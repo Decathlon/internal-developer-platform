@@ -1,0 +1,579 @@
+openapi: 3.1.0
+info:
+  title: Idp core API
+  description: API dedicated to idp core functionalities
+  version: v1
+servers:
+  - url: http://localhost:8084
+security:
+  - clientId: []
+  - bearer: []
+tags:
+  - name: Entities Templates Management
+    description: Operations related to entity template management
+paths:
+  /api/v1/entity-templates/identifier/{identifier}:
+    get:
+      tags:
+        - Entities Templates Management
+      summary: Get template by identifier
+      description: Retrieve a specific template using its string identifier
+      operationId: getTemplateByIdentifier
+      parameters:
+        - name: identifier
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Template found
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/EntityTemplateDtoOut'
+        '404':
+          description: Template not found with the provided identifier
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+    put:
+      tags:
+        - Entities Templates Management
+      summary: Update an existing template by template identifier
+      description: Update the details of an existing template identified by its unique string identifier
+      operationId: updateTemplate
+      parameters:
+        - name: identifier
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EntityTemplateDtoIn'
+        required: true
+      responses:
+        '200':
+          description: Template update successfully
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/EntityTemplateDtoOut'
+        '404':
+          description: Template not found with the provided identifier
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+    delete:
+      tags:
+        - Entities Templates Management
+      summary: Delete template by identifier
+      description: Remove a template from the system using its unique identifier
+      operationId: deleteTemplate
+      parameters:
+        - name: identifier
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '204':
+          description: Template deleted successfully
+        '404':
+          description: Template not found with the provided identifier
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /api/v1/entity-templates:
+    get:
+      tags:
+        - Entities Templates Management
+      summary: Get paginated templates
+      description: Retrieve a paginated list of templates with optional sorting
+      operationId: getTemplatesPaginated
+      parameters:
+        - name: page
+          in: query
+          description: Page number for pagination. Defaults to 0.
+          content:
+            '*/*':
+              schema:
+                type: integer
+                default: '0'
+        - name: size
+          in: query
+          description: Number of items per page. Defaults to 20.
+          content:
+            '*/*':
+              schema:
+                type: integer
+                default: '20'
+        - name: sort
+          in: query
+          description: 'Sorting criteria in the format: property(,asc|desc). Defaults to identifier,asc.'
+          content:
+            '*/*':
+              schema:
+                type: string
+                default: identifier,asc
+      responses:
+        '200':
+          description: Paginated templates retrieved successfully
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/TemplatePageResponse'
+        '400':
+          description: Invalid pagination parameters
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+    post:
+      tags:
+        - Entities Templates Management
+      summary: Create a new template
+      description: Create a new template in the system with the provided information
+      operationId: createTemplate
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EntityTemplateDtoIn'
+        required: true
+      responses:
+        '201':
+          description: Template created successfully
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/EntityTemplateDtoOut'
+        '400':
+          description: Invalid template data provided
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+components:
+  schemas:
+    EntityTemplateDtoIn:
+      type: object
+      description: Input DTO for creating or updating an entity template
+      properties:
+        identifier:
+          type: string
+          description: Unique Entity Template identifier
+          example: service
+          minLength: 1
+        description:
+          type: string
+          description: Entity Template description
+          example: A comprehensive service template
+        properties_definitions:
+          type: array
+          description: List of property definitions for this template
+          items:
+            $ref: '#/components/schemas/PropertyDefinitionDtoIn'
+          minItems: 1
+        relations_definitions:
+          type: array
+          description: List of relation definitions for this template
+          items:
+            $ref: '#/components/schemas/RelationDefinitionDtoIn'
+      required:
+        - identifier
+        - properties_definitions
+    PropertyDefinitionDtoIn:
+      type: object
+      description: Input DTO for creating or updating a property definition
+      properties:
+        name:
+          type: string
+          description: Property name
+          example: applicationName
+          minLength: 1
+        description:
+          type: string
+          description: Property description
+          example: Name of the application
+          minLength: 1
+        type:
+          type: string
+          description: Property data type
+          enum:
+            - STRING
+            - NUMBER
+            - BOOLEAN
+          example: STRING
+        required:
+          type: boolean
+          default: false
+          description: Whether this property is required
+          example: true
+        rules:
+          $ref: '#/components/schemas/PropertyRulesDtoIn'
+          description: Property validation rules
+      required:
+        - description
+        - name
+        - type
+    PropertyRulesDtoIn:
+      type: object
+      description: Input DTO for creating or updating a property definition
+      properties:
+        format:
+          type: string
+          description: Property format validation
+          enum:
+            - URL
+            - EMAIL
+          example: EMAIL
+        enum_values:
+          type: array
+          description: Enumeration values for enum properties
+          example:
+            - ACTIVE
+            - INACTIVE
+          items:
+            type: string
+        regex:
+          type: string
+          description: Regular expression pattern for validation
+          example: ^[a-zA-Z0-9]+$
+        max_length:
+          type: integer
+          format: int32
+          description: Maximum length for string properties
+          example: 255
+        min_length:
+          type: integer
+          format: int32
+          description: Minimum length for string properties
+          example: 1
+        max_value:
+          type: integer
+          format: int32
+          description: Maximum value for numeric properties
+          example: 100
+        min_value:
+          type: integer
+          format: int32
+          description: Minimum value for numeric properties
+          example: 0
+    RelationDefinitionDtoIn:
+      type: object
+      description: Input DTO for creating or updating a relation definition
+      properties:
+        name:
+          type: string
+          description: Name of the relation
+          example: dependencies
+          minLength: 1
+        target_entity_identifier:
+          type: string
+          description: Identifier of the target entity
+          example: service
+          minLength: 1
+        required:
+          type: boolean
+          default: false
+          description: Whether this relation is required
+          example: false
+        to_many:
+          type: boolean
+          default: false
+          description: Whether this relation can have multiple targets
+          example: true
+      required:
+        - name
+        - target_entity_identifier
+    EntityTemplateDtoOut:
+      type: object
+      description: Output for entity template
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: Unique generated identifier of the entity template
+          example: 123e4567-e89b-12d3-a456-426614174000
+        identifier:
+          type: string
+          description: Unique Entity Template identifier
+          example: service
+        description:
+          type: string
+          description: Entity Template description
+          example: A comprehensive service template
+        properties_definitions:
+          type: array
+          description: List of property definitions for this template
+          items:
+            $ref: '#/components/schemas/PropertyDefinitionDtoOut'
+        relations_definitions:
+          type: array
+          description: List of relation definitions for this template
+          items:
+            $ref: '#/components/schemas/RelationDefinitionDtoOut'
+    PropertyDefinitionDtoOut:
+      type: object
+      description: Output DTO for property definition
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: Unique identifier of the property definition
+          example: 123e4567-e89b-12d3-a456-426614174000
+        name:
+          type: string
+          description: Property name
+          example: applicationName
+        description:
+          type: string
+          description: Property description
+          example: Name of the application
+        type:
+          type: string
+          description: Property data type
+          enum:
+            - STRING
+            - NUMBER
+            - BOOLEAN
+          example: STRING
+        required:
+          type: boolean
+          description: Whether this property is required
+          example: true
+        rules:
+          $ref: '#/components/schemas/PropertyRulesDtoOut'
+          description: Property validation rules
+          example: Property validation rules
+    PropertyRulesDtoOut:
+      type: object
+      description: Output DTO for property validation rules
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: Unique identifier of the property rules
+          example: 123e4567-e89b-12d3-a456-426614174000
+        format:
+          type: string
+          description: Format of the property
+          enum:
+            - URL
+            - EMAIL
+          example: STRING
+        enum_values:
+          type: array
+          description: Allowed enum values for the property
+          example:
+            - VALUE1
+            - VALUE2
+          items:
+            type: string
+        regex:
+          type: string
+          description: Regular expression for property validation
+          example: ^[A-Za-z0-9]+$
+        max_length:
+          type: integer
+          format: int32
+          description: Maximum length of the property
+          example: 255
+        min_length:
+          type: integer
+          format: int32
+          description: Minimum length of the property
+          example: 1
+        max_value:
+          type: integer
+          format: int32
+          description: Maximum value for the property
+          example: 100
+        min_value:
+          type: integer
+          format: int32
+          description: Minimum value for the property
+          example: 0
+    RelationDefinitionDtoOut:
+      type: object
+      description: Output DTO for relation definition
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: Unique identifier of the relation definition
+          example: 123e4567-e89b-12d3-a456-426614174000
+        name:
+          type: string
+          description: Name of the relation
+          example: dependencies
+        target_entity_identifier:
+          type: string
+          description: Identifier of the target entity
+          example: component-template
+        required:
+          type: boolean
+          description: Whether this relation is required
+          example: false
+        to_many:
+          type: boolean
+          description: Whether this relation can have multiple targets
+          example: true
+    ErrorResponse:
+      type: object
+      properties:
+        error:
+          type: string
+          enum:
+            - 100 CONTINUE
+            - 101 SWITCHING_PROTOCOLS
+            - 102 PROCESSING
+            - 103 EARLY_HINTS
+            - 103 CHECKPOINT
+            - 200 OK
+            - 201 CREATED
+            - 202 ACCEPTED
+            - 203 NON_AUTHORITATIVE_INFORMATION
+            - 204 NO_CONTENT
+            - 205 RESET_CONTENT
+            - 206 PARTIAL_CONTENT
+            - 207 MULTI_STATUS
+            - 208 ALREADY_REPORTED
+            - 226 IM_USED
+            - 300 MULTIPLE_CHOICES
+            - 301 MOVED_PERMANENTLY
+            - 302 FOUND
+            - 302 MOVED_TEMPORARILY
+            - 303 SEE_OTHER
+            - 304 NOT_MODIFIED
+            - 305 USE_PROXY
+            - 307 TEMPORARY_REDIRECT
+            - 308 PERMANENT_REDIRECT
+            - 400 BAD_REQUEST
+            - 401 UNAUTHORIZED
+            - 402 PAYMENT_REQUIRED
+            - 403 FORBIDDEN
+            - 404 NOT_FOUND
+            - 405 METHOD_NOT_ALLOWED
+            - 406 NOT_ACCEPTABLE
+            - 407 PROXY_AUTHENTICATION_REQUIRED
+            - 408 REQUEST_TIMEOUT
+            - 409 CONFLICT
+            - 410 GONE
+            - 411 LENGTH_REQUIRED
+            - 412 PRECONDITION_FAILED
+            - 413 PAYLOAD_TOO_LARGE
+            - 413 REQUEST_ENTITY_TOO_LARGE
+            - 414 URI_TOO_LONG
+            - 414 REQUEST_URI_TOO_LONG
+            - 415 UNSUPPORTED_MEDIA_TYPE
+            - 416 REQUESTED_RANGE_NOT_SATISFIABLE
+            - 417 EXPECTATION_FAILED
+            - 418 I_AM_A_TEAPOT
+            - 419 INSUFFICIENT_SPACE_ON_RESOURCE
+            - 420 METHOD_FAILURE
+            - 421 DESTINATION_LOCKED
+            - 422 UNPROCESSABLE_ENTITY
+            - 423 LOCKED
+            - 424 FAILED_DEPENDENCY
+            - 425 TOO_EARLY
+            - 426 UPGRADE_REQUIRED
+            - 428 PRECONDITION_REQUIRED
+            - 429 TOO_MANY_REQUESTS
+            - 431 REQUEST_HEADER_FIELDS_TOO_LARGE
+            - 451 UNAVAILABLE_FOR_LEGAL_REASONS
+            - 500 INTERNAL_SERVER_ERROR
+            - 501 NOT_IMPLEMENTED
+            - 502 BAD_GATEWAY
+            - 503 SERVICE_UNAVAILABLE
+            - 504 GATEWAY_TIMEOUT
+            - 505 HTTP_VERSION_NOT_SUPPORTED
+            - 506 VARIANT_ALSO_NEGOTIATES
+            - 507 INSUFFICIENT_STORAGE
+            - 508 LOOP_DETECTED
+            - 509 BANDWIDTH_LIMIT_EXCEEDED
+            - 510 NOT_EXTENDED
+            - 511 NETWORK_AUTHENTICATION_REQUIRED
+        errorDescription:
+          type: string
+    PageableObject:
+      type: object
+      properties:
+        offset:
+          type: integer
+          format: int64
+        sort:
+          $ref: '#/components/schemas/SortObject'
+        unpaged:
+          type: boolean
+        paged:
+          type: boolean
+        pageNumber:
+          type: integer
+          format: int32
+        pageSize:
+          type: integer
+          format: int32
+    SortObject:
+      type: object
+      properties:
+        empty:
+          type: boolean
+        sorted:
+          type: boolean
+        unsorted:
+          type: boolean
+    TemplatePageResponse:
+      type: object
+      description: Paginated response containing Template objects
+      properties:
+        content:
+          type: array
+          items:
+            $ref: '#/components/schemas/EntityTemplateDtoOut'
+        pageable:
+          $ref: '#/components/schemas/PageableObject'
+        last:
+          type: boolean
+        totalPages:
+          type: integer
+          format: int32
+        totalElements:
+          type: integer
+          format: int64
+        first:
+          type: boolean
+        size:
+          type: integer
+          format: int32
+        number:
+          type: integer
+          format: int32
+        sort:
+          $ref: '#/components/schemas/SortObject'
+        numberOfElements:
+          type: integer
+          format: int32
+        empty:
+          type: boolean
+  securitySchemes:
+    clientId:
+      type: oauth2
+      description: clientId authentication
+      name: clientId
+      flows:
+        clientCredentials:
+          tokenUrl: https://my-oauth-server.com/as/token.oauth2
+    bearer:
+      type: http
+      description: bearer authentication
+      name: bearer
+      scheme: bearer
+      bearerFormat: JWT

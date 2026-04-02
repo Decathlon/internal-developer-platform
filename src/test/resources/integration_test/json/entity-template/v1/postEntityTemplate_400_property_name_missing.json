@@ -1,0 +1,21 @@
+{
+  "identifier": "temp-test-0",
+  "description": "This is a test template",
+  "properties_definitions": [
+    {
+      "description": "description",
+      "required": true,
+      "type": "STRING",
+      "rules": {
+        "format": "URL",
+        "enum_values": [],
+        "regex": "",
+        "max_length": 200,
+        "min_length": 1,
+        "max_value": 0,
+        "min_value": 0
+      }
+    }
+  ],
+  "relations_definitions": []
+}

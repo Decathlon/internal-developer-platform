@@ -1,0 +1,9 @@
+{
+  "name": "microservice-2",
+  "identifier": "microservice-2",
+  "properties": {
+    "port": "8080",
+    "environment": "dev"
+  },
+  "relations": []
+}

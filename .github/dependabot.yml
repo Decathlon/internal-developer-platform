@@ -1,0 +1,60 @@
+---
+version: 2
+updates:
+  # Maven dependencies
+  - package-ecosystem: "maven"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "05:00"
+    open-pull-requests-limit: 10
+    groups:
+      # Group all patch and minor updates together, individual PRs for major updates
+      all-minor-and-patch-updates:
+        patterns:
+          - "*"
+        update-types:
+          - "patch"
+          - "minor"
+    pull-request-branch-name:
+      separator: "-"
+
+  # Docker dependencies
+  - package-ecosystem: "docker"
+    directory: "/"
+    schedule:
+      interval: "daily"
+      time: "05:00"
+    open-pull-requests-limit: 5
+    pull-request-branch-name:
+      separator: "-"
+
+  # GitHub Actions dependencies
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "05:00"
+    open-pull-requests-limit: 5
+    groups:
+      # Group all minor and patch updates together
+      all-minor-and-patch-updates:
+        patterns:
+          - "*"
+        update-types:
+          - "minor"
+          - "patch"
+    pull-request-branch-name:
+      separator: "-"
+
+  - package-ecosystem: "uv"
+    directory: "/docs"
+    schedule:
+      interval: "monthly"
+      day: "monday"
+      time: "05:00"
+    open-pull-requests-limit: 5
+    pull-request-branch-name:
+      separator: "-"

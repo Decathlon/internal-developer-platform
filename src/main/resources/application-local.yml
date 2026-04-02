@@ -1,0 +1,39 @@
+---
+server:
+  port: 8084
+spring:
+  datasource:
+    url: jdbc:postgresql://localhost:5437/idpcore
+    username: idpcore
+    password: idpcore_password
+    hikari:
+      maximum-pool-size: 10
+      minimum-idle: 5
+      schema: idp_core
+  flyway:
+    enabled: true
+    locations: classpath:db/migration, classpath:db/local
+    create-schemas: true
+    baseline-on-migrate: true
+    validate-on-migrate: true
+  security:
+    oauth2:
+      client:
+        registration:
+          idp-core:
+            client-id: your-client-id-here
+        provider:
+          idp-core:
+            token-uri: https://my-oauth-server.com/as/token.oauth2
+          oauth-prod:
+            token-uri: https://my-oauth-server.com/as/token.oauth2
+      resourceserver:
+        jwt:
+          jwk-set-uri: https://my-oauth-server.com/ext/JWKS
+  jpa:
+    hibernate:
+      ddl-auto: none  # Disable JPA schema auto-generation, use Flyway instead
+      show-sql: false
+app:
+  full-refresh-at-startup: true
+  idp-core-prefix-url: http://localhost:8084

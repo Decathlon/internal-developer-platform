@@ -1,0 +1,14 @@
+[project]
+name = "idp-core-docs"
+version = "0.1.0"
+description = "IDP-Core Documentation Site - A modern, open-source Internal Developer Platform backend"
+readme = "README.md"
+requires-python = ">=3.14"
+dependencies = [
+    "zensical>=0.0.17",
+    "mkdocs-swagger-ui-tag>=0.7.2",
+]
+
+[project.scripts]
+docs-serve = "zensical:serve"
+docs-build = "zensical:build"

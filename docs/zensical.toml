@@ -1,0 +1,192 @@
+# ============================================================================
+# IDP-Core Documentation Site Configuration
+# ============================================================================
+
+[project]
+
+site_name = "IDP-Core"
+site_description = "A modern, open-source Internal Developer Platform backend - Build your software catalog, integrate data, create scorecards, and enable self-service actions."
+site_author = "IDP-Core Contributors"
+site_url = "https://idp-core.github.io/"
+repo_url = "https://github.com/decathlon/internal-developer-platform"
+repo_name = "decathlon/internal-developer-platform"
+docs_dir = "src"
+
+extra_css = [
+    "https://unpkg.com/swagger-ui-dist@5/swagger-ui.css"
+]
+
+copyright = """
+Copyright &copy; 2026 IDP-Core Contributors. Licensed under Apache 2.0.
+"""
+
+# Navigation structure
+nav = [
+  { "Home" = "index.md" },
+  { "Getting Started" = [
+    "getting-started/index.md",
+    "getting-started/installation.md",
+    "getting-started/quickstart.md",
+    "getting-started/configuration.md"
+  ]},
+  { "Concepts" = [
+    "concepts/index.md",
+    "concepts/entity-templates.md",
+    "concepts/entities.md",
+    "concepts/properties.md",
+    "concepts/relations.md"
+  ]},
+  { "Features" = [
+    "features/index.md",
+    "features/data-integration.md",
+    "features/scorecards.md",
+    "features/self-service-actions.md"
+  ]},
+  { "API Reference" = [
+    "api/index.md"
+  ]},
+  { "Deployment" = [
+    "deployment/index.md",
+    "deployment/docker.md",
+    "deployment/kubernetes.md",
+    "deployment/observability.md",
+    "deployment/configuration.md"
+  ]},
+  { "Contributing" = [
+    "contributing/index.md",
+    { "Code Architecture" = [
+        "contributing/code/index.md",
+        "contributing/code/domain-infrastructure.md",
+        "contributing/code/exception-handling.md",
+        "contributing/code/domain-model-validations.md",
+        "contributing/code/best-practices.md",
+        "contributing/code/code-conventions.md"
+    ]},
+    { "Architecture Decision Records" = [
+        "contributing/adrs/index.md",
+        "contributing/adrs/0001-doc-site-engine.md"
+    ]},
+    "contributing/development-setup.md",
+    "contributing/pull-requests.md",
+    "contributing/testing.md",
+    "contributing/ci-workflow.md",
+  ]}
+]
+
+# ----------------------------------------------------------------------------
+# Theme Configuration
+# ----------------------------------------------------------------------------
+[project.theme]
+
+# Features for navigation and content
+features = [
+    "announce.dismiss",
+    "content.action.edit",
+    "content.action.view",
+    "content.code.annotate",
+    "content.code.copy",
+    "content.code.select",
+    "content.footnote.tooltips",
+    "content.tabs.link",
+    "content.tooltips",
+    "navigation.footer",
+    "navigation.indexes",
+    "navigation.instant",
+    "navigation.instant.prefetch",
+    "navigation.path",
+    "navigation.tabs",
+    "navigation.tabs.sticky",
+    "navigation.top",
+    "navigation.tracking",
+    "search.highlight",
+    "toc.follow"
+]
+
+language = "en"
+
+# Icons
+[project.theme.icon]
+repo = "fontawesome/brands/github"
+
+# Color palette with dark/light mode toggle
+[[project.theme.palette]]
+scheme = "default"
+primary = "indigo"
+accent = "indigo"
+toggle.icon = "lucide/sun"
+toggle.name = "Switch to dark mode"
+
+[[project.theme.palette]]
+scheme = "slate"
+primary = "indigo"
+accent = "indigo"
+toggle.icon = "lucide/moon"
+toggle.name = "Switch to light mode"
+
+# ----------------------------------------------------------------------------
+# Extra Configuration
+# ----------------------------------------------------------------------------
+[project.extra]
+
+# Social links
+[[project.extra.social]]
+icon = "fontawesome/brands/github"
+link = "https://github.com/decathlon/internal-developer-platform"
+
+[[project.extra.social]]
+icon = "fontawesome/brands/docker"
+link = "https://hub.docker.com/r/decathlon/internal-developer-platform"
+
+# ----------------------------------------------------------------------------
+# Extra JavaScript for Mermaid diagrams
+# ----------------------------------------------------------------------------
+[[project.extra_javascript]]
+path = "https://unpkg.com/mermaid@10/dist/mermaid.min.js"
+defer = true
+
+[[project.extra_javascript]]
+path = "javascripts/mermaid-init.js"
+defer = true
+
+# ----------------------------------------------------------------------------
+# Extra JavaScript/CSS for Swagger UI
+# ----------------------------------------------------------------------------
+[[project.extra_javascript]]
+path = "https://unpkg.com/swagger-ui-dist@5/swagger-ui-bundle.js"
+
+[[project.extra_javascript]]
+path = "https://unpkg.com/swagger-ui-dist@5/swagger-ui-standalone-preset.js"
+
+# ----------------------------------------------------------------------------
+# Extra JavaScript for MathJax
+# ----------------------------------------------------------------------------
+[[project.extra_javascript]]
+path = "javascripts/mathjax.js"
+defer = true
+
+[[project.extra_javascript]]
+path = "https://unpkg.com/mathjax@3/es5/tex-mml-chtml.js"
+
+# ----------------------------------------------------------------------------
+# Markdown Extensions
+# ----------------------------------------------------------------------------
+[project.markdown_extensions]
+
+# Enable admonitions
+admonition = {}
+"pymdownx.details" = {}
+"pymdownx.superfences" = {}
+
+# Enable content tabs
+"pymdownx.tabbed" = { alternate_style = true }
+
+# Enable task lists
+"pymdownx.tasklist" = { custom_checkbox = true }
+
+# Enable code highlighting
+"pymdownx.highlight" = { anchor_linenums = true }
+"pymdownx.inlinehilite" = {}
+
+# Enable attribute lists (for grid cards)
+attr_list = {}
+md_in_html = {}
