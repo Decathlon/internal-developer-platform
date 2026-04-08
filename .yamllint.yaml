@@ -1,0 +1,14 @@
+---
+extends: default
+ignore: |
+  /.git
+  /.vale
+  /.venv
+  /docs/.venv
+  /docs/site
+  /docs/src/static/swagger.yaml
+rules:
+  line-length:
+    max: 210
+  trailing-spaces: enable
+  indentation: enable

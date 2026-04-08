@@ -1,0 +1,358 @@
+---
+name: Basic Code Checks
+on:  # yamllint disable-line rule:truthy
+  pull_request:
+    branches:
+      - main
+    types: [opened, synchronize, reopened, ready_for_review]
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.ref }}-${{ github.workflow }}-checks
+  cancel-in-progress: true
+
+jobs:
+  lint:
+    name: Lint & Pre-Commit Checks
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8  # v6.0.1
+
+      - name: Lint GitHub Actions Workflows
+        uses: reviewdog/action-actionlint@0d952c597ef8459f634d7145b0b044a9699e5e43  # v1.71.0
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          reporter: github-pr-review
+          level: warning
+          filter_mode: added
+
+      - name: Run Pre-Commit Hooks
+        uses: pre-commit/action@2c7b3805fd2a0fd8c1884dcaebf91fc102a13ecd  # v3.0.1
+        with:
+          extra_args: --all-files
+
+  license_compliance:
+    name: Sources Licensing Compliance Check
+    runs-on: ubuntu-latest
+    needs: lint
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8  # v6.0.1
+
+      - name: Setup Java 25
+        uses: actions/setup-java@be666c2fcd27ec809703dec50e508c2fdc7f6654  # v5.2.0
+        with:
+          distribution: temurin
+          java-version: 25
+          cache: maven
+
+      - name: Run License Compliance Check (Validate Phase)
+        run: mvn validate -B
+
+  build:
+    name: Build Application
+    runs-on: ubuntu-latest
+    needs: license_compliance
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8  # v6.0.1
+
+      - name: Cache Maven packages
+        uses: actions/cache@cdf6c1fa76f9f475f3d7449005a359c84ca0f306  # v5.0.3
+        with:
+          path: ~/.m2/repository
+          key: ${{ runner.os }}-maven-${{ hashFiles('**/pom.xml') }}
+          restore-keys: |
+            ${{ runner.os }}-maven-
+
+      - name: Setup Java 25
+        uses: actions/setup-java@be666c2fcd27ec809703dec50e508c2fdc7f6654  # v5.2.0
+        with:
+          distribution: temurin
+          java-version: 25
+
+      - name: Build Maven project
+        run: mvn clean verify
+
+      - name: Upload built jar
+        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f  # v7.0.0
+        with:
+          name: idp-core-jar
+          path: target/
+          retention-days: 1
+
+      - name: Submit Maven dependencies for security scan
+        uses: advanced-security/maven-dependency-submission-action@b275d12641ac2d2108b2cbb7598b154ad2f2cee8  # v5.0.0
+
+  security_scan:
+    name: Security Scan (SCA + SAST)
+    runs-on: ubuntu-latest
+    needs: build
+    permissions:
+      contents: read
+      security-events: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8  # v6.0.1
+
+      - name: Download built jar
+        uses: actions/download-artifact@70fc10c6e5e1ce46ad2ea6f2b72d43f7d47b13c3  # v8.0.0
+        with:
+          name: idp-core-jar
+          path: target
+
+      - name: Setup Java 25
+        uses: actions/setup-java@be666c2fcd27ec809703dec50e508c2fdc7f6654  # v5.2.0
+        with:
+          distribution: temurin
+          java-version: 25
+
+      - name: Restore Maven cache
+        uses: actions/cache@cdf6c1fa76f9f475f3d7449005a359c84ca0f306  # v5.0.3
+        with:
+          path: ~/.m2/repository
+          key: ${{ runner.os }}-maven-${{ hashFiles('**/pom.xml') }}
+          restore-keys: |
+            ${{ runner.os }}-maven-
+
+      - name: Cache OWASP D/C Data
+        uses: actions/cache@cdf6c1fa76f9f475f3d7449005a359c84ca0f306  # v5.0.3
+        with:
+          path: ~/.m2/repository/org/owasp/dependency-check-data
+          key: ${{ runner.os }}-owasp-dc-data-${{ hashFiles('**/pom.xml') }}
+          restore-keys: |
+            ${{ runner.os }}-owasp-dc-data-
+
+      - name: Upload SpotBugs XML
+        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f  # v7.0.0
+        with:
+          name: spotbugs-report
+          path: target/spotbugsXml.xml
+          retention-days: 1
+
+      - name: Summarize SpotBugs Results
+        run: |
+          REPORT_FILE="$PWD/target/spotbugsXml.xml"
+          if [ ! -f "$REPORT_FILE" ]; then
+            printf -- "::warning:: SpotBugs XML report file not found at %s\n" "$REPORT_FILE"
+          else
+            echo "file found $REPORT_FILE"
+            BUG_COUNT=$(grep -c "<BugInstance" "$REPORT_FILE" || echo 0)
+            BUG_COUNT=$(echo "$BUG_COUNT" | xargs)
+            {
+            printf -- "## SpotBugs Analysis\n"
+            printf -- "| Metric | Value |\n"
+            printf -- "| :--- | :--- |\n"
+            printf -- "| **Total Bugs** | %s |\n" "$BUG_COUNT"
+            printf -- "\n[Download full XML report (Artifact)](./artifacts/spotbugs-report)\n"
+            }>> "$GITHUB_STEP_SUMMARY"
+          fi
+
+  check-openapi-static-swagger-update:
+    name: OpenAPI Static Swagger Update Check
+    runs-on: ubuntu-latest
+    needs: build
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8  # v6.0.1
+
+      - name: Download built jar
+        uses: actions/download-artifact@70fc10c6e5e1ce46ad2ea6f2b72d43f7d47b13c3  # v8.0.0
+        with:
+          name: idp-core-jar
+          path: target
+
+      - name: Setup Java 25
+        uses: actions/setup-java@be666c2fcd27ec809703dec50e508c2fdc7f6654  # v5.2.0
+        with:
+          distribution: temurin
+          java-version: 25
+
+      - name: Check if static swagger file is up to date
+        env:
+          SPEC_URL_PATH: '/v3/api-docs/internal'
+          SERVER_PORT: 8080
+          OAUTH_JWK_URI: 'http://localhost:9999/mock/jwks'
+          OAUTH_TOKEN_URI: 'http://localhost:9999/mock/token'
+          IDP_CORE_PREFIX_URL: 'http://localhost:9999/mock/idp-core'
+          SPRING_JPA_DATABASE_PLATFORM: 'org.hibernate.dialect.H2Dialect'
+          SPRING_FLYWAY_ENABLED: 'false'
+          SPRING_JPA_HIBERNATE_DDL_AUTO: 'none'
+          SPRING_DATASOURCE_URL: 'jdbc:h2:mem'
+          SPRING_DATASOURCE_DRIVER_CLASS_NAME: 'org.h2.Driver'
+        run: |
+          mkdir -p specs
+          PR_SWAGGER="$PWD/docs/src/static/swagger.yaml"
+          if [ ! -f "$PR_SWAGGER" ]; then
+            echo "Static swagger file is missing in the PR"
+            exit 1
+          fi
+          cp "$PR_SWAGGER" "specs/static-swagger-declared.yaml"
+          echo 'Extracting OpenAPI spec from running idp-core api'
+          java -jar target/*.jar &
+          API_PID=$!
+          sleep 30
+          curl -s "http://localhost:$SERVER_PORT$SPEC_URL_PATH" > "specs/swagger-extracted.yaml"
+          kill "$API_PID"
+
+      - name: Upload static swagger declared by developer
+        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f  # v7.0.0
+        with:
+          name: swagger-declared
+          path: specs
+          retention-days: 1
+
+      - name: Run oasdiff via Docker
+        run: |
+          printf 'Running breaking change check between static swagger declared in openapi directory and extracted swagger generated by spring boot\n'
+          docker run --rm -v "$PWD/specs:/specs" tufin/oasdiff:latest \
+          breaking /specs/static-swagger-declared.yaml /specs/swagger-extracted.yaml \
+          --format markdown --fail-on=ERR \
+          > "oasdiff-report.md"
+          cat oasdiff-report.md
+
+  check-breaking-changes:
+    name: OpenAPI Breaking Change Check
+    runs-on: ubuntu-latest
+    needs: check-openapi-static-swagger-update
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8  # v6.0.1
+        with:
+          fetch-depth: 0
+
+      - name: Setup Java 25
+        uses: actions/setup-java@be666c2fcd27ec809703dec50e508c2fdc7f6654  # v5.2.0
+        with:
+          distribution: temurin
+          java-version: 25
+          cache: maven
+
+      - name: Download swagger declared artifact
+        uses: actions/download-artifact@70fc10c6e5e1ce46ad2ea6f2b72d43f7d47b13c3  # v8.0.0
+        with:
+          name: swagger-declared
+          path: specs
+
+      - name: Make scripts executable
+        run: chmod +x .github/scripts/extract_specs.sh
+
+      - name: Extract OpenAPI Specs from Static Swagger Files
+        run: .github/scripts/extract_specs.sh
+
+      - name: Run oasdiff - Breaking Change Check
+        id: breaking_check
+        continue-on-error: true
+        run: |
+          set +e  # Prevents the script from stopping at the first failure
+          REPORT_FILE="oasdiff-breaking-report.md"
+          printf -- "Running breaking change check...\n"
+          docker run --rm -v "$PWD/specs:/specs" tufin/oasdiff:latest \
+            breaking /specs/static-swagger-main.yaml /specs/static-swagger-declared.yaml \
+            --format markdown --fail-on=ERR \
+            > "$REPORT_FILE"
+          EXIT_CODE=$?
+          printf -- "Exit code: %d\n" "$EXIT_CODE"
+          echo "oasdiff_exit_code=$EXIT_CODE" >> "$GITHUB_OUTPUT"
+          if [ $EXIT_CODE -ne 0 ]; then
+            printf -- "::error::Breaking changes detected! See the report below.\n"
+            echo "breaking_found=true" >> "$GITHUB_OUTPUT"
+          else
+            printf -- "No breaking changes detected.\n"
+            echo "breaking_found=false" >> "$GITHUB_OUTPUT"
+          fi
+          cat "$REPORT_FILE"
+
+      - name: Prepare Breaking Change Comment
+        if: steps.breaking_check.outputs.breaking_found == 'true'
+        id: breaking_message
+        run: |
+          REPORT_FILE="oasdiff-breaking-report.md"
+          echo "message<<EOF_MSG" >> "$GITHUB_OUTPUT"
+          echo "###  BREAKING CHANGES DETECTED"
+          echo ""
+          echo "The OpenAPI contract (\`swagger.yaml\`) has backward-incompatible changes compared to the \`main\` branch."
+          echo ""
+          echo "**Breaking Changes Report:**"
+          echo "<details><summary>View the report</summary>"
+          echo ""
+          echo '```markdown'
+          cat "$REPORT_FILE"
+          echo '```'
+          echo "</details>"
+          echo ""
+          echo "---"
+          echo "**Action required:** Please verify whether these changes are intentional before merging."
+          echo "EOF_MSG" >> "$GITHUB_OUTPUT"
+
+      - name: Comment PR on Breaking Change
+        if: steps.breaking_check.outputs.breaking_found == 'true' && github.event_name == 'pull_request'
+        uses: marocchino/sticky-pull-request-comment@773744901bac0e8cbb5a0dc842800d45e9b2b405  # v2.9.4
+        with:
+          header: breaking-changes
+          message: ${{ steps.breaking_message.outputs.message }}
+          delete: true
+
+      - name: Remove Breaking Change Comment (If fixed)
+        if: steps.breaking_check.outputs.breaking_found == 'false' && github.event_name == 'pull_request'
+        uses: marocchino/sticky-pull-request-comment@773744901bac0e8cbb5a0dc842800d45e9b2b405  # v2.9.4
+        with:
+          header: breaking-changes
+          delete: true
+
+      - name: Fail Job if Breaking Changes Found
+        if: steps.breaking_check.outputs.breaking_found == 'true'
+        run: |
+          EXIT_CODE="${{ steps.breaking_check.outputs.oasdiff_exit_code }}"
+          if [ "$EXIT_CODE" -ne 0 ]; then
+            # check if the commit message contains "!:" to allow breaking changes
+            COMMIT_SHA="${{ github.event.pull_request.head.sha || github.sha }}"
+            COMMIT_MESSAGE=$(git log -1 --pretty=%B "$COMMIT_SHA")
+            if echo "$COMMIT_MESSAGE" | grep -qE "!:|BREAKING CHANGE:"
+            then
+              printf -- "::notice::Breaking change detected by API analysis, but it was correctly announced in the commit using '!: ' or 'BREAKING CHANGE:'. semantic-release will perform a MAJOR bump."
+            else
+              printf -- "::error:: Unannounced Breaking Change! The API analysis detected a backward-incompatible change, but the commit message does not include '!: ' or 'BREAKING CHANGE:'."
+              printf -- "Please fix the commit message to follow the convention, e.g.: 'feat!: description' or 'feat: description\\n\\nBREAKING CHANGE: description of change'."
+              exit 1
+            fi
+          fi
+
+  docker_build_test:
+    name: Docker Image Build Test
+    runs-on: ubuntu-latest
+    needs: build
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8  # v6.0.1
+
+      - name: Download built jar
+        uses: actions/download-artifact@70fc10c6e5e1ce46ad2ea6f2b72d43f7d47b13c3  # v8.0.0
+        with:
+          name: idp-core-jar
+          path: target
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f  # V3.12.0
+
+      - name: Test Docker Image Build
+        uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8  # v6.19.2
+        with:
+          context: .
+          file: ./Dockerfile
+          tags: app:test-build
+          load: true
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Confirm Image Built
+        run: |
+          echo "Image 'app:test-build' successfully built locally."
+          docker images | grep app

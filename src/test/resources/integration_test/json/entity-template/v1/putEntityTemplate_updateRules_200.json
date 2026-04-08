@@ -1,0 +1,17 @@
+{
+  "identifier": "temp-test-99",
+  "description": "This is a test template updated",
+  "properties_definitions": [
+    {
+      "name": "property-test",
+      "description": "description updated",
+      "type": "STRING",
+      "required": false,
+      "rules": {
+        "regex": "^[a-zA-Z0-9]+$",
+        "max_length": 255
+      }
+    }
+  ],
+  "relations_definitions": []
+}

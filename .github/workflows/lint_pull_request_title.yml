@@ -1,0 +1,52 @@
+---
+name: "Lint pull request title with conventional commits format"
+
+on:  # yamllint disable-line rule:truthy
+  # Trigger the workflow on pull request events
+  workflow_dispatch:
+  pull_request:
+    types:
+      - opened
+      - edited
+      - synchronize
+
+permissions:
+  pull-requests: write
+  statuses: write
+
+jobs:
+  lint-title:
+    name: Lint PR title
+    runs-on: ubuntu-latest
+    steps:
+
+      - name: Check PR title convention
+        uses: amannn/action-semantic-pull-request@48f256284bd46cdaab1048c3721360e808335d50  # v6.1.1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          types: |
+            feat
+            fix
+            docs
+            style
+            refactor
+            perf
+            test
+            chore
+            build
+            ci
+            revert
+          scopes: |
+            core
+            api
+            service
+            ui
+            database
+            config
+            security
+            auth
+            logging
+            metrics
+            deps
+            deps-dev

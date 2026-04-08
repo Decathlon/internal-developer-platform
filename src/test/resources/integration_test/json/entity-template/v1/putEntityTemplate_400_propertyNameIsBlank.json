@@ -1,0 +1,26 @@
+{
+  "identifier": "web-service",
+  "description": "This is a test template",
+  "properties_definitions": [
+    {
+      "name": "",
+      "description": "Name of web service",
+      "type": "STRING",
+      "required": true,
+      "rules": {
+        "regex": "^[a-zA-Z0-9]+$",
+        "max_length": 255,
+        "min_value": 0
+      }
+    },
+    {
+      "name": "status",
+      "description": "status of web service",
+      "type": "BOOLEAN",
+      "required": false,
+      "rules": {
+      }
+    }
+  ],
+  "relations_definitions": []
+}

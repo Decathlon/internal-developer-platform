@@ -1,0 +1,40 @@
+---
+spring:
+  flyway:
+    default-schema: idp_core
+    enabled: true
+    locations: classpath:db/migration, classpath:db/test
+  jpa:
+    hibernate:
+      ddl-auto: none  # Disable JPA schema auto-generation, use Flyway instead
+  jackson:
+    property-naming-strategy: SNAKE_CASE
+    write_dates_as_timestamps: false
+  security:
+    oauth2:
+      client:
+        registration:
+          idp-core:
+            client-id: clientIdIdpCore
+            client-secret: clientSecretIdpCore
+        provider:
+          idp-core:
+            token-uri: fakeTokenUri
+      resourceserver:
+        jwt:
+          jwk-set-uri: fakeJwkUri
+management:
+  endpoint:
+    health:
+      probes:
+        enabled: true
+      group:
+        liveness:
+          include:
+            - livenessState
+            - db
+        readiness:
+          include:
+            - readinessState
+            - db
+      show-details: when_authorized

@@ -1,0 +1,48 @@
+---
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v6.0.0
+    hooks:
+      - id: trailing-whitespace  # Trims trailing whitespace
+        exclude: |
+          (?x)^(
+              .gitmodules|
+              shared\/bats-libs\/.*|
+              .*\.excalidraw.*|
+              .*\.drawio.*|
+              .*\.snap
+          )$
+      - id: check-yaml  # Validates YAML files
+        args:
+          - --allow-multiple-documents
+      - id: check-json  # Validates JSON files
+      - id: check-case-conflict  # Checks for files that would conflict in case-insensitive filesystems
+      - id: check-merge-conflict  # Checks for files that contain merge conflict strings
+      - id: detect-private-key  # Check for the existence of private keys
+      - id: check-executables-have-shebangs  # Checks that executables have shebangs
+        exclude: |
+          (?x)^(
+              .*\.java
+          )$
+      - id: end-of-file-fixer  # Makes sure files end in a newline and only a newline
+  - repo: https://github.com/adrienverge/yamllint
+    rev: v1.37.1
+    hooks:
+      - id: yamllint  # Lints YAML files
+  - repo: https://github.com/igorshubovych/markdownlint-cli
+    rev: v0.47.0
+    hooks:
+      - id: markdownlint
+        args:
+          - --config
+          - .markdownlint.yaml
+          - .
+  - repo: https://github.com/errata-ai/vale
+    rev: v3.12.0
+    hooks:
+      - id: vale
+        name: vale sync
+        pass_filenames: false
+        args: [sync]
+      - id: vale
+        args: [--output=line, --minAlertLevel=error]
