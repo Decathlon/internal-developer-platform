@@ -15,10 +15,10 @@ import org.springframework.data.domain.Pageable;
 
 import com.decathlon.idp_core.infrastructure.api.dto.out.entity.EntityDtoOut;
 import com.decathlon.idp_core.infrastructure.api.dto.out.entitytemplate.EntityTemplateDtoOut;
-import com.fasterxml.jackson.databind.ObjectMapper;
 
 import io.swagger.v3.core.converter.ModelConverters;
 import io.swagger.v3.core.jackson.ModelResolver;
+import io.swagger.v3.core.util.Json;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.models.OpenAPI;
 import io.swagger.v3.oas.models.info.Info;
@@ -27,10 +27,8 @@ import io.swagger.v3.oas.models.security.OAuthFlows;
 import io.swagger.v3.oas.models.security.SecurityRequirement;
 import io.swagger.v3.oas.models.security.SecurityScheme;
 import io.swagger.v3.oas.models.servers.Server;
-import lombok.RequiredArgsConstructor;
 
 @Configuration
-@RequiredArgsConstructor
 @Profile("!test")
 public class SwaggerConfiguration {
 
@@ -44,11 +42,9 @@ public class SwaggerConfiguration {
     @Value("${app.idp-core-prefix-url}")
     private String idpCorePrefixUrl;
 
-    private final ObjectMapper objectMapper;
-
     @Bean
     public OpenAPI openAPI() {
-        ModelConverters.getInstance().addConverter(new ModelResolver(objectMapper));
+        ModelConverters.getInstance().addConverter(new ModelResolver(Json.mapper()));
         return new OpenAPI()
                 .info(new Info()
                         .title("Idp core API")
@@ -83,12 +79,12 @@ public class SwaggerConfiguration {
         }
     }
 
-        @Schema(description = "Paginated response containing Entity objects")
-        public static class EntityPageResponse extends PageImpl<EntityDtoOut> {
-                public EntityPageResponse(List<EntityDtoOut> content, Pageable pageable, long total) {
-                        super(content, pageable, total);
-                }
+    @Schema(description = "Paginated response containing Entity objects")
+    public static class EntityPageResponse extends PageImpl<EntityDtoOut> {
+        public EntityPageResponse(List<EntityDtoOut> content, Pageable pageable, long total) {
+            super(content, pageable, total);
         }
+    }
 
 
 }
