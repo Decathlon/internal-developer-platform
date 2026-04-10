@@ -78,5 +78,5 @@ This version keeps the "Port and Adapter" split but allows `@Service`, `@Transac
 
 ### The "Pragmatic" Boundaries
 
-1. **No External Library Imports:** The Domain may use Spring libraries, but it may NOT import third-party integration libraries (e.g., specific Kafka clients or mapping engines like Jackson-JQ).
+1. **No External Library Imports:** The Domain may use Spring libraries, but it may NOT import third-party integration libraries.
 2. **Ports as Contracts:** Every interaction with the "Outside World" must go through a Port interface.
