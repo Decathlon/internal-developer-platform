@@ -1,5 +1,5 @@
 -- Create the entity_relations join table in the idp_core schema
-CREATE TABLE idp_core.entity_relations (
+CREATE TABLE entity_relations (
     entity_id UUID NOT NULL,
     relation_id UUID NOT NULL,
     PRIMARY KEY (entity_id, relation_id),
