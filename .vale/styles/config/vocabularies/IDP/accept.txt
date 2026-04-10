@@ -37,3 +37,4 @@ ADR
 ADRs
 npm
 Docusaurus
+markdownlint
