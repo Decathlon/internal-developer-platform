@@ -18,8 +18,8 @@ Deploy IDP-Core using Docker for development, testing, or small-scale production
 ### 1. Clone the Repository
 
 ```bash
-git clone https://github.com/decathlon/internal-developer-platform.git
-cd internal-developer-platform
+git clone https://github.com/decathlon/idp-core.git
+cd idp-core
 ```
 
 ### 2. Start Services
@@ -73,7 +73,7 @@ services:
       retries: 3
 
   postgres:
-    image: postgres:14-alpine
+    image: postgres:18-alpine
     environment:
       - POSTGRES_DB=idp
       - POSTGRES_USER=idp
@@ -106,7 +106,7 @@ docker run -d \
   -e SPRING_DATASOURCE_URL=jdbc:postgresql://host.docker.internal:5432/idp \
   -e SPRING_DATASOURCE_USERNAME=idp \
   -e SPRING_DATASOURCE_PASSWORD=idp \
-  decathlon/internal-developer-platform:latest
+  ghcr.io/decathlon/idp-core:latest
 ```
 
 ### With Volume Mounts
@@ -118,7 +118,7 @@ docker run -d \
   -v $(pwd)/config:/app/config:ro \
   -v $(pwd)/logs:/app/logs \
   -e SPRING_CONFIG_ADDITIONAL_LOCATION=/app/config/ \
-  decathlon/internal-developer-platform:latest
+  ghcr.io/decathlon/idp-core:latest
 ```
 
 ### With External Network
@@ -134,7 +134,7 @@ docker run -d \
   -e POSTGRES_DB=idp \
   -e POSTGRES_USER=idp \
   -e POSTGRES_PASSWORD=idp \
-  postgres:14-alpine
+  postgres:18-alpine
 
 # Run IDP-Core
 docker run -d \
@@ -144,7 +144,7 @@ docker run -d \
   -e SPRING_DATASOURCE_URL=jdbc:postgresql://postgres:5432/idp \
   -e SPRING_DATASOURCE_USERNAME=idp \
   -e SPRING_DATASOURCE_PASSWORD=idp \
-  decathlon/internal-developer-platform:latest
+  ghcr.io/decathlon/idp-core:latest
 ```
 
 ---
@@ -163,10 +163,10 @@ Then build and run the Docker image:
 
 ```bash
 # Build
-docker build -t internal-developer-platform:local .
+docker build -t idp-core:local .
 
 # Run
-docker run -d -p 8080:8080 internal-developer-platform:local
+docker run -d -p 8080:8080 idp-core:local
 ```
 
 ### Multi-stage Build

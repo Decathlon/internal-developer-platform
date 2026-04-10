@@ -1,4 +1,4 @@
-FROM eclipse-temurin:25-jre-alpine
+FROM eclipse-temurin:25-jre-alpine@sha256:f96a37c0896c613b4328e0e54d6fad5a2e60061cff878a7cca2be10358a6e77d
 
 ENV PORT=8080
 

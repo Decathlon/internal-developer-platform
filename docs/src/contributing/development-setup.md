@@ -3,27 +3,13 @@ title: Development Setup
 description: Set up your local development environment for IDP-Core
 ---
 
-This guide walks you through setting up a complete development environment for IDP-Core.
+This guide focuses on using the devcontainer so you don’t need local Java/Maven setup.
 
 ## Prerequisites
 
-| Tool   | Version | Purpose         |
-| ------ | ------- | --------------- |
-| Java   | 25+     | Runtime         |
-| Maven  | 3.9+    | Build tool      |
-| Docker | 20.10+  | Local services  |
-| Git    | 2.30+   | Version control |
-| IDE    | -       | Development     |
-
-### Verify Installation
-
-```bash
-java -version   # Should show 25+
-mvn -version    # Should show 3.9+
-docker --version
-git --version
-pre-commit --version # If using pre-commit (recommended)
-```
+- Docker 20.10+
+- Git 2.30+
+- VS Code (recommended) or JetBrains IntelliJ IDEA
 
 ---
 
@@ -31,40 +17,48 @@ pre-commit --version # If using pre-commit (recommended)
 
 ```bash
 # Clone your fork
-git clone https://github.com/YOUR_USERNAME/internal-developer-platform.git
-cd internal-developer-platform
+git clone https://github.com/YOUR_USERNAME/idp-core.git
+cd idp-core
 
 # Add upstream remote
-git remote add upstream https://github.com/Decathlon/internal-developer-platform.git
+git remote add upstream https://github.com/decathlon/idp-core.git
 ```
 
 ---
 
-## IDE Setup
+## Devcontainer Setup
 
-### VS Code (Recommended)
+The devcontainer provides Java 25, Maven 3.9.9, Docker command-line tool, and recommended IDE extensions.
 
-1. Install [VS Code](https://code.visualstudio.com/)
-2. Install extensions:
-   - Java Extension Pack
-   - Maven for Java
-   - Docker
-3. Open the project folder in VS Code
-4. Import Maven projects when prompted
+### VS Code
+
+1. Install [VS Code](https://code.visualstudio.com/) and the **DevContainers** extension
+2. Ensure Docker is running
+3. Open the project folder
+4. Select **Reopen in Container** (or run **DevContainers: Reopen in Container**)
+5. Wait for the container build and Maven import
+
+### JetBrains IDEs
+
+1. Ensure Docker is running
+2. Open the project folder
+3. Choose **DevContainer** / **Open in DevContainer**
+4. Wait for the container build and Maven import
 
 ---
 
 ## Start the project
 
-For your development setup, you can refer to the Getting started documentation here: [Getting Started](getting-started.md)
+Once the devcontainer is running, you have a fully set up environment. At startup, the `docker compose up` command will run the PostgreSQL database. As well, in the `docs` folder, the `uv` virtual environment is already set up.
 
-### Pre-Commit Hooks (Optional)
+### Included Tools
 
-Install pre-commit hooks for code quality:
+The devcontainer includes:
 
-```bash
-pre-commit install
-```
+- Pre-commit tool (run `pre-commit install` to enable hooks)
+- GH command-line tool
+- Python with UV and utilities for docs site generation
+- PostgreSQL database running with `docker compose`
 
 ---
 
@@ -93,6 +87,8 @@ src/main/resources/db/local/
 ```
 
 ### Reset Database
+
+Within the devcontainer, you can reset the database with:
 
 ```bash
 # Drop and recreate
@@ -143,7 +139,7 @@ pre-commit run --all-files
 
 ```bash
 git add .
-git commit -m "feat: add my feature"
+git commit -m "feat(scope): add my feature"
 ```
 
 ### 6. Push & Create PR

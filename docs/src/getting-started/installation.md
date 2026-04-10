@@ -1,21 +1,21 @@
 ---
 title: Installation
-description: Install the Internal Developer Platform to test the product
+description: Install IDP-Core to test the product
 ---
 
-This guide covers multiple ways to install and run the Internal Developer Platform in your local environment for testing and evaluation.
+This guide covers multiple ways to install and run IDP-Core in your local environment for testing and evaluation.
 
 ---
 
-## Using Docker (standard method)
+## Using Maven (standard method)
 
-The recommended way to get started with the Internal Developer Platform is using Docker and Docker Compose.
+The recommended way to get started with IDP-Core is using Maven.
 
 1. **Clone the Repository**
 
     ```bash
-    git clone https://github.com/decathlon/internal-developer-platform.git
-    cd internal-developer-platform
+    git clone https://github.com/dktunited/idp-core.git
+    cd idp-core
     ```
 
 2. **Start the PG database with Docker Compose**
@@ -24,14 +24,12 @@ The recommended way to get started with the Internal Developer Platform is using
     docker-compose up -d
     ```
 
-3. **Run the Internal Developer Platform Application**
+3. **Run the IDP-Core Application**
 
-    Once the database runs, start the Internal Developer Platform app by building and running it with Docker:
+    Once the database runs, start the IDP-Core app by building and running it with Maven:
 
     ```bash
-    mvn clean package -DskipTests
-    docker build -t idp-core .
-    docker run -p 8084:8084 --env SPRING_PROFILES_ACTIVE=local idp-core
+    mvn spring-boot:run -Dspring-boot.run.profiles=local,secret
     ```
 
 The app will be accessible at `http://localhost:8084`. In particular, the OpenAPI documentation will be available at `http://localhost:8084/swagger-ui.html`.

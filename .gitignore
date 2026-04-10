@@ -51,6 +51,13 @@ mvnw.cmd
 .env
 application-secret.*
 
+### DevContainer ###
+# Host certificates copied by .devcontainer/init-certs.sh — never commit cert files
+.devcontainer/local-certs/*
+!.devcontainer/local-certs/.gitkeep
+
+### Node.js ###
+**/node_modules/
 
 # BlueJ files
 *.ctxt
