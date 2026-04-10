@@ -50,7 +50,31 @@ Chosen option: option 1, **"Pragmatic Hexagonal Architecture,"** because it prov
 
 ### 1. Pragmatic Hexagonal Architecture (Ports and Adapters)
 
-This version keeps the "Port and Adapter" split but allows `@Service`, `@Transactional`, and `@Autowired` in the Domain.
+This version keeps the "Port and Adapter" split but allows `@Service`, `@Transactional` in the Domain.
+
+```text
+com.decathlon.idp
+├── domain/                         <-- The "Inside" (Pure Logic)
+│   ├── model/
+│   │   ├── Entity.java             # Logic: validateInternal()
+│   │   └── EntityTemplate.java     # Metadata: JQ scripts, etc.
+│   ├── ports/                      # The "Plugs" (Interfaces)
+│   │   ├── EntityRepository.java   # Driven Port
+│   │   └── EventPublisher.java     # Driven Port
+│   └── service/
+│       └── IngestionService.java   # The "Chef": Orchestrates the Story
+│
+└── infrastructure/                 <-- The "Outside" (Tools/Adapters)
+    ├── adapters/                             # Implementations of Ports
+    │   ├── api/
+    │   │   ├── EntityController.java         # Driving Adapter (Kafka/Webhooks)
+    │   │   └── EntityTemplateController.java # Metadata: JQ scripts, etc.
+    │   ├── persistence/
+    │   │   └── PostgresAdapter.java          # Implementation of EntityRepository
+    │   └── messaging/
+    │       └── KafkaEventAdapter.java        # Implementation of EventPublisher
+    └── config/                               # Spring Boot @Configuration
+```
 
 * Good, because it provides a **Unified Ingestion Port**: Every adapter maps its specific technical payload into the same Domain Model before calling an `IngestionService`. (Maintainability / Contributing in open source mode)
 * Good, because it isolates **Protocol Translation**: Mapping technical formats into Domain Entities happens strictly in Adapters. (Complexity of implementation)
@@ -64,6 +88,21 @@ This version keeps the "Port and Adapter" split but allows `@Service`, `@Transac
 * Bad, because it creates **Package Fragmentation**: Navigating between `domain.ports`, `domain.services`, and `infrastructure.adapters`. (Complexity of implementation)
 
 ### 2. Traditional MVC (Layered) Architecture
+
+```text
+  com.decathlon.idp
+  ├── api/                            # Controllers for Webhooks
+  ├── messaging/                      # Kafka Consumers & Producers
+  ├── service/
+  │   ├── IngestionService.java       # "God Class": Does mapping, logic, and saving
+  │   └── ValidationService.java      # Specific logic usually called by the IngestionService
+  ├── repository/
+  │   └── EntityRepository.java       # Direct Spring Data JPA (tightly coupled to DB schema)
+  ├── model/
+  │   ├── SoftwareEntity.java         # POJO / Entity with Getters & Setters
+  │   └── Blueprint.java              # Database representation of a Blueprint
+  └── config/                         # Centralized Spring & Framework configuration
+```
 
 * Good, because of the **"Lowest Common Denominator"**: Almost every Java developer on GitHub understands MVC. (Contributing in open source mode)
 * Good, because it is **Extremely Fast to Scaffold**: Fewer files and no interfaces required for internal calls. (Developer Velocity)
