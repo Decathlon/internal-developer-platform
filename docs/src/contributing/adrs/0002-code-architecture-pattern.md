@@ -2,8 +2,8 @@
 
 * Status: Proposed
 * Deciders:
-    * Maintainers team: Andrés BRAND, Matthieu WALTERSPIELER, Eve BERNHARD, Ferial OUKOUKES, Renny VANDOMBER
-    * Contributors team: `N/A`
+  * Maintainers team: Andrés BRAND, Matthieu WALTERSPIELER, Eve BERNHARD, Ferial OUKOUKES, Renny VANDOMBER
+  * Contributors team: `N/A`
 * Consulted: Étienne JACQUOT
 * Informed: `N/A`
 * Date: 2026-04-10
@@ -53,7 +53,7 @@ Chosen option: option 1, **"Pragmatic Hexagonal Architecture,"** because it prov
 This version keeps the "Port and Adapter" split but allows `@Service`, `@Transactional`, and `@Autowired` in the Domain.
 
 * Good, because it provides a **Unified Ingestion Port**: Every adapter maps its specific technical payload into the same Domain Model before calling an `IngestionService`. (Maintainability / Contributing in open source mode)
-* Good, because it isolates **Protocol Translation**: Mapping technical formats (JSON, Avro, Protobuf) into Domain Entities happens strictly in Adapters. (Complexity of implementation)
+* Good, because it isolates **Protocol Translation**: Mapping technical formats into Domain Entities happens strictly in Adapters. (Complexity of implementation)
 * Good, because it **Decouples Throughput from Logic**: High-volume sources (Kafka) and low-latency sources (Webhooks) can scale independently at the adapter level using Java 25 Virtual Threads. (FinOps / Complexity of implementation)
 * Good, because it facilitates **"Driven Ports" for Event Emission**: Downstream notifications (Kafka, SNS) are defined as ports, keeping the Domain focused on the *intent* of the event rather than the delivery. (Complexity of implementation / User experience)
 * Good, because it enables **"Dry Run" Testing of Side Effects**: We can verify event emission by mocking the outbound port in unit tests without a live message broker. (Testability)
@@ -77,6 +77,6 @@ This version keeps the "Port and Adapter" split but allows `@Service`, `@Transac
 ## More Information
 
 ### The "Pragmatic" Boundaries
+
 1. **No External Library Imports:** The Domain may use Spring libraries, but it may NOT import third-party integration libraries (e.g., specific Kafka clients or mapping engines like Jackson-JQ).
 2. **Ports as Contracts:** Every interaction with the "Outside World" must go through a Port interface.
-

@@ -37,3 +37,6 @@ ADR
 ADRs
 npm
 Docusaurus
+Matthieu
+Renny
+Pluggability
