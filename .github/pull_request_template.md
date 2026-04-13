@@ -43,7 +43,7 @@ The reviewer **must** double-check these points:
 ## How to test
 
 <!--
-Copy/paste the "test" section of the Jira or Github Issue here
+Copy/paste the "test" section of the Github Issue here
 -->
 
 Please **refer** (copy/paste) the test section **from the User Story**. This should include

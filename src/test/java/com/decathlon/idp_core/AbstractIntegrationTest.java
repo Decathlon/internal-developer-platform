@@ -27,9 +27,9 @@ import org.mockserver.model.Header;
 import org.mockserver.model.HttpRequest;
 import org.mockserver.model.HttpResponse;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.context.TestConfiguration;
+import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Import;
 import org.springframework.context.annotation.Primary;
@@ -89,7 +89,7 @@ public abstract class AbstractIntegrationTest {
 
     @Container
     @SuppressWarnings("rawtypes")
-    private static final JdbcDatabaseContainer postgres = new PostgreSQLContainer("postgres:14-alpine")
+    private static final JdbcDatabaseContainer postgres = new PostgreSQLContainer("postgres:18-alpine")
             .withDatabaseName("idp-core").withUsername("idp-core").withPassword("idp-core");
 
     @DynamicPropertySource
@@ -122,13 +122,13 @@ public abstract class AbstractIntegrationTest {
 
     @SafeVarargs
     public final void mockApiCall(HttpMethod httpMethod, String path, Object response,
-            Pair<String, String>... queryParameterList) {
+                                  Pair<String, String>... queryParameterList) {
         mockApiCall(httpMethod, path, OK, response, queryParameterList);
     }
 
     @SafeVarargs
     public final void mockApiCall(HttpMethod httpMethod, String path, HttpStatus status, Object response,
-            Pair<String, String>... queryParameterList) {
+                                  Pair<String, String>... queryParameterList) {
         startMockServer();
         HttpRequest requestDefinition = getRequestDefinition(httpMethod, path, queryParameterList);
         mockServerClient.clear(requestDefinition);
@@ -141,7 +141,7 @@ public abstract class AbstractIntegrationTest {
 
     @SafeVarargs
     private static HttpRequest getRequestDefinition(HttpMethod httpMethod, String path,
-            Pair<String, String>... queryParameterList) {
+                                                    Pair<String, String>... queryParameterList) {
         HttpRequest requestDefinition = request().withMethod(httpMethod.name()).withPath(path);
 
         if (queryParameterList != null) {
@@ -183,11 +183,11 @@ public abstract class AbstractIntegrationTest {
     @SuppressWarnings("null")
     public MvcResult postAndValidateBadRequest(String path, String jsonBodyfilePath, String errorDescription)
             throws Exception {
-       return mockMvc.perform(MockMvcRequestBuilders.post(path)
-                .contentType(APPLICATION_JSON)
-                .accept(APPLICATION_JSON)
-                .with(csrf())
-                .content(getJsonTestFileContent(jsonBodyfilePath)))
+        return mockMvc.perform(MockMvcRequestBuilders.post(path)
+                        .contentType(APPLICATION_JSON)
+                        .accept(APPLICATION_JSON)
+                        .with(csrf())
+                        .content(getJsonTestFileContent(jsonBodyfilePath)))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.error").value("BAD_REQUEST"))
                 .andExpect(jsonPath("$.error_description").value(errorDescription))

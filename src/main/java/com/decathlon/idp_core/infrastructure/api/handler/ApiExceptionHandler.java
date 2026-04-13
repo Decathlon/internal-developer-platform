@@ -74,7 +74,7 @@ public class ApiExceptionHandler {
     @ExceptionHandler(EntityTemplateNotFoundException.class)
     public ResponseEntity<ErrorResponse> handleTemplateNotFoundException(EntityTemplateNotFoundException ex) {
         log.warn("Template not found: {}", ex.getMessage());
-        ErrorResponse errorResponse = new ErrorResponse(HttpStatus.NOT_FOUND, ex.getMessage());
+        ErrorResponse errorResponse = new ErrorResponse(HttpStatus.NOT_FOUND.name(), ex.getMessage());
         return ResponseEntity.status(HttpStatus.NOT_FOUND).body(errorResponse);
     }
 
@@ -88,7 +88,7 @@ public class ApiExceptionHandler {
     public ResponseEntity<ErrorResponse> handleEntityTemplateAlreadyExistsException(
             EntityTemplateAlreadyExistsException ex) {
         log.warn("Entity template already exists: {}", ex.getMessage());
-        ErrorResponse errorResponse = new ErrorResponse(HttpStatus.CONFLICT, ex.getMessage());
+        ErrorResponse errorResponse = new ErrorResponse(HttpStatus.CONFLICT.name(), ex.getMessage());
         return ResponseEntity.status(HttpStatus.CONFLICT).body(errorResponse);
     }
 
@@ -148,7 +148,7 @@ public class ApiExceptionHandler {
      */
     @ExceptionHandler(EntityNotFoundException.class)
     public ResponseEntity<ErrorResponse> handleEntityNotFoundException(EntityNotFoundException ex) {
-        ErrorResponse errorResponse = new ErrorResponse(HttpStatus.NOT_FOUND, ex.getMessage());
+        ErrorResponse errorResponse = new ErrorResponse(HttpStatus.NOT_FOUND.name(), ex.getMessage());
         return ResponseEntity.status(HttpStatus.NOT_FOUND).body(errorResponse);
     }
     private String parseHttpMessageNotReadableError(String originalMessage) {
@@ -226,14 +226,14 @@ public class ApiExceptionHandler {
 
     @SuppressWarnings("null")
     private static ResponseEntity<ErrorResponse> createErrorResponse(HttpStatus httpStatus, String errorMessage) {
-        return new ResponseEntity<>(new ErrorResponse(httpStatus, errorMessage), httpStatus);
+        return new ResponseEntity<>(new ErrorResponse(httpStatus.name(), errorMessage), httpStatus);
     }
 
     @Getter
     @AllArgsConstructor
     @NoArgsConstructor(force = true)
     public static class ErrorResponse {
-        private HttpStatus error;
+        private String error;
         private String errorDescription;
     }
 }

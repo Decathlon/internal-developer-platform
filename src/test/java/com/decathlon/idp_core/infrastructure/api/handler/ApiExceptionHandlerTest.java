@@ -81,7 +81,7 @@ class ApiExceptionHandlerTest {
             assertEquals(HttpStatus.NOT_FOUND, response.getStatusCode());
             ErrorResponse body = response.getBody();
             assertNotNull(body);
-            assertEquals(HttpStatus.NOT_FOUND, body.getError());
+            assertEquals(HttpStatus.NOT_FOUND.name(), body.getError());
             assertEquals(errorMessage, body.getErrorDescription());
         }
 
@@ -112,7 +112,7 @@ class ApiExceptionHandlerTest {
             assertEquals(HttpStatus.CONFLICT, response.getStatusCode());
             ErrorResponse body = response.getBody();
             assertNotNull(body);
-            assertEquals(HttpStatus.CONFLICT, body.getError());
+            assertEquals(HttpStatus.CONFLICT.name(), body.getError());
             assertEquals(expectedMessage, body.getErrorDescription());
         }
     }
@@ -148,7 +148,7 @@ class ApiExceptionHandlerTest {
             assertEquals(HttpStatus.BAD_REQUEST, response.getStatusCode());
             ErrorResponse body = response.getBody();
             assertNotNull(body);
-            assertEquals(HttpStatus.BAD_REQUEST, body.getError());
+            assertEquals(HttpStatus.BAD_REQUEST.name(), body.getError());
             assertEquals("Field must not be null", body.getErrorDescription());
         }
 
@@ -180,8 +180,8 @@ class ApiExceptionHandlerTest {
             assertEquals(HttpStatus.BAD_REQUEST, response.getStatusCode());
             ErrorResponse body = response.getBody();
             assertNotNull(body);
-            assertEquals(HttpStatus.BAD_REQUEST, body.getError());
-            // Note: The order of messages may vary due to Set implementation
+            assertEquals(HttpStatus.BAD_REQUEST.name(), body.getError());
+
             String errorDescription = body.getErrorDescription();
             assertTrue(errorDescription.contains("Field1 must not be null"));
             assertTrue(errorDescription.contains("Field2 must not be blank"));
@@ -224,7 +224,7 @@ class ApiExceptionHandlerTest {
             assertEquals(HttpStatus.BAD_REQUEST, response.getStatusCode());
             ErrorResponse body = response.getBody();
             assertNotNull(body);
-            assertEquals(HttpStatus.BAD_REQUEST, body.getError());
+            assertEquals(HttpStatus.BAD_REQUEST.name(), body.getError());
             String errorDescription = body.getErrorDescription();
             assertTrue(errorDescription.contains("Field1 is required"));
             assertTrue(errorDescription.contains("Field2 must be valid"));
@@ -274,7 +274,7 @@ class ApiExceptionHandlerTest {
             assertEquals(HttpStatus.BAD_REQUEST, response.getStatusCode());
             ErrorResponse body = response.getBody();
             assertNotNull(body);
-            assertEquals(HttpStatus.BAD_REQUEST, body.getError());
+            assertEquals(HttpStatus.BAD_REQUEST.name(), body.getError());
             assertEquals("Invalid request body format", body.getErrorDescription());
         }
 
@@ -284,22 +284,22 @@ class ApiExceptionHandlerTest {
          */
         static Stream<Arguments> httpMessageNotReadableExceptionTestData() {
             return Stream.of(
-                Arguments.of(
-                    "Required request body is missing: public ResponseEntity",
-                    "Request body is required"
-                ),
-                Arguments.of(
-                    "JSON parse error: Unexpected character",
-                    "Invalid JSON format in request body"
-                ),
-                Arguments.of(
-                    "Cannot deserialize value of type `PropertyType` from String \"INVALID_TYPE\": not one of the values accepted for Enum class",
-                    "Invalid value 'INVALID_TYPE' for property 'type'"
-                ),
-                Arguments.of(
-                    "Cannot deserialize value of type `UnknownEnum` from String \"VALUE\": not one of the values accepted for Enum class",
-                    "Invalid enum value in request body"
-                )
+                    Arguments.of(
+                            "Required request body is missing: public ResponseEntity",
+                            "Request body is required"
+                    ),
+                    Arguments.of(
+                            "JSON parse error: Unexpected character",
+                            "Invalid JSON format in request body"
+                    ),
+                    Arguments.of(
+                            "Cannot deserialize value of type `PropertyType` from String \"INVALID_TYPE\": not one of the values accepted for Enum class",
+                            "Invalid value 'INVALID_TYPE' for property 'type'"
+                    ),
+                    Arguments.of(
+                            "Cannot deserialize value of type `UnknownEnum` from String \"VALUE\": not one of the values accepted for Enum class",
+                            "Invalid enum value in request body"
+                    )
             );
         }
 
@@ -342,7 +342,7 @@ class ApiExceptionHandlerTest {
             assertEquals(HttpStatus.BAD_REQUEST, response.getStatusCode());
             ErrorResponse body = response.getBody();
             assertNotNull(body);
-            assertEquals(HttpStatus.BAD_REQUEST, body.getError());
+            assertEquals(HttpStatus.BAD_REQUEST.name(), body.getError());
             assertEquals(expectedErrorDescription, body.getErrorDescription());
         }
     }
@@ -376,7 +376,7 @@ class ApiExceptionHandlerTest {
             assertEquals(HttpStatus.INTERNAL_SERVER_ERROR, response.getStatusCode());
             ErrorResponse body = response.getBody();
             assertNotNull(body);
-            assertEquals(HttpStatus.INTERNAL_SERVER_ERROR, body.getError());
+            assertEquals(HttpStatus.INTERNAL_SERVER_ERROR.name(), body.getError());
             assertEquals("An unexpected error occurred. Please try again later.", body.getErrorDescription());
         }
     }
@@ -404,11 +404,11 @@ class ApiExceptionHandlerTest {
             String description = "Test error message";
 
             // When
-            ErrorResponse errorResponse = new ErrorResponse(status, description);
+            ErrorResponse errorResponse = new ErrorResponse(status.name(), description);
 
             // Then
             assertNotNull(errorResponse);
-            assertEquals(status, errorResponse.getError());
+            assertEquals(status.name(), errorResponse.getError());
             assertEquals(description, errorResponse.getErrorDescription());
         }
 
