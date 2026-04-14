@@ -1,6 +1,6 @@
 ---
 title: Installation
-description: Install IDP-Core to test the product
+description: Install the Internal Developer Platform to test the product
 ---
 
 This guide covers multiple ways to install and run the Internal Developer Platform in your local environment for testing and evaluation.

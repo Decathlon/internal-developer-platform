@@ -1,6 +1,6 @@
 ---
 title: Development Setup
-description: Set up your local development environment for IDP-Core
+description: Set up your local development environment for the Internal Developer Platform
 ---
 
 This guide focuses on using the devcontainer so you don’t need local Java/Maven setup.
@@ -17,11 +17,11 @@ This guide focuses on using the devcontainer so you don’t need local Java/Mave
 
 ```bash
 # Clone your fork
-git clone https://github.com/YOUR_USERNAME/idp-core.git
-cd idp-core
+git clone https://github.com/YOUR_USERNAME/internal-developer-platform.git
+cd internal-developer-platform
 
 # Add upstream remote
-git remote add upstream https://github.com/decathlon/idp-core.git
+git remote add upstream https://github.com/decathlon/internal-developer-platform.git
 ```
 
 ---

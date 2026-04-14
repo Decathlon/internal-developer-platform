@@ -106,7 +106,7 @@ docker run -d \
   -e SPRING_DATASOURCE_URL=jdbc:postgresql://host.docker.internal:5432/idp \
   -e SPRING_DATASOURCE_USERNAME=idp \
   -e SPRING_DATASOURCE_PASSWORD=idp \
-  ghcr.io/decathlon/idp-core:latest
+  decathlon/internal-developer-platform:latest
 ```
 
 ### With Volume Mounts
