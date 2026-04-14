@@ -21,6 +21,8 @@
 
   "forwardPorts": [8084, 5437, 8000],
 
+  "runArgs": ["--privileged"],
+
   "mounts": [
     "source=idp-core-maven-cache,target=/home/vscode/.m2,type=volume"
   ],
@@ -41,7 +43,7 @@
     }
   },
 
-  "onCreateCommand": "sudo chown -R vscode:vscode /home/vscode/.m2 && bash -lc 'if command -v mvn >/dev/null 2>&1 && mvn -version 2>/dev/null | grep -q \"Apache Maven 3.9.9\"; then echo \"Maven 3.9.9 already installed, skipping download\"; else wget https://archive.apache.org/dist/maven/maven-3/3.9.9/binaries/apache-maven-3.9.9-bin.tar.gz -O /tmp/maven.tar.gz && sudo tar -xzf /tmp/maven.tar.gz -C /opt && sudo ln -sf /opt/apache-maven-3.9.9/bin/mvn /usr/local/bin/mvn && rm /tmp/maven.tar.gz; fi'",
+  "onCreateCommand": "sudo mkdir -p /home/vscode/.m2 && sudo chown -R vscode:vscode /home/vscode/.m2",
   "postCreateCommand": "cd docs && uv sync",
   "postStartCommand": "bash -lc 'if ! docker info >/dev/null 2>&1; then sudo mkdir -p /var/run /var/lib/docker && sudo nohup dockerd >/tmp/dockerd.log 2>&1 & fi; for i in $(seq 1 30); do docker info >/dev/null 2>&1 && break; sleep 1; done; docker compose up -d'",
 
