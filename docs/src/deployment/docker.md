@@ -18,8 +18,8 @@ Deploy IDP-Core using Docker for development, testing, or small-scale production
 ### 1. Clone the Repository
 
 ```bash
-git clone https://github.com/decathlon/idp-core.git
-cd idp-core
+git clone https://github.com/decathlon/internal-developer-platform.git
+cd internal-developer-platform
 ```
 
 ### 2. Start Services
@@ -118,7 +118,7 @@ docker run -d \
   -v $(pwd)/config:/app/config:ro \
   -v $(pwd)/logs:/app/logs \
   -e SPRING_CONFIG_ADDITIONAL_LOCATION=/app/config/ \
-  ghcr.io/decathlon/idp-core:latest
+  decathlon/internal-developer-platform:latest
 ```
 
 ### With External Network
@@ -144,7 +144,7 @@ docker run -d \
   -e SPRING_DATASOURCE_URL=jdbc:postgresql://postgres:5432/idp \
   -e SPRING_DATASOURCE_USERNAME=idp \
   -e SPRING_DATASOURCE_PASSWORD=idp \
-  ghcr.io/decathlon/idp-core:latest
+  decathlon/internal-developer-platform:latest
 ```
 
 ---
@@ -163,10 +163,10 @@ Then build and run the Docker image:
 
 ```bash
 # Build
-docker build -t idp-core:local .
+docker build -t idp:local .
 
 # Run
-docker run -d -p 8080:8080 idp-core:local
+docker run -d -p 8080:8080 idp:local
 ```
 
 ### Multi-stage Build
