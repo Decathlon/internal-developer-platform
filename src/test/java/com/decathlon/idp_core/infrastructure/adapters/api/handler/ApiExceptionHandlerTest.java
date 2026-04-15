@@ -380,12 +380,8 @@ class ApiExceptionHandlerTest {
         @Test
         @DisplayName("Should create ErrorResponse with no args constructor")
         void shouldCreateErrorResponseWithNoArgsConstructor() {
-            // When
             ErrorResponse errorResponse = new ErrorResponse();
-
-            // Then
             assertNotNull(errorResponse);
-            // Note: With @NoArgsConstructor(force = true), fields will be null initially
         }
     }
 }

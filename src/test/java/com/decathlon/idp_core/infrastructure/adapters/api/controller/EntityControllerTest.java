@@ -32,10 +32,9 @@ public class EntityControllerTest extends AbstractIntegrationTest {
     private static final String ENTITIES_BY_TEMPLATE_IDENTIFIER_PATH = "/api/v1/entities/{template-identifier}";
     private static final String ENTITY_JSON_FILES_TEST_PATH = "integration_test/json/entity/v1/";
 
-    ///
+
     /// Tests for GET /api/v1/entities/{template-identifier} endpoint (paginated
     /// retrieval).
-    ////
     @Nested
     @DisplayName("GET /api/v1/entities/{template-identifier} - Get Templates Paginated")
     class GetEntitiesByTemplateIdentifierTests {
@@ -114,10 +113,8 @@ public class EntityControllerTest extends AbstractIntegrationTest {
         }
     }
 
-    ///
     /// Tests for GET /api/v1/entities/{template-identifier}/identifier/{identifier}
     /// endpoint (lookup by template and identifier).
-    ////
     @Nested
     @DisplayName("GET /api/v1/entities/{template-identifier}/identifier/{identifier} - Get Entities by template identifier and entity identifier")
     class GetEntitiesByTemplateAndEntityIdentifierTests {
