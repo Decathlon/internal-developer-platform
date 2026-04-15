@@ -1,15 +1,15 @@
 -- Sample data for IDP Core domain models - Enhanced with 10 templates
 
 -- Clear existing data (for repeatable migrations)
-DELETE FROM idp_core.entity_template_relations_definitions;
-DELETE FROM idp_core.entity_template_properties_definitions;
-DELETE FROM idp_core.entity_template;
-DELETE FROM idp_core.relation_definition;
-DELETE FROM idp_core.property_definition;
-DELETE FROM idp_core.property_rules;
+DELETE FROM entity_template_relations_definitions;
+DELETE FROM entity_template_properties_definitions;
+DELETE FROM entity_template;
+DELETE FROM relation_definition;
+DELETE FROM property_definition;
+DELETE FROM property_rules;
 
 -- Insert comprehensive property rules
-INSERT INTO idp_core.property_rules (id, format, enum_values, regex, max_length, min_length, max_value, min_value) VALUES
+INSERT INTO property_rules (id, format, enum_values, regex, max_length, min_length, max_value, min_value) VALUES
 -- Email validation rule
 ('550e8400-e29b-41d4-a716-446655440001', 'EMAIL', NULL, '^[A-Za-z0-9+_.-]+@(.+)$', 100, 5, NULL, NULL),
 -- Environment enum rule
@@ -40,7 +40,7 @@ INSERT INTO idp_core.property_rules (id, format, enum_values, regex, max_length,
 ('550e8400-e29b-41d4-a716-446655440014', NULL, NULL, '^[a-zA-Z0-9-_]+$', 30, 2, NULL, NULL);
 
 -- Insert diverse property definitions
-INSERT INTO idp_core.property_definition (id, name, description, type, required, rules_id) VALUES
+INSERT INTO property_definition (id, name, description, type, required, rules_id) VALUES
 -- Basic application properties
 ('550e8400-e29b-41d4-a716-446655440020', 'applicationName', 'Name of the application', 'STRING', true, '550e8400-e29b-41d4-a716-446655440003'),
 ('550e8400-e29b-41d4-a716-446655440021', 'ownerEmail', 'Email address of the application owner', 'STRING', true, '550e8400-e29b-41d4-a716-446655440001'),
@@ -77,7 +77,7 @@ INSERT INTO idp_core.property_definition (id, name, description, type, required,
 ('550e8400-e29b-41d4-a716-446655440044', 'dataRetentionDays', 'Data retention period in days', 'NUMBER', false, NULL);
 
 -- Insert diverse relation definitions
-INSERT INTO idp_core.relation_definition (id, name, target_entity_identifier, required, to_many) VALUES
+INSERT INTO relation_definition (id, name, target_entity_identifier, required, to_many) VALUES
 -- Service dependencies
 ('550e8400-e29b-41d4-a716-446655440050', 'dependencies', 'service', false, true),
 ('550e8400-e29b-41d4-a716-446655440051', 'upstream_services', 'service', false, true),
@@ -105,7 +105,7 @@ INSERT INTO idp_core.relation_definition (id, name, target_entity_identifier, re
 ('550e8400-e29b-41d4-a716-446655440065', 'file_storage', 'storage', false, false);
 
 -- Insert 10 diverse entity templates
-INSERT INTO idp_core.entity_template (id, identifier, description) VALUES
+INSERT INTO entity_template (id, identifier, description) VALUES
 ('550e8400-e29b-41d4-a716-446655440070', 'web-service', 'Template for REST API web services'),
 ('550e8400-e29b-41d4-a716-446655440071', 'microservice', 'Template for microservice applications'),
 ('550e8400-e29b-41d4-a716-446655440072', 'batch-job', 'Template for batch processing jobs'),
@@ -118,7 +118,7 @@ INSERT INTO idp_core.entity_template (id, identifier, description) VALUES
 ('550e8400-e29b-41d4-a716-446655440079', 'monitoring-service', 'Template for monitoring and observability services');
 
 -- Link web-service template (comprehensive web API)
-INSERT INTO idp_core.entity_template_properties_definitions (entity_template_id, properties_definitions_id) VALUES
+INSERT INTO entity_template_properties_definitions (entity_template_id, properties_definitions_id) VALUES
 ('550e8400-e29b-41d4-a716-446655440070', '550e8400-e29b-41d4-a716-446655440020'), -- applicationName
 ('550e8400-e29b-41d4-a716-446655440070', '550e8400-e29b-41d4-a716-446655440021'), -- ownerEmail
 ('550e8400-e29b-41d4-a716-446655440070', '550e8400-e29b-41d4-a716-446655440022'), -- environment
@@ -132,7 +132,7 @@ INSERT INTO idp_core.entity_template_properties_definitions (entity_template_id,
 ('550e8400-e29b-41d4-a716-446655440070', '550e8400-e29b-41d4-a716-446655440035'), -- programmingLanguage
 ('550e8400-e29b-41d4-a716-446655440070', '550e8400-e29b-41d4-a716-446655440036'); -- framework
 
-INSERT INTO idp_core.entity_template_relations_definitions (entity_template_id, relations_definitions_id) VALUES
+INSERT INTO entity_template_relations_definitions (entity_template_id, relations_definitions_id) VALUES
 ('550e8400-e29b-41d4-a716-446655440070', '550e8400-e29b-41d4-a716-446655440053'), -- database
 ('550e8400-e29b-41d4-a716-446655440070', '550e8400-e29b-41d4-a716-446655440054'), -- cache
 ('550e8400-e29b-41d4-a716-446655440070', '550e8400-e29b-41d4-a716-446655440057'), -- networks
@@ -140,7 +140,7 @@ INSERT INTO idp_core.entity_template_relations_definitions (entity_template_id, 
 ('550e8400-e29b-41d4-a716-446655440070', '550e8400-e29b-41d4-a716-446655440061'); -- secrets
 
 -- Link microservice template (lightweight service)
-INSERT INTO idp_core.entity_template_properties_definitions (entity_template_id, properties_definitions_id) VALUES
+INSERT INTO entity_template_properties_definitions (entity_template_id, properties_definitions_id) VALUES
 ('550e8400-e29b-41d4-a716-446655440071', '550e8400-e29b-41d4-a716-446655440020'), -- applicationName
 ('550e8400-e29b-41d4-a716-446655440071', '550e8400-e29b-41d4-a716-446655440021'), -- ownerEmail
 ('550e8400-e29b-41d4-a716-446655440071', '550e8400-e29b-41d4-a716-446655440022'), -- environment

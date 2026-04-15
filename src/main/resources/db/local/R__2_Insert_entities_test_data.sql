@@ -1,5 +1,5 @@
--- Insert sample entities into idp_core.entity
-INSERT INTO idp_core.entity (id, identifier, name, template_identifier)
+-- Insert sample entities into entity
+INSERT INTO entity (id, identifier, name, template_identifier)
 VALUES
   ('550e8400-e29b-41d4-a716-446655440100', 'web-api-1', 'Web API 1', 'web-service'),
   ('550e8400-e29b-41d4-a716-446655440101', 'web-api-2', 'Web API 2', 'web-service'),
