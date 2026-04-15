@@ -18,11 +18,14 @@ public interface JpaEntityTemplateRepository extends JpaRepository<EntityTemplat
     @EntityGraph(attributePaths = {"propertiesDefinitions", "propertiesDefinitions.rules", "relationsDefinitions"})
     Optional<EntityTemplateJpaEntity> findByIdentifier(String templateIdentifier);
 
+    @Override
     @EntityGraph(attributePaths = {"propertiesDefinitions", "propertiesDefinitions.rules", "relationsDefinitions"})
     Optional<EntityTemplateJpaEntity> findById(UUID id);
 
+    @Override
     @EntityGraph(attributePaths = {"propertiesDefinitions", "propertiesDefinitions.rules", "relationsDefinitions"})
     Page<EntityTemplateJpaEntity> findAll(Pageable pageable);
+
 
     boolean existsByIdentifier(String identifier);
 
