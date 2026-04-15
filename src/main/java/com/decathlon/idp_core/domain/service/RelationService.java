@@ -5,7 +5,7 @@ import java.util.List;
 import org.springframework.stereotype.Service;
 
 import com.decathlon.idp_core.domain.model.entity.RelationAsTargetSummary;
-import com.decathlon.idp_core.domain.repository.RelationRepository;
+import com.decathlon.idp_core.domain.ports.RelationRepositoryPort;
 
 import lombok.AllArgsConstructor;
 
@@ -19,7 +19,7 @@ import lombok.AllArgsConstructor;
 @AllArgsConstructor
 public class RelationService {
 
-    private final RelationRepository relationRepository;
+    private final RelationRepositoryPort relationRepository;
 
     /**
      * Finds all relation ownerships where the specified entity identifiers are the target.

@@ -25,7 +25,7 @@ import java.util.UUID;
  *
  * @author IDP Core Team
  * @since 1.0.0
- * @see com.decathlon.idp_core.infrastructure.api.handler.ApiExceptionHandler
+ * @see com.decathlon.idp_core.infrastructure.adapters.api.handler.ApiExceptionHandler
  */
 public class EntityTemplateNotFoundException extends RuntimeException {
 

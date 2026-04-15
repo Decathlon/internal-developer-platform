@@ -10,8 +10,8 @@ import com.decathlon.idp_core.domain.exception.EntityNotFoundException;
 import com.decathlon.idp_core.domain.exception.EntityTemplateNotFoundException;
 import com.decathlon.idp_core.domain.model.entity.Entity;
 import com.decathlon.idp_core.domain.model.entity.EntitySummary;
-import com.decathlon.idp_core.domain.repository.EntityRepository;
-import com.decathlon.idp_core.domain.repository.EntityTemplateRepository;
+import com.decathlon.idp_core.domain.ports.EntityRepositoryPort;
+import com.decathlon.idp_core.domain.ports.EntityTemplateRepositoryPort;
 
 import jakarta.transaction.Transactional;
 import jakarta.validation.Valid;
@@ -27,8 +27,8 @@ import lombok.AllArgsConstructor;
 @Service
 @AllArgsConstructor
 public class EntityService {
-    private final EntityRepository entityRepository;
-    private final EntityTemplateRepository entityTemplateRepository;
+    private final EntityRepositoryPort entityRepository;
+    private final EntityTemplateRepositoryPort entityTemplateRepository;
 
     /**
      * Retrieves a paginated list of entities by template identifier.
@@ -80,7 +80,6 @@ public class EntityService {
      * @param entity the entity to create (validated)
      * @return the persisted entity
      */
-     @SuppressWarnings("null")
     public Entity createEntity(@Valid Entity entity) {
         // Add validations
         return entityRepository.save(entity);

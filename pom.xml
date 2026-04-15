@@ -26,6 +26,7 @@
         <testcontainers.version>1.21.4</testcontainers.version>
         <maven-compiler.version>3.15.0</maven-compiler.version>
         <jacoco-maven.version>0.8.14</jacoco-maven.version>
+        <mapstruct.version>1.5.5.Final</mapstruct.version>
     </properties>
 
     <!--  Swagger version management to avoid conflicts -->
@@ -87,6 +88,19 @@
             <groupId>org.projectlombok</groupId>
             <artifactId>lombok</artifactId>
             <version>${lombok.version}</version>
+            <scope>provided</scope>
+        </dependency>
+
+        <!-- MapStruct for object mapping -->
+        <dependency>
+            <groupId>org.mapstruct</groupId>
+            <artifactId>mapstruct</artifactId>
+            <version>${mapstruct.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.mapstruct</groupId>
+            <artifactId>mapstruct-processor</artifactId>
+            <version>${mapstruct.version}</version>
             <scope>provided</scope>
         </dependency>
 
@@ -261,6 +275,17 @@
                             <groupId>org.projectlombok</groupId>
                             <artifactId>lombok</artifactId>
                             <version>${lombok.version}</version>
+                        </path>
+                        <path>
+                            <groupId>org.mapstruct</groupId>
+                            <artifactId>mapstruct-processor</artifactId>
+                            <version>${mapstruct.version}</version>
+                        </path>
+                        <!-- MapStruct-Lombok integration -->
+                        <path>
+                            <groupId>org.projectlombok</groupId>
+                            <artifactId>lombok-mapstruct-binding</artifactId>
+                            <version>0.2.0</version>
                         </path>
                     </annotationProcessorPaths>
                 </configuration>

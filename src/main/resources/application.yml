@@ -2,76 +2,130 @@
 spring:
   web:
     resources:
+      # Disables serving of static resources (HTML, JS, CSS, images).
       add-mappings: false
+
   jackson:
+    # Serializes all JSON fields as snake_case (e.g. templateIdentifier → template_identifier).
     property-naming-strategy: SNAKE_CASE
+
   profiles:
+    # Activates a Spring profile from the env var SPRING_PROFILE (defaults to none).
     active: ${SPRING_PROFILE:}
+
   datasource:
+    # PostgreSQL JDBC URL. prepareThreshold=0 disables server-side prepared statements
+    # which avoids issues with PgBouncer in transaction mode.
     url: jdbc:postgresql://${DATASOURCE_HOST}:${DATASOURCE_PORT}/${DATASOURCE_DB_NAME}?prepareThreshold=0
     username: ${DATASOURCE_USERNAME}
     password: ${DATASOURCE_PASSWORD}
     driver-class-name: org.postgresql.Driver
     hikari:
+      # Max concurrent DB connections in the pool.
       maximum-pool-size: 10
+      # Minimum number of idle connections kept alive in the pool.
       minimum-idle: 5
+      # Sets the default schema for all connections in the pool.
       schema: idp_core
+
   flyway:
+    # Schema Flyway will create/manage its history table in.
     default-schema: idp_core
+    # Location of SQL migration scripts on the classpath.
     locations: classpath:db/migration
+    # Marks an existing schema as the baseline instead of failing on first run.
     baseline-on-migrate: true
+    # Verifies migration checksums on startup. Fails fast if a script was changed after running.
     validate-on-migrate: true
+
   security:
     oauth2:
       client:
         registration:
           idp-core:
+            # OAuth2 flow used to obtain tokens (machine-to-machine, no user login).
             authorization-grant-type: client_credentials
+            # OAuth2 client ID used when requesting tokens.
             client-id: ${CLIENT_CREDENTIAL_CLIENT_ID}
         provider:
           idp-core:
+            # Token endpoint the app uses to obtain access tokens.
             token-uri: ${OAUTH_TOKEN_URI}
       resourceserver:
         jwt:
+          # JWKS URI used to validate incoming JWT tokens from API callers.
+          # required for JWT signature validation (overridden by JwtConfiguration bean).
           jwk-set-uri: ${OAUTH_JWK_URI}
+
   jpa:
-    open-in-view: true
+    # Keeps the Hibernate session open for the entire HTTP request lifecycle.
+    # Must stay FALSE – we use @EntityGraph for eager loading. Setting to true
+    # would re-introduce silent N+1 lazy queries and hold DB connections unnecessarily.
+    open-in-view: false
     hibernate:
-      ddl-auto: none  # Disable JPA schema auto-generation, use Flyway instead
+      # Hibernate must NOT manage the schema – Flyway owns all DDL.
+      ddl-auto: none
     properties:
+      # Disables the JPA shared (L2) cache. We do not use a second-level cache.
       jakarta.persistence.sharedCache.mode: UNSPECIFIED
       hibernate:
+        # Reorders INSERT and UPDATE statements to improve JDBC batch efficiency.
+        # works together with batch_size to reduce round-trips.
         order_inserts: true
         order_updates: true
         jdbc:
+          # Number of statements grouped into one JDBC batch.
+          # significantly reduces DB round-trips on bulk writes.
           batch_size: 500
+          # Allows batching of versioned entities (those with @Version).
+          # required for batching to work correctly with optimistic locking.
           batch_versioned_data: true
+
 springdoc:
   swagger-ui:
+    # Sorts API tags alphabetically in the Swagger UI.
+    # Improves readability of the API documentation.
     tagsSorter: alpha
+    # Hides the default petstore URL in the Swagger UI.
+    # Avoids confusion with an irrelevant default example.
     disable-swagger-default-url: true
+    # Sets which URL is selected by default in the Swagger UI dropdown.
+    # Ensures the correct API spec is shown first.
     urls-primary-name: internal
+
 app:
+  # Base URL of this service, used to build self-referencing links.
   idp-core-prefix-url: ${IDP_CORE_PREFIX_URL}
 
 logging:
   level:
+    # Application log level, defaults to INFO. Override per environment via LOG_LEVEL env var.
     com.decathlon: ${LOG_LEVEL:INFO}
+    # Suppresses noisy Spring context startup logs at WARN level.
     org.springframework.context.support: WARN
+    # Suppresses a specific repetitive bean registration delegate log line.
     org.springframework.context.support.PostProcessorRegistrationDelegate: ERROR
 
 management:
   endpoint:
     health:
       probes:
+        # Enables liveness (/actuator/health/liveness) and
+        # readiness (/actuator/health/readiness) probes.
         enabled: true
       group:
         liveness:
+          # Liveness checks: is the JVM alive + can it reach the DB?
+          # DB check ensures the pod is restarted if it loses connectivity.
           include:
             - livenessState
             - db
         readiness:
+          # Readiness checks: is the app ready to serve traffic + is DB accessible?
+          # Prevents traffic being routed to a pod before DB migrations complete.
           include:
             - readinessState
             - db
+      # Shows full health details only to authenticated users.
+      # Avoids leaking internal infrastructure info to unauthenticated callers.
       show-details: when_authorized
