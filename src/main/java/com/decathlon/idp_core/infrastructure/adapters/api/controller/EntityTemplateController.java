@@ -33,7 +33,6 @@ import static org.springframework.http.HttpStatus.OK;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.web.PageableDefault;
-import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -44,8 +43,6 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
-import com.decathlon.idp_core.domain.exception.EntityTemplateAlreadyExistsException;
-import com.decathlon.idp_core.domain.exception.EntityTemplateNotFoundException;
 import com.decathlon.idp_core.domain.model.entity_template.EntityTemplate;
 import com.decathlon.idp_core.domain.service.EntityTemplateService;
 import com.decathlon.idp_core.infrastructure.adapters.api.configuration.SwaggerConfiguration.TemplatePageResponse;
@@ -65,37 +62,23 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 
-/**
- * REST controller for managing Entity Template resources.
- * <p>
- * This controller provides REST API endpoints for Entity Template operations
- * including:
- * <ul>
- * <li>Retrieving paginated lists of templates</li>
- * <li>Finding templates by their unique identifier</li>
- * <li>Creating new templates with validation</li>
- * <li>Deleting templates by identifier</li>
- * </ul>
- * </p>
- * <p>
- * The controller follows Domain-Driven Design (DDD) principles by:
- * <ul>
- * <li>Working with domain entities through the service layer</li>
- * <li>Handling DTO mapping at the API boundary</li>
- * <li>Delegating business logic to the service layer</li>
- * </ul>
- * </p>
- * <p>
- * All endpoints are documented with OpenAPI/Swagger annotations and handle
- * validation errors through the centralized {@link ApiExceptionHandler}.
- * </p>
- *
- * @author IDP Core Team
- * @see EntityTemplateService
- * @see EntityTemplateMapper
- * @see ApiExceptionHandler
- * @since 1.0.0
- */
+/// REST API adapter for Entity Template management operations.
+///
+/// **Infrastructure responsibilities:**
+/// - HTTP endpoint exposure for template CRUD operations with OpenAPI documentation
+/// - Request/response DTO mapping between API layer and domain services
+/// - REST-compliant status codes and pagination support for management interfaces
+/// - Validation integration with centralized exception handling
+///
+/// **API design principles:**
+/// - Resource-based URLs following REST conventions for template management
+/// - Comprehensive OpenAPI documentation for interactive testing and client generation
+/// - Consistent error responses through centralized [ApiExceptionHandler]
+/// - Domain-driven design separation with business logic in service layer
+///
+/// **Template management workflow:** Supports full lifecycle operations including
+/// paginated listing, identifier-based lookup, creation with uniqueness validation,
+/// updates with conflict resolution, and safe deletion with referential checks.
 @RestController
 @RequiredArgsConstructor
 @RequestMapping("/api/v1/entity-templates")
@@ -105,24 +88,11 @@ public class EntityTemplateController {
         private final EntityTemplateService entityTemplateService;
         private final EntityTemplateMapper templateMapper;
 
-        /**
-         * Retrieves a paginated list of Entity Templates.
-         * <p>
-         * This endpoint supports pagination and sorting through the {@code Pageable}
-         * parameter.
-         * Default pagination is set to 20 items per page, sorted by identifier.
-         * </p>
-         * <p>
-         * The response includes pagination metadata such as total elements, total
-         * pages,
-         * current page number, and the templates for the requested page.
-         * </p>
-         *
-         * @param pageable pagination and sorting parameters with default size of 20 and
-         *                 sort by identifier
-         * @return {@link ResponseEntity} containing a {@link Page} of
-         *         {@link EntityTemplateDtoOut} with HTTP 200 status
-         */
+        /// Retrieves paginated entity templates for administrative interfaces.
+        ///
+        /// **API contract:** Provides paginated template listings with configurable sorting
+        /// and page size. Defaults to 20 templates per page sorted by identifier for
+        /// consistent management interface display.
         @Operation(summary = ENDPOINT_GET_TEMPLATES_PAGINATED_SUMMARY, description = ENDPOINT_GET_TEMPLATES_PAGINATED_DESCRIPTION)
         @ApiResponse(responseCode = OK_CODE, description = RESPONSE_TEMPLATES_PAGINATED_SUCCESS, content = @Content(schema = @Schema(implementation = TemplatePageResponse.class)))
         @ApiResponse(responseCode = BAD_REQUEST_CODE, description = RESPONSE_INVALID_PAGINATION, content = {
@@ -138,23 +108,11 @@ public class EntityTemplateController {
                 return templates.map(templateMapper::fromEntityTemplatetoDto);
         }
 
-        /**
-         * Retrieves an Entity Template by its unique identifier.
-         * <p>
-         * This endpoint allows clients to fetch a specific template using its business
-         * identifier
-         * rather than its internal UUID. The identifier is case-sensitive and must
-         * match exactly.
-         * </p>
-         *
-         * @param identifier the unique business identifier of the template to retrieve,
-         *                   must not be null or empty
-         * @return {@link ResponseEntity} containing the {@link EntityTemplateDtoOut}
-         *         with HTTP 200 status if found
-         * @throws EntityTemplateNotFoundException if no template exists with the given
-         *                                         identifier (returns HTTP 404)
-         * @throws IllegalArgumentException        if identifier is null or empty
-         */
+        /// Retrieves specific entity template by business identifier.
+        ///
+        /// **API contract:** Returns complete template definition using case-sensitive
+        /// business identifier lookup. Provides HTTP 404 for non-existent templates
+        /// with meaningful error messages for API consumers.
         @Operation(summary = ENDPOINT_GET_TEMPLATE_BY_IDENTIFIER_SUMMARY, description = ENDPOINT_GET_TEMPLATE_BY_IDENTIFIER_DESCRIPTION)
         @ApiResponse(responseCode = OK_CODE, description = RESPONSE_TEMPLATE_FOUND, content = {
                         @Content(schema = @Schema(implementation = EntityTemplateDtoOut.class)) })
@@ -167,25 +125,11 @@ public class EntityTemplateController {
                 return templateMapper.fromEntityTemplatetoDto(entity);
         }
 
-        /**
-         * Creates a new Entity Template.
-         * <p>
-         * This endpoint accepts a template definition and creates a new template in the
-         * system. The request body is validated using Bean Validation annotations, and
-         * the
-         * template identifier must be unique across all existing templates.
-         * </p>
-         * <p>
-         * The created template is returned in the response body with its generated UUID
-         * and any system-assigned metadata.
-         * </p>
-         *
-         * @param templateDto the template data to create, must not be null and must
-         *                    pass validation
-         * @return the created {@link EntityTemplateDtoOut} with HTTP 201 status
-         * @throws EntityTemplateAlreadyExistsException if template identifier already
-         *                                              exists (returns HTTP 409)
-         */
+        /// Creates new entity template with validation and uniqueness checks.
+        ///
+        /// **API contract:** Accepts template creation payload with comprehensive validation.
+        /// Returns HTTP 201 with created template including generated identifiers, or
+        /// HTTP 409 for duplicate identifier conflicts.
         @Operation(summary = ENDPOINT_POST_TEMPLATE_SUMMARY, description = ENDPOINT_POST_TEMPLATE_DESCRIPTION)
         @ApiResponse(responseCode = CREATED_CODE, description = RESPONSE_TEMPLATE_CREATED, content = {
                         @Content(schema = @Schema(implementation = EntityTemplateDtoOut.class)) })
@@ -199,12 +143,10 @@ public class EntityTemplateController {
                 return templateMapper.fromEntityTemplatetoDto(savedEntity);
         }
 
-        /**
-         * Update an existing Entity Template by its unique template identifier.
-         *
-         * @param identifier         The template identifier
-         * @param updatedTemplateDto The entity data to update with
-         */
+        /// Updates existing entity template with complete replacement strategy.
+        ///
+        /// **API contract:** Replaces entire template definition while preserving identifier.
+        /// Returns updated template with HTTP 200, or HTTP 404 for non-existent templates.
         @Operation(summary = ENDPOINT_PUT_TEMPLATE_SUMMARY, description = ENDPOINT_PUT_TEMPLATE_DESCRIPTION)
         @ApiResponse(responseCode = OK_CODE, description = RESPONSE_TEMPLATE_UPDATED, content = {
                         @Content(schema = @Schema(implementation = EntityTemplateDtoOut.class)) })
@@ -219,22 +161,11 @@ public class EntityTemplateController {
                 return templateMapper.fromEntityTemplatetoDto(entityTemplate);
         }
 
-        /**
-         * Deletes an Entity Template by its unique identifier.
-         * <p>
-         * This endpoint permanently removes the specified template from the system.
-         * The operation is idempotent - if the template doesn't exist, it will still
-         * return HTTP 204 (No Content) status.
-         * </p>
-         * <p>
-         * <strong>Warning:</strong> This operation cannot be undone. Ensure that the
-         * template is not referenced by other entities before deletion.
-         * </p>
-         *
-         * @param identifier the unique business identifier of the template to delete,
-         *                   must not be null or empty
-         * @throws IllegalArgumentException if identifier is null or empty
-         */
+        /// Deletes entity template by business identifier with safety checks.
+        ///
+        /// **API contract:** Permanently removes template with HTTP 204 response.
+        /// Operation is idempotent - returns success even for non-existent templates.
+        /// **Warning:** Irreversible operation requiring referential integrity validation.
         @Operation(summary = ENDPOINT_DELETE_TEMPLATE_SUMMARY, description = ENDPOINT_DELETE_TEMPLATE_DESCRIPTION)
         @ApiResponse(responseCode = NO_CONTENT_CODE, description = RESPONSE_TEMPLATE_DELETED)
         @ApiResponse(responseCode = NOT_FOUND_CODE, description = RESPONSE_TEMPLATE_NOT_FOUND_IDENTIFIER, content = {

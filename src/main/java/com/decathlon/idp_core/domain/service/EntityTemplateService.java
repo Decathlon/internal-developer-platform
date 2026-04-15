@@ -23,35 +23,18 @@ import jakarta.transaction.Transactional;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 
-/**
- * Service class for managing Entity Templates in the IDP Core application.
- *
- * <p>This service provides business logic operations for Entity Template management,
- * including CRUD operations, validation, and business rule enforcement. It acts as
- * an intermediary between the controller layer and the repository layer, ensuring
- * proper domain logic is applied.</p>
- *
- * <p>Key responsibilities:</p>
- * <ul>
- *   <li>Template retrieval with pagination support</li>
- *   <li>Template creation with duplicate prevention</li>
- *   <li>Template deletion with existence validation</li>
- *   <li>Business rule enforcement and validation</li>
- *   <li>Exception handling for domain-specific errors</li>
- * </ul>
- *
- * <p>This service follows Domain-Driven Design (DDD) principles by working exclusively
- * with domain entities ({@link EntityTemplate}) rather than DTOs. The mapping between
- * DTOs and domain entities is handled at the controller layer.</p>
- *
- * @author GitHub Copilot
- * @version 1.0
- * @see EntityTemplate
- * @see EntityTemplateRepository
- * @see EntityTemplateNotFoundException
- * @see EntityTemplateAlreadyExistsException
- * @since 1.0
- */
+/// Domain service orchestrating [EntityTemplate] business operations and lifecycle management.
+///
+/// **Business purpose:** Coordinates template creation, validation, and retrieval while enforcing
+/// business rules around template uniqueness and structure integrity. Serves as the primary
+/// entry point for template operations from application layer.
+///
+/// **Key responsibilities:**
+/// - Template retrieval with pagination for management interfaces
+/// - Template creation with business rule validation and duplicate prevention
+/// - Template deletion with referential integrity checks
+/// - Property and relation rule merging for template updates
+/// - Domain-specific exception handling and error reporting
 @Service
 @Validated
 @RequiredArgsConstructor
@@ -59,43 +42,26 @@ public class EntityTemplateService {
 
     private final EntityTemplateRepositoryPort entityTemplateRepository;
 
-    /**
-     * Retrieves a paginated list of all entity templates.
-     *
-     * <p>This method supports pagination and sorting through the {@link Pageable} parameter.
-     * The returned {@link Page} contains both the template data and pagination metadata
-     * such as total elements, total pages, and current page information.</p>
-     *
-     * <p>Example usage:</p>
-     * <pre>{@code
-     * Pageable pageable = PageRequest.of(0, 10, Sort.by("identifier"));
-     * Page<EntityTemplate> templates = service.getEntityTemplates(pageable);
-     * }</pre>
-     *
-     * @param pageable the pagination information including page number, size, and sorting criteria
-     * @return a {@link Page} containing entity templates and pagination metadata
-     * @throws IllegalArgumentException if pageable is null
-     */
+    /// Retrieves paginated entity templates for management interface display.
+    ///
+    /// **Contract:** Returns templates with pagination metadata for efficient UI rendering.
+    /// Supports sorting and filtering through Spring's Pageable interface for flexible
+    /// template browsing and administration.
+    ///
+    /// @param pageable pagination configuration including page size, number, and sorting
+    /// @return paginated template results with metadata
     public Page<EntityTemplate> getEntityTemplates(Pageable pageable) {
         return entityTemplateRepository.findAll(pageable);
     }
 
-    /**
-     * Retrieves a specific entity template by its unique identifier.
-     *
-     * <p>This method performs a case-sensitive lookup for the template with the
-     * specified identifier. The identifier must be an exact match.</p>
-     *
-     * <p>Example usage:</p>
-     * <pre>{@code
-     * EntityTemplate template = service.getEntityTemplateByIdentifier("web-service");
-     * }</pre>
-     *
-     * @param identifier the unique identifier of the template to retrieve
-     * @return the {@link EntityTemplate} with the specified identifier
-     * @throws EntityTemplateNotFoundException if no template with the given identifier exists
-     * @throws IllegalArgumentException        if identifier is null or empty
-     */
+    /// Retrieves a specific entity template by business identifier.
+    ///
+    /// **Contract:** Performs exact match lookup for template identification.
+    /// Case-sensitive matching ensures precise template resolution for entity operations.
+    ///
+    /// @param identifier unique business identifier of the template
+    /// @return the matching [EntityTemplate]
+    /// @throws EntityTemplateNotFoundException when template doesn't exist
     public EntityTemplate getEntityTemplateByIdentifier(String identifier) {
         return entityTemplateRepository.findByIdentifier(identifier)
                 .orElseThrow(() -> new EntityTemplateNotFoundException("identifier", identifier));
@@ -209,32 +175,15 @@ public class EntityTemplateService {
         return result;
     }
 
-    /**
-     * Creates and saves a new entity template to the repository.
-     *
-     * <p>This method performs the following validations before saving:</p>
-     * <ul>
-     *   <li>Validates the entity template using Bean Validation annotations</li>
-     *   <li>Checks for duplicate identifiers to prevent conflicts</li>
-     *   <li>Ensures all required fields are properly populated</li>
-     * </ul>
-     *
-     * <p>If a template with the same identifier already exists, an
-     * {@link EntityTemplateAlreadyExistsException} will be thrown to maintain
-     * data integrity and prevent duplicate entries.</p>
-     *
-     * <p>Example usage:</p>
-     * <pre>{@code
-     * EntityTemplate newTemplate = new EntityTemplate(null, "my-service", "description", propertyDefs, relationDefs);
-     * EntityTemplate savedTemplate = service.saveEntityTemplate(newTemplate);
-     * }</pre>
-     *
-     * @param entityTemplate the valid {@link EntityTemplate} entity to be saved
-     * @return the saved {@link EntityTemplate} with generated fields populated
-     * @throws EntityTemplateAlreadyExistsException            if a template with the same identifier already exists
-     * @throws jakarta.validation.ConstraintViolationException if the entity fails validation
-     * @throws IllegalArgumentException                        if entityTemplate is null
-     */
+    /// Creates and persists a new entity template with business validation.
+    ///
+    /// **Contract:** Validates template structure, enforces identifier uniqueness,
+    /// and persists the template with all nested property and relation definitions.
+    /// Template identifiers must be unique across the entire system.
+    ///
+    /// @param entityTemplate validated template to create and persist
+    /// @return the persisted template with generated identifiers
+    /// @throws EntityTemplateAlreadyExistsException when identifier already exists
     @Transactional
     public EntityTemplate saveEntityTemplate(@Valid EntityTemplate entityTemplate) {
         if (entityTemplate.identifier() != null &&
@@ -244,32 +193,14 @@ public class EntityTemplateService {
         return entityTemplateRepository.save(entityTemplate);
     }
 
-    /**
-     * Deletes an entity template by its unique identifier.
-     *
-     * <p>This method performs the following operations:</p>
-     * <ol>
-     *   <li>Validates that the identifier is not null</li>
-     *   <li>Checks if a template with the given identifier exists</li>
-     *   <li>Deletes the template if found</li>
-     * </ol>
-     *
-     * <p>The deletion is performed using the identifier rather than the internal ID
-     * to maintain consistency with the public API interface. This method ensures
-     * data integrity by validating existence before attempting deletion.</p>
-     *
-     * <p>Example usage:</p>
-     * <pre>{@code
-     * service.deleteEntityTemplate("web-service");
-     * }</pre>
-     *
-     * <p><strong>Note:</strong> This operation is irreversible. Once a template
-     * is deleted, it cannot be recovered through this service.</p>
-     *
-     * @param identifier the unique identifier of the template to delete
-     * @throws EntityTemplateNotFoundException if no template with the given identifier exists
-     * @throws IllegalArgumentException        if identifier is null
-     */
+    /// Deletes an entity template by business identifier with existence validation.
+    ///
+    /// **Contract:** Validates template existence before deletion to ensure referential
+    /// integrity. Deletion cascades through persistence layer according to configured
+    /// relationships. This operation is irreversible once committed.
+    ///
+    /// @param identifier unique business identifier of template to delete
+    /// @throws EntityTemplateNotFoundException when template doesn't exist
     @Transactional
     public void deleteEntityTemplate(String identifier) {
         if (identifier == null) {

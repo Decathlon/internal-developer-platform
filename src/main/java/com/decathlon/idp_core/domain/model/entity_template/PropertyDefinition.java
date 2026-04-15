@@ -11,10 +11,17 @@ import com.decathlon.idp_core.domain.model.enums.PropertyType;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 
-/**
- * Pure domain model representing a PropertyDefinition within an EntityTemplate.
- * Immutable value object.
- */
+/// Defines the structure and constraints for a property within an [EntityTemplate].
+///
+/// Part of the domain's ubiquitous language where each property represents a business
+/// attribute that entities can possess. Properties define both the data structure
+/// (name, type, description) and behavioral constraints (required flag, validation rules).
+///
+/// **Business invariants:**
+/// - Property names must be unique within an EntityTemplate context
+/// - Required properties cannot be null/empty when creating entities
+/// - Validation rules in [PropertyRules] are enforced for all property values
+/// - Property descriptions support business documentation and user guidance
 public record PropertyDefinition(
     UUID id,
 

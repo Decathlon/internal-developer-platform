@@ -3,11 +3,24 @@ package com.decathlon.idp_core.infrastructure.adapters.api.configuration;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
 
+/// Centralized OpenAPI documentation constants for consistent API descriptions.
+///
+/// **Documentation standardization rationale:** Maintains consistency across all API
+/// endpoints by centralizing descriptions, response messages, and field documentation.
+/// Prevents duplication and ensures uniform language throughout the API.
+///
+/// **Organization strategy:**
+/// - HTTP status codes and standard responses
+/// - Endpoint summaries and descriptions by domain (templates, entities)
+/// - Schema and field descriptions for comprehensive API documentation
+/// - Pagination parameter descriptions for consistent query interfaces
+///
+/// **Maintenance benefits:** Single point of truth for API documentation strings,
+/// enabling easy updates and internationalization if needed in the future.
+
 @NoArgsConstructor(access = AccessLevel.PRIVATE)
 public class SwaggerDescription {
-    /**
-     * HTTP response status codes
-     */
+    /// HTTP response status codes for OpenAPI documentation
     public static final String OK_CODE = "200";
     public static final String CREATED_CODE = "201";
     public static final String NO_CONTENT_CODE = "204";
@@ -17,9 +30,7 @@ public class SwaggerDescription {
     public static final String CONFLICT_CODE = "409";
     public static final String SERVICE_UNAVAILABLE_CODE = "503";
 
-    /**
-     * Template constants
-     */
+    /// Entity Template API endpoint constants
     public static final String ENDPOINT_GET_TEMPLATES_SUMMARY = "Get all templates";
     public static final String ENDPOINT_GET_TEMPLATES_DESCRIPTION = "Retrieve a list of all available templates in the system";
 
@@ -40,9 +51,7 @@ public class SwaggerDescription {
     public static final String ENDPOINT_DELETE_TEMPLATE_SUMMARY = "Delete template by identifier";
     public static final String ENDPOINT_DELETE_TEMPLATE_DESCRIPTION = "Remove a template from the system using its unique identifier";
 
-    /**
-     * Entity constants
-     */
+    /// Entity API endpoint constants
     public static final String ENDPOINT_GET_ENTITIES_SUMMARY = "Get entities by template identifier";
     public static final String ENDPOINT_GET_ENTITIES_DESCRIPTION = "Retrieve a list of all available entities in the system";
 
@@ -56,9 +65,7 @@ public class SwaggerDescription {
     public static final String ENDPOINT_POST_ENTITY_DESCRIPTION = "Create a new entity in the system with the provided information";
 
 
-    /**
-     * Response descriptions
-     */
+    /// API response description constants
     public static final String RESPONSE_TEMPLATES_PAGINATED_SUCCESS = "Paginated templates retrieved successfully";
     public static final String RESPONSE_TEMPLATES_PARTIAL_CONTENT = "Partial content - paginated templates retrieved (subset of total data)";
     public static final String RESPONSE_TEMPLATE_FOUND = "Template found";

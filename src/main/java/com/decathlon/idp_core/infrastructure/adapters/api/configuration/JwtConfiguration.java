@@ -7,19 +7,18 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.security.oauth2.jwt.JwtDecoder;
 import org.springframework.security.oauth2.jwt.NimbusJwtDecoder;
 
-/**
- * Custom JwtDecoder configuration.
- * <p>
- * By defining this bean manually, we override Spring Boot's strict default auto-configuration.
- * This is required because the Identity Provider's JWKS response might be missing explicit
- * 'alg' (Algorithm) or 'use' attributes on the keys.
- * </p>
- * <p>
- * The bare-bones {@code NimbusJwtDecoder.withJwkSetUri().build()} defaults to RS256 and is
- * more forgiving. It successfully decodes the token as long as it finds a valid key with a
- * matching 'kid', bypassing strict attribute validation failures that would normally drop the key.
- * </p>
- */
+/// Custom JWT decoder configuration for OAuth2 resource server integration.
+///
+/// **Infrastructure rationale:** Overrides Spring Boot's strict auto-configuration to handle
+/// identity providers with non-standard JWKS responses. Some providers omit explicit 'alg'
+/// or 'use' attributes on keys, causing Spring's default decoder to fail validation.
+///
+/// **Technical solution:** Uses bare-bones NimbusJwtDecoder configuration that defaults to
+/// RS256 and is more permissive with key validation. Successfully decodes tokens with valid
+/// 'kid' matching, bypassing strict attribute validation that would drop keys.
+///
+/// **Security considerations:** Maintains security while providing flexibility for various
+/// identity provider implementations that may not follow all JWKS specifications exactly.
 @Configuration
 public class JwtConfiguration {
 

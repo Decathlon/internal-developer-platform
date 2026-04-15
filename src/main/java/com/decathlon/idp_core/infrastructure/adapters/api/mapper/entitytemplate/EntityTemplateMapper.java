@@ -17,53 +17,35 @@ import com.decathlon.idp_core.infrastructure.adapters.api.dto.out.entitytemplate
 import com.decathlon.idp_core.infrastructure.adapters.api.dto.out.entitytemplate.PropertyRulesDtoOut;
 import com.decathlon.idp_core.infrastructure.adapters.api.dto.out.entitytemplate.RelationDefinitionDtoOut;
 
-/**
- * Mapper component for converting between Entity Template DTOs and domain
- * entities.
- * <p>
- * This mapper provides bidirectional conversion between:
- * <ul>
- * <li>Input DTOs (from REST requests) to domain entities</li>
- * <li>Domain entities to output DTOs (for REST responses)</li>
- * </ul>
- * </p>
- * <p>
- * The mapper follows Domain-Driven Design (DDD) principles by:
- * <ul>
- * <li>Maintaining clear boundaries between API and domain layers</li>
- * <li>Ensuring domain entities remain pure without API concerns</li>
- * <li>Providing null-safe conversions with appropriate defaults</li>
- * </ul>
- * </p>
- * <p>
- * All mapping methods handle null inputs gracefully, returning null or empty
- * collections
- * as appropriate. The mapper supports both individual entity mapping and bulk
- * list conversions.
- * </p>
- *
- * @author IDP Core Team
- * @since 1.0.0
- * @see EntityTemplate
- * @see EntityTemplateDtoIn
- * @see EntityTemplateDtoOut
- */
+/// Mapper component for converting between [EntityTemplate] DTOs and domain entities.
+///
+/// **Mapping capabilities:**
+/// - Input DTOs (from REST requests) to domain entities
+/// - Domain entities to output DTOs (for REST responses)
+///
+/// **Hexagonal architecture alignment:**
+/// - Maintains clear boundaries between API and domain layers
+/// - Ensures domain entities remain pure without API concerns
+/// - Provides null-safe conversions with appropriate defaults
+/// - Supports both individual entity mapping and bulk list conversions
+///
+/// **Why this mapper exists:**
+/// All mapping methods handle null inputs gracefully, returning null or empty collections
+/// as appropriate. This follows DDD principles by keeping mapping concerns separate
+/// from business logic and ensuring clean API contract implementation.
 @Component
 public class EntityTemplateMapper {
 
-    /**
-     * Converts an EntityTemplate input DTO to a domain entity.
-     * <p>
-     * This method maps all fields from the input DTO to create a new EntityTemplate
-     * domain entity.
-     * Nested collections (properties and relations) are recursively converted using
-     * their
-     * respective mapping methods.
-     * </p>
-     *
-     * @param dto the input DTO to convert, may be null
-     * @return the converted EntityTemplate domain entity, or null if input is null
-     */
+    ///
+    /// Converts an EntityTemplate input DTO to a domain entity.
+    /// This method maps all fields from the input DTO to create a new EntityTemplate
+    /// domain entity.
+    /// Nested collections (properties and relations) are recursively converted using
+    /// their
+    /// respective mapping methods.
+    ///
+    /// @param dto the input DTO to convert, may be null
+    /// @return the converted EntityTemplate domain entity, or null if input is null
     public EntityTemplate fromDtoToEntityTemplate(EntityTemplateDtoIn dto) {
         if (dto == null) {
             return null;
@@ -78,19 +60,19 @@ public class EntityTemplateMapper {
         );
     }
 
-    /**
-     * Converts an EntityTemplate domain entity to an output DTO.
-     * <p>
-     * This method maps all fields from the domain entity to create a new output DTO
-     * for API responses.
-     * The conversion includes the entity's UUID ID and all nested collections are
-     * recursively
-     * converted to their respective DTO representations.
-     * </p>
-     *
-     * @param entity the domain entity to convert, may be null
-     * @return the converted EntityTemplateDtoOut, or null if input is null
-     */
+    ///
+    /// Converts an EntityTemplate domain entity to an output DTO.
+    /// <p>
+    /// This method maps all fields from the domain entity to create a new output DTO
+    /// for API responses.
+    /// The conversion includes the entity's UUID ID and all nested collections are
+    /// recursively
+    /// converted to their respective DTO representations.
+    /// </p>
+    ///
+    /// @param entity the domain entity to convert, may be null
+    /// @return the converted EntityTemplateDtoOut, or null if input is null
+    ////
     public EntityTemplateDtoOut fromEntityTemplatetoDto(EntityTemplate entity) {
         if (entity == null) {
             return null;
@@ -104,18 +86,18 @@ public class EntityTemplateMapper {
                 .build();
     }
 
-    /**
-     * Converts a list of EntityTemplate domain entities to a list of output DTOs.
-     * <p>
-     * This is a convenience method for bulk conversion operations, particularly
-     * useful
-     * for paginated results and list endpoints.
-     * </p>
-     *
-     * @param entities the list of domain entities to convert, may be null
-     * @return a list of converted EntityTemplateDtoOut objects, empty list if input
-     *         is null
-     */
+    ///
+    /// Converts a list of EntityTemplate domain entities to a list of output DTOs.
+    /// <p>
+    /// This is a convenience method for bulk conversion operations, particularly
+    /// useful
+    /// for paginated results and list endpoints.
+    /// </p>
+    ///
+    /// @param entities the list of domain entities to convert, may be null
+    /// @return a list of converted EntityTemplateDtoOut objects, empty list if input
+    ///         is null
+    ////
     public List<EntityTemplateDtoOut> fromEntityTemplatesToDtos(List<EntityTemplate> entities) {
         if (entities == null) {
             return List.of();
@@ -125,13 +107,13 @@ public class EntityTemplateMapper {
                 .toList();
     }
 
-    /**
-     * Converts a PropertyDefinition input DTO to a domain entity.
-     *
-     * @param dto the input DTO to convert, may be null
-     * @return the converted PropertyDefinition domain entity, or null if input is
-     *         null
-     */
+    ///
+    /// Converts a PropertyDefinition input DTO to a domain entity.
+    ///
+    /// @param dto the input DTO to convert, may be null
+    /// @return the converted PropertyDefinition domain entity, or null if input is
+    ///         null
+    ////
     public PropertyDefinition toToPropertyDefinition(PropertyDefinitionDtoIn dto) {
         if (dto == null) {
             return null;
@@ -147,12 +129,12 @@ public class EntityTemplateMapper {
         );
     }
 
-    /**
-     * Converts a PropertyDefinition domain entity to an output DTO.
-     *
-     * @param entity the domain entity to convert, may be null
-     * @return the converted PropertyDefinitionDtoOut, or null if input is null
-     */
+    ///
+    /// Converts a PropertyDefinition domain entity to an output DTO.
+    ///
+    /// @param entity the domain entity to convert, may be null
+    /// @return the converted PropertyDefinitionDtoOut, or null if input is null
+    ////
     public PropertyDefinitionDtoOut toDto(PropertyDefinition entity) {
         if (entity == null) {
             return null;

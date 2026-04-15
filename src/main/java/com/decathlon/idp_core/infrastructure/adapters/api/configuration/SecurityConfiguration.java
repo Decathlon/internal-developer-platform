@@ -9,6 +9,18 @@ import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.web.SecurityFilterChain;
 
+/// Spring Security configuration for OAuth2 resource server with JWT authentication.
+///
+/// **Security policy rationale:**
+/// - Public access: Actuator endpoints for health monitoring, Swagger UI for API documentation
+/// - Protected access: All `/api/v1/**` endpoints require full authentication via JWT
+/// - OAuth2 integration: JWT tokens validated against configured JWKS endpoint
+///
+/// **Infrastructure specifics:**
+/// - CORS enabled with default configuration for cross-origin API access
+/// - JWT resource server auto-configured with Spring Security OAuth2
+/// - Security filter chain processes authentication before reaching controllers
+
 @Configuration
 @EnableWebSecurity
 public class SecurityConfiguration {

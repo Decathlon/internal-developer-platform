@@ -49,49 +49,31 @@ class EntityTemplateControllerTest extends AbstractIntegrationTest {
     private EntityTemplateRepositoryPort entityTemplateRepository;
     private static final String ENTITY_TEMPLATE_PATH = "/api/v1/entity-templates";
 
-    /**
-     * Test suite for the GET /api/v1/entity-templates endpoint, covering paginated
-     * retrieval of entity templates.
-     *
-     * <p>
-     * This nested class contains tests that verify:
-     * </p>
-     * <ul>
-     * <li>Default pagination behavior and response structure</li>
-     * <li>Authentication requirements for accessing the endpoint</li>
-     * <li>Custom pagination and sorting parameters</li>
-     * <li>Retrieval of a specific template by identifier</li>
-     * <li>Filtering templates by identifier using query parameters</li>
-     * </ul>
-     *
-     * <p>
-     * Each test ensures the API returns the expected HTTP status codes, response
-     * content, and pagination metadata.
-     * </p>
-     */
+    /// Test suite for the GET /api/v1/entity-templates endpoint, covering paginated
+    /// retrieval of entity templates.
+    /// **Test coverage includes:**
+    /// - Default pagination behavior and response structure
+    /// - Authentication requirements for accessing the endpoint
+    /// - Custom pagination and sorting parameters
+    /// - Retrieval of a specific template by identifier
+    /// - Filtering templates by identifier using query parameters
+    /// **Testing rationale:** Each test ensures the API returns the expected HTTP status codes,
+    /// response content, and pagination metadata for proper contract verification.
     @Nested
     @DisplayName("GET /api/v1/entity-templates - Get Templates Paginated")
     @Order(1)
     class GetTemplatesPaginatedTests {
 
-        /**
-         * Tests the GET /api/v1/entity-templates/ endpoint with default pagination
-         * parameters.
-         *
-         * <p>
-         * This test verifies that:
-         * </p>
-         * <ul>
-         * <li>The endpoint returns HTTP 200 OK status</li>
-         * <li>Response content type is application/json</li>
-         * <li>All 10 templates are returned in the content array</li>
-         * <li>Default pagination settings are applied (page 0, size 20)</li>
-         * <li>Template ordering is consistent (batch-job at index 1)</li>
-         * <li>Pagination metadata is correctly populated</li>
-         * </ul>
-         *
-         * @throws Exception if the MockMvc request fails
-         */
+        /// Tests the GET /api/v1/entity-templates/ endpoint with default pagination
+        /// parameters.
+        /// **This test verifies that:**
+        /// - The endpoint returns HTTP 200 OK status
+        /// - Response content type is application/json
+        /// - All 10 templates are returned in the content array
+        /// - Default pagination settings are applied (page 0, size 20)
+        /// - Template ordering is consistent (batch-job at index 1)
+        /// - Pagination metadata is correctly populated
+        /// @throws Exception if the MockMvc request fails
         @Test
         @DisplayName("Should return paginated templates with default pagination")
         @WithMockUser
@@ -110,13 +92,9 @@ class EntityTemplateControllerTest extends AbstractIntegrationTest {
                     .andExpect(jsonPath("$.page.number").value(0));
         }
 
-        /**
-         * Tests that accessing the /api/v1/entity-templates/ endpoint without
-         * authentication
-         * returns a 401 Unauthorized status.
-         *
-         * @throws Exception if an error occurs during the request
-         */
+        /// Tests that accessing the /api/v1/entity-templates/ endpoint without
+        /// authentication returns a 401 Unauthorized status.
+        /// @throws Exception if an error occurs during the request
         @Test
         @DisplayName("Should return 401 without authentication")
         void getTemplates_paginated_401_without_user_token() throws Exception {
@@ -125,24 +103,11 @@ class EntityTemplateControllerTest extends AbstractIntegrationTest {
                     .andExpect(status().isUnauthorized());
         }
 
-        /**
-         * Tests the GET /api/v1/entity-templates/ endpoint with custom pagination
-         * parameters.
-         *
-         * <p>
-         * This test verifies that:
-         * </p>
-         * <ul>
-         * <li>Custom pagination parameters are correctly applied (page=1, size=5,
-         * sort=identifier,asc)</li>
-         * <li>Only 5 templates are returned on the second page</li>
-         * <li>Templates are sorted alphabetically by identifier</li>
-         * <li>Pagination metadata reflects the custom settings</li>
-         * <li>First template in the sorted result is "frontend-app"</li>
-         * </ul>
-         *
-         * @throws Exception if the MockMvc request fails
-         */
+        /// Tests the GET /api/v1/entity-templates/ endpoint with custom pagination
+        /// parameters.
+        /// This test verifies that:
+        /// - Custom pagination parameters are correctly applied (page=1, size=5,
+        /// @throws Exception if the MockMvc request fails
         @Test
         @DisplayName("Should return paginated templates with custom pagination")
         @WithMockUser
@@ -163,21 +128,10 @@ class EntityTemplateControllerTest extends AbstractIntegrationTest {
                     .andExpect(jsonPath("$.page.number").value(1));
         }
 
-        /**
-         * Tests the GET /api/v1/entity-templates/identifier/{identifier} endpoint for
-         * retrieving a specific template.
-         *
-         * <p>
-         * This test verifies that:
-         * </p>
-         * <ul>
-         * <li>The endpoint returns HTTP 200 OK status for valid identifier</li>
-         * <li>The response contains the specific template data for "frontend-app"</li>
-         * <li>The identifier field in response matches the requested identifier</li>
-         * </ul>
-         *
-         * @throws Exception if the MockMvc request fails
-         */
+        /// Tests the GET /api/v1/entity-templates/identifier/{identifier} endpoint for
+        /// retrieving a specific template.
+        /// This test verifies that:
+        /// @throws Exception if the MockMvc request fails
         @Test
         @DisplayName("Should return 200 even with invalid pagination parameters")
         @WithMockUser
@@ -189,22 +143,11 @@ class EntityTemplateControllerTest extends AbstractIntegrationTest {
                     .andExpect(jsonPath("$.identifier").value("frontend-app"));
         }
 
-        /**
-         * Tests the GET /api/v1/entity-templates/ endpoint with identifier query
-         * parameter.
-         *
-         * <p>
-         * This test verifies that:
-         * </p>
-         * <ul>
-         * <li>The endpoint returns HTTP 200 OK status when identifier parameter is
-         * provided</li>
-         * <li>The API can handle identifier-based filtering via query parameter</li>
-         * <li>Valid identifier "web-service" is processed successfully</li>
-         * </ul>
-         *
-         * @throws Exception if the MockMvc request fails
-         */
+        /// Tests the GET /api/v1/entity-templates/ endpoint with identifier query
+        /// parameter.
+        /// This test verifies that:
+        /// - The endpoint returns HTTP 200 OK status when identifier parameter is
+        /// @throws Exception if the MockMvc request fails
         @Test
         @DisplayName("Should return 200 with valid identifier")
         @WithMockUser
@@ -224,22 +167,10 @@ class EntityTemplateControllerTest extends AbstractIntegrationTest {
 
         private static final String ENTITY_TEMPLATE_JSON_TEST_PATH = "integration_test/json/entity-template/v1/";
 
-        /**
-         * Tests the POST /api/v1/entity-templates endpoint for successful template
-         * creation.
-         *
-         * <p>
-         * This test verifies that:
-         * </p>
-         * <ul>
-         * <li>Valid template data results in HTTP 201 Created status</li>
-         * <li>The request includes proper CSRF token for security</li>
-         * <li>Content type is properly set to application/json</li>
-         * <li>Template is created using valid JSON from test file</li>
-         * </ul>
-         *
-         * @throws Exception if the MockMvc request fails
-         */
+        /// Tests the POST /api/v1/entity-templates endpoint for successful template
+        /// creation.
+        /// This test verifies that:
+        /// @throws Exception if the MockMvc request fails
         @Test
         @WithMockUser()
         @DisplayName("Should create template and return 201")
@@ -253,20 +184,9 @@ class EntityTemplateControllerTest extends AbstractIntegrationTest {
                     .andReturn();
         }
 
-        /**
-         * Tests the POST /api/v1/entity-templates endpoint without authentication.
-         *
-         * <p>
-         * This test verifies that:
-         * </p>
-         * <ul>
-         * <li>Unauthenticated requests result in HTTP 401 Unauthorized status</li>
-         * <li>CSRF token is included but authentication is missing</li>
-         * <li>Valid template data does not bypass authentication requirements</li>
-         * </ul>
-         *
-         * @throws Exception if the MockMvc request fails
-         */
+        /// Tests the POST /api/v1/entity-templates endpoint without authentication.
+        /// This test verifies that:
+        /// @throws Exception if the MockMvc request fails
         @Test
         @DisplayName("Should create template and return 401")
         void postTemplate_401_without_user_token() throws Exception {
@@ -279,22 +199,11 @@ class EntityTemplateControllerTest extends AbstractIntegrationTest {
                     .andReturn();
         }
 
-        /**
-         * Tests the POST /api/v1/entity-templates endpoint when the identifier field is
-         * missing.
-         *
-         * <p>
-         * This test verifies that:
-         * </p>
-         * <ul>
-         * <li>Missing identifier results in HTTP 400 Bad Request</li>
-         * <li>Validation error message matches expected template identifier mandatory
-         * message</li>
-         * <li>Request is properly rejected with appropriate error response</li>
-         * </ul>
-         *
-         * @throws Exception if the MockMvc request fails
-         */
+        /// Tests the POST /api/v1/entity-templates endpoint when the identifier field is
+        /// missing.
+        /// This test verifies that:
+        /// - Validation error message matches expected template identifier mandatory
+        /// @throws Exception if the MockMvc request fails
         @Test
         @WithMockUser()
         @DisplayName("Returns 400 when identifier is missing")
@@ -305,22 +214,11 @@ class EntityTemplateControllerTest extends AbstractIntegrationTest {
             assertNotNull(res, "Test executed successfully");
         }
 
-        /**
-         * Tests the POST /api/v1/entity-templates endpoint when identifier field is
-         * blank.
-         *
-         * <p>
-         * This test verifies that:
-         * </p>
-         * <ul>
-         * <li>Blank identifier results in HTTP 400 Bad Request</li>
-         * <li>Validation error message matches expected template identifier mandatory
-         * message</li>
-         * <li>Request is properly rejected with appropriate error response</li>
-         * </ul>
-         *
-         * @throws Exception if the MockMvc request fails
-         */
+        /// Tests the POST /api/v1/entity-templates endpoint when identifier field is
+        /// blank.
+        /// This test verifies that:
+        /// - Validation error message matches expected template identifier mandatory
+        /// @throws Exception if the MockMvc request fails
         @Test
         @WithMockUser()
         @DisplayName("Returns 400 when identifier is blank")
@@ -331,22 +229,11 @@ class EntityTemplateControllerTest extends AbstractIntegrationTest {
             assertNotNull(res, "Test executed successfully");
         }
 
-        /**
-         * Tests the POST /api/v1/entity-templates endpoint when properties array is
-         * empty.
-         *
-         * <p>
-         * This test verifies that:
-         * </p>
-         * <ul>
-         * <li>Empty properties array results in HTTP 400 Bad Request</li>
-         * <li>Validation error message indicates property definitions are
-         * mandatory</li>
-         * <li>At least one property definition is required for template creation</li>
-         * </ul>
-         *
-         * @throws Exception if the MockMvc request fails
-         */
+        /// Tests the POST /api/v1/entity-templates endpoint when properties array is
+        /// empty.
+        /// This test verifies that:
+        /// - Validation error message indicates property definitions are
+        /// @throws Exception if the MockMvc request fails
         @Test
         @WithMockUser()
         @DisplayName("Returns 400 when properties array is empty")
@@ -357,21 +244,10 @@ class EntityTemplateControllerTest extends AbstractIntegrationTest {
             assertNotNull(res, "Test executed successfully");
         }
 
-        /**
-         * Tests the POST /api/v1/entity-templates endpoint when property name field is
-         * missing.
-         *
-         * <p>
-         * This test verifies that:
-         * </p>
-         * <ul>
-         * <li>Missing property name results in HTTP 400 Bad Request</li>
-         * <li>Validation error message indicates property name is mandatory</li>
-         * <li>All property definitions must include a name field</li>
-         * </ul>
-         *
-         * @throws Exception if the MockMvc request fails
-         */
+        /// Tests the POST /api/v1/entity-templates endpoint when property name field is
+        /// missing.
+        /// This test verifies that:
+        /// @throws Exception if the MockMvc request fails
         @Test
         @WithMockUser()
         @DisplayName("Returns 400 when property name is missing")
@@ -382,21 +258,10 @@ class EntityTemplateControllerTest extends AbstractIntegrationTest {
             assertNotNull(res, "Test executed successfully");
         }
 
-        /**
-         * Tests the POST /api/v1/entity-templates endpoint when property name field is
-         * blank.
-         *
-         * <p>
-         * This test verifies that:
-         * </p>
-         * <ul>
-         * <li>Blank property name results in HTTP 400 Bad Request</li>
-         * <li>Validation error message indicates property name is mandatory</li>
-         * <li>Property names cannot be empty or whitespace-only</li>
-         * </ul>
-         *
-         * @throws Exception if the MockMvc request fails
-         */
+        /// Tests the POST /api/v1/entity-templates endpoint when property name field is
+        /// blank.
+        /// This test verifies that:
+        /// @throws Exception if the MockMvc request fails
         @Test
         @WithMockUser()
         @DisplayName("Returns 400 when property name is blank")
@@ -407,21 +272,10 @@ class EntityTemplateControllerTest extends AbstractIntegrationTest {
             assertNotNull(res, "Test executed successfully");
         }
 
-        /**
-         * Tests the POST /api/v1/entity-templates endpoint when property description
-         * field is missing.
-         *
-         * <p>
-         * This test verifies that:
-         * </p>
-         * <ul>
-         * <li>Missing property description results in HTTP 400 Bad Request</li>
-         * <li>Validation error message indicates property description is mandatory</li>
-         * <li>All property definitions must include a description field</li>
-         * </ul>
-         *
-         * @throws Exception if the MockMvc request fails
-         */
+        /// Tests the POST /api/v1/entity-templates endpoint when property description
+        /// field is missing.
+        /// This test verifies that:
+        /// @throws Exception if the MockMvc request fails
         @Test
         @WithMockUser()
         @DisplayName("Returns 400 when property description is missing")
@@ -432,21 +286,10 @@ class EntityTemplateControllerTest extends AbstractIntegrationTest {
             assertNotNull(res, "Test executed successfully");
         }
 
-        /**
-         * Tests the POST /api/v1/entity-templates endpoint when property description
-         * field is blank.
-         *
-         * <p>
-         * This test verifies that:
-         * </p>
-         * <ul>
-         * <li>Blank property description results in HTTP 400 Bad Request</li>
-         * <li>Validation error message indicates property description is mandatory</li>
-         * <li>Property descriptions cannot be empty or whitespace-only</li>
-         * </ul>
-         *
-         * @throws Exception if the MockMvc request fails
-         */
+        /// Tests the POST /api/v1/entity-templates endpoint when property description
+        /// field is blank.
+        /// This test verifies that:
+        /// @throws Exception if the MockMvc request fails
         @Test
         @WithMockUser()
         @DisplayName("Returns 400 when property description is blank")
@@ -457,21 +300,10 @@ class EntityTemplateControllerTest extends AbstractIntegrationTest {
             assertNotNull(res, "Test executed successfully");
         }
 
-        /**
-         * Tests the POST /api/v1/entity-templates endpoint when property type field is
-         * missing.
-         *
-         * <p>
-         * This test verifies that:
-         * </p>
-         * <ul>
-         * <li>Missing property type results in HTTP 400 Bad Request</li>
-         * <li>Validation error message indicates property type is mandatory</li>
-         * <li>All property definitions must include a type field</li>
-         * </ul>
-         *
-         * @throws Exception if the MockMvc request fails
-         */
+        /// Tests the POST /api/v1/entity-templates endpoint when property type field is
+        /// missing.
+        /// This test verifies that:
+        /// @throws Exception if the MockMvc request fails
         @Test
         @WithMockUser()
         @DisplayName("Returns 400 when property type is missing")
@@ -482,22 +314,10 @@ class EntityTemplateControllerTest extends AbstractIntegrationTest {
             assertNotNull(res, "Test executed successfully");
         }
 
-        /**
-         * Tests the POST /api/v1/entity-templates endpoint when trying to create a
-         * template with duplicate identifier.
-         *
-         * <p>
-         * This test verifies that:
-         * </p>
-         * <ul>
-         * <li>Duplicate identifier results in HTTP 409 Conflict status</li>
-         * <li>Error response indicates that template already exists</li>
-         * <li>Business rule preventing duplicate identifiers is enforced</li>
-         * <li>Specific error message includes the conflicting identifier</li>
-         * </ul>
-         *
-         * @throws Exception if the MockMvc request fails
-         */
+        /// Tests the POST /api/v1/entity-templates endpoint when trying to create a
+        /// template with duplicate identifier.
+        /// This test verifies that:
+        /// @throws Exception if the MockMvc request fails
         @Test
         @WithMockUser()
         @DisplayName("Returns 409 when identifier already exists")
@@ -516,22 +336,10 @@ class EntityTemplateControllerTest extends AbstractIntegrationTest {
                     .andExpect(jsonPath("$.error_description").value(TEMPLATE_ALREADY_EXISTS + ":web-service"));
         }
 
-        /**
-         * Tests the POST /api/v1/entity-templates endpoint when property type contains
-         * an invalid enum value.
-         *
-         * <p>
-         * This test verifies that:
-         * </p>
-         * <ul>
-         * <li>Invalid property type enum value results in HTTP 400 Bad Request</li>
-         * <li>JSON deserialization error occurs for unsupported enum values</li>
-         * <li>Error response indicates the invalid enum value cannot be processed</li>
-         * <li>Proper validation of PropertyType enum constraints</li>
-         * </ul>
-         *
-         * @throws Exception if the MockMvc request fails
-         */
+        /// Tests the POST /api/v1/entity-templates endpoint when property type contains
+        /// an invalid enum value.
+        /// This test verifies that:
+        /// @throws Exception if the MockMvc request fails
         @Test
         @WithMockUser()
         @DisplayName("Returns 400 when property type has invalid enum value")
@@ -542,23 +350,10 @@ class EntityTemplateControllerTest extends AbstractIntegrationTest {
             assertNotNull(res, "Test executed successfully");
         }
 
-        /**
-         * Tests the POST /api/v1/entity-templates endpoint when property format
-         * contains
-         * an invalid enum value.
-         *
-         * <p>
-         * This test verifies that:
-         * </p>
-         * <ul>
-         * <li>Invalid property format enum value results in HTTP 400 Bad Request</li>
-         * <li>JSON deserialization error occurs for unsupported enum values</li>
-         * <li>Error response indicates the invalid enum value cannot be processed</li>
-         * <li>Proper validation of PropertyFormat enum constraints</li>
-         * </ul>
-         *
-         * @throws Exception if the MockMvc request fails
-         */
+        /// Tests the POST /api/v1/entity-templates endpoint when property format
+        /// contains an invalid enum value.
+        /// This test verifies that:
+        /// @throws Exception if the MockMvc request fails
         @Test
         @WithMockUser()
         @DisplayName("Returns 400 when property format has invalid enum value")
@@ -889,22 +684,10 @@ class EntityTemplateControllerTest extends AbstractIntegrationTest {
 
         private static final String ENTITY_TEMPLATE_PATH = "/api/v1/entity-templates";
 
-        /**
-         * Tests the DELETE /api/v1/entity-templates/{id} endpoint for successful
-         * template deletion.
-         *
-         * <p>
-         * This test verifies that:
-         * </p>
-         * <ul>
-         * <li>Existing template can be successfully deleted</li>
-         * <li>HTTP 204 No Content status is returned for successful deletion</li>
-         * <li>CSRF token is properly included for security</li>
-         * <li>Uses valid template ID "monitoring-service" from test data</li>
-         * </ul>
-         *
-         * @throws Exception if the MockMvc request fails
-         */
+        /// Tests the DELETE /api/v1/entity-templates/{id} endpoint for successful
+        /// template deletion.
+        /// This test verifies that:
+        /// @throws Exception if the MockMvc request fails
         @Test
         @WithMockUser()
         @DisplayName("Should delete template and return 204")
@@ -920,23 +703,10 @@ class EntityTemplateControllerTest extends AbstractIntegrationTest {
             assertNotNull(templateId, "Test executed successfully");
         }
 
-        /**
-         * Tests the DELETE /api/v1/entity-templates/{id} endpoint when template does
-         * not
-         * exist.
-         *
-         * <p>
-         * This test verifies that:
-         * </p>
-         * <ul>
-         * <li>Non-existent template ID results in HTTP 404 Not Found status</li>
-         * <li>Error response contains proper error structure with NOT_FOUND status</li>
-         * <li>Error description is included in the response</li>
-         * <li>CSRF token is properly included for security</li>
-         * </ul>
-         *
-         * @throws Exception if the MockMvc request fails
-         */
+        /// Tests the DELETE /api/v1/entity-templates/{id} endpoint when template does
+        /// not exist.
+        /// This test verifies that:
+        /// @throws Exception if the MockMvc request fails
         @Test
         @WithMockUser()
         @DisplayName("Should return 404 when template not found")
@@ -955,20 +725,9 @@ class EntityTemplateControllerTest extends AbstractIntegrationTest {
             assertNotNull(nonExistentId, "Test executed successfully");
         }
 
-        /**
-         * Tests the DELETE /api/v1/entity-templates/{id} endpoint when authentication is missing.
-         *
-         * <p>
-         * This test verifies that:
-         * </p>
-         * <ul>
-         * <li>Missing authentication results in HTTP 401 Unauthorized status</li>
-         * <li>CSRF token is included but authentication is required</li>
-         * <li>Security measures prevent unauthorized deletion attempts</li>
-         * </ul>
-         *
-         * @throws Exception if the MockMvc request fails
-         */
+        /// Tests the DELETE /api/v1/entity-templates/{id} endpoint when authentication is missing.
+        /// This test verifies that:
+        /// @throws Exception if the MockMvc request fails
         @Test
         @DisplayName("Should return 401 when deleting without user token")
         void deleteTemplate_401_without_user_token() throws Exception {

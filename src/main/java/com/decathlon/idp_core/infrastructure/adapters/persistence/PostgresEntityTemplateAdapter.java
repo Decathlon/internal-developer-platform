@@ -23,9 +23,25 @@ import com.decathlon.idp_core.infrastructure.adapters.persistence.repository.Jpa
 
 import lombok.RequiredArgsConstructor;
 
+/// PostgreSQL persistence adapter implementing [EntityTemplateRepositoryPort].
+///
+/// **Infrastructure specifics:**
+/// - Uses JPA/Hibernate for object-relational mapping to PostgreSQL
+/// - Implements optimized entity graph loading with `@EntityGraph` to prevent N+1 queries
+/// - Handles domain-to-JPA mapping through [EntityTemplatePersistenceMapper]
+/// - Manages entity relationship cascading and orphan removal
+/// - Ensures transactional consistency for complex entity template operations
+///
+/// **Performance optimizations:**
+/// - Entity graphs fetch properties and relations in single query
+/// - Bulk operations minimize database round trips
+/// - Lazy loading configured appropriately for relationship navigation
 @Component
 @RequiredArgsConstructor
 public class PostgresEntityTemplateAdapter implements EntityTemplateRepositoryPort {
+/// - Entity graphs fetch properties and relations in single query
+/// - Bulk operations minimize database round trips
+/// - Lazy loading configured appropriately for relationship navigation
 
     private final JpaEntityTemplateRepository jpaEntityTemplateRepository;
     private final EntityTemplatePersistenceMapper mapper;

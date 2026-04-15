@@ -13,6 +13,22 @@ import com.decathlon.idp_core.infrastructure.adapters.api.dto.in.EntityDtoIn;
 
 import lombok.AllArgsConstructor;
 
+/// Adapter mapper for converting API request DTOs to domain [Entity] objects.
+///
+/// **Infrastructure mapping responsibilities:**
+/// - Request DTO-to-domain conversion for entity creation operations
+/// - Type-safe property mapping with string value normalization
+/// - Relationship mapping with template identifier injection
+/// - Defensive handling of null collections and properties
+///
+/// **Mapping considerations:**
+/// - All property values normalized to strings for consistent domain handling
+/// - Target template identifiers resolved from API context rather than request body
+/// - Empty collections preferred over null to prevent downstream null checks
+///
+/// **API contract support:** Enables clean separation between API request format
+/// and internal domain model structure for maintainable API evolution.
+
 @Component
 @AllArgsConstructor
 public class EntityDtoInMapper {

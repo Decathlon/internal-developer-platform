@@ -2,18 +2,16 @@ package com.decathlon.idp_core.domain.model.entity;
 
 import lombok.Builder;
 
-/**
- * Record representing a summary view of an Entity.
- * <p>
- *   Contains the minimal identifying information for an entity, including:
- *   <ul>
- *     <li><b>identifier</b>: the unique business identifier of the entity</li>
- *     <li><b>name</b>: the display name of the entity</li>
- *     <li><b>templateIdentifier</b>: the identifier of the template this entity is based on</li>
- *   </ul>
- * Used for lightweight projections and summary responses in APIs.
- * </p>
- *
- */
+/// Lightweight projection of an [Entity] for efficient summary views.
+///
+/// Provides essential business identification without the full property and relation
+/// data. Used in listing operations, search results, and API responses where only
+/// key identifying information is needed for business purposes.
+///
+/// **Business purpose:**
+/// - Entity listings in admin interfaces
+/// - Search result previews
+/// - Relationship target references
+/// - Performance-optimized read operations where full entity data isn't required
 @Builder
 public record EntitySummary(String identifier, String name, String templateIdentifier) {}

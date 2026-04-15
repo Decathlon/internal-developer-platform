@@ -23,38 +23,20 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
-/**
- * Global exception handler for the API layer that provides centralized error
- * handling
- * across all controllers in the application.
- *
- * <p>
- * This class uses Spring's {@code @ControllerAdvice} annotation to intercept
- * exceptions
- * thrown by controllers and convert them into appropriate HTTP responses with
- * consistent
- * error formatting.
- * </p>
- *
- * <p>
- * The handler covers various types of exceptions including:
- * </p>
- * <ul>
- * <li>Domain-specific exceptions (EntityTemplateNotFoundException,
- * EntityTemplateAlreadyExistsException)</li>
- * <li>Validation exceptions (ConstraintViolationException,
- * MethodArgumentNotValidException)</li>
- * <li>Request parsing exceptions (HttpMessageNotReadableException)</li>
- * <li>Generic exceptions as a fallback</li>
- * </ul>
- *
- * <p>
- * All exceptions are logged appropriately and converted to
- * {@link ErrorResponse} objects
- * with standardized HTTP status codes and user-friendly error messages.
- * </p>
- *
- */
+/// Global exception handler providing centralized error handling for all API endpoints.
+///
+/// **Infrastructure error handling strategy:** Intercepts domain and validation exceptions
+/// and converts them to appropriate HTTP responses with consistent error formatting.
+/// Ensures API consumers receive standardized error messages regardless of internal failures.
+///
+/// **Exception mapping approach:**
+/// - Domain exceptions → HTTP 404/409 with business-meaningful messages
+/// - Validation exceptions → HTTP 400 with field-specific error details
+/// - JSON parsing errors → HTTP 400 with user-friendly parsing messages
+/// - Generic exceptions → HTTP 500 with safe internal error responses
+///
+/// **Error response standardization:** All errors follow consistent [ErrorResponse] format
+/// with appropriate HTTP status codes and logged for monitoring/debugging purposes.
 @Slf4j
 @ControllerAdvice
 public class ApiExceptionHandler {
@@ -62,12 +44,10 @@ public class ApiExceptionHandler {
     private ApiExceptionHandler() {
     }
 
-    /**
-     * Handle TemplateNotFoundException
-     *
-     * @param ex TemplateNotFoundException
-     * @return ErrorResponse with 404 status
-     */
+    /// Handles domain exception when entity templates are not found.
+    ///
+    /// **HTTP mapping:** Maps domain EntityTemplateNotFoundException to HTTP 404 status
+    /// with business-meaningful error message for API consumers.
     @ExceptionHandler(EntityTemplateNotFoundException.class)
     public ResponseEntity<ErrorResponse> handleTemplateNotFoundException(EntityTemplateNotFoundException ex) {
         log.warn("Template not found: {}", ex.getMessage());
@@ -75,12 +55,10 @@ public class ApiExceptionHandler {
         return ResponseEntity.status(HttpStatus.NOT_FOUND).body(errorResponse);
     }
 
-    /**
-     * Handle EntityTemplateAlreadyExistsException
-     *
-     * @param ex EntityTemplateAlreadyExistsException
-     * @return ErrorResponse with 409 status
-     */
+    /// Handles domain exception when entity templates already exist.
+    ///
+    /// **HTTP mapping:** Maps domain EntityTemplateAlreadyExistsException to HTTP 409
+    /// status indicating business rule conflict for duplicate identifiers.
     @ExceptionHandler(EntityTemplateAlreadyExistsException.class)
     public ResponseEntity<ErrorResponse> handleEntityTemplateAlreadyExistsException(
             EntityTemplateAlreadyExistsException ex) {
@@ -89,12 +67,10 @@ public class ApiExceptionHandler {
         return ResponseEntity.status(HttpStatus.CONFLICT).body(errorResponse);
     }
 
-    /**
-     * Handle ConstraintViolationException (validation errors)
-     *
-     * @param ex ConstraintViolationException
-     * @return ErrorResponse with 400 status
-     */
+    /// Handles Bean Validation constraint violations from domain model validation.
+    ///
+    /// **Error aggregation:** Combines multiple constraint violation messages into
+    /// single user-friendly response with HTTP 400 status for client correction.
     @ExceptionHandler(ConstraintViolationException.class)
     public ResponseEntity<ErrorResponse> handleConstraintViolationException(ConstraintViolationException ex) {
         log.warn("Validation constraint violation: {}", ex.getMessage());
@@ -105,12 +81,10 @@ public class ApiExceptionHandler {
         return createErrorResponse(HttpStatus.BAD_REQUEST, errorMessage);
     }
 
-    /**
-     * Handle MethodArgumentNotValidException (request body validation errors)
-     *
-     * @param ex MethodArgumentNotValidException
-     * @return ErrorResponse with 400 status
-     */
+    /// Handles Spring MVC request body validation failures.
+    ///
+    /// **Field-level errors:** Extracts and aggregates field validation errors from
+    /// request body binding into comprehensive HTTP 400 error response.
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<ErrorResponse> handleMethodArgumentNotValidException(MethodArgumentNotValidException ex) {
         log.warn("Method argument validation error: {}", ex.getMessage());
@@ -122,12 +96,10 @@ public class ApiExceptionHandler {
         return createErrorResponse(HttpStatus.BAD_REQUEST, errorMessage);
     }
 
-    /**
-     * Handle HttpMessageNotReadableException (JSON parsing errors)
-     *
-     * @param ex HttpMessageNotReadableException
-     * @return ErrorResponse with 400 status
-     */
+    /// Handles JSON parsing and deserialization errors from request bodies.
+    ///
+    /// **User-friendly parsing:** Converts technical JSON parsing errors into
+    /// readable messages, especially for enum validation and format issues.
     @ExceptionHandler(HttpMessageNotReadableException.class)
     public ResponseEntity<ErrorResponse> handleHttpMessageNotReadableException(HttpMessageNotReadableException ex) {
         log.warn("HTTP message not readable: {}", ex.getMessage());
@@ -137,12 +109,10 @@ public class ApiExceptionHandler {
     }
 
 
-    /**
-     * Handle generic EntityNotFoundException
-     *
-     * @param ex EntityNotFoundException
-     * @return ErrorResponse with 404 status
-     */
+    /// Handles domain exception when entities are not found.
+    ///
+    /// **HTTP mapping:** Maps domain EntityNotFoundException to HTTP 404 status
+    /// with specific entity context for API consumers.
     @ExceptionHandler(EntityNotFoundException.class)
     public ResponseEntity<ErrorResponse> handleEntityNotFoundException(EntityNotFoundException ex) {
         ErrorResponse errorResponse = new ErrorResponse(HttpStatus.NOT_FOUND.name(), ex.getMessage());
@@ -207,12 +177,10 @@ public class ApiExceptionHandler {
         return "";
     }
 
-    /**
-     * Handle all other exceptions (default fallback)
-     *
-     * @param ex Exception
-     * @return ErrorResponse with 500 status
-     */
+    /// Handles all unexpected exceptions as safety fallback.
+    ///
+    /// **Security consideration:** Returns generic error message to prevent information
+    /// leakage while logging full exception details for internal debugging.
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ErrorResponse> handleGenericException(Exception ex) {
         log.error("Unexpected error occurred: {}", ex.getMessage(), ex);

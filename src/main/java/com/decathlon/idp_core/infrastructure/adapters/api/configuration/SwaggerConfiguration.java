@@ -28,6 +28,23 @@ import io.swagger.v3.oas.models.security.SecurityRequirement;
 import io.swagger.v3.oas.models.security.SecurityScheme;
 import io.swagger.v3.oas.models.servers.Server;
 
+/// OpenAPI/Swagger configuration for comprehensive API documentation and testing.
+///
+/// **Documentation strategy:**
+/// - Auto-generates interactive API documentation from controller annotations
+/// - Provides OAuth2 and Bearer token authentication for API testing
+/// - Creates type-safe response models for paginated endpoints
+///
+/// **Security integration:**
+/// - OAuth2 client credentials flow for machine-to-machine authentication
+/// - JWT Bearer token support for user-based authentication
+/// - Configurable token endpoints for different deployment environments
+///
+/// **API testing benefits:**
+/// - Interactive Swagger UI for manual API testing and exploration
+/// - Automatic request/response validation against OpenAPI schema
+/// - Authentication testing without external tools
+
 @Configuration
 @Profile("!test")
 public class SwaggerConfiguration {

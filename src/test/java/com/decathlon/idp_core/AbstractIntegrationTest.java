@@ -168,18 +168,15 @@ public abstract class AbstractIntegrationTest {
         return objectMapper.writeValueAsString(object);
     }
 
-    /**
-     * Helper method to perform a POST request and validate that it returns a
-     * BAD_REQUEST response.
-     *
-     * @param path             the URL path to send the POST request to
-     * @param jsonBodyfilePath the file path containing the JSON content to be sent
-     *                         in the request body
-     * @param errorDescription the expected error description that should be
-     *                         returned in the response
-     * @return
-     * @throws Exception if an error occurs during the mock MVC request execution
-     */
+    /// Helper method to perform a POST request and validate that it returns a
+    /// BAD_REQUEST response.
+    ///
+    /// @param path             the URL path to send the POST request to
+    /// @param jsonBodyfilePath the file path containing the JSON content to be sent
+    ///                         in the request body
+    /// @param errorDescription the expected error description that should be
+    ///                         returned in the response
+    /// @throws Exception if an error occurs during the mock MVC request execution
     public MvcResult postAndValidateBadRequest(String path, String jsonBodyfilePath, String errorDescription)
             throws Exception {
         return mockMvc.perform(MockMvcRequestBuilders.post(path)

@@ -8,6 +8,10 @@ import org.springframework.test.web.servlet.request.MockMvcRequestBuilders;
 
 import com.decathlon.idp_core.AbstractIntegrationTest;
 
+/// Integration test for health check endpoint accessibility.
+///
+/// **Test purpose:** Verifies that the actuator health endpoint is accessible
+/// without authentication, ensuring system monitoring capabilities work correctly.
 class HealthControllerTest extends AbstractIntegrationTest {
 
     @Test

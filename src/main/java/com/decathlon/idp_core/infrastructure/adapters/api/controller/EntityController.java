@@ -53,18 +53,14 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.AllArgsConstructor;
 
-/**
- * REST controller exposing entity management endpoints.
- * <p>
- * Supports:
- * <ul>
- * <li>Paginated retrieval of entities by template identifier</li>
- * <li>Lookup of a single entity by template identifier and entity
- * identifier</li>
- * <li>Creation of new entities for a given template</li>
- * </ul>
- * All endpoints are documented with OpenAPI annotations.
- */
+/// REST API adapter providing entity management endpoints.
+///
+/// **Infrastructure specifics:**
+/// - Exposes HTTP endpoints for entity CRUD operations
+/// - Handles REST API request/response mapping between DTOs and domain models
+/// - Integrates with OpenAPI/Swagger for API documentation
+/// - Provides paginated responses for efficient data transfer
+/// - Maps domain exceptions to appropriate HTTP status codes
 @RestController
 @RequestMapping("/api/v1/entities")
 @Tag(name = "Entities Management", description = "Operations related to entity management")
@@ -75,14 +71,16 @@ public class EntityController {
     private final EntityDtoOutMapper entityDtoOutMapper;
     private final EntityDtoInMapper entityDtoInMapper;
 
-    /**
-     * Returns a paginated list of entities filtered by template identifier.
-     *
-     * @param page               zero-based page index (default 0)
-     * @param size               page size (default 20)
-     * @param templateIdentifier identifier of the template to filter entities
-     * @return a page of {@link EntityDtoOut} matching the given template
-     */
+    /// Returns paginated entities filtered by template with HTTP pagination support.
+    ///
+    /// **API contract:** Provides paginated entity listings for template-specific views.
+    /// Supports standard REST pagination parameters and returns appropriate HTTP status codes.
+    /// Template validation is handled by the domain service layer.
+    ///
+    /// @param page zero-based page index for pagination navigation
+    /// @param size number of entities per page for response size control
+    /// @param templateIdentifier template filter for entity scope limitation
+    /// @return paginated entity DTOs optimized for API consumers
     @Operation(summary = ENDPOINT_GET_ENTITIES_SUMMARY, description = ENDPOINT_GET_ENTITIES_PAGINATED_DESCRIPTION)
     @ApiResponse(responseCode = OK_CODE, description = RESPONSE_ENTITIES_PAGINATED_SUCCESS, content = @Content(schema = @Schema(implementation = EntityPageResponse.class)))
     @ApiResponse(responseCode = BAD_REQUEST_CODE, description = RESPONSE_INVALID_PAGINATION, content = {
@@ -101,13 +99,14 @@ public class EntityController {
         return entityDtoOutMapper.fromEntitiesPageToDtoPage(entities, templateIdentifier);
     }
 
-    /**
-     * Retrieves a single entity by template identifier and entity identifier.
-     *
-     * @param templateIdentifier identifier of the template the entity belongs to
-     * @param entityIdentifier   business identifier of the entity
-     * @return the matching {@link EntityDtoOut}
-     */
+    /// Retrieves a single entity by template and entity identifiers.
+    ///
+    /// **API contract:** Provides specific entity lookup using compound identifier pattern.
+    /// Returns HTTP 404 if either template or entity doesn't exist, maintaining REST semantics.
+    ///
+    /// @param templateIdentifier business template identifier for entity scope
+    /// @param entityIdentifier unique business identifier within template context
+    /// @return entity DTO with full property and relationship data
     @Operation(summary = ENDPOINT_GET_ENTITY_BY_IDENTIFIER_SUMMARY, description = ENDPOINT_GET_ENTITY_BY_IDENTIFIER_DESCRIPTION)
     @ApiResponse(responseCode = OK_CODE, description = RESPONSE_ENTITY_FOUND, content = {
             @Content(schema = @Schema(implementation = EntityDtoOut.class)) })
@@ -122,13 +121,15 @@ public class EntityController {
         return entityDtoOutMapper.fromEntity(entity);
     }
 
-    /**
-     * Creates a new entity for the given template.
-     *
-     * @param templateIdentifier identifier of the template the new entity will use
-     * @param entityDtoIn        payload with the entity data
-     * @return the created {@link EntityDtoOut}
-     */
+    /// Creates a new entity for the specified template with validation.
+    ///
+    /// **API contract:** Accepts entity creation payload and returns created entity with
+    /// generated identifiers. Validates entity structure against template constraints
+    /// and returns HTTP 201 on success, HTTP 400 for validation errors.
+    ///
+    /// @param templateIdentifier target template identifier for entity creation context
+    /// @param entityDtoIn entity creation payload with properties and relationships
+    /// @return created entity DTO with server-generated identifiers
     @Operation(summary = ENDPOINT_POST_ENTITY_SUMMARY, description = ENDPOINT_POST_ENTITY_DESCRIPTION)
     @ApiResponse(responseCode = CREATED_CODE, description = RESPONSE_ENTITY_CREATED, content = {
             @Content(schema = @Schema(implementation = EntityDtoOut.class)) })

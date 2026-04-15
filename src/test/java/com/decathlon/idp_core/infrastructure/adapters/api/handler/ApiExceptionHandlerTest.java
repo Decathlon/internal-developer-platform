@@ -32,12 +32,10 @@ import com.decathlon.idp_core.infrastructure.adapters.api.handler.ApiExceptionHa
 import jakarta.validation.ConstraintViolation;
 import jakarta.validation.ConstraintViolationException;
 
-/**
- * Comprehensive unit tests for {@link ApiExceptionHandler}.
- *
- * Tests all exception handler methods and utility functions to ensure proper
- * error handling and response formatting across the API layer.
- */
+/// Comprehensive unit tests for [ApiExceptionHandler].
+///
+/// Tests all exception handler methods and utility functions to ensure proper
+/// error handling and response formatting across the API layer.
 @DisplayName("ApiExceptionHandler Tests")
 class ApiExceptionHandlerTest {
 
@@ -55,17 +53,13 @@ class ApiExceptionHandlerTest {
     @DisplayName("Domain Exception Handling")
     class DomainExceptionTests {
 
-        /**
-         * Tests the handling of EntityTemplateNotFoundException by the ApiExceptionHandler.
-         *
-         * <p>This test verifies that:</p>
-         * <ul>
-         *   <li>EntityTemplateNotFoundException is properly caught and handled</li>
-         *   <li>HTTP 404 Not Found status is returned</li>
-         *   <li>Error response contains the correct error status and description</li>
-         *   <li>Original exception message is preserved in the response</li>
-         * </ul>
-         */
+        /// Tests the handling of [EntityTemplateNotFoundException] by the [ApiExceptionHandler].
+        ///
+        /// **This test verifies that:**
+        /// - EntityTemplateNotFoundException is properly caught and handled
+        /// - HTTP 404 Not Found status is returned
+        /// - Error response contains the correct error status and description
+        /// - Original exception message is preserved in the response
         @Test
         @DisplayName("Should handle EntityTemplateNotFoundException with 404 status")
         void shouldHandleEntityTemplateNotFoundException() {
@@ -85,17 +79,13 @@ class ApiExceptionHandlerTest {
             assertEquals(errorMessage, body.getErrorDescription());
         }
 
-        /**
-         * Tests the handling of EntityTemplateAlreadyExistsException by the ApiExceptionHandler.
-         *
-         * <p>This test verifies that:</p>
-         * <ul>
-         *   <li>EntityTemplateAlreadyExistsException is properly caught and handled</li>
-         *   <li>HTTP 409 Conflict status is returned</li>
-         *   <li>Error response contains the correct error status and formatted description</li>
-         *   <li>Exception message is properly formatted with validation constants</li>
-         * </ul>
-         */
+        /// Tests the handling of [EntityTemplateAlreadyExistsException] by the [ApiExceptionHandler].
+        ///
+        /// **This test verifies that:**
+        /// - EntityTemplateAlreadyExistsException is properly caught and handled
+        /// - HTTP 409 Conflict status is returned
+        /// - Error response contains the correct error status and formatted description
+        /// - Exception message is properly formatted with validation constants
         @Test
         @DisplayName("Should handle EntityTemplateAlreadyExistsException with 409 status")
         void shouldHandleEntityTemplateAlreadyExistsException() {
@@ -121,17 +111,13 @@ class ApiExceptionHandlerTest {
     @DisplayName("Validation Exception Handling")
     class ValidationExceptionTests {
 
-        /**
-         * Tests the handling of ConstraintViolationException with a single validation violation.
-         *
-         * <p>This test verifies that:</p>
-         * <ul>
-         *   <li>ConstraintViolationException is properly caught and handled</li>
-         *   <li>HTTP 400 Bad Request status is returned</li>
-         *   <li>Single violation message is correctly extracted and returned</li>
-         *   <li>Error response format matches expected structure</li>
-         * </ul>
-         */
+        /// Tests the handling of [ConstraintViolationException] with a single validation violation.
+        ///
+        /// **This test verifies that:**
+        /// - ConstraintViolationException is properly caught and handled
+        /// - HTTP 400 Bad Request status is returned
+        /// - Single violation message is correctly extracted and returned
+        /// - Error response format matches expected structure
         @Test
         @DisplayName("Should handle ConstraintViolationException with single violation")
         void shouldHandleConstraintViolationExceptionSingleViolation() {
@@ -152,17 +138,13 @@ class ApiExceptionHandlerTest {
             assertEquals("Field must not be null", body.getErrorDescription());
         }
 
-        /**
-         * Tests the handling of ConstraintViolationException with multiple validation violations.
-         *
-         * <p>This test verifies that:</p>
-         * <ul>
-         *   <li>ConstraintViolationException with multiple violations is properly handled</li>
-         *   <li>HTTP 400 Bad Request status is returned</li>
-         *   <li>All violation messages are concatenated with comma separation</li>
-         *   <li>Error response contains all validation error messages</li>
-         * </ul>
-         */
+        /// Tests the handling of [ConstraintViolationException] with multiple validation violations.
+        ///
+        /// **This test verifies that:**
+        /// - ConstraintViolationException with multiple violations is properly handled
+        /// - HTTP 400 Bad Request status is returned
+        /// - All violation messages are concatenated with comma separation
+        /// - Error response contains all validation error messages
         @Test
         @DisplayName("Should handle ConstraintViolationException with multiple violations")
         void shouldHandleConstraintViolationExceptionMultipleViolations() {
@@ -188,19 +170,15 @@ class ApiExceptionHandlerTest {
             assertTrue(errorDescription.contains(", "));
         }
 
-        /**
-         * Tests the handling of MethodArgumentNotValidException with field validation errors.
-         *
-         * <p>This test verifies that:</p>
-         * <ul>
-         *   <li>MethodArgumentNotValidException is properly caught and handled</li>
-         *   <li>HTTP 400 Bad Request status is returned</li>
-         *   <li>Field error messages from binding result are extracted and concatenated</li>
-         *   <li>All field validation errors are included in the response with comma separation</li>
-         * </ul>
-         *
-         * @throws Exception if reflection fails during test setup
-         */
+        /// Tests the handling of [MethodArgumentNotValidException] with field validation errors.
+        ///
+        /// **This test verifies that:**
+        /// - MethodArgumentNotValidException is properly caught and handled
+        /// - HTTP 400 Bad Request status is returned
+        /// - Field error messages from binding result are extracted and concatenated
+        /// - All field validation errors are included in the response with comma separation
+        ///
+        /// @throws Exception if reflection fails during test setup
         @Test
         @DisplayName("Should handle MethodArgumentNotValidException with field errors")
         void shouldHandleMethodArgumentNotValidException() throws Exception {
@@ -248,17 +226,13 @@ class ApiExceptionHandlerTest {
     @DisplayName("HTTP Message Exception Handling")
     class HttpMessageExceptionTests {
 
-        /**
-         * Tests the handling of HttpMessageNotReadableException when exception message is null.
-         *
-         * <p>This test verifies that:</p>
-         * <ul>
-         *   <li>HttpMessageNotReadableException with null message is properly handled</li>
-         *   <li>HTTP 400 Bad Request status is returned</li>
-         *   <li>Default error message is provided when original message is null</li>
-         *   <li>Graceful handling of edge case scenarios</li>
-         * </ul>
-         */
+        /// Tests the handling of [HttpMessageNotReadableException] when exception message is null.
+        ///
+        /// **This test verifies that:**
+        /// - HttpMessageNotReadableException with null message is properly handled
+        /// - HTTP 400 Bad Request status is returned
+        /// - Default error message is provided when original message is null
+        /// - Graceful handling of edge case scenarios
         @Test
         @DisplayName("Should handle HttpMessageNotReadableException with null message")
         void shouldHandleHttpMessageNotReadableExceptionWithNullMessage() {
@@ -278,10 +252,8 @@ class ApiExceptionHandlerTest {
             assertEquals("Invalid request body format", body.getErrorDescription());
         }
 
-        /**
-         * Provides test data for HttpMessageNotReadableException scenarios.
-         * Each argument contains: input message and expected error description.
-         */
+        /// Provides test data for [HttpMessageNotReadableException] scenarios.
+        /// Each argument contains: input message and expected error description.
         static Stream<Arguments> httpMessageNotReadableExceptionTestData() {
             return Stream.of(
                     Arguments.of(
@@ -303,29 +275,23 @@ class ApiExceptionHandlerTest {
             );
         }
 
-        /**
-         * Parameterized test for handling HttpMessageNotReadableException with various error scenarios.
-         *
-         * <p>This test verifies that different types of HttpMessageNotReadableException are properly
-         * parsed and converted to user-friendly error messages:</p>
-         * <ul>
-         *   <li>Missing request body errors → "Request body is required"</li>
-         *   <li>JSON parse errors → "Invalid JSON format in request body"</li>
-         *   <li>PropertyType enum deserialization errors → Specific property and value information</li>
-         *   <li>Unknown enum deserialization errors → Generic enum error message</li>
-         * </ul>
-         *
-         * <p>Each test case validates that:</p>
-         * <ul>
-         *   <li>HTTP 400 Bad Request status is returned</li>
-         *   <li>Original complex error message is parsed and simplified</li>
-         *   <li>User-friendly error description is provided</li>
-         *   <li>Error response structure is consistent</li>
-         * </ul>
-         *
-         * @param originalMessage the original exception message to be processed
-         * @param expectedErrorDescription the expected user-friendly error description
-         */
+        /// Parameterized test for handling [HttpMessageNotReadableException] with various error scenarios.
+        ///
+        /// **This test verifies that different types of HttpMessageNotReadableException are properly
+        /// parsed and converted to user-friendly error messages:**
+        /// - Missing request body errors → "Request body is required"
+        /// - JSON parse errors → "Invalid JSON format in request body"
+        /// - PropertyType enum deserialization errors → Specific property and value information
+        /// - Unknown enum deserialization errors → Generic enum error message
+        ///
+        /// **Each test case validates that:**
+        /// - HTTP 400 Bad Request status is returned
+        /// - Original complex error message is parsed and simplified
+        /// - User-friendly error description is provided
+        /// - Error response structure is consistent
+        ///
+        /// @param originalMessage the original exception message to be processed
+        /// @param expectedErrorDescription the expected user-friendly error description
         @ParameterizedTest
         @MethodSource("httpMessageNotReadableExceptionTestData")
         @DisplayName("Should handle HttpMessageNotReadableException with various error types")
@@ -351,17 +317,13 @@ class ApiExceptionHandlerTest {
     @DisplayName("Generic Exception Handling")
     class GenericExceptionTests {
 
-        /**
-         * Tests the handling of generic Exception as a fallback mechanism.
-         *
-         * <p>This test verifies that:</p>
-         * <ul>
-         *   <li>Unexpected exceptions are caught by the generic handler</li>
-         *   <li>HTTP 500 Internal Server Error status is returned</li>
-         *   <li>Generic error message is provided to avoid exposing internal details</li>
-         *   <li>Exception is properly logged for debugging purposes</li>
-         * </ul>
-         */
+        /// Tests the handling of generic Exception as a fallback mechanism.
+        ///
+        /// **This test verifies that:**
+        /// - Unexpected exceptions are caught by the generic handler
+        /// - HTTP 500 Internal Server Error status is returned
+        /// - Generic error message is provided to avoid exposing internal details
+        /// - Exception is properly logged for debugging purposes
         @Test
         @DisplayName("Should handle generic Exception with 500 status")
         void shouldHandleGenericException() {
@@ -385,17 +347,13 @@ class ApiExceptionHandlerTest {
     @DisplayName("ErrorResponse Class Tests")
     class ErrorResponseTests {
 
-        /**
-         * Tests the creation of ErrorResponse using the all-arguments constructor.
-         *
-         * <p>This test verifies that:</p>
-         * <ul>
-         *   <li>ErrorResponse can be instantiated with HttpStatus and description</li>
-         *   <li>All fields are properly initialized with provided values</li>
-         *   <li>Getter methods return the expected values</li>
-         *   <li>Object is successfully created and accessible</li>
-         * </ul>
-         */
+        /// Tests the creation of [ErrorResponse] using the all-arguments constructor.
+        ///
+        /// **This test verifies that:**
+        /// - ErrorResponse can be instantiated with HttpStatus and description
+        /// - All fields are properly initialized with provided values
+        /// - Getter methods return the expected values
+        /// - Object is successfully created and accessible
         @Test
         @DisplayName("Should create ErrorResponse with all args constructor")
         void shouldCreateErrorResponseWithAllArgsConstructor() {
@@ -412,17 +370,13 @@ class ApiExceptionHandlerTest {
             assertEquals(description, errorResponse.getErrorDescription());
         }
 
-        /**
-         * Tests the creation of ErrorResponse using the no-arguments constructor.
-         *
-         * <p>This test verifies that:</p>
-         * <ul>
-         *   <li>ErrorResponse can be instantiated without parameters</li>
-         *   <li>Object is successfully created with default/null field values</li>
-         *   <li>Constructor works with @NoArgsConstructor(force = true) annotation</li>
-         *   <li>Provides flexibility for frameworks requiring default constructors</li>
-         * </ul>
-         */
+        /// Tests the creation of [ErrorResponse] using the no-arguments constructor.
+        ///
+        /// **This test verifies that:**
+        /// - ErrorResponse can be instantiated without parameters
+        /// - Object is successfully created with default/null field values
+        /// - Constructor works with `@NoArgsConstructor(force = true)` annotation
+        /// - Provides flexibility for frameworks requiring default constructors
         @Test
         @DisplayName("Should create ErrorResponse with no args constructor")
         void shouldCreateErrorResponseWithNoArgsConstructor() {
