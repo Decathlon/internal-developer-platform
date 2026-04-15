@@ -11,12 +11,12 @@ import org.springframework.security.oauth2.jwt.NimbusJwtDecoder;
  * Custom JwtDecoder configuration.
  * <p>
  * By defining this bean manually, we override Spring Boot's strict default auto-configuration.
- * This is required because the Identity Provider's JWKS response might be missing explicit 
+ * This is required because the Identity Provider's JWKS response might be missing explicit
  * 'alg' (Algorithm) or 'use' attributes on the keys.
  * </p>
  * <p>
- * The bare-bones {@code NimbusJwtDecoder.withJwkSetUri().build()} defaults to RS256 and is 
- * more forgiving. It successfully decodes the token as long as it finds a valid key with a 
+ * The bare-bones {@code NimbusJwtDecoder.withJwkSetUri().build()} defaults to RS256 and is
+ * more forgiving. It successfully decodes the token as long as it finds a valid key with a
  * matching 'kid', bypassing strict attribute validation failures that would normally drop the key.
  * </p>
  */

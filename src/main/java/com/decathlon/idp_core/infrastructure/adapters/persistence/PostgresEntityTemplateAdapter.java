@@ -53,9 +53,9 @@ public class PostgresEntityTemplateAdapter implements EntityTemplateRepositoryPo
     @Override
     public EntityTemplate save(EntityTemplate entityTemplate) {
         EntityTemplateJpaEntity jpaEntity;
-        if (entityTemplate.getId() != null) {
+        if (entityTemplate.id() != null) {
             // Update: fetch the managed JPA entity and merge in-place
-            jpaEntity = jpaEntityTemplateRepository.findById(entityTemplate.getId())
+            jpaEntity = jpaEntityTemplateRepository.findById(entityTemplate.id())
                     .orElseGet(() -> mapper.toJpa(entityTemplate));
             mergeIntoExisting(jpaEntity, entityTemplate);
         } else {
@@ -72,8 +72,8 @@ public class PostgresEntityTemplateAdapter implements EntityTemplateRepositoryPo
     // ── Merge helpers to update a managed JPA entity from domain values ──
 
     private void mergeIntoExisting(EntityTemplateJpaEntity jpa, EntityTemplate domain) {
-        jpa.setIdentifier(domain.getIdentifier());
-        jpa.setDescription(domain.getDescription());
+        jpa.setIdentifier(domain.identifier());
+        jpa.setDescription(domain.description());
         mergePropertyDefinitions(jpa, domain);
         mergeRelationDefinitions(jpa, domain);
     }
@@ -85,7 +85,7 @@ public class PostgresEntityTemplateAdapter implements EntityTemplateRepositoryPo
             jpa.setPropertiesDefinitions(existing);
         }
 
-        if (domain.getPropertiesDefinitions() == null) {
+        if (domain.propertiesDefinitions() == null) {
             existing.clear();
             return;
         }
@@ -93,29 +93,29 @@ public class PostgresEntityTemplateAdapter implements EntityTemplateRepositoryPo
         Map<String, PropertyDefinitionJpaEntity> existingByName = existing.stream()
                 .collect(Collectors.toMap(PropertyDefinitionJpaEntity::getName, Function.identity()));
 
-        Set<String> updatedNames = domain.getPropertiesDefinitions().stream()
-                .map(p -> p.getName())
+        Set<String> updatedNames = domain.propertiesDefinitions().stream()
+                .map(p -> p.name())
                 .collect(Collectors.toSet());
 
         // Remove properties no longer present
         existing.removeIf(p -> !updatedNames.contains(p.getName()));
 
         // Update existing or add new
-        for (var domProp : domain.getPropertiesDefinitions()) {
-            PropertyDefinitionJpaEntity ex = existingByName.get(domProp.getName());
+        for (var domProp : domain.propertiesDefinitions()) {
+            PropertyDefinitionJpaEntity ex = existingByName.get(domProp.name());
             if (ex != null) {
-                ex.setDescription(domProp.getDescription());
-                ex.setType(domProp.getType());
-                ex.setRequired(domProp.isRequired());
-                mergeRules(ex, domProp.getRules());
+                ex.setDescription(domProp.description());
+                ex.setType(domProp.type());
+                ex.setRequired(domProp.required());
+                mergeRules(ex, domProp.rules());
             } else {
                 PropertyDefinitionJpaEntity newProp = PropertyDefinitionJpaEntity.builder()
-                        .id(domProp.getId())
-                        .name(domProp.getName())
-                        .description(domProp.getDescription())
-                        .type(domProp.getType())
-                        .required(domProp.isRequired())
-                        .rules(domProp.getRules() != null ? toRulesJpa(domProp.getRules()) : null)
+                        .id(domProp.id())
+                        .name(domProp.name())
+                        .description(domProp.description())
+                        .type(domProp.type())
+                        .required(domProp.required())
+                        .rules(domProp.rules() != null ? toRulesJpa(domProp.rules()) : null)
                         .build();
                 existing.add(newProp);
             }
@@ -124,16 +124,22 @@ public class PostgresEntityTemplateAdapter implements EntityTemplateRepositoryPo
 
     private void mergeRules(PropertyDefinitionJpaEntity jpaProp,
                             com.decathlon.idp_core.domain.model.entity_template.PropertyRules domRules) {
-        if (domRules == null) return;
+        if (domRules == null) {
+            // No rules in the updated domain – leave existing rules unchanged
+            return;
+        }
         PropertyRulesJpaEntity ex = jpaProp.getRules();
         if (ex != null) {
-            ex.setFormat(domRules.getFormat());
-            ex.setEnumValues(domRules.getEnumValues());
-            ex.setRegex(domRules.getRegex());
-            ex.setMaxLength(domRules.getMaxLength());
-            ex.setMinLength(domRules.getMinLength());
-            ex.setMaxValue(domRules.getMaxValue());
-            ex.setMinValue(domRules.getMinValue());
+            // Update the managed entity in-place — Hibernate tracks the dirty fields
+            ex.setFormat(domRules.format());
+            ex.setEnumValues(domRules.enumValues() != null ? domRules.enumValues().toArray(new String[0]) : null);
+            ex.setRegex(domRules.regex());
+            ex.setMaxLength(domRules.maxLength());
+            ex.setMinLength(domRules.minLength());
+            ex.setMaxValue(domRules.maxValue());
+            ex.setMinValue(domRules.minValue());
+            // Re-set the reference so Hibernate detects the association as dirty
+            jpaProp.setRules(ex);
         } else {
             jpaProp.setRules(toRulesJpa(domRules));
         }
@@ -141,9 +147,10 @@ public class PostgresEntityTemplateAdapter implements EntityTemplateRepositoryPo
 
     private PropertyRulesJpaEntity toRulesJpa(com.decathlon.idp_core.domain.model.entity_template.PropertyRules d) {
         return PropertyRulesJpaEntity.builder()
-                .id(d.getId()).format(d.getFormat()).enumValues(d.getEnumValues())
-                .regex(d.getRegex()).maxLength(d.getMaxLength()).minLength(d.getMinLength())
-                .maxValue(d.getMaxValue()).minValue(d.getMinValue()).build();
+                .id(d.id()).format(d.format())
+                .enumValues(d.enumValues() != null ? d.enumValues().toArray(new String[0]) : null)
+                .regex(d.regex()).maxLength(d.maxLength()).minLength(d.minLength())
+                .maxValue(d.maxValue()).minValue(d.minValue()).build();
     }
 
     private void mergeRelationDefinitions(EntityTemplateJpaEntity jpa, EntityTemplate domain) {
@@ -153,7 +160,7 @@ public class PostgresEntityTemplateAdapter implements EntityTemplateRepositoryPo
             jpa.setRelationsDefinitions(existing);
         }
 
-        if (domain.getRelationsDefinitions() == null) {
+        if (domain.relationsDefinitions() == null) {
             existing.clear();
             return;
         }
@@ -161,26 +168,26 @@ public class PostgresEntityTemplateAdapter implements EntityTemplateRepositoryPo
         Map<String, RelationDefinitionJpaEntity> existingByName = existing.stream()
                 .collect(Collectors.toMap(RelationDefinitionJpaEntity::getName, Function.identity()));
 
-        Set<String> updatedNames = domain.getRelationsDefinitions().stream()
-                .map(r -> r.getName())
+        Set<String> updatedNames = domain.relationsDefinitions().stream()
+                .map(r -> r.name())
                 .collect(Collectors.toSet());
 
         // Remove relations no longer present
         existing.removeIf(r -> !updatedNames.contains(r.getName()));
 
         // Update existing or add new
-        for (var domRel : domain.getRelationsDefinitions()) {
-            RelationDefinitionJpaEntity ex = existingByName.get(domRel.getName());
+        for (var domRel : domain.relationsDefinitions()) {
+            RelationDefinitionJpaEntity ex = existingByName.get(domRel.name());
             if (ex != null) {
-                ex.setTargetEntityIdentifier(domRel.getTargetEntityIdentifier());
-                ex.setRequired(domRel.isRequired());
-                ex.setToMany(domRel.isToMany());
+                ex.setTargetEntityIdentifier(domRel.targetEntityIdentifier());
+                ex.setRequired(domRel.required());
+                ex.setToMany(domRel.toMany());
             } else {
                 RelationDefinitionJpaEntity newRel = RelationDefinitionJpaEntity.builder()
-                        .name(domRel.getName())
-                        .targetEntityIdentifier(domRel.getTargetEntityIdentifier())
-                        .required(domRel.isRequired())
-                        .toMany(domRel.isToMany())
+                        .name(domRel.name())
+                        .targetEntityIdentifier(domRel.targetEntityIdentifier())
+                        .required(domRel.required())
+                        .toMany(domRel.toMany())
                         .build();
                 existing.add(newRel);
             }

@@ -105,25 +105,22 @@ public class EntityTemplateService {
     public EntityTemplate putEntityTemplate(String identifier, @Valid EntityTemplate updatedTemplate) {
         EntityTemplate existingTemplate = getEntityTemplateByIdentifier(identifier);
 
-        if (!identifier.equals(updatedTemplate.getIdentifier()) &&
-                entityTemplateRepository.findByIdentifier(updatedTemplate.getIdentifier()).isPresent()) {
-            throw new EntityTemplateAlreadyExistsException(updatedTemplate.getIdentifier());
+        if (!identifier.equals(updatedTemplate.identifier()) &&
+                entityTemplateRepository.findByIdentifier(updatedTemplate.identifier()).isPresent()) {
+            throw new EntityTemplateAlreadyExistsException(updatedTemplate.identifier());
         }
 
-        existingTemplate.setIdentifier(updatedTemplate.getIdentifier());
-        existingTemplate.setDescription(updatedTemplate.getDescription());
-
-        existingTemplate.setPropertiesDefinitions(
-                mergePropertyDefinitions(existingTemplate.getPropertiesDefinitions(),
-                        updatedTemplate.getPropertiesDefinitions())
+        EntityTemplate mergedTemplate = new EntityTemplate(
+                existingTemplate.id(),
+                updatedTemplate.identifier(),
+                updatedTemplate.description(),
+                mergePropertyDefinitions(existingTemplate.propertiesDefinitions(),
+                        updatedTemplate.propertiesDefinitions()),
+                mergeRelationDefinitions(existingTemplate.relationsDefinitions(),
+                        updatedTemplate.relationsDefinitions())
         );
 
-        existingTemplate.setRelationsDefinitions(
-                mergeRelationDefinitions(existingTemplate.getRelationsDefinitions(),
-                        updatedTemplate.getRelationsDefinitions())
-        );
-
-        return entityTemplateRepository.save(existingTemplate);
+        return entityTemplateRepository.save(mergedTemplate);
     }
 
     private List<PropertyDefinition> mergePropertyDefinitions(
@@ -134,20 +131,23 @@ public class EntityTemplateService {
         if (updated == null) return existing;
 
         Map<String, PropertyDefinition> existingMap = existing.stream()
-                .collect(Collectors.toMap(PropertyDefinition::getName, Function.identity()));
+                .collect(Collectors.toMap(PropertyDefinition::name, Function.identity()));
 
         List<PropertyDefinition> result = new ArrayList<>();
 
         for (PropertyDefinition prop : updated) {
-            PropertyDefinition existingProp = existingMap.get(prop.getName());
+            PropertyDefinition existingProp = existingMap.get(prop.name());
             if (existingProp != null) {
-                existingProp.setDescription(prop.getDescription());
-                existingProp.setType(prop.getType());
-                existingProp.setRequired(prop.isRequired());
-
-                existingProp.setRules(mergePropertyRules(existingProp.getRules(), prop.getRules()));
-
-                result.add(existingProp);
+                // Records are immutable - create a new instance
+                PropertyDefinition merged = new PropertyDefinition(
+                        existingProp.id(),
+                        prop.name(),
+                        prop.description(),
+                        prop.type(),
+                        prop.required(),
+                        mergePropertyRules(existingProp.rules(), prop.rules())
+                );
+                result.add(merged);
             } else {
                 result.add(prop);
             }
@@ -164,15 +164,17 @@ public class EntityTemplateService {
             return newRules;
         }
 
-        existingRules.setFormat(newRules.getFormat());
-        existingRules.setEnumValues(newRules.getEnumValues());
-        existingRules.setRegex(newRules.getRegex());
-        existingRules.setMinLength(newRules.getMinLength());
-        existingRules.setMaxLength(newRules.getMaxLength());
-        existingRules.setMinValue(newRules.getMinValue());
-        existingRules.setMaxValue(newRules.getMaxValue());
-
-        return existingRules;
+        // Records are immutable - create a new instance
+        return new PropertyRules(
+                existingRules.id(),
+                newRules.format(),
+                newRules.enumValues(),
+                newRules.regex(),
+                newRules.maxLength(),
+                newRules.minLength(),
+                newRules.maxValue(),
+                newRules.minValue()
+        );
     }
 
     private List<RelationDefinition> mergeRelationDefinitions(
@@ -183,17 +185,22 @@ public class EntityTemplateService {
         if (updated == null) return existing;
 
         Map<String, RelationDefinition> existingMap = existing.stream()
-                .collect(Collectors.toMap(RelationDefinition::getName, Function.identity()));
+                .collect(Collectors.toMap(RelationDefinition::name, Function.identity()));
 
         List<RelationDefinition> result = new ArrayList<>();
 
         for (RelationDefinition rel : updated) {
-            RelationDefinition existingRel = existingMap.get(rel.getName());
+            RelationDefinition existingRel = existingMap.get(rel.name());
             if (existingRel != null) {
-                existingRel.setTargetEntityIdentifier(rel.getTargetEntityIdentifier());
-                existingRel.setRequired(rel.isRequired());
-                existingRel.setToMany(rel.isToMany());
-                result.add(existingRel);
+                // Records are immutable - create a new instance
+                RelationDefinition merged = new RelationDefinition(
+                        existingRel.id(),
+                        rel.name(),
+                        rel.targetEntityIdentifier(),
+                        rel.required(),
+                        rel.toMany()
+                );
+                result.add(merged);
             } else {
                 result.add(rel);
             }
@@ -218,9 +225,7 @@ public class EntityTemplateService {
      *
      * <p>Example usage:</p>
      * <pre>{@code
-     * EntityTemplate newTemplate = new EntityTemplate();
-     * newTemplate.setIdentifier("my-service");
-     * // ... set other properties
+     * EntityTemplate newTemplate = new EntityTemplate(null, "my-service", "description", propertyDefs, relationDefs);
      * EntityTemplate savedTemplate = service.saveEntityTemplate(newTemplate);
      * }</pre>
      *
@@ -232,9 +237,9 @@ public class EntityTemplateService {
      */
     @Transactional
     public EntityTemplate saveEntityTemplate(@Valid EntityTemplate entityTemplate) {
-        if (entityTemplate.getIdentifier() != null &&
-                entityTemplateRepository.findByIdentifier(entityTemplate.getIdentifier()).isPresent()) {
-            throw new EntityTemplateAlreadyExistsException(entityTemplate.getIdentifier());
+        if (entityTemplate.identifier() != null &&
+                entityTemplateRepository.findByIdentifier(entityTemplate.identifier()).isPresent()) {
+            throw new EntityTemplateAlreadyExistsException(entityTemplate.identifier());
         }
         return entityTemplateRepository.save(entityTemplate);
     }

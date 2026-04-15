@@ -16,11 +16,7 @@ import lombok.AllArgsConstructor;
 @Component
 @AllArgsConstructor
 public class EntityDtoInMapper {
-      public Entity fromEntityDtoInToEntity(EntityDtoIn entityDtoIn, String entityTemplateIdentifier) {
-        Entity.EntityBuilder entityBuilder = Entity.builder();
-        entityBuilder.name(entityDtoIn.getName());
-        entityBuilder.templateIdentifier(entityTemplateIdentifier);
-        entityBuilder.identifier(entityDtoIn.getIdentifier());
+    public Entity fromEntityDtoInToEntity(EntityDtoIn entityDtoIn, String entityTemplateIdentifier) {
 
         List<Property> properties = entityDtoIn.getProperties() == null ? Collections.emptyList()
                 : entityDtoIn.getProperties().entrySet().stream()
@@ -31,25 +27,32 @@ public class EntityDtoInMapper {
                             } else {
                                 value = null;
                             }
-                            return Property.builder()
-                                    .name(entry.getKey())
-                                    .value(value)
-                                    .build();
+                            return new Property(
+                                    null,
+                                    entry.getKey(),
+                                    value
+                            );
                         })
                         .toList();
 
         List<Relation> relations = entityDtoIn.getRelations() == null ? Collections.emptyList()
                 : entityDtoIn.getRelations().stream()
-                        .map(relDto -> Relation.builder()
-                                .name(relDto.getName())
-                                .targetEntityIdentifiers(relDto.getTargetEntityIdentifiers())
-                                .build())
+                        .map(relDto -> new Relation(
+                                null,
+                                relDto.getName(),
+                                null, // targetTemplateIdentifier not available in DTO
+                                relDto.getTargetEntityIdentifiers()
+                        ))
                         .toList();
 
-        entityBuilder.properties(properties);
-        entityBuilder.relations(relations);
-
-        return entityBuilder.build();
+        return new Entity(
+                null,
+                entityTemplateIdentifier,
+                entityDtoIn.getName(),
+                entityDtoIn.getIdentifier(),
+                properties,
+                relations
+        );
     }
 
 }

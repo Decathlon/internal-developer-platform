@@ -8,29 +8,21 @@ import java.util.UUID;
 
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotEmpty;
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Data;
-import lombok.NoArgsConstructor;
 
 /**
  * Pure domain model representing an EntityTemplate.
  */
-@Data
-@Builder
-@NoArgsConstructor
-@AllArgsConstructor
-public class EntityTemplate {
+public record EntityTemplate(
+        UUID id,
 
-    private UUID id;
+        @NotBlank(message = TEMPLATE_IDENTIFIER_MANDATORY)
+        String identifier,
 
-    @NotBlank(message = TEMPLATE_IDENTIFIER_MANDATORY)
-    private String identifier;
+        String description,
 
-    private String description;
+        @NotEmpty(message = PROPERTY_DEFINITIONS_MANDATORY)
+        List<PropertyDefinition> propertiesDefinitions,
 
-    @NotEmpty(message = PROPERTY_DEFINITIONS_MANDATORY)
-    private List<PropertyDefinition> propertiesDefinitions;
-
-    private List<RelationDefinition> relationsDefinitions;
+        List<RelationDefinition> relationsDefinitions
+) {
 }

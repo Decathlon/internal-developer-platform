@@ -44,7 +44,6 @@ public class EntityControllerTest extends AbstractIntegrationTest {
     @DisplayName("GET /api/v1/entities/{template-identifier} - Get Templates Paginated")
     class GetEntitiesByTemplateIdentifierTests {
 
-        @SuppressWarnings("null")
         @Test
         @DisplayName("Should return paginated entities with default pagination")
         @WithMockUser
@@ -81,7 +80,6 @@ public class EntityControllerTest extends AbstractIntegrationTest {
                     .andExpect(status().isUnauthorized());
         }
 
-        @SuppressWarnings("null")
         @Test
         @DisplayName("Should return paginated entities with custom pagination")
         @WithMockUser
@@ -102,7 +100,6 @@ public class EntityControllerTest extends AbstractIntegrationTest {
                     .andExpect(jsonPath("$.page.number").value(1));
         }
 
-        @SuppressWarnings("null")
         @Test
         @DisplayName("Should return paginated entities with default pagination")
         @WithMockUser
@@ -129,7 +126,6 @@ public class EntityControllerTest extends AbstractIntegrationTest {
     @DisplayName("GET /api/v1/entities/{template-identifier}/identifier/{identifier} - Get Entities by template identifier and entity identifier")
     class GetEntitiesByTemplateAndEntityIdentifierTests {
 
-        @SuppressWarnings("null")
         @Test
         @DisplayName("Should return entity by template identifier and identifier")
         @WithMockUser
@@ -165,7 +161,6 @@ public class EntityControllerTest extends AbstractIntegrationTest {
     @DisplayName("POST /api/v1/entities/{template-identifier} - Get Entities by template identifier and entity identifier")
     class PostEntitiesTests {
 
-        @SuppressWarnings("null")
         @Test
         @WithMockUser()
         @DisplayName("Should create entity and return 201")

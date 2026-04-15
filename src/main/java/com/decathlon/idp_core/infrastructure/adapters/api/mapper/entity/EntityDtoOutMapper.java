@@ -75,7 +75,7 @@ public class EntityDtoOutMapper {
      */
     public EntityDtoOut fromEntity(Entity entity) {
         EntityTemplate entityTemplate = entityTemplateService
-                .getEntityTemplateByIdentifier(entity.getTemplateIdentifier());
+                .getEntityTemplateByIdentifier(entity.templateIdentifier());
         return fromEntityUsingEntityTemplate(entity, entityTemplate);
     }
 
@@ -119,9 +119,9 @@ public class EntityDtoOutMapper {
                 relatedEntitiesByTargetSummaryMap);
 
         return EntityDtoOut.builder()
-                .templateIdentifier(entity.getTemplateIdentifier())
-                .name(entity.getName())
-                .identifier(entity.getIdentifier())
+                .templateIdentifier(entity.templateIdentifier())
+                .name(entity.name())
+                .identifier(entity.identifier())
                 .properties(props)
                 .relations(relationMap)
                 .relationsAsTarget(relationAsTargetMap)
@@ -149,9 +149,9 @@ public class EntityDtoOutMapper {
                 relationTargetOwnershipsMap);
 
         return EntityDtoOut.builder()
-                .templateIdentifier(entity.getTemplateIdentifier())
-                .name(entity.getName())
-                .identifier(entity.getIdentifier())
+                .templateIdentifier(entity.templateIdentifier())
+                .name(entity.name())
+                .identifier(entity.identifier())
                 .properties(props)
                 .relations(relationMap)
                 .relationsAsTarget(relationAsTargetMap)
@@ -168,21 +168,21 @@ public class EntityDtoOutMapper {
      */
     private Map<String, Object> mapPropertiesDto(Entity entity, EntityTemplate entityTemplate) {
 
-        if (entity.getProperties() == null) {
+        if (entity.properties() == null) {
             return Collections.emptyMap();
         }
 
-        Map<String, PropertyDefinition> propertiesDefinitions = entityTemplate.getPropertiesDefinitions().stream()
-                .collect(Collectors.toMap(PropertyDefinition::getName, Function.identity()));
+        Map<String, PropertyDefinition> propertiesDefinitions = entityTemplate.propertiesDefinitions().stream()
+                .collect(Collectors.toMap(PropertyDefinition::name, Function.identity()));
 
-        return entity.getProperties().stream()
+        return entity.properties().stream()
                 .collect(Collectors.toMap(
-                        Property::getName,
+                        Property::name,
                         prop -> {
-                            PropertyDefinition def = propertiesDefinitions.get(prop.getName());
+                            PropertyDefinition def = propertiesDefinitions.get(prop.name());
                             if (def != null) {
-                                PropertyType type = def.getType();
-                                String value = prop.getValue();
+                                PropertyType type = def.type();
+                                String value = prop.value();
                                 if (PropertyType.NUMBER.equals(type)) {
                                     try {
                                         return Double.valueOf(value);
@@ -196,7 +196,7 @@ public class EntityDtoOutMapper {
                                 return value;
                             } else {
                                 // Fallback if propertyDefinition is missing
-                                return prop.getValue();
+                                return prop.value();
                             }
                         }));
     }
@@ -211,12 +211,12 @@ public class EntityDtoOutMapper {
      */
     private Map<String, List<EntitySummaryDto>> mapRelationsDto(Entity entity,
             Map<String, EntitySummaryDto> relatedEntitiesSummaries) {
-        return entity.getRelations() == null
+        return entity.relations() == null
                 ? Collections.emptyMap()
-                : entity.getRelations().stream()
+                : entity.relations().stream()
                         .collect(Collectors.groupingBy(
-                                Relation::getName,
-                                Collectors.flatMapping(rel -> rel.getTargetEntityIdentifiers().stream()
+                                Relation::name,
+                                Collectors.flatMapping(rel -> rel.targetEntityIdentifiers().stream()
                                         .map(relatedEntitiesSummaries::get)
                                         .filter(Objects::nonNull),
                                         Collectors.toList())));
@@ -234,7 +234,7 @@ public class EntityDtoOutMapper {
     private Map<String, List<EntitySummaryDto>> mapRelationsAsTargetDto(Entity entity,
             Map<String, List<RelationAsTargetSummary>> relationTargetOwnershipsMap) {
         List<RelationAsTargetSummary> relationAsTargetSummaries = relationTargetOwnershipsMap
-                .get(entity.getIdentifier());
+                .get(entity.identifier());
         if (relationAsTargetSummaries == null) {
             return Collections.emptyMap();
         }
@@ -257,10 +257,10 @@ public class EntityDtoOutMapper {
      */
     private Map<String, List<RelationAsTargetSummary>> buildRelationsAsTargetSummaryMapByPage(
             Page<Entity> entitiesPage) {
-        if (entitiesPage == null || entitiesPage.getContent() == null || entitiesPage.getContent().isEmpty()) {
+        if (entitiesPage == null || entitiesPage.getContent().isEmpty()) {
             return Collections.emptyMap();
         }
-        List<String> entitiesIdentifiers = entitiesPage.getContent().stream().map(e -> e.getIdentifier())
+        List<String> entitiesIdentifiers = entitiesPage.getContent().stream().map(Entity::identifier)
                 .filter(Objects::nonNull).toList();
         List<RelationAsTargetSummary> relationTargetOwnerships = relationService
                 .findRelationsSummariesByTargetEntityIdentifiers(entitiesIdentifiers);
@@ -277,11 +277,11 @@ public class EntityDtoOutMapper {
      *         summaries
      */
     private Map<String, List<RelationAsTargetSummary>> buildRelationsAsTargetSummaryMapByEntity(Entity entity) {
-        if (entity == null || entity.getIdentifier() == null) {
+        if (entity == null || entity.identifier() == null) {
             return Collections.emptyMap();
         }
         List<RelationAsTargetSummary> relationTargetOwnerships = relationService
-                .findRelationsSummariesByTargetEntityIdentifiers(List.of(entity.getIdentifier()));
+                .findRelationsSummariesByTargetEntityIdentifiers(List.of(entity.identifier()));
         return relationTargetOwnerships.stream()
                 .collect(Collectors.groupingBy(RelationAsTargetSummary::targetEntityIdentifier));
     }
@@ -294,10 +294,10 @@ public class EntityDtoOutMapper {
      * @return a list of unique target entity identifiers
      */
     private List<String> getAllTargetIdentifiersFromEntityRelations(Entity entity) {
-        return entity.getRelations() == null
+        return entity.relations() == null
                 ? Collections.emptyList()
-                : new ArrayList<>(entity.getRelations().stream()
-                        .flatMap(rel -> rel.getTargetEntityIdentifiers().stream())
+                : new ArrayList<>(entity.relations().stream()
+                        .flatMap(rel -> rel.targetEntityIdentifiers().stream())
                         .collect(Collectors.toSet()));
     }
 
@@ -310,10 +310,10 @@ public class EntityDtoOutMapper {
      */
     private List<String> getUniqueTargetIdentifiersInPage(Page<Entity> entities) {
         return new ArrayList<>(entities.stream()
-                .flatMap(entity -> entity.getRelations() == null
+                .flatMap(entity -> entity.relations() == null
                         ? Stream.empty()
-                        : entity.getRelations().stream()
-                                .flatMap(rel -> rel.getTargetEntityIdentifiers().stream()))
+                        : entity.relations().stream()
+                                .flatMap(rel -> rel.targetEntityIdentifiers().stream()))
                 .collect(Collectors.toSet()));
 
     }

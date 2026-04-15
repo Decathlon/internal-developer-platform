@@ -180,7 +180,6 @@ public abstract class AbstractIntegrationTest {
      * @return
      * @throws Exception if an error occurs during the mock MVC request execution
      */
-    @SuppressWarnings("null")
     public MvcResult postAndValidateBadRequest(String path, String jsonBodyfilePath, String errorDescription)
             throws Exception {
         return mockMvc.perform(MockMvcRequestBuilders.post(path)

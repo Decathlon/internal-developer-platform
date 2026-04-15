@@ -6,10 +6,6 @@ import java.util.List;
 import java.util.UUID;
 
 import jakarta.validation.constraints.NotBlank;
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Data;
-import lombok.NoArgsConstructor;
 
 /**
  * Pure domain model representing an Entity in the system.
@@ -17,22 +13,18 @@ import lombok.NoArgsConstructor;
  * Free of persistence annotations. JPA mapping is in the infrastructure layer.
  * </p>
  */
-@Data
-@Builder
-@NoArgsConstructor
-@AllArgsConstructor
-public class Entity {
-
-        private UUID id;
+public record Entity(
+        UUID id,
 
         @NotBlank(message = TEMPLATE_IDENTIFIER_MANDATORY)
-        private String templateIdentifier;
+        String templateIdentifier,
 
-        private String name;
+        String name,
 
-        private String identifier;
+        String identifier,
 
-        private List<Property> properties;
+        List<Property> properties,
 
-        private List<Relation> relations;
+        List<Relation> relations
+) {
 }

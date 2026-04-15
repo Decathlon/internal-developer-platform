@@ -69,12 +69,13 @@ public class EntityTemplateMapper {
             return null;
         }
 
-        return EntityTemplate.builder()
-                .identifier(dto.getIdentifier())
-                .description(dto.getDescription())
-                .propertiesDefinitions(toPropertyDefinitionEntities(dto.getPropertiesDefinitions()))
-                .relationsDefinitions(toRelationDefinitionEntities(dto.getRelationsDefinitions()))
-                .build();
+        return new EntityTemplate(
+                null,
+                dto.getIdentifier(),
+                dto.getDescription(),
+                toPropertyDefinitionEntities(dto.getPropertiesDefinitions()),
+                toRelationDefinitionEntities(dto.getRelationsDefinitions())
+        );
     }
 
     /**
@@ -96,10 +97,10 @@ public class EntityTemplateMapper {
         }
 
         return EntityTemplateDtoOut.builder()
-                .identifier(entity.getIdentifier())
-                .description(entity.getDescription())
-                .propertiesDefinitions(toPropertyDefinitionDtos(entity.getPropertiesDefinitions()))
-                .relationsDefinitions(toRelationDefinitionDtos(entity.getRelationsDefinitions()))
+                .identifier(entity.identifier())
+                .description(entity.description())
+                .propertiesDefinitions(toPropertyDefinitionDtos(entity.propertiesDefinitions()))
+                .relationsDefinitions(toRelationDefinitionDtos(entity.relationsDefinitions()))
                 .build();
     }
 
@@ -136,13 +137,14 @@ public class EntityTemplateMapper {
             return null;
         }
 
-        return PropertyDefinition.builder()
-                .name(dto.getName())
-                .description(dto.getDescription())
-                .type(dto.getType())
-                .required(dto.isRequired())
-                .rules(toPropertyRules(dto.getRules()))
-                .build();
+        return new PropertyDefinition(
+                null,
+                dto.getName(),
+                dto.getDescription(),
+                dto.getType(),
+                dto.isRequired(),
+                toPropertyRules(dto.getRules())
+        );
     }
 
     /**
@@ -157,11 +159,11 @@ public class EntityTemplateMapper {
         }
 
         return PropertyDefinitionDtoOut.builder()
-                .name(entity.getName())
-                .description(entity.getDescription())
-                .type(entity.getType())
-                .required(entity.isRequired())
-                .rules(toDto(entity.getRules()))
+                .name(entity.name())
+                .description(entity.description())
+                .type(entity.type())
+                .required(entity.required())
+                .rules(toDto(entity.rules()))
                 .build();
     }
 
@@ -188,15 +190,16 @@ public class EntityTemplateMapper {
             return null;
         }
 
-        return PropertyRules.builder()
-                .format(dto.getFormat())
-                .enumValues(dto.getEnumValues())
-                .regex(dto.getRegex())
-                .maxLength(dto.getMaxLength())
-                .minLength(dto.getMinLength())
-                .maxValue(dto.getMaxValue())
-                .minValue(dto.getMinValue())
-                .build();
+        return new PropertyRules(
+                null,
+                dto.getFormat(),
+                dto.getEnumValues() != null ? List.of(dto.getEnumValues()) : null,
+                dto.getRegex(),
+                dto.getMaxLength(),
+                dto.getMinLength(),
+                dto.getMaxValue(),
+                dto.getMinValue()
+        );
     }
 
     public PropertyRulesDtoOut toDto(PropertyRules entity) {
@@ -205,14 +208,14 @@ public class EntityTemplateMapper {
         }
 
         return PropertyRulesDtoOut.builder()
-                .id(entity.getId())
-                .format(entity.getFormat())
-                .enumValues(entity.getEnumValues())
-                .regex(entity.getRegex())
-                .maxLength(entity.getMaxLength())
-                .minLength(entity.getMinLength())
-                .maxValue(entity.getMaxValue())
-                .minValue(entity.getMinValue())
+                .id(entity.id())
+                .format(entity.format())
+                .enumValues(entity.enumValues() != null ? entity.enumValues().toArray(new String[0]) : null)
+                .regex(entity.regex())
+                .maxLength(entity.maxLength())
+                .minLength(entity.minLength())
+                .maxValue(entity.maxValue())
+                .minValue(entity.minValue())
                 .build();
     }
 
@@ -221,12 +224,13 @@ public class EntityTemplateMapper {
             return null;
         }
 
-        return RelationDefinition.builder()
-                .name(dto.getName())
-                .targetEntityIdentifier(dto.getTargetEntityIdentifier())
-                .required(dto.isRequired())
-                .toMany(dto.isToMany())
-                .build();
+        return new RelationDefinition(
+                null,
+                dto.getName(),
+                dto.getTargetEntityIdentifier(),
+                dto.isRequired(),
+                dto.isToMany()
+        );
     }
 
     public RelationDefinitionDtoOut toDto(RelationDefinition entity) {
@@ -235,10 +239,10 @@ public class EntityTemplateMapper {
         }
 
         return RelationDefinitionDtoOut.builder()
-                .name(entity.getName())
-                .targetEntityIdentifier(entity.getTargetEntityIdentifier())
-                .required(entity.isRequired())
-                .toMany(entity.isToMany())
+                .name(entity.name())
+                .targetEntityIdentifier(entity.targetEntityIdentifier())
+                .required(entity.required())
+                .toMany(entity.toMany())
                 .build();
     }
 

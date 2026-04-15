@@ -6,31 +6,22 @@ import static com.decathlon.idp_core.domain.constant.ValidationsMessages.RELATIO
 import java.util.UUID;
 
 import jakarta.validation.constraints.NotBlank;
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Data;
-import lombok.NoArgsConstructor;
 
 /**
  * Pure domain model representing a RelationDefinition within an EntityTemplate.
+ * Immutable value object.
  */
-@Data
-@Builder
-@NoArgsConstructor
-@AllArgsConstructor
-public class RelationDefinition {
-
-    private UUID id;
+public record RelationDefinition(
+    UUID id,
 
     @NotBlank(message = RELATION_NAME_MANDATORY_SIMPLE)
-    private String name;
+    String name,
 
     @NotBlank(message = RELATION_TARGET_IDENTIFIER_MANDATORY_SIMPLE)
-    private String targetEntityIdentifier;
+    String targetEntityIdentifier,
 
-    @Builder.Default
-    private boolean required = false;
+    boolean required,
 
-    @Builder.Default
-    private boolean toMany = false;
+    boolean toMany
+) {
 }

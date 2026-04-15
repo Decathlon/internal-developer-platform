@@ -35,7 +35,6 @@ import com.decathlon.idp_core.domain.model.entity_template.PropertyRules;
 import com.decathlon.idp_core.domain.model.entity_template.RelationDefinition;
 import com.decathlon.idp_core.domain.ports.EntityTemplateRepositoryPort;
 
-import jakarta.transaction.Transactional;
 import lombok.extern.slf4j.Slf4j;
 
 @DisplayName("EntityTemplate Controller Integration Tests")
@@ -591,7 +590,6 @@ class EntityTemplateControllerTest extends AbstractIntegrationTest {
 
         @Test
         @WithMockUser
-        @Transactional
         @DisplayName("Should update existing property rules using PUT")
         void putTemplate_shouldMergePropertyRules() throws Exception {
 
@@ -608,8 +606,8 @@ class EntityTemplateControllerTest extends AbstractIntegrationTest {
                     .findByIdentifier("temp-test-99")
                     .orElseThrow();
 
-            PropertyDefinition initialProperty = initialTemplate.getPropertiesDefinitions().get(0);
-            UUID initialRulesId = initialProperty.getRules().getId();
+            PropertyDefinition initialProperty = initialTemplate.propertiesDefinitions().get(0);
+            UUID initialRulesId = initialProperty.rules().id();
 
             mockMvc.perform(MockMvcRequestBuilders.put("/api/v1/entity-templates/identifier/temp-test-99")
                     .contentType(APPLICATION_JSON)
@@ -624,26 +622,25 @@ class EntityTemplateControllerTest extends AbstractIntegrationTest {
                     .findByIdentifier("temp-test-99")
                     .orElseThrow();
 
-            assertThat(updatedTemplate.getPropertiesDefinitions()).hasSize(1);
+            assertThat(updatedTemplate.propertiesDefinitions()).hasSize(1);
 
-            PropertyDefinition updatedProperty = updatedTemplate.getPropertiesDefinitions().get(0);
+            PropertyDefinition updatedProperty = updatedTemplate.propertiesDefinitions().get(0);
 
-            assertThat(updatedProperty.getName()).isEqualTo("property-test");
+            assertThat(updatedProperty.name()).isEqualTo("property-test");
 
-            PropertyRules updatedRules = updatedProperty.getRules();
-            assertThat(updatedRules.getFormat()).isNull();
-            assertThat(updatedRules.getRegex()).isEqualTo("^[a-zA-Z0-9]+$");
-            assertThat(updatedRules.getMaxLength()).isEqualTo(255);
-            assertThat(updatedRules.getMinLength()).isNull();
+            PropertyRules updatedRules = updatedProperty.rules();
+            assertThat(updatedRules.format()).isNull();
+            assertThat(updatedRules.regex()).isEqualTo("^[a-zA-Z0-9]+$");
+            assertThat(updatedRules.maxLength()).isEqualTo(255);
+            assertThat(updatedRules.minLength()).isNull();
 
-            assertThat(updatedRules.getId()).isEqualTo(initialRulesId);
+            assertThat(updatedRules.id()).isEqualTo(initialRulesId);
 
-            assertThat(updatedTemplate.getRelationsDefinitions()).isEmpty();
+            assertThat(updatedTemplate.relationsDefinitions()).isEmpty();
         }
 
         @Test
         @WithMockUser
-        @Transactional
         @DisplayName("Should update template with relations and return 200")
         void putTemplate_updateRelations_200() throws Exception {
             mockMvc.perform(MockMvcRequestBuilders.post(ENTITY_TEMPLATE_PATH)
@@ -719,32 +716,31 @@ class EntityTemplateControllerTest extends AbstractIntegrationTest {
             EntityTemplate updatedTemplate = updatedTemplateOpt.get();
 
             // Vérifier description mise à jour
-            assertThat(updatedTemplate.getDescription()).isEqualTo("Updated template with new relation");
+            assertThat(updatedTemplate.description()).isEqualTo("Updated template with new relation");
 
             // Vérifier properties
-            assertThat(updatedTemplate.getPropertiesDefinitions()).hasSize(1);
-            assertThat(updatedTemplate.getPropertiesDefinitions().get(0).getDescription())
+            assertThat(updatedTemplate.propertiesDefinitions()).hasSize(1);
+            assertThat(updatedTemplate.propertiesDefinitions().get(0).description())
                     .isEqualTo("Updated description");
 
             // Vérifier relations
-            assertThat(updatedTemplate.getRelationsDefinitions()).hasSize(2);
+            assertThat(updatedTemplate.relationsDefinitions()).hasSize(2);
 
-            Map<String, RelationDefinition> relationsMap = updatedTemplate.getRelationsDefinitions()
+            Map<String, RelationDefinition> relationsMap = updatedTemplate.relationsDefinitions()
                     .stream()
-                    .collect(Collectors.toMap(RelationDefinition::getName, r -> r));
+                    .collect(Collectors.toMap(RelationDefinition::name, r -> r));
 
-            assertThat(relationsMap.get("owns").getTargetEntityIdentifier()).isEqualTo("child-entity-updated");
-            assertThat(relationsMap.get("owns").isRequired()).isFalse();
-            assertThat(relationsMap.get("owns").isToMany()).isFalse();
+            assertThat(relationsMap.get("owns").targetEntityIdentifier()).isEqualTo("child-entity-updated");
+            assertThat(relationsMap.get("owns").required()).isFalse();
+            assertThat(relationsMap.get("owns").toMany()).isFalse();
 
-            assertThat(relationsMap.get("belongsTo").getTargetEntityIdentifier()).isEqualTo("parent-entity");
-            assertThat(relationsMap.get("belongsTo").isRequired()).isTrue();
-            assertThat(relationsMap.get("belongsTo").isToMany()).isFalse();
+            assertThat(relationsMap.get("belongsTo").targetEntityIdentifier()).isEqualTo("parent-entity");
+            assertThat(relationsMap.get("belongsTo").required()).isTrue();
+            assertThat(relationsMap.get("belongsTo").toMany()).isFalse();
         }
 
         @Test
         @WithMockUser()
-        @Transactional
         @DisplayName("Should update template and return 201")
         void putTemplate_200() throws Exception {
             String identifier = "web-service";
@@ -758,8 +754,8 @@ class EntityTemplateControllerTest extends AbstractIntegrationTest {
 
             Optional<EntityTemplate> entityTemplateUpdated = entityTemplateRepository.findByIdentifier("web-service");
             assertThat(entityTemplateUpdated).isPresent();
-            assertThat(entityTemplateUpdated.get().getPropertiesDefinitions()).hasSize(2);
-            assertThat(entityTemplateUpdated.get().getRelationsDefinitions()).isEmpty();
+            assertThat(entityTemplateUpdated.get().propertiesDefinitions()).hasSize(2);
+            assertThat(entityTemplateUpdated.get().relationsDefinitions()).isEmpty();
         }
 
         @Test
