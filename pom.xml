@@ -20,8 +20,8 @@
 
     <properties>
         <java.version>25</java.version>
-        <jakarta.version>2.2.45</jakarta.version>
-        <lombok.version>1.18.42</lombok.version>
+        <jakarta.version>2.2.48</jakarta.version>
+        <lombok.version>1.18.44</lombok.version>
         <mockserver.version>5.15.0</mockserver.version>
         <testcontainers.version>1.21.4</testcontainers.version>
         <maven-compiler.version>3.15.0</maven-compiler.version>
@@ -199,14 +199,14 @@
         <dependency>
             <groupId>org.springdoc</groupId>
             <artifactId>springdoc-openapi-starter-webmvc-ui</artifactId>
-            <version>3.0.2</version>
+            <version>3.0.3</version>
         </dependency>
 
         <!-- Swagger Parser for testing with exclusions -->
         <dependency>
             <groupId>io.swagger.parser.v3</groupId>
             <artifactId>swagger-parser</artifactId>
-            <version>2.1.38</version>
+            <version>2.1.40</version>
             <scope>test</scope>
             <exclusions>
                 <exclusion>
@@ -338,7 +338,7 @@
             <plugin>
                 <groupId>com.github.codemonstur</groupId>
                 <artifactId>maven-check-license</artifactId>
-                <version>1.1.0</version>
+                <version>1.2.0</version>
                 <executions>
                     <execution>
                         <phase>validate</phase>
