@@ -14,16 +14,18 @@ The IDP Core is responsible for ingesting, transforming, and persisting data fro
 
 ## Decision Drivers
 
-* **Maintainability:** Clear separation between business rules and infrastructure logic.
-* **Testability:** High confidence in core logic through fast, isolated unit tests.
-* **Developer Velocity (Pragmatism):** Reducing boilerplate by allowing Spring Boot 4's dependency injection and transaction management within the domain.
-* **Future-Proofing:** Decoupling the "standardization engine" from specific protocols (Kafka, HTTP, etc.) and allowing for future side effects (outbound events).
-* **Contributing in Open Source Mode:** Ensuring the codebase is modular and "inviting" for external contributors to add new adapters without risking core stability.
+* Security
+* User experience
+* Complexity of implementation
+* Maintainability
+* Developer experience and velocity
+* Open Source contributing
 
 ## Considered Options
 
 1. **Pragmatic Hexagonal Architecture (Ports and Adapters with Spring annotations)**
 2. **Traditional MVC (Layered) Architecture**
+3. **Strict Hexagonal Architecture (Pure Ports and Adapters)**
 
 ## Decision Outcome
 
@@ -110,6 +112,38 @@ com.decathlon.idp
 * Bad, because it lacks **"Contribution Guardrails"**: No structural rule prevents a contributor from putting Kafka-specific logic directly into a Service class. (Contributing in open source mode / Maintainability)
 * Bad, because it **Couples Business Logic to Outbound Protocols**: Calling a `KafkaTemplate` directly in a service locks the project into Kafka, forcing community forks for other brokers. (Contributing in open source mode / Portability)
 * Bad, because it creates **Brittle Tests**: Business logic tests become dependent on infrastructure mocks. (Testability)
+
+### 3. Strict Hexagonal Architecture (Pure Ports and Adapters)
+
+This version enforces a pristine Domain layer with absolutely zero dependencies on external frameworks, including Spring Boot. All dependency injection, transaction management, and configuration must be handled explicitly in the Infrastructure layer.
+
+```text
+com.decathlon.idp
+├── domain/                         <-- Pure Java, ZERO framework imports
+│   ├── model/
+│   │   ├── Entity.java
+│   │   └── EntityTemplate.java
+│   ├── ports/
+│   │   ├── EntityRepository.java
+│   │   └── EventPublisher.java
+│   └── service/
+│       └── IngestionService.java   # Pure Java class, no @Service or @Transactional
+│
+└── infrastructure/                 <-- All Frameworks (Spring Boot, etc.)
+    ├── adapters/
+    │   ├── api/
+    │   ├── persistence/
+    │   └── messaging/
+    └── config/                     # Manual bean wiring for Domain classes
+```
+
+* Good, because of **Absolute Framework Independence**: The core logic is pristine Java, meaning migrating away from Spring Boot to Quarkus, Micronaut, or Jakarta EE requires absolutely zero changes to the domain. (Portability / Future-Proofing)
+* Good, because of **Maximum Testability**: Domain tests run instantly as pure JUnit tests without any need for Spring Context, component scanning, or framework mocking. (Testability)
+* Good, because of **Enforced Boundaries**: It is structurally impossible to leak framework-specific logic (like Spring Data or Spring Web annotations) into the business logic. (Maintainability)
+* Bad, because of **High Boilerplate**: Requires manual Bean configuration in the infrastructure layer to instantiate domain services and manually inject infrastructure adapters. (Complexity of implementation)
+* Bad, because of **Developer Friction**: Developers cannot use well-known and highly productive conveniences like `@Transactional` or `@Service` in their core logic, slowing down development velocity. (Developer Velocity)
+* Bad, because of **Transaction Management Complexity**: Handling transaction boundaries programmatically across pure domain boundaries without framework annotations is tedious and prone to errors. (Complexity of implementation)
+* Bad, because of **Onboarding Difficulty**: The stark absence of standard Spring conventions in the core logic might alienate typical Java/Spring engineers and increase the learning curve for open-source contributors. (Contributing in open source mode)
 
 ---
 
