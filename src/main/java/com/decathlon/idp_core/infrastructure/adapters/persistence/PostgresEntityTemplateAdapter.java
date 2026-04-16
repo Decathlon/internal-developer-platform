@@ -95,14 +95,11 @@ public class PostgresEntityTemplateAdapter implements EntityTemplateRepositoryPo
     }
 
     private void mergePropertyDefinitions(EntityTemplateJpaEntity jpa, EntityTemplate domain) {
-        Set<PropertyDefinitionJpaEntity> existing = jpa.getPropertiesDefinitions();
-        if (existing == null) {
-            existing = new LinkedHashSet<>();
-            jpa.setPropertiesDefinitions(existing);
-        }
+        // Work on a mutable copy — getter returns an unmodifiable view
+        Set<PropertyDefinitionJpaEntity> existing = new LinkedHashSet<>(jpa.getPropertiesDefinitions());
 
         if (domain.propertiesDefinitions() == null) {
-            existing.clear();
+            jpa.setPropertiesDefinitions(new LinkedHashSet<>());
             return;
         }
 
@@ -136,6 +133,9 @@ public class PostgresEntityTemplateAdapter implements EntityTemplateRepositoryPo
                 existing.add(newProp);
             }
         }
+
+        // Push the mutated copy back through the defensive setter
+        jpa.setPropertiesDefinitions(existing);
     }
 
     private void mergeRules(PropertyDefinitionJpaEntity jpaProp,
@@ -170,14 +170,11 @@ public class PostgresEntityTemplateAdapter implements EntityTemplateRepositoryPo
     }
 
     private void mergeRelationDefinitions(EntityTemplateJpaEntity jpa, EntityTemplate domain) {
-        Set<RelationDefinitionJpaEntity> existing = jpa.getRelationsDefinitions();
-        if (existing == null) {
-            existing = new LinkedHashSet<>();
-            jpa.setRelationsDefinitions(existing);
-        }
+        // Work on a mutable copy — getter returns an unmodifiable view
+        Set<RelationDefinitionJpaEntity> existing = new LinkedHashSet<>(jpa.getRelationsDefinitions());
 
         if (domain.relationsDefinitions() == null) {
-            existing.clear();
+            jpa.setRelationsDefinitions(new LinkedHashSet<>());
             return;
         }
 
@@ -208,5 +205,8 @@ public class PostgresEntityTemplateAdapter implements EntityTemplateRepositoryPo
                 existing.add(newRel);
             }
         }
+
+        // Push the mutated copy back through the defensive setter
+        jpa.setRelationsDefinitions(existing);
     }
 }

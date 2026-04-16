@@ -9,9 +9,9 @@ Dependencies always point inward: Adapters → Ports → Domain.
 
 This project follows **Hexagonal Architecture** (Ports & Adapters):
 
-- **Domain** — Pure business logic, no framework dependencies
-- **Ports** — Interfaces that define the contracts between the domain and the outside world
-- **Adapters** — Concrete implementations that connect the domain to external systems (REST API, database, etc.)
+- **Domain** Pure business logic, no framework dependencies
+- **Ports** Interfaces that define the contracts between the domain and the outside world
+- **Adapters** Concrete implementations that connect the domain to external systems (REST API, database, etc.)
 
 ```text
 ┌─────────────────────────────────────────────────────┐
@@ -42,12 +42,12 @@ Contains all business rules, invariants, and contracts.
 ```text
 domain/
 ├── constant/            # Validation message constants (single source of truth)
-├── exception/           # Domain-specific exceptions (e.g. EntityTemplateNotFoundException)
+├── exception/           # Domain-specific exceptions (EntityTemplateNotFoundException)
 ├── model/
 │   ├── entity/          # Core business records: Entity, Property, Relation, EntitySummary
 │   ├── entity_template/ # Template records: EntityTemplate, PropertyDefinition, PropertyRules, RelationDefinition
 │   └── enums/           # Business enums: PropertyType, PropertyFormat
-├── ports/               # Port interfaces — contracts for driven adapters
+├── ports/               # Port interfaces—contracts for driven adapters
 │   ├── EntityRepositoryPort
 │   ├── EntityTemplateRepositoryPort
 │   └── RelationRepositoryPort
@@ -62,9 +62,9 @@ domain/
 | Concern | Responsibility |
 | --- | --- |
 | **Models** | Immutable Java records enforcing business invariants via validation annotations |
-| **Ports** | Interfaces defining the **contract** between domain and infrastructure — no implementation details |
-| **Services** | Orchestrate business operations, enforce rules (e.g. uniqueness), delegate persistence to ports |
-| **Exceptions** | Domain-specific error types — protocol-agnostic (mapped to HTTP status codes by adapters) |
+| **Ports** | Interfaces defining the **contract** between domain and infrastructure. No implementation details |
+| **Services** | Orchestrate business operations, enforce rules, delegate persistence to ports |
+| **Exceptions** | Domain-specific error types. Protocol-agnostic (mapped to HTTP status codes by adapters) |
 | **Constants** | Centralized validation messages used by model annotations and exception formatting |
 
 ### Key Constraints
@@ -130,15 +130,15 @@ infrastructure/
 | **Controllers** | Receive HTTP requests, delegate to domain services, return DTOs. **No business logic.** |
 | **DTOs** | Define the API contract shape (request/response). Carry validation annotations. |
 | **Mappers** | Convert between DTOs and domain models. Null-safe, no side effects. |
-| **Handler** | Map domain exceptions to HTTP status codes (e.g. `EntityTemplateNotFoundException` → 404) |
+| **Handler** | Map domain exceptions to HTTP status codes (`EntityTemplateNotFoundException` → 404) |
 | **Configuration** | Security (JWT, CORS), Swagger/OpenAPI, pagination, serialization settings |
 
-#### Persistence Adapter (Driven — Outbound)
+#### Persistence Adapter (Driven—Outbound)
 
 | Concern | Responsibility |
 | --- | --- |
 | **Adapter classes** | Implement domain port interfaces using JPA repositories and persistence mappers |
-| **JPA Entities** | Database representation — may differ from domain models (e.g. mutable, JPA annotations) |
+| **JPA Entities** | Database representation—may differ from domain models ( mutable, JPA annotations) |
 | **Persistence Mappers** | Convert between domain records and JPA entities |
 | **JPA Repositories** | Spring Data interfaces for database queries |
 
@@ -164,7 +164,7 @@ HTTP Request
 HTTP Request + JSON body
   → Controller (DTO deserialization + Bean Validation)
     → DTO-to-Domain Mapper
-      → Domain Service (enforces invariants, e.g. uniqueness check)
+      → Domain Service (enforces invariants, uniqueness check)
         → Port interface
           → Persistence Adapter (domain → JPA mapping → save)
       ← Domain model
@@ -175,7 +175,7 @@ HTTP Request + JSON body
 ### Error Flow
 
 ```text
-Domain exception thrown (e.g. EntityTemplateAlreadyExistsException)
+Domain exception thrown (EntityTemplateAlreadyExistsException)
   → ApiExceptionHandler catches
     → Maps to HTTP status (409 Conflict) + ErrorResponse DTO
   ← JSON error response

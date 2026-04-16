@@ -67,6 +67,27 @@ public class EntityTemplateService {
                 .orElseThrow(() -> new EntityTemplateNotFoundException("identifier", identifier));
     }
 
+    /// Updates an existing entity template using full replacement with smart merging.
+    ///
+    /// **Contract:** Replaces the template's scalar fields (identifier, description) with the
+    /// incoming values, while performing an intelligent merge on nested collections
+    /// (properties and relations). Matching children (by name) preserve their existing UUIDs
+    /// so the persistence layer treats them as updates rather than delete-and-recreate,
+    /// avoiding unnecessary orphan removal and re-insertion.
+    ///
+    /// **Business rules enforced:**
+    /// - The target template must already exist (looked up by the path `identifier`).
+    /// - If the caller changes the identifier, the new value must not collide with another template.
+    /// - Property and relation definitions are merged by name:
+    ///   - *Matched by name* → existing ID is preserved, other fields are overwritten.
+    ///   - *Not matched* → treated as a new definition (no ID yet).
+    ///   - *Missing from update* → removed (handled downstream by the persistence adapter).
+    ///
+    /// @param identifier current business identifier of the template to update
+    /// @param updatedTemplate validated template carrying the desired state
+    /// @return the persisted template after merge, with generated or preserved identifiers
+    /// @throws EntityTemplateNotFoundException when no template matches `identifier`
+    /// @throws EntityTemplateAlreadyExistsException when renaming would cause a duplicate
     @Transactional
     public EntityTemplate putEntityTemplate(String identifier, @Valid EntityTemplate updatedTemplate) {
         EntityTemplate existingTemplate = getEntityTemplateByIdentifier(identifier);

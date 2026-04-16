@@ -38,3 +38,4 @@ ADRs
 npm
 Docusaurus
 markdownlint
+DTOs
