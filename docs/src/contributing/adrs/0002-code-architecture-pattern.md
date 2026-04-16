@@ -10,7 +10,7 @@
 
 ## Context and Problem Statement
 
-The IDP Core is responsible for ingesting, transforming, and persisting data from a variety of external sources. Traditional Layered (MVC) architectures often lead to business logic becoming intertwined with technical details (database schemas, specific message formats, and external API quirks). We need an architecture that protects our core domain logic—specifically the entity mapping and validation—while remaining flexible enough to handle various ingress methods and future outbound events in an open-source ecosystem.
+The Internal Developer Platform (IDP) is responsible for ingesting, transforming, and persisting data from a variety of external sources. We need an architecture that protects our core domain logic, specifically the entity validation and ingestion, while remaining flexible enough to handle various ingress methods and future outbound events in an open-source ecosystem.
 
 ## Decision Drivers
 
@@ -78,10 +78,11 @@ com.decathlon.idp
     └── config/                               # Spring Boot @Configuration
 ```
 
+* Good, because it is a **Good Fit**: This architecture is perfectly adapted to the IDP's expected behavior, where entities can be ingested from multiple delivery channels (REST APIs, messaging brokers, or ETL pipelines).
 * Good, because it provides a **Unified Ingestion Port**: Every adapter maps its specific technical payload into the same Domain Model before calling an `IngestionService`. (Maintainability / Contributing in open source mode)
 * Good, because it isolates **Protocol Translation**: Mapping technical formats into Domain Entities happens strictly in Adapters. (Complexity of implementation)
 * Good, because it **Decouples Throughput from Logic**: High-volume sources (Kafka) and low-latency sources (Webhooks) can scale independently at the adapter level using Java 25 Virtual Threads. (FinOps / Complexity of implementation)
-* Good, because it facilitates **"Driven Ports" for Event Emission**: Downstream notifications (Kafka, SNS) are defined as ports, keeping the Domain focused on the *intent* of the event rather than the delivery. (Complexity of implementation / User experience)
+* Good, because it facilitates **"Driven Ports" for Event Emission**: Downstream notifications are defined as ports, keeping the Domain focused on the *intent* of the event rather than the delivery. (Complexity of implementation / User experience)
 * Good, because it enables **"Dry Run" Testing of Side Effects**: We can verify event emission by mocking the outbound port in unit tests without a live message broker. (Testability)
 * Good, because it enables **"Pluggability" for OS Users**: Community members can contribute new Inbound or Outbound adapters with minimal friction. (Contributing in open source mode)
 * Good, because the **Folder Structure is the Map**: The split between `domain` (The Why) and `infrastructure` (The How) acts as a visual guide for external developers. (Contributing in open source mode)
@@ -137,7 +138,7 @@ com.decathlon.idp
     └── config/                     # Manual bean wiring for Domain classes
 ```
 
-* Good, because of **Absolute Framework Independence**: The core logic is pristine Java, meaning migrating away from Spring Boot to Quarkus, Micronaut, or Jakarta EE requires absolutely zero changes to the domain. (Portability / Future-Proofing)
+* Good, because of **Absolute Framework Independence**: The core logic is pristine Java, meaning migrating away from Spring Boot to a different Java framework requires absolutely zero changes to the domain. (Portability / Future-Proofing)
 * Good, because of **Maximum Testability**: Domain tests run instantly as pure JUnit tests without any need for Spring Context, component scanning, or framework mocking. (Testability)
 * Good, because of **Enforced Boundaries**: It is structurally impossible to leak framework-specific logic (like Spring Data or Spring Web annotations) into the business logic. (Maintainability)
 * Bad, because of **High Boilerplate**: Requires manual Bean configuration in the infrastructure layer to instantiate domain services and manually inject infrastructure adapters. (Complexity of implementation)
