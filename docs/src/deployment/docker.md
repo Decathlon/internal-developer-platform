@@ -73,7 +73,7 @@ services:
       retries: 3
 
   postgres:
-    image: postgres:14-alpine
+    image: postgres:18-alpine
     environment:
       - POSTGRES_DB=idp
       - POSTGRES_USER=idp
@@ -134,7 +134,7 @@ docker run -d \
   -e POSTGRES_DB=idp \
   -e POSTGRES_USER=idp \
   -e POSTGRES_PASSWORD=idp \
-  postgres:14-alpine
+  postgres:18-alpine
 
 # Run IDP-Core
 docker run -d \
@@ -163,10 +163,10 @@ Then build and run the Docker image:
 
 ```bash
 # Build
-docker build -t internal-developer-platform:local .
+docker build -t idp:local .
 
 # Run
-docker run -d -p 8080:8080 internal-developer-platform:local
+docker run -d -p 8080:8080 idp:local
 ```
 
 ### Multi-stage Build

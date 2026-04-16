@@ -20,9 +20,19 @@ updates:
     pull-request-branch-name:
       separator: "-"
 
-  # Docker dependencies
+  # Root Docker dependencies
   - package-ecosystem: "docker"
     directory: "/"
+    schedule:
+      interval: "daily"
+      time: "05:00"
+    open-pull-requests-limit: 5
+    pull-request-branch-name:
+      separator: "-"
+
+  # Devcontainer Docker dependencies
+  - package-ecosystem: "docker"
+    directory: "/.devcontainer"
     schedule:
       interval: "daily"
       time: "05:00"
