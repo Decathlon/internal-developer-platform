@@ -34,6 +34,10 @@ spring:
     hibernate:
       ddl-auto: none  # Disable JPA schema auto-generation, use Flyway instead
       show-sql: false
+  web:
+    cors:
+      allowed-origins:
+        - http://localhost:3001
 app:
   full-refresh-at-startup: true
   idp-core-prefix-url: http://localhost:8084
