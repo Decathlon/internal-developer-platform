@@ -7,9 +7,9 @@ Dependencies always point inward: Adapters → Ports → Domain.
 
 ## Architecture Overview
 
-This project follows **Hexagonal Architecture** (Ports & Adapters):
+This project follows **Pragmatic Hexagonal Architecture** (Ports & Adapters, allowing some Spring dependecies at the domain level):
 
-- **Domain** Pure business logic, no framework dependencies
+- **Domain** Business logic. No infrastructure dependencies (JPA, Kafka, Security)
 - **Ports** Interfaces that define the contracts between the domain and the outside world
 - **Adapters** Concrete implementations that connect the domain to external systems (REST API, database, etc.)
 
@@ -34,7 +34,7 @@ This project follows **Hexagonal Architecture** (Ports & Adapters):
 
 ## Domain Layer (`com.decathlon.idp_core.domain`)
 
-Pure Java implementation,**no Spring annotations, no framework imports**.
+Spring implementation with no JPA dependencies.
 Contains all business rules, invariants, and contracts.
 
 ### 📂 Domain Structure
@@ -70,7 +70,7 @@ domain/
 ### Key Constraints
 
 - **No Spring annotations** in models, ports, or exceptions
-- Services may use `@Service` solely for DI. No other framework coupling
+- Services may use `@Service`
 - Domain exceptions carry business meaning, not HTTP semantics
 
 ---
@@ -189,6 +189,6 @@ Domain exception thrown (EntityTemplateAlreadyExistsException)
 | --- | --- | --- |
 | Domain models | Java standard library only | Spring, JPA, infrastructure |
 | Domain ports | Domain models | Any implementation |
-| Domain services | Ports + models + exceptions | Adapters, Spring (except `@Service`) |
+| Domain services | Ports + models + exceptions | Adapters, Spring |
 | API adapter | Domain services + ports + models | Persistence adapter |
 | Persistence adapter | Domain ports + models | API adapter |
