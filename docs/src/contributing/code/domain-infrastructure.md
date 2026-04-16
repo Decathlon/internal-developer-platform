@@ -34,7 +34,7 @@ This project follows **Hexagonal Architecture** (Ports & Adapters):
 
 ## Domain Layer (`com.decathlon.idp_core.domain`)
 
-Pure Java implementation — **no Spring annotations, no framework imports**.
+Pure Java implementation,**no Spring annotations, no framework imports**.
 Contains all business rules, invariants, and contracts.
 
 ### 📂 Domain Structure
@@ -93,7 +93,7 @@ infrastructure/
     │   │   ├── SwaggerConfiguration
     │   │   ├── SwaggerDescription
     │   │   └── WebConfiguration
-    │   ├── controller/               # REST controllers — thin entry points
+    │   ├── controller/               # REST controllers
     │   │   ├── EntityController
     │   │   └── EntityTemplateController
     │   ├── dto/
@@ -105,7 +105,7 @@ infrastructure/
     │       ├── entity/               # EntityDtoInMapper, EntityDtoOutMapper
     │       └── entitytemplate/       # EntityTemplateMapper
     │
-    └── persistence/                  # Driven adapter (outbound — database)
+    └── persistence/                  # Driven adapter (outbound—database)
         ├── PostgresEntityAdapter             # Implements EntityRepositoryPort
         ├── PostgresEntityTemplateAdapter     # Implements EntityTemplateRepositoryPort
         ├── PostgresRelationAdapter           # Implements RelationRepositoryPort
@@ -123,7 +123,7 @@ infrastructure/
 
 ### Infrastructure Layer Responsibilities
 
-#### API Adapter (Driving — Inbound)
+#### API Adapter (Driving-Inbound)
 
 | Concern | Responsibility |
 | --- | --- |
