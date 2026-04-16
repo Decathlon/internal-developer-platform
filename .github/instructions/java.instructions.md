@@ -10,7 +10,7 @@ applyTo: '**/*.java'
 - Use Java 25 syntax and features.
 - Address code smells proactively during development rather than accumulating technical debt.
 - Focus on readability, maintainability, and performance when refactoring identified issues.
-- Use IDE / Code editor reported warnings and suggestions to catch common patterns early in development.
+- Use IDE and code editor warnings and suggestions to catch common patterns early in development.
 - Add JavaDoc comments for all public classes and methods to enhance code understandability.
 - Follow the Java Language Specification and standard conventions for code style and formatting.
 

@@ -1,37 +1,104 @@
 ---
-description: 'Guidelines for modifying Infrastructure layer'
-applyTo: '**/insfrastructure/*.java'
+description: 'Guidelines for modifying the Infrastructure layer'
+applyTo: '**/infrastructure/**/*.java'
 ---
 
-# Infrastructure Layer related instructions
+# Infrastructure Layer Instructions
 
-## General Instructions
+## General Principles
 
-- Layer Separation: Use Jakarta Validation annotations on DTOs in the Infrastructure/Web layer to handle syntactic validation (e.g., "Field is required," "String length"). 
-- Adapter-Specific DTOs: Every input adapter (REST, Messaging, Cron, CLI) must define its own input models/DTOs. Never reuse a Web DTO in a Messaging listener. 
-- Adapter Level (Syntactic): Perform "cheap" checks (nulls, empty strings, regex) using the tools native to that adapter (e.g., Jakarta Validation for Web/Messaging).
-- Shared Constraints: If a validation rule (like a complex Regex) is used across multiple adapters, extract it into a Domain Value Object and let the constructor handle the validation. This avoids duplicating the Regex logic in every DTO.
-- Prefer Java Records for all DTOs. Leverage Record Patterns in controllers for clean data extraction. Java classes are permitted as well.
-    
-## APIs development
+- The Infrastructure layer contains **everything technical**: Spring Boot, REST, database, security, and serialization.
+- Infrastructure adapters **implement or drive** the domain ports. They must never contain business logic.
+- Infrastructure may depend on Domain models, ports, and exceptions. Domain must **never** depend on Infrastructure.
+- Each adapter type (REST, Messaging, CLI) must define its **own input/output models**. Never reuse a Web DTO in a Messaging listener.
 
-- When developing on APIs, adhere to RESTful principles.
-- Use appropriate HTTP methods (GET, POST, PUT, DELETE) based on the operation.
-- Ensure proper status codes are returned for different scenarios (for example, 200 OK, 201 Created, 400 Bad Request, 404 Not Found, 500 Internal Server Error).
-- Paginated responses have 200 OK HTTP code when successfully retrieved.
-- Controllers should only handle orchestration and validation; all business logic belongs in domain Service classes.
-- Use RFC 7807 (Problem Details) for all API errors. Define a consistent error response structure and map domain exceptions to appropriate HTTP status codes in a centralized `@ControllerAdvice` class.
-- Use DTOs for all API inputs and outputs. Never expose Domain entities directly in API.
+## API Adapter (Driving — Inbound)
 
+### Controllers
 
-## JPA / Hibernate
+- Adhere to RESTful principles. Use appropriate HTTP methods (`GET`, `POST`, `PUT`, `DELETE`).
+- Controllers handle **orchestration and validation only** — all business logic belongs in Domain Services.
+- Return proper status codes: `200 OK`, `201 Created`, `400 Bad Request`, `404 Not Found`, `409 Conflict`, `500 Internal Server Error`.
+- Paginated responses return `200 OK` when successfully retrieved.
+- Never expose Domain models directly in API responses. Always use DTOs.
 
-- Do not rely on Hibernate to create/update the schema (`ddl-auto: none`). All schema changes must be done via Flyway migrations.
-- Keep domain models and persistence models separate: avoid leaking JPA entities outside persistence adapters.
-- Prefer `UUID` identifiers and align `@Table`/`@Column` names with the actual Flyway-created schema (snake_case in the database).
+### DTOs
+
+- Prefer Java Records for all DTOs. Java classes are permitted when mutability is required.
+- Use Jakarta Validation annotations on DTOs for syntactic validation (`@NotNull`, `@NotBlank`, `@Size`).
+- Separate input DTOs (`dto/in/`) from output DTOs (`dto/out/`).
+- If a validation rule (e.g., a complex regex) is shared across multiple adapters, extract it into a Domain Value Object.
+
+### Mappers
+
+- Convert between DTOs and Domain models. Mappers must be null-safe with no side effects.
+- Use MapStruct for straightforward conversions.
+- Use Record Patterns for complex transformations requiring business logic.
+- Never use `ObjectMapper` or reflection-based libraries for internal layer mapping.
+
+### Exception Handling
+
+- Use RFC 7807 (Problem Details) for all API errors.
+- Map domain exceptions to HTTP status codes in a centralized `@ControllerAdvice` class (`ApiExceptionHandler`).
+- Domain exceptions carry business meaning; the handler translates them to HTTP semantics.
+
+### Configuration
+
+- Centralize Spring configuration in `infrastructure/adapters/api/configuration/`.
+- This includes Security (JWT, CORS), Swagger/OpenAPI, pagination, and serialization settings.
+
+## Persistence Adapter (Driven — Outbound)
+
+### Adapter Classes
+
+- Implement domain port interfaces (e.g., `PostgresEntityTemplateAdapter implements EntityTemplateRepositoryPort`).
+- Adapter classes are annotated with `@Component`.
+- Convert between Domain models and JPA entities using persistence mappers.
+
+### JPA Entities
+
+- JPA entities are **mutable** and may differ from domain models.
+- Avoid Lombok `@Data` on JPA entities — use `@Getter`, `@Setter`, `@ToString`, `@EqualsAndHashCode` separately.
+- For mutable collection fields (`Set`, `List`), suppress Lombok-generated accessors with `@Getter(AccessLevel.NONE)` and `@Setter(AccessLevel.NONE)`, then provide **defensive copy** getters and setters.
+- Prefer `UUID` identifiers and align `@Table`/`@Column` names with the Flyway-created schema (`snake_case`).
+- Be careful with `equals`/`hashCode` on entities (Hibernate proxies).
+
+### Relationships & Fetching
+
 - Prefer `LAZY` relationships by default; avoid `EAGER` unless you have a proven reason.
-- Avoid `N+1` queries: use purpose-built repository queries, `JOIN FETCH`, or `@EntityGraph` where appropriate.
-- Put transaction boundaries at the service/application layer: use `@Transactional` and `@Transactional(readOnly = true)` for reads.
-- Be careful with `equals`/`hashCode` on entities (Hibernate proxies). Avoid Lombok `@Data` on entities.
+- Avoid `N+1` queries: use purpose-built repository queries, `JOIN FETCH`, or `@EntityGraph`.
+- For `orphanRemoval = true` collections, always mutate through the **setter** (using `clear()` + `addAll()` internally) to preserve the Hibernate-managed `PersistentSet`.
 
+### Schema & Migrations
 
+- Do not rely on Hibernate to create or update the schema (`ddl-auto: none`).
+- All schema changes must use Flyway migrations. See `database.instructions.md`.
+
+### Transactions
+
+- Place transaction boundaries at the Domain Service layer using `@Transactional`.
+- Use `@Transactional(readOnly = true)` for read-only operations.
+
+## Package Structure
+
+Every adapter **must** include a `mapper/` package for model conversion. Add a `configuration/` package when the adapter requires Spring `@Configuration` classes (e.g., security, serialization, or bean wiring).
+
+```text
+infrastructure/
+└── adapters/
+    ├── api/                          # Driving adapter (inbound — REST API)
+    │   ├── configuration/            # Spring Config, Security, Swagger, JWT, CORS
+    │   ├── controller/               # REST controllers
+    │   ├── dto/
+    │   │   ├── in/                   # Request DTOs
+    │   │   └── out/                  # Response DTOs
+    │   ├── handler/                  # Global exception → HTTP status mapping
+    │   └── mapper/                   # DTO ↔ Domain mapping
+    └── persistence/                  # Driven adapter (outbound — database)
+        ├── mapper/                   # Domain ↔ JPA entity mapping
+        ├── model/                    # JPA entities
+        └── repository/              # Spring Data JPA interfaces
+```
+
+> [!NOTE]
+> Future adapters (e.g., `messaging/`, `cli/`) must follow the same convention: always include a `mapper/` package and add a `configuration/` package only when Spring configuration is needed.

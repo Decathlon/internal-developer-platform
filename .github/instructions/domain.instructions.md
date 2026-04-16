@@ -1,32 +1,79 @@
 ---
-description: 'Guidelines for modifying Domain layer'
-applyTo: '**/domain/*.java'
+description: 'Guidelines for modifying the Domain layer'
+applyTo: '**/domain/**/*.java'
 ---
 
-# Domain Layer related instructions
+# Domain Layer Instructions
 
-## General Instructions
+## General Principles
 
-- Place business logic in `@Service` annotated classes.
-- Services should be stateless and testable.
-- Always use constructor injection. Field injection (@Autowired on fields) is strictly forbidden.
-- Lightweight Spring Dependency: It is permissible to use Spring Stereotype annotations (@Service, @Component) within the Domain layer to reduce configuration boilerplate.
-- Business Language (Ubiquitous Language): Use naming conventions that reflect the business domain, not technical implementation.
-- Domain Exceptions: Create specific, checked or unchecked exceptions for business rule violations (for example: EntityNotFoundException).
-- No Web/Network Metadata: Domain exceptions must not contain HTTP status codes or REST-specific information.
-- Self-Validating Records: Perform basic domain validation using Jakarat validation annotations to ensure the domain object is never in an invalid state.
-- Domain Services: Only create a DomainService when a piece of logic involves multiple aggregates or doesn't naturally belong to a single Entity.
-- Aggregates and Entities: Use standard classes for Entities that have a lifecycle and identity. Ensure all state changes happen through well-defined business methods.
-- Inbound Data: Input ports should accept domain-specific objects or simple primitives.
+- The Domain layer contains **all business logic, invariants, and contracts**.
+- Dependencies always point inward: the Domain **must never** depend on the Infrastructure layer.
+- The Domain may depend only on the Java standard library, Jakarta Validation, and Spring stereotype annotations (`@Service`, `@Transactional`).
+- **No JPA, Kafka, Security, or HTTP** imports are permitted in this layer.
 
-## Mapping
+## Services
 
-- Prohibited when mapping: Never use ObjectMapper or reflection-based libraries for internal layer mapping.
-- Standard Mapping: Use MapStruct for straightforward conversion between JPA entities and Domain objects.
-- Complex Mapping: Use Record Patterns for manual mapping when business logic or complex transformations are required during conversion.
+- Place business logic in `@Service`-annotated classes.
+- Services must be stateless and testable.
+- Always use constructor injection. Field injection (`@Autowired` on fields) is strictly forbidden.
+- Use `@Transactional` for write operations and `@Transactional(readOnly = true)` for reads.
+- Only create a Domain Service when logic involves multiple aggregates or does not naturally belong to a single entity.
+
+## Models
+
+- Use **Java Records** for all domain models to enforce immutability.
+- Records must be self-validating using Jakarta Validation annotations (`@NotNull`, `@NotBlank`, `@Size`).
+- Design domain objects so they **cannot be instantiated in an invalid state** (Always Valid pattern).
+- Use compact constructors to enforce invariants that go beyond annotation-based validation.
+- Domain models carry **business meaning only** — no HTTP semantics, no persistence metadata.
+
+## Ports
+
+- Define all external interactions as **Port interfaces** in the `domain/ports/` package.
+- Ports accept and return **domain models or simple primitives only** — never DTOs, JPA entities, or framework types.
+- Port interfaces define the **contract** between domain and infrastructure. They contain no implementation details.
+- Name ports with a `Port` suffix (e.g., `EntityRepositoryPort`, `EntityTemplateRepositoryPort`).
+
+## Exceptions
+
+- Create specific unchecked exceptions for business rule violations (e.g., `EntityTemplateNotFoundException`, `EntityTemplateAlreadyExistsException`).
+- Domain exceptions must **not** contain HTTP status codes or REST-specific information.
+- Map domain exceptions to HTTP status codes exclusively in the Infrastructure layer (`@ControllerAdvice`).
+
+## Constants
+
+- Use a dedicated constants class (e.g., `ValidationMessages.java`) for all validation messages.
+- Store constants in the `domain/constant/` package as a single source of truth.
+- Reference these constants from model validation annotations and exception formatting.
+
+## Naming
+
+- Use **Ubiquitous Language**: naming conventions must reflect the business domain, not technical implementation.
+- Use nouns for models (`EntityTemplate`, `PropertyDefinition`) and verbs for service methods (`putEntityTemplate`, `validateEntity`).
 
 ## Validation
 
-- Intrinsic Validation: Enforce domain invariants within the class itself. For Records, use compact constructors to validate data upon instantiation. For Entities, validate state transitions within business methods.
-- Always Valid Pattern: Design domain objects so they cannot be instantiated in an invalid state. Throw custom DomainValidationException (or a similar unchecked domain exception) when rules are violated.
-- Validation Messages: Use constants for validation messages to ensure consistency and maintainability. Store these in a dedicated class (for example: `ValidationsMessages.java`) within the domain layer.
+- **Intrinsic Validation**: enforce domain invariants within the class itself.
+- **Adapter-Level vs. Domain-Level**: syntactic checks (nulls, empty strings) belong on DTOs in the Infrastructure layer. Semantic checks (uniqueness, cross-field rules) belong in Domain Services.
+- Throw a custom `DomainValidationException` (or similar unchecked exception) when rules are violated.
+
+## Mapping
+
+- Never use `ObjectMapper` or reflection-based libraries for internal layer mapping.
+- Use MapStruct for straightforward conversion between JPA entities and domain objects.
+- Use Record Patterns for manual mapping when business logic or complex transformations are required.
+
+## Package Structure
+
+```text
+domain/
+├── constant/            # Validation message constants
+├── exception/           # Domain-specific exceptions
+├── model/
+│   ├── entity/          # Core business records
+│   ├── entity_template/ # Template records
+│   └── enums/           # Business enums
+├── ports/               # Port interfaces (contracts for driven adapters)
+└── service/             # Domain services (orchestration)
+```

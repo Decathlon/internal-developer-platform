@@ -62,17 +62,14 @@ public class EntityTemplateMapper {
 
     ///
     /// Converts an EntityTemplate domain entity to an output DTO.
-    /// <p>
     /// This method maps all fields from the domain entity to create a new output DTO
     /// for API responses.
     /// The conversion includes the entity's UUID ID and all nested collections are
     /// recursively
     /// converted to their respective DTO representations.
-    /// </p>
     ///
     /// @param entity the domain entity to convert, may be null
     /// @return the converted EntityTemplateDtoOut, or null if input is null
-    ////
     public EntityTemplateDtoOut fromEntityTemplatetoDto(EntityTemplate entity) {
         if (entity == null) {
             return null;
@@ -88,7 +85,6 @@ public class EntityTemplateMapper {
 
     ///
     /// Converts a list of EntityTemplate domain entities to a list of output DTOs.
-    /// <p>
     /// This is a convenience method for bulk conversion operations, particularly
     /// useful
     /// for paginated results and list endpoints.
@@ -97,7 +93,6 @@ public class EntityTemplateMapper {
     /// @param entities the list of domain entities to convert, may be null
     /// @return a list of converted EntityTemplateDtoOut objects, empty list if input
     ///         is null
-    ////
     public List<EntityTemplateDtoOut> fromEntityTemplatesToDtos(List<EntityTemplate> entities) {
         if (entities == null) {
             return List.of();
@@ -113,7 +108,6 @@ public class EntityTemplateMapper {
     /// @param dto the input DTO to convert, may be null
     /// @return the converted PropertyDefinition domain entity, or null if input is
     ///         null
-    ////
     public PropertyDefinition toToPropertyDefinition(PropertyDefinitionDtoIn dto) {
         if (dto == null) {
             return null;
@@ -134,7 +128,6 @@ public class EntityTemplateMapper {
     ///
     /// @param entity the domain entity to convert, may be null
     /// @return the converted PropertyDefinitionDtoOut, or null if input is null
-    ////
     public PropertyDefinitionDtoOut toDto(PropertyDefinition entity) {
         if (entity == null) {
             return null;

@@ -143,14 +143,12 @@ public class EntityDtoOutMapper {
                 .build();
     }
 
-    ///
     /// Maps the properties of an entity to a map of property names to typed values,
     /// using the entity template for type conversion.
     ///
     /// @param entity         the entity whose properties to map
     /// @param entityTemplate the template for property type mapping
     /// @return a map of property names to typed values
-    ////
     private Map<String, Object> mapPropertiesDto(Entity entity, EntityTemplate entityTemplate) {
 
         if (entity.properties() == null) {
@@ -186,14 +184,12 @@ public class EntityDtoOutMapper {
                         }));
     }
 
-    ///
     /// Maps the relations of an entity to a map of relation names to lists of target
     /// entity summaries.
     ///
     /// @param entity     the entity whose relations to map
     /// @param relatedEntitiesSummaries map of entity summaries for relation targets
     /// @return a map of relation names to lists of target entity summaries
-    ////
     private Map<String, List<EntitySummaryDto>> mapRelationsDto(Entity entity,
             Map<String, EntitySummaryDto> relatedEntitiesSummaries) {
         return entity.relations() == null
@@ -215,7 +211,6 @@ public class EntityDtoOutMapper {
     ///                                    map
     /// @param relationTargetOwnershipsMap map of relations-as-target for the entity
     /// @return a map of relation names to lists of source entity summaries
-    ////
     private Map<String, List<EntitySummaryDto>> mapRelationsAsTargetDto(Entity entity,
             Map<String, List<RelationAsTargetSummary>> relationTargetOwnershipsMap) {
         List<RelationAsTargetSummary> relationAsTargetSummaries = relationTargetOwnershipsMap
@@ -232,14 +227,11 @@ public class EntityDtoOutMapper {
                                 Collectors.toList())));
     }
 
-    ///
     /// Builds a map of relation target ownerships for a list of entities, grouping
     /// by target entity identifier.
     ///
     /// @param entitiesPage the list of entities to analyze
-    /// @return a map from target entity identifier to list of relation-as-target
-    ///         summaries
-    ////
+    /// @return a map from target entity identifier to list of relation-as-target summaries
     private Map<String, List<RelationAsTargetSummary>> buildRelationsAsTargetSummaryMapByPage(
             Page<Entity> entitiesPage) {
         if (entitiesPage == null || entitiesPage.getContent().isEmpty()) {
@@ -259,8 +251,7 @@ public class EntityDtoOutMapper {
     ///
     /// @param entity the entity to analyze
     /// @return a map from target entity identifier to list of relation-as-target
-    ///         summaries
-    ////
+    /// summaries
     private Map<String, List<RelationAsTargetSummary>> buildRelationsAsTargetSummaryMapByEntity(Entity entity) {
         if (entity == null || entity.identifier() == null) {
             return Collections.emptyMap();
@@ -271,13 +262,11 @@ public class EntityDtoOutMapper {
                 .collect(Collectors.groupingBy(RelationAsTargetSummary::targetEntityIdentifier));
     }
 
-    ///
     /// Gets all unique target entity identifiers from the relations of a single
     /// entity.
     ///
     /// @param entity the entity to analyze
     /// @return a list of unique target entity identifiers
-    ////
     private List<String> getAllTargetIdentifiersFromEntityRelations(Entity entity) {
         return entity.relations() == null
                 ? Collections.emptyList()
@@ -292,7 +281,6 @@ public class EntityDtoOutMapper {
     ///
     /// @param entities the page of entities to analyze
     /// @return a list of unique target entity identifiers
-    ////
     private List<String> getUniqueTargetIdentifiersInPage(Page<Entity> entities) {
         return new ArrayList<>(entities.stream()
                 .flatMap(entity -> entity.relations() == null

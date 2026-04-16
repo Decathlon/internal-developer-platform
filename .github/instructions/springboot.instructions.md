@@ -28,16 +28,16 @@ applyTo: '**/*.java'
 ### Configuration
 
 - Use YAML files (`application.yml`) for externalized configuration.
-- Environment Profiles: Use Spring profiles for different environments (local, test, prod)
-- Configuration Properties: Use @ConfigurationProperties for type-safe configuration binding
+- Environment Profiles: Use Spring profiles for different environments (local, test, prod).
+- Configuration Properties: Use `@ConfigurationProperties` for type-safe configuration binding.
 - Secrets Management: Externalize secrets using environment variables or secret management systems
 
 ### Code Organization
 
-- Package Structure: Organize rather by layer and functionality
-- Separation of Concerns: Keep controllers thin, services focused, and repositories simple
+- Package Structure: Organize by layer and functionality.
+- Separation of Concerns: Keep controllers thin, services focused, and repositories simple.
 - Utility Classes: Make utility classes final with private constructors
-           
+
 ### Observability
 
 - Use OpenTelemetry for tracing and metrics.
