@@ -62,7 +62,7 @@ The documentation file must follow the template below, ensuring that all section
 
 1. Use `[Option 1]`
 2. Use `[Option 2]`
-3. ...
+N. Use `[Option N]`
 
 ## Decision Outcome
 
