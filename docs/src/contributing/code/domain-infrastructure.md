@@ -7,7 +7,7 @@ Dependencies always point inward: Adapters → Ports → Domain.
 
 ## Architecture Overview
 
-This project follows **Pragmatic Hexagonal Architecture** (Ports & Adapters, allowing some Spring dependecies at the domain level):
+This project follows **Pragmatic Hexagonal Architecture** (Ports & Adapters, allowing some Spring dependencies at the domain level):
 
 - **Domain** Business logic. No infrastructure dependencies (JPA, Kafka, Security)
 - **Ports** Interfaces that define the contracts between the domain and the outside world
