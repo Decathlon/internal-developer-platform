@@ -51,7 +51,7 @@ domain/
 │   ├── EntityRepositoryPort
 │   ├── EntityTemplateRepositoryPort
 │   └── RelationRepositoryPort
-└── service/             # Domain services — business logic orchestration
+└── service/             # Domain services logic orchestration
     ├── EntityService
     ├── EntityTemplateService
     └── RelationService
@@ -70,7 +70,7 @@ domain/
 ### Key Constraints
 
 - **No Spring annotations** in models, ports, or exceptions
-- Services may use `@Service` solely for DI — no other framework coupling
+- Services may use `@Service` solely for DI. No other framework coupling
 - Domain exceptions carry business meaning, not HTTP semantics
 
 ---
@@ -85,7 +85,7 @@ Organized as **adapters** that implement or drive the domain ports.
 ```text
 infrastructure/
 └── adapters/
-    ├── api/                          # Driving adapter (inbound — REST API)
+    ├── api/                          # Driving adapter (inbound—REST API)
     │   ├── configuration/            # Spring Config, Security, Swagger, JWT, CORS
     │   │   ├── JwtConfiguration
     │   │   ├── SecurityConfiguration
