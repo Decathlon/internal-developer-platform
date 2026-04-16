@@ -37,8 +37,12 @@ ADR
 ADRs
 npm
 Docusaurus
+<<<<<<< HEAD
 Matthieu
 Renny
 Pluggability
 DTOs
 Onboarding
+=======
+markdownlint
+>>>>>>> 6e36de1 (chore(config): add instructions and skills for documentation generation (#20))
