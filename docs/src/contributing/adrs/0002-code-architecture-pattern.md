@@ -1,9 +1,9 @@
-# ADR-0002: Code Architecture Pattern
+# 0002 - Code Architecture Pattern
 
-* Status: Proposed
+* Status: Accepted
 * Deciders:
-  * Maintainers team: Andrés BRAND, Matthieu WALTERSPIELER, Eve BERNHARD, Ferial OUKOUKES, Renny VANDOMBER
-  * Contributors team: `N/A`
+  * maintainers team: Andrés BRAND, Matthieu WALTERSPIELER, Eve BERNHARD, Ferial OUKOUKES, Renny VANDOMBER
+  * contributors team: `N/A`
 * Consulted: Étienne JACQUOT
 * Informed: `N/A`
 * Date: 2026-04-10
@@ -84,11 +84,12 @@ com.decathlon.idp
 * Good, because it **Decouples Throughput from Logic**: High-volume sources (Kafka) and low-latency sources (Webhooks) can scale independently at the adapter level using Java 25 Virtual Threads. (FinOps / Complexity of implementation)
 * Good, because it facilitates **"Driven Ports" for Event Emission**: Downstream notifications are defined as ports, keeping the Domain focused on the *intent* of the event rather than the delivery. (Complexity of implementation / User experience)
 * Good, because it enables **"Dry Run" Testing of Side Effects**: We can verify event emission by mocking the outbound port in unit tests without a live message broker. (Testability)
-* Good, because it enables **"Pluggability" for OS Users**: Community members can contribute new Inbound or Outbound adapters with minimal friction. (Contributing in open source mode)
+* Good, because it **Facilitates Open Source Contributions**: Community members can contribute new Inbound or Outbound adapters with minimal friction. (Contributing in open source mode)
 * Good, because the **Folder Structure is the Map**: The split between `domain` (The Why) and `infrastructure` (The How) acts as a visual guide for external developers. (Contributing in open source mode)
 * Bad, because of **"Conceptual Overhead"**: Not every contributor is familiar with Hexagonal Architecture; clear documentation is required. (Contributing in open source mode / Complexity of implementation)
-* Bad, because it requires **"Double Mapping"**: We must often map from an "Incoming DTO" to a "Domain Entity." (Complexity of implementation)
-* Bad, because it creates **Package Fragmentation**: Navigating between `domain.ports`, `domain.services`, and `infrastructure.adapters`. (Complexity of implementation)
+* Bad, because of **Spring Context in Tests**: Allowing Spring annotations (`@Service`, `@Transactional`) in the Domain means some tests may require loading the Spring Application Context, which slows down test execution compared to plain JUnit tests. (Testability / Developer Velocity)
+* Bad, because it requires **"Double Mapping"**: You must often map between Infrastructure objects and Domain Entities, which can lead to increased code complexity and minor processing latency overhead. (Complexity of implementation)
+* Bad, because it creates **Package Fragmentation**: Navigating between `domain.ports`, `domain.service`, and `infrastructure.adapters`. (Complexity of implementation)
 
 ### 2. Traditional MVC (Layered) Architecture
 
@@ -107,12 +108,13 @@ com.decathlon.idp
   └── config/                         # Centralized Spring & Framework configuration
 ```
 
-* Good, because of the **"Lowest Common Denominator"**: Almost every Java developer on GitHub understands MVC. (Contributing in open source mode)
+* Good, because layered architecture is the most widely known pattern in the Java ecosystem, ensuring familiarity for the vast majority of open-source contributors.
 * Good, because it is **Extremely Fast to Scaffold**: Fewer files and no interfaces required for internal calls. (Developer Velocity)
 * Bad, because of **Leaky Abstractions**: Infrastructure details (SQL types, REST DTOs) inevitably migrate into the Service layer. (Maintainability)
 * Bad, because it lacks **"Contribution Guardrails"**: No structural rule prevents a contributor from putting Kafka-specific logic directly into a Service class. (Contributing in open source mode / Maintainability)
 * Bad, because it **Couples Business Logic to Outbound Protocols**: Calling a `KafkaTemplate` directly in a service locks the project into Kafka, forcing community forks for other brokers. (Contributing in open source mode / Portability)
 * Bad, because it creates **Brittle Tests**: Business logic tests become dependent on infrastructure mocks. (Testability)
+* Bad, because of tight coupling in large projects. A common pitfall as the project grows is that business notions can become intertwined, leading to dependencies that are difficult to untangle.
 
 ### 3. Strict Hexagonal Architecture (Pure Ports and Adapters)
 
@@ -142,9 +144,9 @@ com.decathlon.idp
 * Good, because of **Maximum Testability**: Domain tests run instantly as pure JUnit tests without any need for Spring Context, component scanning, or framework mocking. (Testability)
 * Good, because of **Enforced Boundaries**: It is structurally impossible to leak framework-specific logic (like Spring Data or Spring Web annotations) into the business logic. (Maintainability)
 * Bad, because of **High Boilerplate**: Requires manual Bean configuration in the infrastructure layer to instantiate domain services and manually inject infrastructure adapters. (Complexity of implementation)
-* Bad, because of **Developer Friction**: Developers cannot use well-known and highly productive conveniences like `@Transactional` or `@Service` in their core logic, slowing down development velocity. (Developer Velocity)
+* Bad, because of **Developer Experience**: Developers cannot use well-known and highly productive conveniences like `@Transactional` or `@Service` in their core logic, slowing down development velocity. (Developer Velocity)
 * Bad, because of **Transaction Management Complexity**: Handling transaction boundaries programmatically across pure domain boundaries without framework annotations is tedious and prone to errors. (Complexity of implementation)
-* Bad, because of **Onboarding Difficulty**: The stark absence of standard Spring conventions in the core logic might alienate typical Java/Spring engineers and increase the learning curve for open-source contributors. (Contributing in open source mode)
+* Bad, because of **Contribution friction**: The absence of standard Spring conventions in the core logic might alienate typical Java/Spring engineers and increase the learning curve, making the project less attractive to open-source contributors (Contributing in open source mode)
 
 ---
 
@@ -154,3 +156,6 @@ com.decathlon.idp
 
 1. **No External Library Imports:** The Domain may use Spring libraries, but it may NOT import third-party integration libraries.
 2. **Ports as Contracts:** Every interaction with the "Outside World" must go through a Port interface.
+3. **Architecture Guardrails:** We can enforce the rules of this architecture through two approaches:
+   * ArchUnit Tests: Define architecture rules as unit tests using [ArchUnit](https://www.archunit.org/). This approach offers a fine level of granularity (for example: "classes in `domain` must not depend on `infrastructure`") without adding module overhead.
+   * Maven Modules: Physically separate the Domain and Infrastructure into distinct Maven modules, preventing illegal imports at compile time. This provides the strongest guarantee but increases build complexity.
