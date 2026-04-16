@@ -1,8 +1,8 @@
 package com.decathlon.idp_core.infrastructure.adapters.api.dto.in;
 
-import static com.decathlon.idp_core.domain.constant.ValidationsMessages.PROPERTY_DESCRIPTION_MANDATORY;
-import static com.decathlon.idp_core.domain.constant.ValidationsMessages.PROPERTY_NAME_MANDATORY;
-import static com.decathlon.idp_core.domain.constant.ValidationsMessages.PROPERTY_TYPE_MANDATORY;
+import static com.decathlon.idp_core.domain.constant.ValidationMessages.PROPERTY_DESCRIPTION_MANDATORY;
+import static com.decathlon.idp_core.domain.constant.ValidationMessages.PROPERTY_NAME_MANDATORY;
+import static com.decathlon.idp_core.domain.constant.ValidationMessages.PROPERTY_TYPE_MANDATORY;
 import static com.decathlon.idp_core.infrastructure.adapters.api.configuration.SwaggerDescription.FIELD_PROPERTY_DESCRIPTION;
 import static com.decathlon.idp_core.infrastructure.adapters.api.configuration.SwaggerDescription.FIELD_PROPERTY_NAME;
 import static com.decathlon.idp_core.infrastructure.adapters.api.configuration.SwaggerDescription.FIELD_PROPERTY_REQUIRED;

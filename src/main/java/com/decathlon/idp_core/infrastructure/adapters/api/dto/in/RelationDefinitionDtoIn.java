@@ -1,7 +1,7 @@
 package com.decathlon.idp_core.infrastructure.adapters.api.dto.in;
 
-import static com.decathlon.idp_core.domain.constant.ValidationsMessages.RELATION_NAME_MANDATORY;
-import static com.decathlon.idp_core.domain.constant.ValidationsMessages.RELATION_TARGET_IDENTIFIER_MANDATORY;
+import static com.decathlon.idp_core.domain.constant.ValidationMessages.RELATION_NAME_MANDATORY;
+import static com.decathlon.idp_core.domain.constant.ValidationMessages.RELATION_TARGET_IDENTIFIER_MANDATORY;
 import static com.decathlon.idp_core.infrastructure.adapters.api.configuration.SwaggerDescription.FIELD_RELATION_NAME;
 import static com.decathlon.idp_core.infrastructure.adapters.api.configuration.SwaggerDescription.FIELD_RELATION_REQUIRED;
 import static com.decathlon.idp_core.infrastructure.adapters.api.configuration.SwaggerDescription.FIELD_RELATION_TARGET_IDENTIFIER;

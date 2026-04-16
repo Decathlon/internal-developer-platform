@@ -1,6 +1,6 @@
 package com.decathlon.idp_core.infrastructure.adapters.api.controller;
 
-import static com.decathlon.idp_core.domain.constant.ValidationsMessages.TEMPLATE_ALREADY_EXISTS;
+import static com.decathlon.idp_core.domain.constant.ValidationMessages.TEMPLATE_ALREADY_EXISTS;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.springframework.http.MediaType.APPLICATION_JSON;
@@ -28,7 +28,7 @@ import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders;
 
 import com.decathlon.idp_core.AbstractIntegrationTest;
-import com.decathlon.idp_core.domain.constant.ValidationsMessages;
+import com.decathlon.idp_core.domain.constant.ValidationMessages;
 import com.decathlon.idp_core.domain.model.entity_template.EntityTemplate;
 import com.decathlon.idp_core.domain.model.entity_template.PropertyDefinition;
 import com.decathlon.idp_core.domain.model.entity_template.PropertyRules;
@@ -210,7 +210,7 @@ class EntityTemplateControllerTest extends AbstractIntegrationTest {
         void postTemplate_400_identifier_missing() throws Exception {
             MvcResult res = postAndValidateBadRequest(ENTITY_TEMPLATE_PATH,
                     ENTITY_TEMPLATE_JSON_TEST_PATH + "postEntityTemplate_400_identifier_missing.json",
-                    ValidationsMessages.TEMPLATE_IDENTIFIER_MANDATORY);
+                    ValidationMessages.TEMPLATE_IDENTIFIER_MANDATORY);
             assertNotNull(res, "Test executed successfully");
         }
 
@@ -225,7 +225,7 @@ class EntityTemplateControllerTest extends AbstractIntegrationTest {
         void postTemplate_400_identifier_blank() throws Exception {
             MvcResult res = postAndValidateBadRequest(ENTITY_TEMPLATE_PATH,
                     ENTITY_TEMPLATE_JSON_TEST_PATH + "postEntityTemplate_400_identifier_blank.json",
-                    ValidationsMessages.TEMPLATE_IDENTIFIER_MANDATORY);
+                    ValidationMessages.TEMPLATE_IDENTIFIER_MANDATORY);
             assertNotNull(res, "Test executed successfully");
         }
 
@@ -240,7 +240,7 @@ class EntityTemplateControllerTest extends AbstractIntegrationTest {
         void postTemplate_400_properties_empty() throws Exception {
             MvcResult res = postAndValidateBadRequest(ENTITY_TEMPLATE_PATH,
                     ENTITY_TEMPLATE_JSON_TEST_PATH + "postEntityTemplate_400_properties_empty.json",
-                    ValidationsMessages.PROPERTY_DEFINITIONS_MANDATORY);
+                    ValidationMessages.PROPERTY_DEFINITIONS_MANDATORY);
             assertNotNull(res, "Test executed successfully");
         }
 
@@ -254,7 +254,7 @@ class EntityTemplateControllerTest extends AbstractIntegrationTest {
         void postTemplate_400_property_name_missing() throws Exception {
             MvcResult res = postAndValidateBadRequest(ENTITY_TEMPLATE_PATH,
                     ENTITY_TEMPLATE_JSON_TEST_PATH + "postEntityTemplate_400_property_name_missing.json",
-                    ValidationsMessages.PROPERTY_NAME_MANDATORY);
+                    ValidationMessages.PROPERTY_NAME_MANDATORY);
             assertNotNull(res, "Test executed successfully");
         }
 
@@ -268,7 +268,7 @@ class EntityTemplateControllerTest extends AbstractIntegrationTest {
         void postTemplate_400_property_name_blank() throws Exception {
             MvcResult res = postAndValidateBadRequest(ENTITY_TEMPLATE_PATH,
                     ENTITY_TEMPLATE_JSON_TEST_PATH + "postEntityTemplate_400_property_name_blank.json",
-                    ValidationsMessages.PROPERTY_NAME_MANDATORY);
+                    ValidationMessages.PROPERTY_NAME_MANDATORY);
             assertNotNull(res, "Test executed successfully");
         }
 
@@ -282,7 +282,7 @@ class EntityTemplateControllerTest extends AbstractIntegrationTest {
         void postTemplate_400_property_description_missing() throws Exception {
             MvcResult res = postAndValidateBadRequest(ENTITY_TEMPLATE_PATH,
                     ENTITY_TEMPLATE_JSON_TEST_PATH + "postEntityTemplate_400_property_description_missing.json",
-                    ValidationsMessages.PROPERTY_DESCRIPTION_MANDATORY);
+                    ValidationMessages.PROPERTY_DESCRIPTION_MANDATORY);
             assertNotNull(res, "Test executed successfully");
         }
 
@@ -296,7 +296,7 @@ class EntityTemplateControllerTest extends AbstractIntegrationTest {
         void postTemplate_400_property_description_blank() throws Exception {
             MvcResult res = postAndValidateBadRequest(ENTITY_TEMPLATE_PATH,
                     ENTITY_TEMPLATE_JSON_TEST_PATH + "postEntityTemplate_400_property_description_blank.json",
-                    ValidationsMessages.PROPERTY_DESCRIPTION_MANDATORY);
+                    ValidationMessages.PROPERTY_DESCRIPTION_MANDATORY);
             assertNotNull(res, "Test executed successfully");
         }
 
@@ -310,7 +310,7 @@ class EntityTemplateControllerTest extends AbstractIntegrationTest {
         void postTemplate_400_property_type_missing() throws Exception {
             MvcResult res = postAndValidateBadRequest(ENTITY_TEMPLATE_PATH,
                     ENTITY_TEMPLATE_JSON_TEST_PATH + "postEntityTemplate_400_property_type_missing.json",
-                    ValidationsMessages.PROPERTY_TYPE_MANDATORY);
+                    ValidationMessages.PROPERTY_TYPE_MANDATORY);
             assertNotNull(res, "Test executed successfully");
         }
 

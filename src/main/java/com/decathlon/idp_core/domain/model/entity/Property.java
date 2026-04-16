@@ -1,7 +1,7 @@
 package com.decathlon.idp_core.domain.model.entity;
 
-import static com.decathlon.idp_core.domain.constant.ValidationsMessages.PROPERTY_NAME_MANDATORY;
-import static com.decathlon.idp_core.domain.constant.ValidationsMessages.PROPERTY_VALUE_MANDATORY;
+import static com.decathlon.idp_core.domain.constant.ValidationMessages.PROPERTY_NAME_MANDATORY;
+import static com.decathlon.idp_core.domain.constant.ValidationMessages.PROPERTY_VALUE_MANDATORY;
 
 import java.util.UUID;
 

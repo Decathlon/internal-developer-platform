@@ -4,7 +4,7 @@ import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
 
 @NoArgsConstructor(access = AccessLevel.PRIVATE)
-public class ValidationsMessages {
+public class ValidationMessages {
 
     // Entity Template validation messages
     public static final String TEMPLATE_ALREADY_EXISTS = "An Entity Template already exists with the same identifier";

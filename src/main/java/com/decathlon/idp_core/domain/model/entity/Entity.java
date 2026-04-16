@@ -1,6 +1,6 @@
 package com.decathlon.idp_core.domain.model.entity;
 
-import static com.decathlon.idp_core.domain.constant.ValidationsMessages.TEMPLATE_IDENTIFIER_MANDATORY;
+import static com.decathlon.idp_core.domain.constant.ValidationMessages.TEMPLATE_IDENTIFIER_MANDATORY;
 
 import java.util.List;
 import java.util.UUID;

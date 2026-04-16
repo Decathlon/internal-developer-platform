@@ -1,6 +1,6 @@
 package com.decathlon.idp_core.domain.exception;
 
-import static com.decathlon.idp_core.domain.constant.ValidationsMessages.TEMPLATE_ALREADY_EXISTS;
+import static com.decathlon.idp_core.domain.constant.ValidationMessages.TEMPLATE_ALREADY_EXISTS;
 
 import com.decathlon.idp_core.domain.model.entity_template.EntityTemplate;
 import com.decathlon.idp_core.domain.service.EntityTemplateService;
