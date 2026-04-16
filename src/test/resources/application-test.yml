@@ -1,5 +1,9 @@
 ---
 spring:
+  web:
+    cors:
+      allowed-origins:
+        - http://localhost:3001
   flyway:
     default-schema: idp_core
     enabled: true
