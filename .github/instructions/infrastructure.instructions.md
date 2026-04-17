@@ -12,12 +12,12 @@ applyTo: '**/infrastructure/**/*.java'
 - Infrastructure may depend on Domain models, ports, and exceptions. Domain must **never** depend on Infrastructure.
 - Each adapter type (REST, Messaging, CLI) must define its **own input/output models**. Never reuse a Web DTO in a Messaging listener.
 
-## API Adapter (Driving — Inbound)
+## API Adapter (Driving—Inbound)
 
 ### Controllers
 
 - Adhere to RESTful principles. Use appropriate HTTP methods (`GET`, `POST`, `PUT`, `DELETE`).
-- Controllers handle **orchestration and validation only** — all business logic belongs in Domain Services.
+- Controllers handle **orchestration and validation only**. All business logic belongs in Domain Services.
 - Return proper status codes: `200 OK`, `201 Created`, `400 Bad Request`, `404 Not Found`, `409 Conflict`, `500 Internal Server Error`.
 - Paginated responses return `200 OK` when successfully retrieved.
 - Never expose Domain models directly in API responses. Always use DTOs.
@@ -27,7 +27,7 @@ applyTo: '**/infrastructure/**/*.java'
 - Prefer Java Records for all DTOs. Java classes are permitted when mutability is required.
 - Use Jakarta Validation annotations on DTOs for syntactic validation (`@NotNull`, `@NotBlank`, `@Size`).
 - Separate input DTOs (`dto/in/`) from output DTOs (`dto/out/`).
-- If a validation rule (e.g., a complex regex) is shared across multiple adapters, extract it into a Domain Value Object.
+- If a validation rule (for example, a complex regex) is shared across multiple adapters, extract it into a Domain Value Object.
 
 ### Mappers
 
@@ -47,18 +47,18 @@ applyTo: '**/infrastructure/**/*.java'
 - Centralize Spring configuration in `infrastructure/adapters/api/configuration/`.
 - This includes Security (JWT, CORS), Swagger/OpenAPI, pagination, and serialization settings.
 
-## Persistence Adapter (Driven — Outbound)
+## Persistence Adapter (Driven—Outbound)
 
 ### Adapter Classes
 
-- Implement domain port interfaces (e.g., `PostgresEntityTemplateAdapter implements EntityTemplateRepositoryPort`).
+- Implement domain port interfaces (for example, `PostgresEntityTemplateAdapter implements EntityTemplateRepositoryPort`).
 - Adapter classes are annotated with `@Component`.
 - Convert between Domain models and JPA entities using persistence mappers.
 
 ### JPA Entities
 
 - JPA entities are **mutable** and may differ from domain models.
-- Avoid Lombok `@Data` on JPA entities — use `@Getter`, `@Setter`, `@ToString`, `@EqualsAndHashCode` separately.
+- Avoid Lombok `@Data` on JPA entities, use `@Getter`, `@Setter`, `@ToString`, `@EqualsAndHashCode` separately.
 - For mutable collection fields (`Set`, `List`), suppress Lombok-generated accessors with `@Getter(AccessLevel.NONE)` and `@Setter(AccessLevel.NONE)`, then provide **defensive copy** getters and setters.
 - Prefer `UUID` identifiers and align `@Table`/`@Column` names with the Flyway-created schema (`snake_case`).
 - Be careful with `equals`/`hashCode` on entities (Hibernate proxies).
@@ -81,7 +81,7 @@ applyTo: '**/infrastructure/**/*.java'
 
 ## Package Structure
 
-Every adapter **must** include a `mapper/` package for model conversion. Add a `configuration/` package when the adapter requires Spring `@Configuration` classes (e.g., security, serialization, or bean wiring).
+Every adapter **must** include a `mapper/` package for model conversion. Add a `configuration/` package when the adapter requires Spring `@Configuration` classes (for example, security, serialization, or bean wiring).
 
 ```text
 infrastructure/
@@ -100,5 +100,4 @@ infrastructure/
         └── repository/              # Spring Data JPA interfaces
 ```
 
-> [!NOTE]
-> Future adapters (e.g., `messaging/`, `cli/`) must follow the same convention: always include a `mapper/` package and add a `configuration/` package only when Spring configuration is needed.
+> Future adapters (for example, `messaging/`, `etl/`) must follow the same convention: always include a `mapper/` package and add a `configuration/` package only when Spring configuration is needed.

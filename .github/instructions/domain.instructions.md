@@ -26,24 +26,24 @@ applyTo: '**/domain/**/*.java'
 - Records must be self-validating using Jakarta Validation annotations (`@NotNull`, `@NotBlank`, `@Size`).
 - Design domain objects so they **cannot be instantiated in an invalid state** (Always Valid pattern).
 - Use compact constructors to enforce invariants that go beyond annotation-based validation.
-- Domain models carry **business meaning only** — no HTTP semantics, no persistence metadata.
+- Domain models carry **business meaning only**. No HTTP semantics, no persistence metadata.
 
 ## Ports
 
 - Define all external interactions as **Port interfaces** in the `domain/ports/` package.
-- Ports accept and return **domain models or simple primitives only** — never DTOs, JPA entities, or framework types.
+- Ports accept and return **domain models or simple primitives only**, never DTOs, JPA entities, or framework types.
 - Port interfaces define the **contract** between domain and infrastructure. They contain no implementation details.
-- Name ports with a `Port` suffix (e.g., `EntityRepositoryPort`, `EntityTemplateRepositoryPort`).
+- Name ports with a `Port` suffix (for example, `EntityRepositoryPort`, `EntityTemplateRepositoryPort`).
 
 ## Exceptions
 
-- Create specific unchecked exceptions for business rule violations (e.g., `EntityTemplateNotFoundException`, `EntityTemplateAlreadyExistsException`).
+- Create specific unchecked exceptions for business rule violations (for example, `EntityTemplateNotFoundException`, `EntityTemplateAlreadyExistsException`).
 - Domain exceptions must **not** contain HTTP status codes or REST-specific information.
 - Map domain exceptions to HTTP status codes exclusively in the Infrastructure layer (`@ControllerAdvice`).
 
 ## Constants
 
-- Use a dedicated constants class (e.g., `ValidationMessages.java`) for all validation messages.
+- Use a dedicated constants class (for example, `ValidationMessages.java`) for all validation messages.
 - Store constants in the `domain/constant/` package as a single source of truth.
 - Reference these constants from model validation annotations and exception formatting.
 
