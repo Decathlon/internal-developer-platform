@@ -41,3 +41,6 @@ markdownlint
 Matthieu
 Renny
 DTOs
+deserialize
+accessors
+getters
