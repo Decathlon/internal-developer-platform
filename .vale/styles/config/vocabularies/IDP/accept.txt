@@ -37,18 +37,7 @@ ADR
 ADRs
 npm
 Docusaurus
-<<<<<<< HEAD
-<<<<<<< HEAD
+markdownlint
 Matthieu
 Renny
 DTOs
-<<<<<<< HEAD
-Onboarding
-=======
-=======
->>>>>>> eacf5ce (docs(adr): add adr for the code architecture)
-markdownlint
->>>>>>> 6e36de1 (chore(config): add instructions and skills for documentation generation (#20))
-=======
-markdownlint
->>>>>>> main
