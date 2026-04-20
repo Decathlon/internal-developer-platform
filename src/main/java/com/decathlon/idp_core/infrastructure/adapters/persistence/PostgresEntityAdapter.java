@@ -10,7 +10,7 @@ import org.springframework.stereotype.Component;
 
 import com.decathlon.idp_core.domain.model.entity.Entity;
 import com.decathlon.idp_core.domain.model.entity.EntitySummary;
-import com.decathlon.idp_core.domain.ports.EntityRepositoryPort;
+import com.decathlon.idp_core.domain.port.EntityRepositoryPort;
 import com.decathlon.idp_core.infrastructure.adapters.persistence.mapper.EntityPersistenceMapper;
 import com.decathlon.idp_core.infrastructure.adapters.persistence.repository.JpaEntityRepository;
 

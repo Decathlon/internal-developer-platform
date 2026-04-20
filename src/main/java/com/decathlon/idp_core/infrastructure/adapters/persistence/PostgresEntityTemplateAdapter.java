@@ -13,7 +13,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Component;
 
 import com.decathlon.idp_core.domain.model.entity_template.EntityTemplate;
-import com.decathlon.idp_core.domain.ports.EntityTemplateRepositoryPort;
+import com.decathlon.idp_core.domain.port.EntityTemplateRepositoryPort;
 import com.decathlon.idp_core.infrastructure.adapters.persistence.mapper.EntityTemplatePersistenceMapper;
 import com.decathlon.idp_core.infrastructure.adapters.persistence.model.entity.PropertyRulesJpaEntity;
 import com.decathlon.idp_core.infrastructure.adapters.persistence.model.entity_template.EntityTemplateJpaEntity;

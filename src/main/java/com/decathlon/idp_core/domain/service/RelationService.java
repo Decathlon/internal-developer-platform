@@ -5,7 +5,7 @@ import java.util.List;
 import org.springframework.stereotype.Service;
 
 import com.decathlon.idp_core.domain.model.entity.RelationAsTargetSummary;
-import com.decathlon.idp_core.domain.ports.RelationRepositoryPort;
+import com.decathlon.idp_core.domain.port.RelationRepositoryPort;
 
 import lombok.AllArgsConstructor;
 

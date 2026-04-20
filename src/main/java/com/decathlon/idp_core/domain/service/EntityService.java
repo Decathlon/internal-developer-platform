@@ -10,8 +10,8 @@ import com.decathlon.idp_core.domain.exception.EntityNotFoundException;
 import com.decathlon.idp_core.domain.exception.EntityTemplateNotFoundException;
 import com.decathlon.idp_core.domain.model.entity.Entity;
 import com.decathlon.idp_core.domain.model.entity.EntitySummary;
-import com.decathlon.idp_core.domain.ports.EntityRepositoryPort;
-import com.decathlon.idp_core.domain.ports.EntityTemplateRepositoryPort;
+import com.decathlon.idp_core.domain.port.EntityRepositoryPort;
+import com.decathlon.idp_core.domain.port.EntityTemplateRepositoryPort;
 
 import jakarta.transaction.Transactional;
 import jakarta.validation.Valid;

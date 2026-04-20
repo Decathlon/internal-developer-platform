@@ -1,4 +1,4 @@
-package com.decathlon.idp_core.domain.ports;
+package com.decathlon.idp_core.domain.port;
 
 import java.util.Optional;
 import java.util.UUID;

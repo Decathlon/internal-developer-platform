@@ -33,7 +33,7 @@ import com.decathlon.idp_core.domain.model.entity_template.EntityTemplate;
 import com.decathlon.idp_core.domain.model.entity_template.PropertyDefinition;
 import com.decathlon.idp_core.domain.model.entity_template.PropertyRules;
 import com.decathlon.idp_core.domain.model.entity_template.RelationDefinition;
-import com.decathlon.idp_core.domain.ports.EntityTemplateRepositoryPort;
+import com.decathlon.idp_core.domain.port.EntityTemplateRepositoryPort;
 
 import lombok.extern.slf4j.Slf4j;
 
