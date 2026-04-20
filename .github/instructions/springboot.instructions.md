@@ -63,6 +63,22 @@ applyTo: '**/*.java'
 - Annotate beans with `@Profile("profileName")` to load them conditionally based on the active profile
 - Common profiles: `api`, `batch-xxx`, `worker-xxx`, `test`, `local`
 
+### Exception Logging
+
+- Log exceptions only in the Infrastructure layer (adapters or exception handlers), never in the Domain layer.
+- Use a centralized exception handler (such as `@ControllerAdvice`) to log and map exceptions to HTTP responses.
+- Log domain exceptions at `warn` or `info` level, and unexpected technical exceptions at `error` level.
+- This separation keeps the domain pure and ensures logs have technical and request context.
+
+### Validation
+
+- Perform syntactic validation (e.g., null checks, string length, format) in the Infrastructure layer using DTOs with Jakarta Validation annotations (`@NotNull`, `@Size`, etc.).
+- Also use Jakarta Validation annotations in domain models to enforce core invariants and business rules (e.g., `@NotNull`, `@Size` on record fields).
+- Perform semantic and business validation (e.g., uniqueness, cross-field rules, business invariants) in the Domain layer, either in domain models or domain services.
+- Throw custom unchecked exceptions (e.g., `DomainValidationException`) from the Domain layer when business rules are violated.
+- Use a centralized exception handler (such as `@ControllerAdvice`) in the Infrastructure layer to map validation exceptions to appropriate HTTP responses.
+- This separation ensures only valid data enters the domain and all business rules are enforced at the core.
+
 ## Build and Verification
 
 - After adding or modifying code, verify the project continues to build successfully.
