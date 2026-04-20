@@ -26,6 +26,7 @@ applyTo: '**/infrastructure/**/*.java'
 
 - Prefer Java Records for all DTOs. Java classes are permitted when mutability is required.
 - Use Jakarta Validation annotations on DTOs for syntactic validation (`@NotNull`, `@NotBlank`, `@Size`).
+- Always use constants from `SwaggerDescription` for `@Schema` descriptions in DTOs to ensure consistency and avoid duplication.
 - Separate input DTOs (`dto/in/`) from output DTOs (`dto/out/`).
 - If a validation rule (for example, a complex regex) is shared across multiple adapters, extract it into a Domain Value Object.
 
