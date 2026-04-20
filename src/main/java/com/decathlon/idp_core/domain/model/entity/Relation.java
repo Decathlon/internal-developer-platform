@@ -1,66 +1,49 @@
 package com.decathlon.idp_core.domain.model.entity;
 
+import static com.decathlon.idp_core.domain.constant.ValidationMessages.RELATION_NAME_MANDATORY_SIMPLE;
+import static com.decathlon.idp_core.domain.constant.ValidationMessages.RELATION_TARGET_IDENTIFIERS_NOT_NULL;
+import static com.decathlon.idp_core.domain.constant.ValidationMessages.RELATION_TARGET_IDENTIFIER_MANDATORY_SIMPLE;
+
 import java.util.List;
 import java.util.UUID;
 
-import jakarta.persistence.CollectionTable;
-import jakarta.persistence.Column;
-import jakarta.persistence.ElementCollection;
-import jakarta.persistence.Entity;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.GenerationType;
-import jakarta.persistence.Id;
-import jakarta.persistence.Index;
-import jakarta.persistence.JoinColumn;
-import jakarta.persistence.Table;
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Data;
-import lombok.NoArgsConstructor;
+import com.decathlon.idp_core.domain.model.entity_template.EntityTemplate;
+import com.decathlon.idp_core.domain.model.entity_template.RelationDefinition;
 
-/**
- * Domain model representing a relation between entities.
- * <p>
- * A Relation defines a named connection from a source entity to one or more target entities, optionally filtered by target template.
- * </p>
- * <ul>
- *   <li>Each relation has a unique identifier ({@code id}) and a required name.</li>
- *   <li>The {@code targetTemplateIdentifier} can be used to restrict the type of target entities.</li>
- *   <li>{@code targetEntityIdentifiers} holds the ordered list of identifiers for the target entities.</li>
- * </ul>
- */
-@Entity
-@Data
-@Table
-@Builder
-@NoArgsConstructor
-@AllArgsConstructor
-public class Relation {
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
 
-    /**
-     * Primary key for the relation (UUID).
-     */
-    @Id
-    @GeneratedValue(strategy = GenerationType.UUID)
-    private UUID id;
+/// A concrete relationship instance connecting entities in the business domain.
+///
+/// Represents actual business connections between entities that conform to the
+/// relationship structure defined in [RelationDefinition] within entity templates.
+/// Relations are the "filled-in" connections of the template's relationship schema.
+///
+/// **Business invariants:**
+/// - Relation names must match a [RelationDefinition] name in the entity's template
+/// - Target entities must exist before relations can be established
+/// - Required relations cannot have empty target lists
+/// - Multiple targets allowed only when template's `toMany` is true
+/// - Target template identifiers must reference valid [EntityTemplate] identifiers
+public record Relation(
+    UUID id,
 
-    /**
-     * Name of the relation. Required field.
-     */
-    @Column(nullable = false)
-    private String name;
+    @NotBlank(message = RELATION_NAME_MANDATORY_SIMPLE)
+    String name,
 
-    /**
-     * Template identifier for the target entities. Required field.
-     */
-    @Column(name = "target_template_identifier", nullable = false)
-    private String targetTemplateIdentifier;
+    @NotBlank(message = RELATION_TARGET_IDENTIFIER_MANDATORY_SIMPLE)
+    String targetTemplateIdentifier,
 
-    /**
-     * Ordered list of target entity identifiers for this relation.
-     */
-    @ElementCollection
-    @CollectionTable(name = "relation_target_entities", joinColumns = @JoinColumn(name = "relation_id"), indexes = @Index(columnList = "relation_id"))
-    @Column(name = "target_entity_identifier")
-    private List<String> targetEntityIdentifiers;
+    @NotNull(message = RELATION_TARGET_IDENTIFIERS_NOT_NULL)
+    List<String> targetEntityIdentifiers
+) {
+    /// Ensures immutable defensive copying of target entity identifiers.
+    ///
+    /// **Why this exists:** Prevents external mutation of relationship targets after
+    /// construction, maintaining referential integrity in the business object graph.
+    public Relation {
+        targetEntityIdentifiers = targetEntityIdentifiers != null
+            ? List.copyOf(targetEntityIdentifiers)
+            : List.of();
+    }
 }

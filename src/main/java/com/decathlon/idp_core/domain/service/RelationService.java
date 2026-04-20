@@ -5,28 +5,34 @@ import java.util.List;
 import org.springframework.stereotype.Service;
 
 import com.decathlon.idp_core.domain.model.entity.RelationAsTargetSummary;
-import com.decathlon.idp_core.domain.repository.RelationRepository;
+import com.decathlon.idp_core.domain.port.RelationRepositoryPort;
 
 import lombok.AllArgsConstructor;
 
-/**
- * Service for managing relations between entities, including queries for relation ownerships by target entity identifiers.
- * <p>
- * This service provides methods to retrieve summaries of relations where a given entity (or entities) is the target.
- * </p>
- */
+/// Domain service for managing entity relationship queries and navigation.
+///
+/// **Business purpose:** Provides specialized relationship queries for understanding
+/// entity interconnections and dependency analysis. Supports reverse relationship
+/// navigation to identify which entities reference a given target entity.
+///
+/// **Key responsibilities:**
+/// - Relationship impact analysis for entity deletion scenarios
+/// - Reverse navigation through entity relationship graphs
+/// - Bulk relationship lookups for performance optimization
 @Service
 @AllArgsConstructor
 public class RelationService {
 
-    private final RelationRepository relationRepository;
+    private final RelationRepositoryPort relationRepository;
 
-    /**
-     * Finds all relation ownerships where the specified entity identifiers are the target.
-     *
-     * @param targetEntityIdentifiers List of entity identifiers to search for as relation targets.
-     * @return List of {@link RelationAsTargetSummary} representing relations where the given entities are targets.
-     */
+    /// Finds all incoming relationships where specified entities are targets.
+    ///
+    /// **Contract:** Returns relationship summaries for dependency analysis and
+    /// impact assessment. Useful for understanding entity interconnections before
+    /// deletion or modification operations.
+    ///
+    /// @param targetEntityIdentifiers business identifiers of entities to analyze
+    /// @return relationship summaries showing incoming connections to target entities
     public List<RelationAsTargetSummary> findRelationsSummariesByTargetEntityIdentifiers(List<String> targetEntityIdentifiers) {
         return relationRepository.findRelationsSummariesByTargetEntityIdentifiers(targetEntityIdentifiers);
     }
