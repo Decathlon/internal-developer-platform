@@ -79,6 +79,16 @@ applyTo: '**/*.java'
 - Use a centralized exception handler (such as `@ControllerAdvice`) in the Infrastructure layer to map validation exceptions to appropriate HTTP responses.
 - This separation ensures only valid data enters the domain and all business rules are enforced at the core.
 
+### Functional Programming
+
+- Apply functional programming principles in the Domain layer: favor pure functions, immutability, and stateless services.
+- Use Java Records and immutable data structures for domain models.
+- Write business logic as pure functions (no side effects, no I/O, no logging) to maximize testability and predictability.
+- Use Streams, Optionals, and functional constructs (map, filter, reduce) for data processing in the domain.
+- Let adapters (infrastructure) handle all side effects (I/O, DB, HTTP, logging) and map technical exceptions to domain errors.
+- Ports can return functional types (for example, `Optional<T>`, `Either<L, R>`) to model success/failure without exceptions.
+- This approach keeps the domain logic deterministic, maintainable, and easy to test, while isolating technical concerns in the infrastructure layer.
+
 ## Build and Verification
 
 - After adding or modifying code, verify the project continues to build successfully.
