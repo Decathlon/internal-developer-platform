@@ -9,7 +9,7 @@ spring:
       allowed-origins: ${CORS_ALLOWED_ORIGINS}
 
   jackson:
-    # Serializes all JSON fields as snake_case (e.g. templateIdentifier → template_identifier).
+    # Serializes all JSON fields as snake_case (for example templateIdentifier → template_identifier).
     property-naming-strategy: SNAKE_CASE
 
   profiles:

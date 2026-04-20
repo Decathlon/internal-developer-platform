@@ -72,10 +72,10 @@ applyTo: '**/*.java'
 
 ### Validation
 
-- Perform syntactic validation (e.g., null checks, string length, format) in the Infrastructure layer using DTOs with Jakarta Validation annotations (`@NotNull`, `@Size`, etc.).
-- Also use Jakarta Validation annotations in domain models to enforce core invariants and business rules (e.g., `@NotNull`, `@Size` on record fields).
-- Perform semantic and business validation (e.g., uniqueness, cross-field rules, business invariants) in the Domain layer, either in domain models or domain services.
-- Throw custom unchecked exceptions (e.g., `DomainValidationException`) from the Domain layer when business rules are violated.
+- Perform syntactic validation (for example, null checks, string length, format) in the Infrastructure layer using DTOs with Jakarta Validation annotations (`@NotNull`, `@Size`, etc.).
+- Also use Jakarta Validation annotations in domain models to enforce core invariants and business rules (for example, `@NotNull`, `@Size` on record fields).
+- Perform semantic and business validation (for example, uniqueness, cross-field rules, business invariants) in the Domain layer, either in domain models or domain services.
+- Throw custom unchecked exceptions (for example, `DomainValidationException`) from the Domain layer when business rules are violated.
 - Use a centralized exception handler (such as `@ControllerAdvice`) in the Infrastructure layer to map validation exceptions to appropriate HTTP responses.
 - This separation ensures only valid data enters the domain and all business rules are enforced at the core.
 

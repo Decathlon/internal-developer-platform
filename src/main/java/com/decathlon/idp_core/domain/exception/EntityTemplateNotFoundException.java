@@ -52,10 +52,10 @@ public class EntityTemplateNotFoundException extends RuntimeException {
     /// Constructs a new exception for field-based searches.
     ///
     /// **Why this exists:** Commonly used for business identifier searches where
-    /// the field name (e.g., "identifier") and its value are known, providing
+    /// the field name (for example, "identifier") and its value are known, providing
     /// clear context about what search criteria failed.
     ///
-    /// @param fieldName the name of the field used in the search (e.g., "identifier")
+    /// @param fieldName the name of the field used in the search (for example, "identifier")
     /// @param value the value that was searched for but not found
     public EntityTemplateNotFoundException(String fieldName, String value) {
         super("Template not found with " + fieldName + ": " + value);
