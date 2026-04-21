@@ -16,6 +16,7 @@ import jakarta.persistence.JoinTable;
 import jakarta.persistence.OneToMany;
 import jakarta.persistence.OrderBy;
 import jakarta.persistence.Table;
+import jakarta.validation.constraints.Size;
 import lombok.AllArgsConstructor;
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
@@ -39,6 +40,9 @@ public class EntityTemplateJpaEntity {
 
     @Column(nullable = false, unique = true)
     private String identifier;
+
+    @Column(unique = true)
+    private String name;
 
     private String description;
 

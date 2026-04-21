@@ -146,6 +146,7 @@ class EntityTemplateMapperTest {
             var entity = new EntityTemplate(
                     UUID.randomUUID(),
                     "service-template",
+                    "Service Template",
                     "A service template",
                     List.of(propertyDefinition),
                     List.of(relationDefinition)
@@ -194,6 +195,7 @@ class EntityTemplateMapperTest {
                     UUID.randomUUID(),
                     "template1",
                     "Template 1",
+                    "Description 1",
                     List.of(),
                     List.of()
             );
@@ -202,6 +204,7 @@ class EntityTemplateMapperTest {
                     UUID.randomUUID(),
                     "template2",
                     "Template 2",
+                    "Description 2",
                     List.of(),
                     List.of()
             );

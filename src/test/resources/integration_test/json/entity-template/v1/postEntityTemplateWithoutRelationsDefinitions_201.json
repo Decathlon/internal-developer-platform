@@ -1,5 +1,6 @@
 {
   "identifier": "temp-test-99",
+  "name": "Temp Test 99",
   "description": "This is a test template",
   "properties_definitions": [
     {

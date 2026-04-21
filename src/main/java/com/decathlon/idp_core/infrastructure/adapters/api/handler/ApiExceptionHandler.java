@@ -14,6 +14,7 @@ import org.springframework.web.bind.annotation.ExceptionHandler;
 
 import com.decathlon.idp_core.domain.exception.EntityNotFoundException;
 import com.decathlon.idp_core.domain.exception.EntityTemplateAlreadyExistsException;
+import com.decathlon.idp_core.domain.exception.EntityTemplateNameAlreadyExistsException;
 import com.decathlon.idp_core.domain.exception.EntityTemplateNotFoundException;
 
 import jakarta.validation.ConstraintViolation;
@@ -63,6 +64,18 @@ public class ApiExceptionHandler {
     public ResponseEntity<ErrorResponse> handleEntityTemplateAlreadyExistsException(
             EntityTemplateAlreadyExistsException ex) {
         log.warn("Entity template already exists: {}", ex.getMessage());
+        ErrorResponse errorResponse = new ErrorResponse(HttpStatus.CONFLICT.name(), ex.getMessage());
+        return ResponseEntity.status(HttpStatus.CONFLICT).body(errorResponse);
+    }
+
+    /// Handles domain exception when entity template names already exist.
+    ///
+    /// **HTTP mapping:** Maps domain EntityTemplateNameAlreadyExistsException to HTTP 409
+    /// status indicating business rule conflict for duplicate template names.
+    @ExceptionHandler(EntityTemplateNameAlreadyExistsException.class)
+    public ResponseEntity<ErrorResponse> handleEntityTemplateNameAlreadyExistsException(
+            EntityTemplateNameAlreadyExistsException ex) {
+        log.warn("Entity template name already exists: {}", ex.getMessage());
         ErrorResponse errorResponse = new ErrorResponse(HttpStatus.CONFLICT.name(), ex.getMessage());
         return ResponseEntity.status(HttpStatus.CONFLICT).body(errorResponse);
     }

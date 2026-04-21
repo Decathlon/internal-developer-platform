@@ -1,11 +1,10 @@
 {
   "identifier": "web-service",
-  "name": "Web Service",
   "description": "This is a test template",
   "properties_definitions": [
     {
-      "name": "test",
-      "description": "",
+      "name": "name",
+      "description": "Name of web service",
       "type": "STRING",
       "required": true,
       "rules": {

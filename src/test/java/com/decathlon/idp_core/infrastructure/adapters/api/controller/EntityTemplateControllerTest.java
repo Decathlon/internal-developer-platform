@@ -2,6 +2,7 @@ package com.decathlon.idp_core.infrastructure.adapters.api.controller;
 
 import static com.decathlon.idp_core.domain.constant.ValidationMessages.TEMPLATE_ALREADY_EXISTS;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.hamcrest.Matchers.containsString;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.springframework.http.MediaType.APPLICATION_JSON;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
@@ -208,7 +209,7 @@ class EntityTemplateControllerTest extends AbstractIntegrationTest {
         @WithMockUser()
         @DisplayName("Returns 400 when identifier is missing")
         void postTemplate_400_identifier_missing() throws Exception {
-            MvcResult res = postAndValidateBadRequest(ENTITY_TEMPLATE_PATH,
+            MvcResult res = postBadRequestAndAssertEquals(ENTITY_TEMPLATE_PATH,
                     ENTITY_TEMPLATE_JSON_TEST_PATH + "postEntityTemplate_400_identifier_missing.json",
                     ValidationMessages.TEMPLATE_IDENTIFIER_MANDATORY);
             assertNotNull(res, "Test executed successfully");
@@ -223,9 +224,85 @@ class EntityTemplateControllerTest extends AbstractIntegrationTest {
         @WithMockUser()
         @DisplayName("Returns 400 when identifier is blank")
         void postTemplate_400_identifier_blank() throws Exception {
-            MvcResult res = postAndValidateBadRequest(ENTITY_TEMPLATE_PATH,
+            MvcResult res = postBadRequestAndAssertEquals(ENTITY_TEMPLATE_PATH,
                     ENTITY_TEMPLATE_JSON_TEST_PATH + "postEntityTemplate_400_identifier_blank.json",
                     ValidationMessages.TEMPLATE_IDENTIFIER_MANDATORY);
+            assertNotNull(res, "Test executed successfully");
+        }
+
+        /// Tests the POST /api/v1/entity-templates endpoint when name field
+        /// already exists.
+        /// This test verifies that:
+        /// - Validation error message contains expected template name already exists
+        /// @throws Exception if the MockMvc request fails
+        @Test
+        @WithMockUser()
+        @DisplayName("Returns 409 when name already exists")
+        void postTemplate_409_name_already_exists() throws Exception {
+            MvcResult res = postConflictAndAssertContains(ENTITY_TEMPLATE_PATH,
+                    ENTITY_TEMPLATE_JSON_TEST_PATH + "postEntityTemplate_409_name_already_exists.json",
+                    "The entity template name");
+            assertNotNull(res, "Test executed successfully");
+        }
+
+
+        /// Tests the POST /api/v1/entity-templates endpoint when the name field is
+        /// missing.
+        /// This test verifies that:
+        /// - Validation error message matches expected template identifier mandatory
+        /// @throws Exception if the MockMvc request fails
+        @Test
+        @WithMockUser()
+        @DisplayName("Returns 400 when name is missing")
+        void postTemplate_400_name_missing() throws Exception {
+            MvcResult res = postBadRequestAndAssertEquals(ENTITY_TEMPLATE_PATH,
+                    ENTITY_TEMPLATE_JSON_TEST_PATH + "postEntityTemplate_400_name_missing.json",
+                    ValidationMessages.TEMPLATE_NAME_MANDATORY);
+            assertNotNull(res, "Test executed successfully");
+        }
+
+        /// Tests the POST /api/v1/entity-templates endpoint when name field is
+        /// blank.
+        /// This test verifies that:
+        /// - Validation error message contains expected template name mandatory message
+        /// @throws Exception if the MockMvc request fails
+        @Test
+        @WithMockUser()
+        @DisplayName("Returns 400 when name is blank")
+        void postTemplate_400_name_blank() throws Exception {
+            MvcResult res = postBadRequestAndAssertContains(ENTITY_TEMPLATE_PATH,
+                    ENTITY_TEMPLATE_JSON_TEST_PATH + "postEntityTemplate_400_name_blank.json",
+                    ValidationMessages.TEMPLATE_NAME_MANDATORY);
+            assertNotNull(res, "Test executed successfully");
+        }
+
+        /// Tests the POST /api/v1/entity-templates endpoint when name field is
+        /// too long.
+        /// This test verifies that:
+        /// - Validation error message matches expected template name too long
+        /// @throws Exception if the MockMvc request fails
+        @Test
+        @WithMockUser()
+        @DisplayName("Returns 400 when name is too long")
+        void postTemplate_400_name_too_long() throws Exception {
+            MvcResult res = postBadRequestAndAssertEquals(ENTITY_TEMPLATE_PATH,
+                    ENTITY_TEMPLATE_JSON_TEST_PATH + "postEntityTemplate_400_name_wrong_size.json",
+                    ValidationMessages.TEMPLATE_NAME_MAX_SIZE);
+            assertNotNull(res, "Test executed successfully");
+        }
+
+        /// Tests the POST /api/v1/entity-templates endpoint when name field does
+        /// not respect regex pattern.
+        /// This test verifies that:
+        /// - Validation error message matches expected template name pattern
+        /// @throws Exception if the MockMvc request fails
+        @Test
+        @WithMockUser()
+        @DisplayName("Returns 400 when name does not respect regex pattern")
+        void postTemplate_400_name_invalid_pattern() throws Exception {
+            MvcResult res = postBadRequestAndAssertEquals(ENTITY_TEMPLATE_PATH,
+                    ENTITY_TEMPLATE_JSON_TEST_PATH + "postEntityTemplate_400_name_invalid_pattern.json",
+                    ValidationMessages.TEMPLATE_NAME_FORMAT);
             assertNotNull(res, "Test executed successfully");
         }
 
@@ -238,7 +315,7 @@ class EntityTemplateControllerTest extends AbstractIntegrationTest {
         @WithMockUser()
         @DisplayName("Returns 400 when properties array is empty")
         void postTemplate_400_properties_empty() throws Exception {
-            MvcResult res = postAndValidateBadRequest(ENTITY_TEMPLATE_PATH,
+            MvcResult res = postBadRequestAndAssertEquals(ENTITY_TEMPLATE_PATH,
                     ENTITY_TEMPLATE_JSON_TEST_PATH + "postEntityTemplate_400_properties_empty.json",
                     ValidationMessages.PROPERTY_DEFINITIONS_MANDATORY);
             assertNotNull(res, "Test executed successfully");
@@ -252,7 +329,7 @@ class EntityTemplateControllerTest extends AbstractIntegrationTest {
         @WithMockUser()
         @DisplayName("Returns 400 when property name is missing")
         void postTemplate_400_property_name_missing() throws Exception {
-            MvcResult res = postAndValidateBadRequest(ENTITY_TEMPLATE_PATH,
+            MvcResult res = postBadRequestAndAssertEquals(ENTITY_TEMPLATE_PATH,
                     ENTITY_TEMPLATE_JSON_TEST_PATH + "postEntityTemplate_400_property_name_missing.json",
                     ValidationMessages.PROPERTY_NAME_MANDATORY);
             assertNotNull(res, "Test executed successfully");
@@ -266,7 +343,7 @@ class EntityTemplateControllerTest extends AbstractIntegrationTest {
         @WithMockUser()
         @DisplayName("Returns 400 when property name is blank")
         void postTemplate_400_property_name_blank() throws Exception {
-            MvcResult res = postAndValidateBadRequest(ENTITY_TEMPLATE_PATH,
+            MvcResult res = postBadRequestAndAssertEquals(ENTITY_TEMPLATE_PATH,
                     ENTITY_TEMPLATE_JSON_TEST_PATH + "postEntityTemplate_400_property_name_blank.json",
                     ValidationMessages.PROPERTY_NAME_MANDATORY);
             assertNotNull(res, "Test executed successfully");
@@ -280,7 +357,7 @@ class EntityTemplateControllerTest extends AbstractIntegrationTest {
         @WithMockUser()
         @DisplayName("Returns 400 when property description is missing")
         void postTemplate_400_property_description_missing() throws Exception {
-            MvcResult res = postAndValidateBadRequest(ENTITY_TEMPLATE_PATH,
+            MvcResult res = postBadRequestAndAssertEquals(ENTITY_TEMPLATE_PATH,
                     ENTITY_TEMPLATE_JSON_TEST_PATH + "postEntityTemplate_400_property_description_missing.json",
                     ValidationMessages.PROPERTY_DESCRIPTION_MANDATORY);
             assertNotNull(res, "Test executed successfully");
@@ -294,7 +371,7 @@ class EntityTemplateControllerTest extends AbstractIntegrationTest {
         @WithMockUser()
         @DisplayName("Returns 400 when property description is blank")
         void postTemplate_400_property_description_blank() throws Exception {
-            MvcResult res = postAndValidateBadRequest(ENTITY_TEMPLATE_PATH,
+            MvcResult res = postBadRequestAndAssertEquals(ENTITY_TEMPLATE_PATH,
                     ENTITY_TEMPLATE_JSON_TEST_PATH + "postEntityTemplate_400_property_description_blank.json",
                     ValidationMessages.PROPERTY_DESCRIPTION_MANDATORY);
             assertNotNull(res, "Test executed successfully");
@@ -308,7 +385,7 @@ class EntityTemplateControllerTest extends AbstractIntegrationTest {
         @WithMockUser()
         @DisplayName("Returns 400 when property type is missing")
         void postTemplate_400_property_type_missing() throws Exception {
-            MvcResult res = postAndValidateBadRequest(ENTITY_TEMPLATE_PATH,
+            MvcResult res = postBadRequestAndAssertEquals(ENTITY_TEMPLATE_PATH,
                     ENTITY_TEMPLATE_JSON_TEST_PATH + "postEntityTemplate_400_property_type_missing.json",
                     ValidationMessages.PROPERTY_TYPE_MANDATORY);
             assertNotNull(res, "Test executed successfully");
@@ -344,7 +421,7 @@ class EntityTemplateControllerTest extends AbstractIntegrationTest {
         @WithMockUser()
         @DisplayName("Returns 400 when property type has invalid enum value")
         void postTemplate_400_property_type_invalid_enum() throws Exception {
-            MvcResult res = postAndValidateBadRequest(ENTITY_TEMPLATE_PATH,
+            MvcResult res = postBadRequestAndAssertEquals(ENTITY_TEMPLATE_PATH,
                     ENTITY_TEMPLATE_JSON_TEST_PATH + "postEntityTemplate_400_bad_property_type.json",
                     "Invalid value 'NOT IN ENUM' for property 'type'");
             assertNotNull(res, "Test executed successfully");
@@ -358,7 +435,7 @@ class EntityTemplateControllerTest extends AbstractIntegrationTest {
         @WithMockUser()
         @DisplayName("Returns 400 when property format has invalid enum value")
         void postTemplate_400_property_format_invalid_enum() throws Exception {
-            MvcResult res = postAndValidateBadRequest(ENTITY_TEMPLATE_PATH,
+            MvcResult res = postBadRequestAndAssertEquals(ENTITY_TEMPLATE_PATH,
                     ENTITY_TEMPLATE_JSON_TEST_PATH + "postEntityTemplate_400_bad_property_format.json",
                     "Invalid value 'NOT A VALID FORMAT' for property 'format'");
             assertNotNull(res, "Test executed successfully");
@@ -445,6 +522,7 @@ class EntityTemplateControllerTest extends AbstractIntegrationTest {
                     .content("""
                             {
                               "identifier": "template-rel-test",
+                              "name": "Template Rel Test",
                               "description": "Initial template",
                               "properties_definitions": [
                                 {
@@ -470,6 +548,7 @@ class EntityTemplateControllerTest extends AbstractIntegrationTest {
             String updateJson = """
                     {
                       "identifier": "template-rel-test",
+                      "name": "Template Rel Test",
                       "description": "Updated template with new relation",
                       "properties_definitions": [
                         {
@@ -660,7 +739,7 @@ class EntityTemplateControllerTest extends AbstractIntegrationTest {
 
         @Test
         @WithMockUser()
-        void putTemplate_409_wheneIdentifierAlreadyExists() throws Exception {
+        void putTemplate_409_whenIdentifierAlreadyExists() throws Exception {
             String identifier = "web-service";
             Optional<EntityTemplate> entityTemplateUpdated = entityTemplateRepository.findByIdentifier("microservice");
             assertThat(entityTemplateUpdated).isPresent();
@@ -673,6 +752,100 @@ class EntityTemplateControllerTest extends AbstractIntegrationTest {
                     .andExpect(status().isConflict())
                     .andExpect(content().string(
                             "{\"error\":\"CONFLICT\",\"error_description\":\"An Entity Template already exists with the same identifier:microservice\"}"));
+        }
+
+        /// Tests the PUT /api/v1/entity-templates/identifier/{identifier} endpoint when the name field is
+        /// missing.
+        /// This test verifies that:
+        /// - Validation error message matches expected template name mandatory
+        /// @throws Exception if the MockMvc request fails
+        @Test
+        @WithMockUser()
+        @DisplayName("Returns 400 when name is missing")
+        void putTemplate_400_name_missing() throws Exception {
+            mockMvc.perform(MockMvcRequestBuilders.put("/api/v1/entity-templates/identifier/web-service")
+                    .contentType(APPLICATION_JSON)
+                    .accept(APPLICATION_JSON)
+                    .with(csrf())
+                    .content(getJsonTestFileContent("integration_test/json/entity-template/v1/putEntityTemplate_400_name_missing.json")))
+                    .andExpect(status().isBadRequest())
+                    .andExpect(jsonPath("$.error").value("BAD_REQUEST"))
+                    .andExpect(jsonPath("$.error_description").value(ValidationMessages.TEMPLATE_NAME_MANDATORY));
+        }
+
+        /// Tests the PUT /api/v1/entity-templates/identifier/{identifier} endpoint when name field is
+        /// blank.
+        /// This test verifies that:
+        /// - Validation error message contains expected template name mandatory message
+        /// @throws Exception if the MockMvc request fails
+        @Test
+        @WithMockUser()
+        @DisplayName("Returns 400 when name is blank")
+        void putTemplate_400_name_blank() throws Exception {
+            mockMvc.perform(MockMvcRequestBuilders.put("/api/v1/entity-templates/identifier/web-service")
+                    .contentType(APPLICATION_JSON)
+                    .accept(APPLICATION_JSON)
+                    .with(csrf())
+                    .content(getJsonTestFileContent("integration_test/json/entity-template/v1/putEntityTemplate_400_name_blank.json")))
+                    .andExpect(status().isBadRequest())
+                    .andExpect(jsonPath("$.error").value("BAD_REQUEST"))
+                    .andExpect(jsonPath("$.error_description").value(containsString(ValidationMessages.TEMPLATE_NAME_MANDATORY)));
+        }
+
+        /// Tests the PUT /api/v1/entity-templates/identifier/{identifier} endpoint when name field
+        /// already exists.
+        /// This test verifies that:
+        /// - Validation error message contains expected template name already exists
+        /// @throws Exception if the MockMvc request fails
+        @Test
+        @WithMockUser()
+        @DisplayName("Returns 409 when name already exists")
+        void putTemplate_409_name_already_exists() throws Exception {
+            mockMvc.perform(MockMvcRequestBuilders.put("/api/v1/entity-templates/identifier/web-service")
+                    .contentType(APPLICATION_JSON)
+                    .accept(APPLICATION_JSON)
+                    .with(csrf())
+                    .content(getJsonTestFileContent("integration_test/json/entity-template/v1/putEntityTemplate_409_name_already_exists.json")))
+                    .andExpect(status().isConflict())
+                    .andExpect(content().string("{\"error\":\"CONFLICT\",\"error_description\":\"The entity template name Microservice already exists\"}"));
+        }
+
+        /// Tests the PUT /api/v1/entity-templates/identifier/{identifier} endpoint when name field is
+        /// too long.
+        /// This test verifies that:
+        /// - Validation error message matches expected template name too long
+        /// @throws Exception if the MockMvc request fails
+        @Test
+        @WithMockUser()
+        @DisplayName("Returns 400 when name is too long")
+        void putTemplate_400_name_too_long() throws Exception {
+            mockMvc.perform(MockMvcRequestBuilders.put("/api/v1/entity-templates/identifier/web-service")
+                    .contentType(APPLICATION_JSON)
+                    .accept(APPLICATION_JSON)
+                    .with(csrf())
+                    .content(getJsonTestFileContent("integration_test/json/entity-template/v1/putEntityTemplate_400_name_wrong_size.json")))
+                    .andExpect(status().isBadRequest())
+                    .andExpect(jsonPath("$.error").value("BAD_REQUEST"))
+                    .andExpect(jsonPath("$.error_description").value(ValidationMessages.TEMPLATE_NAME_MAX_SIZE));
+        }
+
+        /// Tests the PUT /api/v1/entity-templates/identifier/{identifier} endpoint when name field does
+        /// not respect regex pattern.
+        /// This test verifies that:
+        /// - Validation error message matches expected template name pattern
+        /// @throws Exception if the MockMvc request fails
+        @Test
+        @WithMockUser()
+        @DisplayName("Returns 400 when name does not respect regex pattern")
+        void putTemplate_400_name_invalid_pattern() throws Exception {
+            mockMvc.perform(MockMvcRequestBuilders.put("/api/v1/entity-templates/identifier/web-service")
+                    .contentType(APPLICATION_JSON)
+                    .accept(APPLICATION_JSON)
+                    .with(csrf())
+                    .content(getJsonTestFileContent("integration_test/json/entity-template/v1/putEntityTemplate_400_name_invalid_pattern.json")))
+                    .andExpect(status().isBadRequest())
+                    .andExpect(jsonPath("$.error").value("BAD_REQUEST"))
+                    .andExpect(jsonPath("$.error_description").value(ValidationMessages.TEMPLATE_NAME_FORMAT));
         }
 
     }

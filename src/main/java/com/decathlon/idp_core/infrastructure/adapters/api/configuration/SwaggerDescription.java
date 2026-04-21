@@ -98,6 +98,7 @@ public class SwaggerDescription {
     // --- Field descriptions (shared) ---
     public static final String FIELD_TEMPLATE_ID = "Unique generated identifier of the entity template";
     public static final String FIELD_TEMPLATE_IDENTIFIER = "Unique Entity Template identifier";
+    public static final String FIELD_TEMPLATE_NAME = "Unique Entity Template name";
     public static final String FIELD_TEMPLATE_DESCRIPTION = "Entity Template description";
     public static final String FIELD_TEMPLATE_PROPERTIES = "List of property definitions for this template";
     public static final String FIELD_TEMPLATE_RELATIONS = "List of relation definitions for this template";

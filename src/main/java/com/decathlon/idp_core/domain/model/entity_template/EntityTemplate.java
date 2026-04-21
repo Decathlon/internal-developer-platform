@@ -2,12 +2,18 @@ package com.decathlon.idp_core.domain.model.entity_template;
 
 import static com.decathlon.idp_core.domain.constant.ValidationMessages.PROPERTY_DEFINITIONS_MANDATORY;
 import static com.decathlon.idp_core.domain.constant.ValidationMessages.TEMPLATE_IDENTIFIER_MANDATORY;
+import static com.decathlon.idp_core.domain.constant.ValidationMessages.TEMPLATE_NAME_FORMAT;
+import static com.decathlon.idp_core.domain.constant.ValidationMessages.TEMPLATE_NAME_MANDATORY;
+import static com.decathlon.idp_core.domain.constant.ValidationMessages.TEMPLATE_NAME_MAX_SIZE;
+import static com.decathlon.idp_core.domain.constant.ValidationRegex.TEMPLATE_NAME_REGEX;
 
 import java.util.List;
 import java.util.UUID;
 
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotEmpty;
+import jakarta.validation.constraints.Pattern;
+import jakarta.validation.constraints.Size;
 
 /// Business template defining the structure and constraints for creating [Entity] instances.
 ///
@@ -17,6 +23,7 @@ import jakarta.validation.constraints.NotEmpty;
 ///
 /// **Business invariants:**
 /// - Template identifiers must be unique across the system
+/// - Template names must be unique across the system and respect the business regex
 /// - At least one property definition is required for meaningful entities
 /// - Property names must be unique within the template
 /// - Relation names must be unique within the template
@@ -27,6 +34,11 @@ public record EntityTemplate(
 
         @NotBlank(message = TEMPLATE_IDENTIFIER_MANDATORY)
         String identifier,
+
+        @Size(max = 255, message = TEMPLATE_NAME_MAX_SIZE)
+        @NotBlank(message = TEMPLATE_NAME_MANDATORY)
+        @Pattern(regexp = TEMPLATE_NAME_REGEX, message = TEMPLATE_NAME_FORMAT)
+        String name,
 
         String description,
 

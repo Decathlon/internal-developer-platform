@@ -1,6 +1,7 @@
 package com.decathlon.idp_core;
 
 import static java.nio.charset.StandardCharsets.UTF_8;
+import static org.hamcrest.Matchers.containsString;
 import static org.mockito.Mockito.mock;
 import static org.mockserver.integration.ClientAndServer.startClientAndServer;
 import static org.mockserver.model.HttpRequest.request;
@@ -177,7 +178,7 @@ public abstract class AbstractIntegrationTest {
     /// @param errorDescription the expected error description that should be
     ///                         returned in the response
     /// @throws Exception if an error occurs during the mock MVC request execution
-    public MvcResult postAndValidateBadRequest(String path, String jsonBodyfilePath, String errorDescription)
+    public MvcResult postBadRequestAndAssertEquals(String path, String jsonBodyfilePath, String errorDescription)
             throws Exception {
         return mockMvc.perform(MockMvcRequestBuilders.post(path)
                         .contentType(APPLICATION_JSON)
@@ -191,6 +192,51 @@ public abstract class AbstractIntegrationTest {
 
     }
 
+    /// Helper method to perform a POST request and validate that it returns a
+    /// BAD_REQUEST response and that the error description contains the expected text.
+    ///
+    /// @param path             the URL path to send the POST request to
+    /// @param jsonBodyfilePath the file path containing the JSON content to be sent
+    ///                         in the request body
+    /// @param errorDescription the text that should be contained in the error description
+    /// @throws Exception if an error occurs during the mock MVC request execution
+    public MvcResult postBadRequestAndAssertContains(String path, String jsonBodyfilePath, String errorDescription)
+            throws Exception {
+        return mockMvc.perform(MockMvcRequestBuilders.post(path)
+                        .contentType(APPLICATION_JSON)
+                        .accept(APPLICATION_JSON)
+                        .with(csrf())
+                        .content(getJsonTestFileContent(jsonBodyfilePath)))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.error").value("BAD_REQUEST"))
+                .andExpect(jsonPath("$.error_description").value(containsString(errorDescription)))
+                .andReturn();
+
+    }
+
+    /// Helper method to perform a POST request and validate that it returns a
+    /// CONFLICT response and that the error description contains the expected text.
+    ///
+    /// @param path             the URL path to send the POST request to
+    /// @param jsonBodyfilePath the file path containing the JSON content to be sent
+    ///                         in the request body
+    /// @param errorDescription the text that should be contained in the error description
+    /// @throws Exception if an error occurs during the mock MVC request execution
+    public MvcResult postConflictAndAssertContains(String path, String jsonBodyfilePath, String errorDescription)
+            throws Exception {
+        return mockMvc.perform(MockMvcRequestBuilders.post(path)
+                        .contentType(APPLICATION_JSON)
+                        .accept(APPLICATION_JSON)
+                        .with(csrf())
+                        .content(getJsonTestFileContent(jsonBodyfilePath)))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.error").value("CONFLICT"))
+                .andExpect(jsonPath("$.error_description").value(containsString(errorDescription)))
+                .andReturn();
+
+    }
+
+    /// Helper method to perform a PUT request and validate that it returns a
     @TestConfiguration
     public static class TestBeanConfiguration {
 
