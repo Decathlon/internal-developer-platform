@@ -157,5 +157,5 @@ com.decathlon.idp
 1. **No External Library Imports:** The Domain may use Spring libraries, but it may NOT import third-party integration libraries.
 2. **Ports as Contracts:** Every interaction with the "Outside World" must go through a Port interface.
 3. **Architecture Guardrails:** We can enforce the rules of this architecture through two approaches:
-   * ArchUnit Tests: Define architecture rules as unit tests using [ArchUnit](https://www.archunit.org/). This approach offers a fine level of granularity (for example: "classes in `domain` must not depend on `infrastructure`") without adding module overhead.
+   * ArchUnit Tests: Define architecture rules as unit tests using [ArchUnit](https://www.archunit.org/). This approach offers a fine level of granularity (for example, "classes in `domain` must not depend on `infrastructure`") without adding module overhead.
    * Maven Modules: Physically separate the Domain and Infrastructure into distinct Maven modules, preventing illegal imports at compile time. This provides the strongest guarantee but increases build complexity.
