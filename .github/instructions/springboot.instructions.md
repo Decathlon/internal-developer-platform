@@ -67,8 +67,6 @@ applyTo: '**/*.java'
 
 - Log exceptions only in the Infrastructure layer (adapters or exception handlers), never in the Domain layer.
 - Use a centralized exception handler (such as `@ControllerAdvice`) to log and map exceptions to HTTP responses.
-- Log domain exceptions at `warn` or `info` level, and unexpected technical exceptions at `error` level.
-- This separation keeps the domain pure and ensures logs have technical and request context.
 
 ### Validation
 
