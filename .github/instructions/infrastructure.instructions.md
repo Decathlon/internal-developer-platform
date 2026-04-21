@@ -61,7 +61,7 @@ applyTo: '**/infrastructure/**/*.java'
 - Avoid Lombok `@Data` on JPA entities, use `@Getter`, `@Setter`, `@ToString`, `@EqualsAndHashCode` separately.
 - For mutable collection fields (`Set`, `List`), suppress Lombok-generated accessors with `@Getter(AccessLevel.NONE)` and `@Setter(AccessLevel.NONE)`, then provide **defensive copy** getters and setters.
 - Prefer `UUID` identifiers and align `@Table`/`@Column` names with the Flyway-created schema (`snake_case`).
-- Avoid relying on Hibernate proxies for equality; use getClass() instead of instanceof in equals to prevent proxy-related bugs.
+- Avoid relying on Hibernate proxies for equality; use getClass() instead of `instanceof` in equals to prevent proxy-related bugs.
 
 ### Relationships & Fetching
 
