@@ -11,7 +11,7 @@ applyTo: "**/db/migration/**/*.sql"
 - **Always** use a Flyway migration script when adding, modifying, or removing fields or constraints in database entities.
 - Do not rely on JPA/Hibernate auto-DDL for schema changes.
 - JPA/Hibernate `ddl-auto` is set to `none`—all schema changes must go through Flyway migrations.
-- The default schema is `idp_core`.
+- The schema should not be enforced anywhere. Use Springboot configuration to get the schema to use.
 - Use JPA annotations for clarity, but rely on Flyway for actual schema enforcement.
 
 ## Flyway Migrations

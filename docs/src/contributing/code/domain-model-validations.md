@@ -9,12 +9,12 @@ We perform validation at multiple layers, each with a distinct responsibility:
 
 1. **Domain Layer (Primary Source of Truth):**
    - Enforces core business rules and invariants.
-   - Domain models and services must guarantee that only valid business states are possible, using Jakarta Validation annotations (e.g., `@NotNull`, `@Size`) and explicit logic.
+   - Domain models and services must guarantee that only valid business states are possible, using Jakarta Validation annotations (for example, `@NotNull`, `@Size`) and explicit logic.
    - All critical validation should reside here, as the domain is responsible for business correctness.
 
 2. **Infrastructure Layer:**
-   - **DTOs:** Handle syntactic and structural validation (e.g., `@NotBlank`, `@Email`, format checks) to ensure only well-formed data reaches the domain.
-   - **Database:** Enforces technical constraints (e.g., `NOT NULL`, uniqueness) for data quality and integrity, but should not be relied upon for business rule enforcement.
+   - **DTOs:** Handle syntactic and structural validation (for example, `@NotBlank`, `@Email`, format checks) to ensure only well-formed data reaches the domain.
+   - **Database:** Enforces technical constraints (for example, `NOT NULL`, uniqueness) for data quality and integrity, but should not be relied upon for business rule enforcement.
 
  The domain layer is the principal authority for business validation. Infrastructure validations (DTOs, database) act as a first line of defense and for technical integrity, but cannot replace domain-level enforcement.
 
