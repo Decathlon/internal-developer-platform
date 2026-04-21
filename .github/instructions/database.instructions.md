@@ -101,6 +101,8 @@ COMMENT ON COLUMN table_name.column_name IS 'Description of the column';
 
 ### Constraints and Indexes
 
+- Use meaningful naming for the constraints. Do not use technical or automated naming.
+
 ```sql
 -- Primary key (defined inline)
 id UUID PRIMARY KEY
