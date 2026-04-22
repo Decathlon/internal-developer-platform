@@ -303,11 +303,6 @@ components:
       type: object
       description: Output for entity template
       properties:
-        id:
-          type: string
-          format: uuid
-          description: Unique generated identifier of the entity template
-          example: 123e4567-e89b-12d3-a456-426614174000
         identifier:
           type: string
           description: Unique Entity Template identifier
