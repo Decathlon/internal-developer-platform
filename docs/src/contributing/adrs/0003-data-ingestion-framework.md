@@ -1,4 +1,4 @@
-# 0003 - Data ingestion framework
+# 0003 - Data Ingestion Framework
 
 * Status: Accepted
 * Deciders:
