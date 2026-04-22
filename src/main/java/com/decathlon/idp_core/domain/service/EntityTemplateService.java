@@ -40,7 +40,7 @@ import lombok.RequiredArgsConstructor;
 @RequiredArgsConstructor
 public class EntityTemplateService {
 
-    private final EntityTemplateRepositoryPort entityTemplateRepository;
+    private final EntityTemplateRepositoryPort entityTemplateRepositoryPort;
 
     /// Retrieves paginated entity templates for management interface display.
     ///
@@ -51,7 +51,7 @@ public class EntityTemplateService {
     /// @param pageable pagination configuration including page size, number, and sorting
     /// @return paginated template results with metadata
     public Page<EntityTemplate> getEntityTemplates(Pageable pageable) {
-        return entityTemplateRepository.findAll(pageable);
+        return entityTemplateRepositoryPort.findAll(pageable);
     }
 
     /// Retrieves a specific entity template by business identifier.
@@ -63,8 +63,25 @@ public class EntityTemplateService {
     /// @return the matching [EntityTemplate]
     /// @throws EntityTemplateNotFoundException when template doesn't exist
     public EntityTemplate getEntityTemplateByIdentifier(String identifier) {
-        return entityTemplateRepository.findByIdentifier(identifier)
+        return entityTemplateRepositoryPort.findByIdentifier(identifier)
                 .orElseThrow(() -> new EntityTemplateNotFoundException("identifier", identifier));
+    }
+
+    /// Creates an entity template.
+    ///
+    ///
+    ///
+    ///
+    @Transactional
+    public EntityTemplate createEntityTemplate(@Valid EntityTemplate entityTemplate) {
+        if (entityTemplate.identifier() != null &&
+                entityTemplateRepositoryPort.findByIdentifier(entityTemplate.identifier()).isPresent()) {
+            throw new EntityTemplateAlreadyExistsException(entityTemplate.identifier());
+        }
+
+        validateTemplateRules(entityTemplate);
+
+        return saveEntityTemplate(entityTemplate);
     }
 
     /// Updates an existing entity template using full replacement with smart merging.
@@ -93,7 +110,7 @@ public class EntityTemplateService {
         EntityTemplate existingTemplate = getEntityTemplateByIdentifier(identifier);
 
         if (!identifier.equals(updatedTemplate.identifier()) &&
-                entityTemplateRepository.findByIdentifier(updatedTemplate.identifier()).isPresent()) {
+                entityTemplateRepositoryPort.findByIdentifier(updatedTemplate.identifier()).isPresent()) {
             throw new EntityTemplateAlreadyExistsException(updatedTemplate.identifier());
         }
 
@@ -107,7 +124,17 @@ public class EntityTemplateService {
                         updatedTemplate.relationsDefinitions())
         );
 
-        return entityTemplateRepository.save(mergedTemplate);
+        validateTemplateRules(mergedTemplate);
+
+        return saveEntityTemplate(mergedTemplate);
+    }
+
+    private void validateTemplateRules(@Valid EntityTemplate entityTemplate) {
+        if (entityTemplate.propertiesDefinitions() != null) {
+            for (PropertyDefinition property : entityTemplate.propertiesDefinitions()) {
+                PropertyRulesService.validatePropertyRules(property);
+            }
+        }
     }
 
     private List<PropertyDefinition> mergePropertyDefinitions(
@@ -196,22 +223,15 @@ public class EntityTemplateService {
         return result;
     }
 
-    /// Creates and persists a new entity template with business validation.
+    /// Persists the entity template
     ///
-    /// **Contract:** Validates template structure, enforces identifier uniqueness,
-    /// and persists the template with all nested property and relation definitions.
+    /// **Contract:** Persists the template with all nested property and relation definitions.
     /// Template identifiers must be unique across the entire system.
     ///
-    /// @param entityTemplate validated template to create and persist
-    /// @return the persisted template with generated identifiers
-    /// @throws EntityTemplateAlreadyExistsException when identifier already exists
-    @Transactional
+    /// @param entityTemplate template to persist
+    /// @return the persisted template
     public EntityTemplate saveEntityTemplate(@Valid EntityTemplate entityTemplate) {
-        if (entityTemplate.identifier() != null &&
-                entityTemplateRepository.findByIdentifier(entityTemplate.identifier()).isPresent()) {
-            throw new EntityTemplateAlreadyExistsException(entityTemplate.identifier());
-        }
-        return entityTemplateRepository.save(entityTemplate);
+        return entityTemplateRepositoryPort.save(entityTemplate);
     }
 
     /// Deletes an entity template by business identifier with existence validation.
@@ -227,10 +247,10 @@ public class EntityTemplateService {
         if (identifier == null) {
             throw new IllegalArgumentException("Template identifier must not be null");
         }
-        if (!entityTemplateRepository.existsByIdentifier(identifier)) {
+        if (!entityTemplateRepositoryPort.existsByIdentifier(identifier)) {
             throw new EntityTemplateNotFoundException("identifier", identifier);
         }
-        entityTemplateRepository.deleteByIdentifier(identifier);
+        entityTemplateRepositoryPort.deleteByIdentifier(identifier);
     }
 
 }

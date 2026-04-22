@@ -1,6 +1,6 @@
 package com.decathlon.idp_core.infrastructure.adapters.api.dto.in;
 
-import static com.decathlon.idp_core.infrastructure.adapters.api.configuration.SwaggerDescription.SCHEMA_PROPERTY_DEFINITION_IN;
+import static com.decathlon.idp_core.infrastructure.adapters.api.configuration.SwaggerDescription.SCHEMA_PROPERTY_RULES_IN;
 
 import com.decathlon.idp_core.domain.model.enums.PropertyFormat;
 import com.fasterxml.jackson.databind.PropertyNamingStrategies.SnakeCaseStrategy;
@@ -17,7 +17,7 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @AllArgsConstructor
 @JsonNaming(SnakeCaseStrategy.class)
-@Schema(description = SCHEMA_PROPERTY_DEFINITION_IN)
+@Schema(description = SCHEMA_PROPERTY_RULES_IN)
 public class PropertyRulesDtoIn {
 
     @Schema(description = "Property format validation", example = "EMAIL")

@@ -15,6 +15,7 @@ import org.springframework.web.bind.annotation.ExceptionHandler;
 import com.decathlon.idp_core.domain.exception.EntityNotFoundException;
 import com.decathlon.idp_core.domain.exception.EntityTemplateAlreadyExistsException;
 import com.decathlon.idp_core.domain.exception.EntityTemplateNotFoundException;
+import com.decathlon.idp_core.domain.exception.PropertyRulesConflictException;
 
 import jakarta.validation.ConstraintViolation;
 import jakarta.validation.ConstraintViolationException;
@@ -65,6 +66,18 @@ public class ApiExceptionHandler {
         log.warn("Entity template already exists: {}", ex.getMessage());
         ErrorResponse errorResponse = new ErrorResponse(HttpStatus.CONFLICT.name(), ex.getMessage());
         return ResponseEntity.status(HttpStatus.CONFLICT).body(errorResponse);
+    }
+
+    /// Handles domain exception when property rules are incompatible with property type.
+    ///
+    /// **HTTP mapping:** Maps domain PropertyRulesConflictException to HTTP 400
+    /// status indicating a business rule violation in property rule configuration.
+    @ExceptionHandler(PropertyRulesConflictException.class)
+    public ResponseEntity<ErrorResponse> handlePropertyRulesConflictException(
+            PropertyRulesConflictException ex) {
+        log.warn("Property rules incompatibility: {}", ex.getMessage());
+        ErrorResponse errorResponse = new ErrorResponse(HttpStatus.BAD_REQUEST.name(), ex.getMessage());
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(errorResponse);
     }
 
     /// Handles Bean Validation constraint violations from domain model validation.

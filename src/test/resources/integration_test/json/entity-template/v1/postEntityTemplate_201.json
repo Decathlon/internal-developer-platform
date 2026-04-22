@@ -12,9 +12,7 @@
         "enum_values": [],
         "regex": "",
         "max_length": 200,
-        "min_length": 1,
-        "max_value": 0,
-        "min_value": 0
+        "min_length": 1
       }
     }
   ],

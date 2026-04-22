@@ -217,8 +217,11 @@ components:
           description: Whether this property is required
           example: true
         rules:
-          $ref: '#/components/schemas/PropertyRulesDtoIn'
-          description: Property validation rules
+          oneOf:
+            - $ref: '#/components/schemas/PropertyRulesDtoInForString'
+            - $ref: '#/components/schemas/PropertyRulesDtoInForNumber'
+            - $ref: '#/components/schemas/PropertyRulesDtoInForBoolean'
+          description: Property validation rules (must match property type)
       required:
         - description
         - name
@@ -266,6 +269,57 @@ components:
           format: int32
           description: Minimum value for numeric properties
           example: 0
+    PropertyRulesDtoInForString:
+      type: object
+      description: Validation rules for STRING property type. Allowed rules - format, enum_values, regex, max_length, min_length. Constraint - 0 ≤ min_length ≤ max_length
+      properties:
+        format:
+          type: string
+          description: Property format validation (for STRING only)
+          enum:
+            - URL
+            - EMAIL
+          example: EMAIL
+        enum_values:
+          type: array
+          description: Enumeration values for enum properties (for STRING only)
+          example:
+            - ACTIVE
+            - INACTIVE
+          items:
+            type: string
+        regex:
+          type: string
+          description: Regular expression pattern for validation (for STRING only)
+          example: ^[a-zA-Z0-9]+$
+        max_length:
+          type: integer
+          format: int32
+          description: Maximum length for string properties
+          example: 255
+        min_length:
+          type: integer
+          format: int32
+          description: Minimum length for string properties (must be ≤ max_length and ≥ 0)
+          example: 1
+    PropertyRulesDtoInForNumber:
+      type: object
+      description: Validation rules for NUMBER property type. Allowed rules - max_value, min_value. Constraint - min_value ≤ max_value
+      properties:
+        max_value:
+          type: integer
+          format: int32
+          description: Maximum value for numeric properties
+          example: 100
+        min_value:
+          type: integer
+          format: int32
+          description: Minimum value for numeric properties (must be ≤ max_value)
+          example: 0
+    PropertyRulesDtoInForBoolean:
+      type: object
+      nullable: true
+      description: Boolean properties do not accept any rules. This field must be null or empty
     RelationDefinitionDtoIn:
       type: object
       description: Input DTO for creating or updating a relation definition

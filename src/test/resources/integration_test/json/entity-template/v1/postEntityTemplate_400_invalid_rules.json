@@ -1,0 +1,17 @@
+{
+  "identifier": "temp-test-invalid-rules",
+  "description": "Test template with invalid rules",
+  "properties_definitions": [
+    {
+      "name": "name",
+      "description": "A string property",
+      "required": true,
+      "type": "STRING",
+      "rules": {
+        "min_value": 0,
+        "max_value": 100
+      }
+    }
+  ],
+  "relations_definitions": []
+}

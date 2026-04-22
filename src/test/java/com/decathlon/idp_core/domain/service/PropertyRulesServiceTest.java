@@ -1,0 +1,645 @@
+package com.decathlon.idp_core.domain.service;
+
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
+import java.util.List;
+import java.util.UUID;
+
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Nested;
+import org.junit.jupiter.api.Test;
+
+import com.decathlon.idp_core.domain.exception.PropertyRulesConflictException;
+import com.decathlon.idp_core.domain.model.entity_template.PropertyDefinition;
+import com.decathlon.idp_core.domain.model.entity_template.PropertyRules;
+import com.decathlon.idp_core.domain.model.enums.PropertyFormat;
+import com.decathlon.idp_core.domain.model.enums.PropertyType;
+
+@DisplayName("PropertyRulesService Tests")
+class PropertyRulesServiceTest {
+
+    @Nested
+    @DisplayName("STRING Property Type")
+    class StringPropertyTypeTests {
+
+        @Test
+        @DisplayName("Happy path: STRING with format and max_length rules")
+        void testStringWithValidRules() {
+            PropertyRules rules = new PropertyRules(
+                    UUID.randomUUID(),
+                    PropertyFormat.EMAIL,
+                    null,
+                    null,
+                    255,
+                    1,
+                    null,
+                    null
+            );
+            PropertyDefinition property = new PropertyDefinition(
+                    UUID.randomUUID(),
+                    "email",
+                    "Email address",
+                    PropertyType.STRING,
+                    true,
+                    rules
+            );
+
+            assertDoesNotThrow(() -> PropertyRulesService.validatePropertyRules(property));
+        }
+
+        @Test
+        @DisplayName("Happy path: STRING with min_length and max_length")
+        void testStringWithLengthConstraints() {
+            PropertyRules rules = new PropertyRules(
+                    UUID.randomUUID(),
+                    null,
+                    null,
+                    null,
+                    100,
+                    10,
+                    null,
+                    null
+            );
+            PropertyDefinition property = new PropertyDefinition(
+                    UUID.randomUUID(),
+                    "description",
+                    "A description",
+                    PropertyType.STRING,
+                    false,
+                    rules
+            );
+
+            assertDoesNotThrow(() -> PropertyRulesService.validatePropertyRules(property));
+        }
+
+        @Test
+        @DisplayName("Happy path: STRING with enum_values")
+        void testStringWithEnumValues() {
+            PropertyRules rules = new PropertyRules(
+                    UUID.randomUUID(),
+                    null,
+                    List.of("ACTIVE", "INACTIVE"),
+                    null,
+                    null,
+                    null,
+                    null,
+                    null
+            );
+            PropertyDefinition property = new PropertyDefinition(
+                    UUID.randomUUID(),
+                    "status",
+                    "Status",
+                    PropertyType.STRING,
+                    true,
+                    rules
+            );
+
+            assertDoesNotThrow(() -> PropertyRulesService.validatePropertyRules(property));
+        }
+
+        @Test
+        @DisplayName("Happy path: STRING with regex pattern")
+        void testStringWithRegex() {
+            PropertyRules rules = new PropertyRules(
+                    UUID.randomUUID(),
+                    null,
+                    null,
+                    "^[a-zA-Z0-9]+$",
+                    null,
+                    null,
+                    null,
+                    null
+            );
+            PropertyDefinition property = new PropertyDefinition(
+                    UUID.randomUUID(),
+                    "username",
+                    "Username",
+                    PropertyType.STRING,
+                    true,
+                    rules
+            );
+
+            assertDoesNotThrow(() -> PropertyRulesService.validatePropertyRules(property));
+        }
+
+        @Test
+        @DisplayName("Error: STRING with numeric max_value rule")
+        void testStringRejectsMaxValue() {
+            PropertyRules rules = new PropertyRules(
+                    UUID.randomUUID(),
+                    null,
+                    null,
+                    null,
+                    null,
+                    null,
+                    100,
+                    null
+            );
+            PropertyDefinition property = new PropertyDefinition(
+                    UUID.randomUUID(),
+                    "name",
+                    "Name",
+                    PropertyType.STRING,
+                    true,
+                    rules
+            );
+
+            PropertyRulesConflictException ex = assertThrows(
+                    PropertyRulesConflictException.class,
+                    () -> PropertyRulesService.validatePropertyRules(property)
+            );
+            assertTrue(ex.getMessage().contains("name"));
+            assertTrue(ex.getMessage().contains("STRING"));
+        }
+
+        @Test
+        @DisplayName("Error: STRING with numeric min_value rule")
+        void testStringRejectsMinValue() {
+            PropertyRules rules = new PropertyRules(
+                    UUID.randomUUID(),
+                    null,
+                    null,
+                    null,
+                    null,
+                    null,
+                    null,
+                    0
+            );
+            PropertyDefinition property = new PropertyDefinition(
+                    UUID.randomUUID(),
+                    "counter",
+                    "Counter",
+                    PropertyType.STRING,
+                    false,
+                    rules
+            );
+
+            PropertyRulesConflictException ex = assertThrows(
+                    PropertyRulesConflictException.class,
+                    () -> PropertyRulesService.validatePropertyRules(property)
+            );
+            assertTrue(ex.getMessage().contains("counter"));
+            assertTrue(ex.getMessage().contains("STRING"));
+        }
+
+        @Test
+        @DisplayName("Error: STRING with min_length > max_length")
+        void testStringWithInvalidLengthConstraints() {
+            PropertyRules rules = new PropertyRules(
+                    UUID.randomUUID(),
+                    null,
+                    null,
+                    null,
+                    50,
+                    100,
+                    null,
+                    null
+            );
+            PropertyDefinition property = new PropertyDefinition(
+                    UUID.randomUUID(),
+                    "field",
+                    "A field",
+                    PropertyType.STRING,
+                    true,
+                    rules
+            );
+
+            PropertyRulesConflictException ex = assertThrows(
+                    PropertyRulesConflictException.class,
+                    () -> PropertyRulesService.validatePropertyRules(property)
+            );
+            assertTrue(ex.getMessage().contains("min_length"));
+            assertTrue(ex.getMessage().contains("max_length"));
+        }
+
+        @Test
+        @DisplayName("Error: STRING with negative min_length")
+        void testStringWithNegativeMinLength() {
+            PropertyRules rules = new PropertyRules(
+                    UUID.randomUUID(),
+                    null,
+                    null,
+                    null,
+                    255,
+                    -1,
+                    null,
+                    null
+            );
+            PropertyDefinition property = new PropertyDefinition(
+                    UUID.randomUUID(),
+                    "field",
+                    "A field",
+                    PropertyType.STRING,
+                    true,
+                    rules
+            );
+
+            PropertyRulesConflictException ex = assertThrows(
+                    PropertyRulesConflictException.class,
+                    () -> PropertyRulesService.validatePropertyRules(property)
+            );
+            assertTrue(ex.getMessage().contains("min_length"));
+            assertTrue(ex.getMessage().contains("0"));
+        }
+    }
+
+    @Nested
+    @DisplayName("NUMBER Property Type")
+    class NumberPropertyTypeTests {
+
+        @Test
+        @DisplayName("Happy path: NUMBER with min_value and max_value")
+        void testNumberWithValidRules() {
+            PropertyRules rules = new PropertyRules(
+                    UUID.randomUUID(),
+                    null,
+                    null,
+                    null,
+                    null,
+                    null,
+                    1000,
+                    0
+            );
+            PropertyDefinition property = new PropertyDefinition(
+                    UUID.randomUUID(),
+                    "score",
+                    "Numeric score",
+                    PropertyType.NUMBER,
+                    true,
+                    rules
+            );
+
+            assertDoesNotThrow(() -> PropertyRulesService.validatePropertyRules(property));
+        }
+
+        @Test
+        @DisplayName("Happy path: NUMBER with only max_value")
+        void testNumberWithOnlyMaxValue() {
+            PropertyRules rules = new PropertyRules(
+                    UUID.randomUUID(),
+                    null,
+                    null,
+                    null,
+                    null,
+                    null,
+                    100,
+                    null
+            );
+            PropertyDefinition property = new PropertyDefinition(
+                    UUID.randomUUID(),
+                    "percentage",
+                    "Percentage value",
+                    PropertyType.NUMBER,
+                    false,
+                    rules
+            );
+
+            assertDoesNotThrow(() -> PropertyRulesService.validatePropertyRules(property));
+        }
+
+        @Test
+        @DisplayName("Error: NUMBER with format rule")
+        void testNumberRejectsFormat() {
+            PropertyRules rules = new PropertyRules(
+                    UUID.randomUUID(),
+                    PropertyFormat.EMAIL,
+                    null,
+                    null,
+                    null,
+                    null,
+                    null,
+                    null
+            );
+            PropertyDefinition property = new PropertyDefinition(
+                    UUID.randomUUID(),
+                    "value",
+                    "Numeric value",
+                    PropertyType.NUMBER,
+                    true,
+                    rules
+            );
+
+            PropertyRulesConflictException ex = assertThrows(
+                    PropertyRulesConflictException.class,
+                    () -> PropertyRulesService.validatePropertyRules(property)
+            );
+            assertTrue(ex.getMessage().contains("value"));
+            assertTrue(ex.getMessage().contains("NUMBER"));
+            assertTrue(ex.getMessage().contains("format"));
+        }
+
+        @Test
+        @DisplayName("Error: NUMBER with enum_values rule")
+        void testNumberRejectsEnumValues() {
+            PropertyRules rules = new PropertyRules(
+                    UUID.randomUUID(),
+                    null,
+                    List.of("1", "2", "3"),
+                    null,
+                    null,
+                    null,
+                    null,
+                    null
+            );
+            PropertyDefinition property = new PropertyDefinition(
+                    UUID.randomUUID(),
+                    "category",
+                    "Category",
+                    PropertyType.NUMBER,
+                    true,
+                    rules
+            );
+
+            PropertyRulesConflictException ex = assertThrows(
+                    PropertyRulesConflictException.class,
+                    () -> PropertyRulesService.validatePropertyRules(property)
+            );
+            assertTrue(ex.getMessage().contains("enum_values"));
+        }
+
+        @Test
+        @DisplayName("Error: NUMBER with regex rule")
+        void testNumberRejectsRegex() {
+            PropertyRules rules = new PropertyRules(
+                    UUID.randomUUID(),
+                    null,
+                    null,
+                    "^[0-9]+$",
+                    null,
+                    null,
+                    null,
+                    null
+            );
+            PropertyDefinition property = new PropertyDefinition(
+                    UUID.randomUUID(),
+                    "id",
+                    "ID",
+                    PropertyType.NUMBER,
+                    true,
+                    rules
+            );
+
+            PropertyRulesConflictException ex = assertThrows(
+                    PropertyRulesConflictException.class,
+                    () -> PropertyRulesService.validatePropertyRules(property)
+            );
+            assertTrue(ex.getMessage().contains("regex"));
+        }
+
+        @Test
+        @DisplayName("Error: NUMBER with min_length rule")
+        void testNumberRejectsMinLength() {
+            PropertyRules rules = new PropertyRules(
+                    UUID.randomUUID(),
+                    null,
+                    null,
+                    null,
+                    null,
+                    5,
+                    null,
+                    null
+            );
+            PropertyDefinition property = new PropertyDefinition(
+                    UUID.randomUUID(),
+                    "field",
+                    "A field",
+                    PropertyType.NUMBER,
+                    true,
+                    rules
+            );
+
+            PropertyRulesConflictException ex = assertThrows(
+                    PropertyRulesConflictException.class,
+                    () -> PropertyRulesService.validatePropertyRules(property)
+            );
+            assertTrue(ex.getMessage().contains("min_length"));
+        }
+
+        @Test
+        @DisplayName("Error: NUMBER with max_length rule")
+        void testNumberRejectsMaxLength() {
+            PropertyRules rules = new PropertyRules(
+                    UUID.randomUUID(),
+                    null,
+                    null,
+                    null,
+                    50,
+                    null,
+                    null,
+                    null
+            );
+            PropertyDefinition property = new PropertyDefinition(
+                    UUID.randomUUID(),
+                    "field",
+                    "A field",
+                    PropertyType.NUMBER,
+                    true,
+                    rules
+            );
+
+            PropertyRulesConflictException ex = assertThrows(
+                    PropertyRulesConflictException.class,
+                    () -> PropertyRulesService.validatePropertyRules(property)
+            );
+            assertTrue(ex.getMessage().contains("max_length"));
+        }
+
+        @Test
+        @DisplayName("Error: NUMBER with min_value > max_value")
+        void testNumberWithInvalidValueConstraints() {
+            PropertyRules rules = new PropertyRules(
+                    UUID.randomUUID(),
+                    null,
+                    null,
+                    null,
+                    null,
+                    null,
+                    0,
+                    100
+            );
+            PropertyDefinition property = new PropertyDefinition(
+                    UUID.randomUUID(),
+                    "range",
+                    "A range",
+                    PropertyType.NUMBER,
+                    true,
+                    rules
+            );
+
+            PropertyRulesConflictException ex = assertThrows(
+                    PropertyRulesConflictException.class,
+                    () -> PropertyRulesService.validatePropertyRules(property)
+            );
+            assertTrue(ex.getMessage().contains("min_value"));
+            assertTrue(ex.getMessage().contains("max_value"));
+        }
+    }
+
+    @Nested
+    @DisplayName("BOOLEAN Property Type")
+    class BooleanPropertyTypeTests {
+
+        @Test
+        @DisplayName("Happy path: BOOLEAN with no rules")
+        void testBooleanWithNullRules() {
+            PropertyDefinition property = new PropertyDefinition(
+                    UUID.randomUUID(),
+                    "active",
+                    "Is active",
+                    PropertyType.BOOLEAN,
+                    true,
+                    null
+            );
+
+            assertDoesNotThrow(() -> PropertyRulesService.validatePropertyRules(property));
+        }
+
+        @Test
+        @DisplayName("Error: BOOLEAN with format rule")
+        void testBooleanRejectsFormat() {
+            PropertyRules rules = new PropertyRules(
+                    UUID.randomUUID(),
+                    PropertyFormat.EMAIL,
+                    null,
+                    null,
+                    null,
+                    null,
+                    null,
+                    null
+            );
+            PropertyDefinition property = new PropertyDefinition(
+                    UUID.randomUUID(),
+                    "enabled",
+                    "Enabled",
+                    PropertyType.BOOLEAN,
+                    true,
+                    rules
+            );
+
+            PropertyRulesConflictException ex = assertThrows(
+                    PropertyRulesConflictException.class,
+                    () -> PropertyRulesService.validatePropertyRules(property)
+            );
+            assertTrue(ex.getMessage().contains("BOOLEAN"));
+            assertTrue(ex.getMessage().contains("rules"));
+        }
+
+        @Test
+        @DisplayName("Error: BOOLEAN with enum_values rule")
+        void testBooleanRejectsEnumValues() {
+            PropertyRules rules = new PropertyRules(
+                    UUID.randomUUID(),
+                    null,
+                    List.of("true", "false"),
+                    null,
+                    null,
+                    null,
+                    null,
+                    null
+            );
+            PropertyDefinition property = new PropertyDefinition(
+                    UUID.randomUUID(),
+                    "flag",
+                    "A flag",
+                    PropertyType.BOOLEAN,
+                    true,
+                    rules
+            );
+
+            PropertyRulesConflictException ex = assertThrows(
+                    PropertyRulesConflictException.class,
+                    () -> PropertyRulesService.validatePropertyRules(property)
+            );
+            assertTrue(ex.getMessage().contains("BOOLEAN"));
+        }
+
+        @Test
+        @DisplayName("Error: BOOLEAN with regex rule")
+        void testBooleanRejectsRegex() {
+            PropertyRules rules = new PropertyRules(
+                    UUID.randomUUID(),
+                    null,
+                    null,
+                    ".*",
+                    null,
+                    null,
+                    null,
+                    null
+            );
+            PropertyDefinition property = new PropertyDefinition(
+                    UUID.randomUUID(),
+                    "test",
+                    "Test",
+                    PropertyType.BOOLEAN,
+                    true,
+                    rules
+            );
+
+            PropertyRulesConflictException ex = assertThrows(
+                    PropertyRulesConflictException.class,
+                    () -> PropertyRulesService.validatePropertyRules(property)
+            );
+            assertTrue(ex.getMessage().contains("BOOLEAN"));
+        }
+
+        @Test
+        @DisplayName("Error: BOOLEAN with min_value rule")
+        void testBooleanRejectsMinValue() {
+            PropertyRules rules = new PropertyRules(
+                    UUID.randomUUID(),
+                    null,
+                    null,
+                    null,
+                    null,
+                    null,
+                    null,
+                    0
+            );
+            PropertyDefinition property = new PropertyDefinition(
+                    UUID.randomUUID(),
+                    "valid",
+                    "Valid",
+                    PropertyType.BOOLEAN,
+                    true,
+                    rules
+            );
+
+            PropertyRulesConflictException ex = assertThrows(
+                    PropertyRulesConflictException.class,
+                    () -> PropertyRulesService.validatePropertyRules(property)
+            );
+            assertTrue(ex.getMessage().contains("BOOLEAN"));
+        }
+
+        @Test
+        @DisplayName("Error: BOOLEAN with max_value rule")
+        void testBooleanRejectsMaxValue() {
+            PropertyRules rules = new PropertyRules(
+                    UUID.randomUUID(),
+                    null,
+                    null,
+                    null,
+                    null,
+                    null,
+                    1,
+                    null
+            );
+            PropertyDefinition property = new PropertyDefinition(
+                    UUID.randomUUID(),
+                    "valid",
+                    "Valid",
+                    PropertyType.BOOLEAN,
+                    true,
+                    rules
+            );
+
+            PropertyRulesConflictException ex = assertThrows(
+                    PropertyRulesConflictException.class,
+                    () -> PropertyRulesService.validatePropertyRules(property)
+            );
+            assertTrue(ex.getMessage().contains("BOOLEAN"));
+        }
+    }
+}

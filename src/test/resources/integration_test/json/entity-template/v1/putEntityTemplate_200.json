@@ -9,8 +9,7 @@
       "required": true,
       "rules": {
         "regex": "^[a-zA-Z0-9]+$",
-        "max_length": 255,
-        "min_value": 0
+        "max_length": 255
       }
     },
     {
@@ -18,8 +17,7 @@
       "description": "status of web service",
       "type": "BOOLEAN",
       "required": false,
-      "rules": {
-      }
+      "rules": {}
     }
   ],
   "relations_definitions": []
