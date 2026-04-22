@@ -1,4 +1,4 @@
-# 0002 - Data ingestion framework
+# 0003 - Data ingestion framework
 
 * Status: Accepted
 * Deciders:
@@ -6,7 +6,7 @@
   * Contributors team: `N/A`
 * Consulted: Étienne JACQUOT
 * Informed: `N/A`
-* Date: 2026-30-03
+* Date: 2026-04-22
 
 ## Context and Problem Statement
 
