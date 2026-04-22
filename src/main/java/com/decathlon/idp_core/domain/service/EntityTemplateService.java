@@ -94,7 +94,7 @@ public class EntityTemplateService {
                 entityTemplateRepositoryPort.existsByName(entityTemplate.name())) {
             throw new EntityTemplateNameAlreadyExistsException(entityTemplate.name());
         }
-        return saveEntityTemplate(entityTemplate);
+        return entityTemplateRepositoryPort.save(entityTemplate);
     }
 
     /// Updates an existing entity template using full replacement with smart merging.
@@ -233,19 +233,6 @@ public class EntityTemplateService {
         return result;
     }
 
-    /// Creates and persists a new entity template with business validation.
-    ///
-    /// **Contract:** Validates template structure, enforces identifier and name uniqueness,
-    /// and persists the template with all nested property and relation definitions.
-    /// Template identifiers and names must be unique across the entire system.
-    ///
-    /// @param entityTemplate validated template to create and persist
-    /// @return the persisted template with generated identifiers
-    /// @throws EntityTemplateAlreadyExistsException when identifier already exists
-    /// @throws EntityTemplateNameAlreadyExistsException when name already exists
-    public EntityTemplate saveEntityTemplate(@Valid EntityTemplate entityTemplate) {
-        return entityTemplateRepositoryPort.save(entityTemplate);
-    }
 
     /// Deletes an entity template by business identifier with existence validation.
     ///

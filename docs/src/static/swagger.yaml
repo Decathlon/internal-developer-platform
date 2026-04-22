@@ -171,6 +171,11 @@ components:
           description: Unique Entity Template identifier
           example: service
           minLength: 1
+        name:
+          type: string
+          description: Unique Entity Template name
+          example: Service
+          maxLength: 255
         description:
           type: string
           description: Entity Template description
@@ -188,6 +193,7 @@ components:
             $ref: '#/components/schemas/RelationDefinitionDtoIn'
       required:
         - identifier
+        - name
         - properties_definitions
     PropertyDefinitionDtoIn:
       type: object
@@ -306,6 +312,10 @@ components:
           type: string
           description: Unique Entity Template identifier
           example: service
+        name:
+          type: string
+          description: Unique Entity Template name
+          example: Service
         description:
           type: string
           description: Entity Template description

@@ -5,7 +5,7 @@ import static com.decathlon.idp_core.domain.constant.ValidationMessages.TEMPLATE
 import static com.decathlon.idp_core.domain.constant.ValidationMessages.TEMPLATE_NAME_FORMAT;
 import static com.decathlon.idp_core.domain.constant.ValidationMessages.TEMPLATE_NAME_MANDATORY;
 import static com.decathlon.idp_core.domain.constant.ValidationMessages.TEMPLATE_NAME_MAX_SIZE;
-import static com.decathlon.idp_core.domain.constant.ValidationRegex.TEMPLATE_NAME_REGEX;
+import static com.decathlon.idp_core.domain.constant.ValidationRegex.ENTITY_TEMPLATE_NAME_REGEX;
 import static com.decathlon.idp_core.infrastructure.adapters.api.configuration.SwaggerDescription.FIELD_TEMPLATE_DESCRIPTION;
 import static com.decathlon.idp_core.infrastructure.adapters.api.configuration.SwaggerDescription.FIELD_TEMPLATE_IDENTIFIER;
 import static com.decathlon.idp_core.infrastructure.adapters.api.configuration.SwaggerDescription.FIELD_TEMPLATE_NAME;
@@ -44,7 +44,7 @@ public class EntityTemplateDtoIn {
     @Size(max = 255, message = TEMPLATE_NAME_MAX_SIZE)
     @Schema(description = FIELD_TEMPLATE_NAME, example = "Service")
     @NotBlank(message = TEMPLATE_NAME_MANDATORY)
-    @Pattern(regexp = TEMPLATE_NAME_REGEX, message = TEMPLATE_NAME_FORMAT)
+    @Pattern(regexp = ENTITY_TEMPLATE_NAME_REGEX, message = TEMPLATE_NAME_FORMAT)
     private String name;
 
     @Schema(description = FIELD_TEMPLATE_DESCRIPTION, example = "A comprehensive service template")

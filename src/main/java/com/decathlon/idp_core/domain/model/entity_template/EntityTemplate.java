@@ -5,7 +5,7 @@ import static com.decathlon.idp_core.domain.constant.ValidationMessages.TEMPLATE
 import static com.decathlon.idp_core.domain.constant.ValidationMessages.TEMPLATE_NAME_FORMAT;
 import static com.decathlon.idp_core.domain.constant.ValidationMessages.TEMPLATE_NAME_MANDATORY;
 import static com.decathlon.idp_core.domain.constant.ValidationMessages.TEMPLATE_NAME_MAX_SIZE;
-import static com.decathlon.idp_core.domain.constant.ValidationRegex.TEMPLATE_NAME_REGEX;
+import static com.decathlon.idp_core.domain.constant.ValidationRegex.ENTITY_TEMPLATE_NAME_REGEX;
 
 import java.util.List;
 import java.util.UUID;
@@ -37,7 +37,7 @@ public record EntityTemplate(
 
         @Size(max = 255, message = TEMPLATE_NAME_MAX_SIZE)
         @NotBlank(message = TEMPLATE_NAME_MANDATORY)
-        @Pattern(regexp = TEMPLATE_NAME_REGEX, message = TEMPLATE_NAME_FORMAT)
+        @Pattern(regexp = ENTITY_TEMPLATE_NAME_REGEX, message = TEMPLATE_NAME_FORMAT)
         String name,
 
         String description,
