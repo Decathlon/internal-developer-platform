@@ -4,6 +4,9 @@ on:
   release:
     types: [released]  #  Trigger only for stable and public releases
 
+permissions:
+  contents: read
+
 jobs:
   build-and-push:
     runs-on: ubuntu-latest
