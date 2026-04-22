@@ -1,37 +1,34 @@
 package com.decathlon.idp_core.domain.model.entity;
 
+import static com.decathlon.idp_core.domain.constant.ValidationMessages.PROPERTY_NAME_MANDATORY;
+import static com.decathlon.idp_core.domain.constant.ValidationMessages.PROPERTY_VALUE_MANDATORY;
+
 import java.util.UUID;
 
-import jakarta.persistence.Column;
-import jakarta.persistence.Entity;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.GenerationType;
-import jakarta.persistence.Id;
-import jakarta.persistence.Table;
+import com.decathlon.idp_core.domain.model.entity_template.PropertyDefinition;
+import com.decathlon.idp_core.domain.model.entity_template.PropertyRules;
+import com.decathlon.idp_core.domain.model.enums.PropertyType;
+
 import jakarta.validation.constraints.NotBlank;
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Data;
-import lombok.NoArgsConstructor;
 
-@Entity
-@Data
-@Table
-@Builder
-@NoArgsConstructor
-@AllArgsConstructor
-public class Property {
+/// A concrete property instance belonging to an [Entity].
+///
+/// Represents actual business data values that conform to the constraints defined
+/// in the corresponding [PropertyDefinition] within the entity's template.
+/// Properties are the "filled-in" values of the template's property schema.
+///
+/// **Business invariants:**
+/// - Property names must match a [PropertyDefinition] name in the entity's template
+/// - Property values must satisfy all validation rules from [PropertyRules]
+/// - Required properties cannot have empty values
+/// - Property types must align with the template's [PropertyType] definition
+public record Property(
+    UUID id,
 
-    @Id
-    @GeneratedValue(strategy = GenerationType.UUID)
-    private UUID id;
-    @Column(nullable = false)
-    @NotBlank(message = "Property name is mandatory")
-    String name;
+    @NotBlank(message = PROPERTY_NAME_MANDATORY)
+    String name,
 
-    @Column
-    @NotBlank(message = "Property value is mandatory")
-    String value;
-
-
+    @NotBlank(message = PROPERTY_VALUE_MANDATORY)
+    String value
+) {
 }

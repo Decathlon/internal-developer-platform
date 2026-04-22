@@ -1,42 +1,198 @@
-# Domain-Infrastructure Separation
+# Domain-Infrastructure Separation (Hexagonal Architecture)
 
 ## The Golden Rule
 
 **The Domain Layer must never depend on the Infrastructure Layer.**
+Dependencies always point inward: Adapters → Ports → Domain.
 
-## Domain Layer Details
+## Architecture Overview
 
-Pure Java implementation without Spring annotations for basic domain logic.
+This project follows **Pragmatic Hexagonal Architecture** (Ports & Adapters, allowing some Spring dependencies at the domain level):
 
-### 📂 Structure
+- **Domain** Business logic. No infrastructure dependencies (JPA, Kafka, Security)
+- **Ports** Interfaces that define the contracts between the domain and the outside world
+- **Adapters** Concrete implementations that connect the domain to external systems (REST API, database, etc.)
+
+## Domain Layer (`com.decathlon.idp_core.domain`)
+
+Spring implementation with no JPA dependencies.
+Contains all business rules, invariants, and contracts.
+
+### 📂 Domain Structure
 
 ```text
 domain/
-├── configuration/       # Configuration classes for domain-specific settings
-├── constant/            # Constants used across the domain layer
-├── exception/           # Custom exceptions for domain-specific errors
-├── model/               # Domain models representing core business entities
-├── service/             # Domain services containing business logic
-└── repository/          # Port interfaces defining repository contracts
+├── constant/            # Validation message constants (single source of truth)
+├── exception/           # Domain-specific exceptions (EntityTemplateNotFoundException)
+├── model/
+│   ├── entity/          # Core business records: Entity, Property, Relation, EntitySummary
+│   ├── entity_template/ # Template records: EntityTemplate, PropertyDefinition, PropertyRules, RelationDefinition
+│   └── enums/           # Business enums: PropertyType, PropertyFormat
+├── ports/               # Port interfaces—contracts for driven adapters
+│   ├── EntityRepositoryPort
+│   ├── EntityTemplateRepositoryPort
+│   └── RelationRepositoryPort
+└── service/             # Domain services logic orchestration
+    ├── EntityService
+    ├── EntityTemplateService
+    └── RelationService
 ```
+
+### Domain Layer Responsibilities
+
+| Concern | Responsibility |
+| --- | --- |
+| **Models** | Immutable Java records enforcing business invariants via validation annotations |
+| **Ports** | Interfaces defining the **contract** between domain and infrastructure. No implementation details |
+| **Services** | Orchestrate business operations, enforce rules, delegate persistence to ports |
+| **Exceptions** | Domain-specific error types. Protocol-agnostic (mapped to HTTP status codes by adapters) |
+| **Constants** | Centralized validation messages used by model annotations and exception formatting |
+
+### Key Constraints
+
+- **No Spring annotations** in models, ports, or exceptions
+- Services may use `@Service`
+- Domain exceptions carry business meaning, not HTTP semantics
+
+---
 
 ## Infrastructure Layer (`com.decathlon.idp_core.infrastructure`)
 
-Everything technical: spring Boot, database, REST, external APIs.
+Everything technical: Spring Boot, REST, database, security, serialization.
+Organized as **adapters** that implement or drive the domain ports.
 
 ### 📂 Infrastructure Structure
 
 ```text
 infrastructure/
-├── configuration/      # Spring Config, Security, Swagger
-├── controller/                 # rest Controllers, API endpoints
-├── dto/                        # Data Transfer Objects for mapping
-├── handler/         # Global exception handlers
-└── mapper/       # Object mappers for converting between Domain and DTOs
+└── adapters/
+    ├── api/                          # Driving adapter (inbound—REST API)
+    │   ├── configuration/            # Spring Config, Security, Swagger, JWT, CORS
+    │   │   ├── JwtConfiguration
+    │   │   ├── SecurityConfiguration
+    │   │   ├── SpringDataWebConfiguration
+    │   │   ├── SwaggerConfiguration
+    │   │   ├── SwaggerDescription
+    │   │   └── WebConfiguration
+    │   ├── controller/               # REST controllers
+    │   │   ├── EntityController
+    │   │   └── EntityTemplateController
+    │   ├── dto/
+    │   │   ├── in/                   # Request DTOs (input from client)
+    │   │   └── out/                  # Response DTOs (output to client)
+    │   ├── handler/                  # Global exception → HTTP status mapping
+    │   │   └── ApiExceptionHandler
+    │   └── mapper/                   # DTO ↔ Domain mapping
+    │       ├── entity/               # EntityDtoInMapper, EntityDtoOutMapper
+    │       └── entitytemplate/       # EntityTemplateMapper
+    │
+    └── persistence/                  # Driven adapter (outbound—database)
+        ├── PostgresEntityAdapter             # Implements EntityRepositoryPort
+        ├── PostgresEntityTemplateAdapter     # Implements EntityTemplateRepositoryPort
+        ├── PostgresRelationAdapter           # Implements RelationRepositoryPort
+        ├── mapper/                   # Domain ↔ JPA entity mapping
+        │   ├── EntityPersistenceMapper
+        │   └── EntityTemplatePersistenceMapper
+        ├── model/                    # JPA entities (database representation)
+        │   ├── entity/
+        │   └── entity_template/
+        └── repository/               # Spring Data JPA interfaces
+            ├── JpaEntityRepository
+            ├── JpaEntityTemplateRepository
+            └── JpaRelationRepository
 ```
 
-### Data Flow
+### Infrastructure Layer Responsibilities
 
-1. **Controller**: Receives DTO, validates, and maps to Domain.
-2. **Service**: Executes Business Logic.
-3. **Repository**: Persists Domain Entity via JPA implementation.
+#### API Adapter (Driving-Inbound)
+
+| Concern           | Responsibility                                                                          |
+| ----------------- | --------------------------------------------------------------------------------------- |
+| **Controllers**   | Receive HTTP requests, delegate to domain services, return DTOs. **No business logic.** |
+| **DTOs**          | Define the API contract shape (request/response). Carry validation annotations.         |
+| **Mappers**       | Convert between DTOs and domain models. Null-safe, no side effects.                     |
+| **Handler**       | Map domain exceptions to HTTP status codes (`EntityTemplateNotFoundException` → 404)    |
+| **Configuration** | Security (JWT, CORS), Swagger/OpenAPI, pagination, serialization settings               |
+
+#### Persistence Adapter (Driven—Outbound)
+
+| Concern                 | Responsibility                                                                    |
+| ----------------------- | ----------------------------------------------------------------------------------|
+| **Adapter classes**     | Implement domain port interfaces using JPA repositories and persistence mappers   |
+| **JPA Entities**        | Database representation—may differ from domain models (mutable, JPA annotations)  |
+| **Persistence Mappers** | Convert between domain records and JPA entities                                   |
+| **JPA Repositories**    | Spring Data interfaces for database queries                                       |
+
+---
+
+## Data Flow
+
+### Read (GET request)
+
+```mermaid
+sequenceDiagram
+    participant Client
+    participant Controller
+    participant DomainService
+    participant Port
+    participant PersistenceAdapter
+    participant JPA
+    Client->>Controller: HTTP Request
+    Controller->>DomainService: Validate params, call business logic
+    DomainService->>Port: Call port
+    Port->>PersistenceAdapter: Call adapter
+    PersistenceAdapter->>JPA: Query DB, map to domain
+    JPA-->>PersistenceAdapter: Domain model
+    PersistenceAdapter-->>Port: Domain model
+    Port-->>DomainService: Domain model
+    DomainService-->>Controller: Domain model
+    Controller-->>Client: DTO Response
+```
+
+### Write (POST/PUT request)
+
+```mermaid
+sequenceDiagram
+    participant Client
+    participant Controller
+    participant Mapper
+    participant DomainService
+    participant Port
+    participant PersistenceAdapter
+    participant JPA
+    Client->>Controller: HTTP Request + JSON body
+    Controller->>Mapper: DTO deserialization + Bean Validation
+    Mapper->>DomainService: Map to domain, enforce invariants
+    DomainService->>Port: Uniqueness check, business logic
+    Port->>PersistenceAdapter: Save domain as JPA
+    PersistenceAdapter->>JPA: Save to DB
+    JPA-->>PersistenceAdapter: JPA model
+    PersistenceAdapter-->>Port: Domain model
+    Port-->>DomainService: Domain model
+    DomainService-->>Mapper: Domain to DTO
+    Mapper-->>Controller: DTO
+    Controller-->>Client: HTTP Response (201/200)
+```
+
+### Error Flow
+
+```mermaid
+sequenceDiagram
+    participant DomainService
+    participant ApiExceptionHandler
+    participant Client
+    DomainService->>ApiExceptionHandler: Throw domain exception
+    ApiExceptionHandler->>Client: Map to HTTP status + ErrorResponse DTO
+```
+
+---
+
+## Dependency Rules
+
+| From                | May depend on                    | Must NOT depend on          |
+| ------------------- | -------------------------------- | --------------------------- |
+| Domain models       | Java standard library only       | Spring, JPA, infrastructure |
+| Domain ports        | Domain models                    | Any implementation          |
+| Domain services     | Ports + models + exceptions      | Adapters, Spring            |
+| API adapter         | Domain services + ports + models | Persistence adapter         |
+| Persistence adapter | Domain ports + models            | API adapter                 |

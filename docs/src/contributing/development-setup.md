@@ -58,6 +58,8 @@ git remote add upstream https://github.com/Decathlon/internal-developer-platform
 
 For your development setup, you can refer to the Getting started documentation here: [Getting Started](getting-started.md)
 
+Configure the application.yml security credentials and secrets locally using environment variables or a local, untracked configuration file.
+
 ### Pre-Commit Hooks (Optional)
 
 Install pre-commit hooks for code quality:

@@ -2,94 +2,72 @@ package com.decathlon.idp_core.domain.exception;
 
 import java.util.UUID;
 
-/**
- * Exception thrown when an Entity Template cannot be found in the system.
- * <p>
- * This exception is part of the domain layer and represents a case where
- * a requested Entity Template does not exist. It is mapped to HTTP 404 (Not Found)
- * status by the {@code ApiExceptionHandler}.
- * </p>
- * <p>
- * The exception provides multiple constructors to support different scenarios:
- * <ul>
- *   <li>Generic template not found</li>
- *   <li>Template not found by UUID</li>
- *   <li>Template not found by field name and value (e.g., identifier)</li>
- *   <li>Custom message with optional cause</li>
- * </ul>
- * </p>
- * <p>
- * This follows Domain-Driven Design principles by encapsulating domain-specific
- * error conditions and providing meaningful error messages for API consumers.
- * </p>
- *
- * @author IDP Core Team
- * @since 1.0.0
- * @see com.decathlon.idp_core.infrastructure.api.handler.ApiExceptionHandler
- */
+import com.decathlon.idp_core.domain.model.entity_template.EntityTemplate;
+
+/// Domain exception for missing [EntityTemplate] business entities.
+///
+/// **Business purpose:** Represents the business rule violation when attempting
+/// to access an EntityTemplate that doesn't exist in the system. This is a
+/// critical business error since entities cannot be created without valid templates.
+///
+/// **Exception design rationale:**
+/// - Multiple constructors support different lookup scenarios (ID, identifier, field-based)
+/// - Meaningful error messages aid in debugging and API error responses
+/// - Domain-level exception keeps business logic separate from HTTP concerns
+///
+/// **Usage patterns:**
+/// - Template validation before entity operations
+/// - Template-based entity queries
+/// - Template management operations
 public class EntityTemplateNotFoundException extends RuntimeException {
 
-    /**
-     * Constructs a new EntityTemplateNotFoundException with a default message.
-     * <p>
-     * This constructor is used for generic cases where no specific details
-     * are available about what was not found.
-     * </p>
-     */
+    /// Default constructor for generic template not found scenarios.
+    ///
+    /// **Why this exists:** Provides a fallback when specific template details
+    /// are not available but the business rule violation still needs to be reported.
     public EntityTemplateNotFoundException() {
         super("Template not found");
     }
 
-    /**
-     * Constructs a new EntityTemplateNotFoundException with a custom message.
-     * <p>
-     * This constructor allows for specific error messages that provide more
-     * context about the search criteria or operation that failed.
-     * </p>
-     *
-     * @param message the detail message explaining what was not found
-     */
+    /// Constructs a new exception with a custom error message.
+    ///
+    /// **Why this exists:** Allows for specific error messages that provide more
+    /// context about the search criteria or operation that failed.
+    ///
+    /// @param message the detail message explaining what was not found
     public EntityTemplateNotFoundException(String message) {
         super(message);
     }
 
-    /**
-     * Constructs a new EntityTemplateNotFoundException for a specific UUID.
-     * <p>
-     * This constructor is used when searching for a template by its primary key
-     * and provides a standardized error message format.
-     * </p>
-     *
-     * @param id the UUID of the template that was not found
-     */
+    /// Constructs a new exception for a specific UUID-based lookup.
+    ///
+    /// **Why this exists:** Provides standardized error message format when
+    /// searching for a template by its primary key identifier.
+    ///
+    /// @param id the UUID of the template that was not found
     public EntityTemplateNotFoundException(UUID id) {
         super("Template not found with ID: " + id);
     }
 
-    /**
-     * Constructs a new EntityTemplateNotFoundException for a specific field search.
-     * <p>
-     * This constructor is commonly used for business identifier searches where
-     * the field name (e.g., "identifier") and its value are known.
-     * </p>
-     *
-     * @param fieldName the name of the field used in the search (e.g., "identifier")
-     * @param value the value that was searched for but not found
-     */
+    /// Constructs a new exception for field-based searches.
+    ///
+    /// **Why this exists:** Commonly used for business identifier searches where
+    /// the field name (for example, "identifier") and its value are known, providing
+    /// clear context about what search criteria failed.
+    ///
+    /// @param fieldName the name of the field used in the search (for example, "identifier")
+    /// @param value the value that was searched for but not found
     public EntityTemplateNotFoundException(String fieldName, String value) {
         super("Template not found with " + fieldName + ": " + value);
     }
 
-    /**
-     * Constructs a new EntityTemplateNotFoundException with a custom message and cause.
-     * <p>
-     * This constructor is used when the exception wraps another exception or
-     * when additional context about the underlying cause is needed.
-     * </p>
-     *
-     * @param message the detail message explaining what was not found
-     * @param cause the underlying cause of this exception
-     */
+    /// Constructs a new exception with a custom message and underlying cause.
+    ///
+    /// **Why this exists:** Used when the exception wraps another exception or
+    /// when additional context about the underlying cause is needed for debugging.
+    ///
+    /// @param message the detail message explaining what was not found
+    /// @param cause the underlying cause of this exception
     public EntityTemplateNotFoundException(String message, Throwable cause) {
         super(message, cause);
     }

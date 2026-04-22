@@ -16,20 +16,6 @@ spring:
     create-schemas: true
     baseline-on-migrate: true
     validate-on-migrate: true
-  security:
-    oauth2:
-      client:
-        registration:
-          idp-core:
-            client-id: your-client-id-here
-        provider:
-          idp-core:
-            token-uri: https://my-oauth-server.com/as/token.oauth2
-          oauth-prod:
-            token-uri: https://my-oauth-server.com/as/token.oauth2
-      resourceserver:
-        jwt:
-          jwk-set-uri: https://my-oauth-server.com/ext/JWKS
   jpa:
     hibernate:
       ddl-auto: none  # Disable JPA schema auto-generation, use Flyway instead
