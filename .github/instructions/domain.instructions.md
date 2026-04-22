@@ -30,7 +30,7 @@ applyTo: '**/domain/**/*.java'
 
 ## Ports
 
-- Define all external interactions as **Port interfaces** in the `domain/ports/` package.
+- Define all external interactions as **Port interfaces** in the `domain/port/` package.
 - Ports accept and return **domain models or simple primitives only**, never DTOs, JPA entities, or framework types.
 - Port interfaces define the **contract** between domain and infrastructure. They contain no implementation details.
 - Name ports with a `Port` suffix (for example, `EntityRepositoryPort`, `EntityTemplateRepositoryPort`).
@@ -74,6 +74,6 @@ domain/
 │   ├── entity/          # Core business records
 │   ├── entity_template/ # Template records
 │   └── enums/           # Business enums
-├── ports/               # Port interfaces (contracts for driven adapters)
+├── port/               # Port interfaces (contracts for driven adapters)
 └── service/             # Domain services (orchestration)
 ```

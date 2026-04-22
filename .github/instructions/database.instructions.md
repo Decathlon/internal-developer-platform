@@ -8,9 +8,10 @@ applyTo: "**/db/migration/**/*.sql"
 
 - The project uses **PostgreSQL** as the primary database.
 - Schema management is handled by **Flyway** for versioned, repeatable migrations.
-- **Always** use a Flyway migration script when adding, modifying, or removing fields or constraints in database entities. Do not rely on JPA/Hibernate auto-DDL for schema changes.
+- **Always** use a Flyway migration script when adding, modifying, or removing fields or constraints in database entities.
+- Do not rely on JPA/Hibernate auto-DDL for schema changes.
 - JPA/Hibernate `ddl-auto` is set to `none`—all schema changes must go through Flyway migrations.
-- The default schema is `idp_core`.
+- The schema should not be enforced anywhere. Use SpringBoot configuration to get the schema to use.
 - Use JPA annotations for clarity, but rely on Flyway for actual schema enforcement.
 
 ## Flyway Migrations
@@ -99,6 +100,8 @@ COMMENT ON COLUMN table_name.column_name IS 'Description of the column';
 - Prefer `BOOLEAN` over integer flags
 
 ### Constraints and Indexes
+
+- Use meaningful naming for the constraints. Do not use technical or automated naming.
 
 ```sql
 -- Primary key (defined inline)

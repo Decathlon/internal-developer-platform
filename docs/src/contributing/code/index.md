@@ -7,7 +7,7 @@ IDP Core is a Spring Boot app built following the principles of the **Hexagonal 
 
 ## Key Technologies
 
-- **Spring Boot 3.5.6**
+- **Spring Boot 4**
 - **Spring Security**
 - **Spring Data JPA** & **PostgreSQL**
 - **Docker** & **Testcontainers library**

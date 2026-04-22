@@ -30,13 +30,13 @@ applyTo: '**/*.java'
 - Use YAML files (`application.yml`) for externalized configuration.
 - Environment Profiles: Use Spring profiles for different environments (local, test, prod).
 - Configuration Properties: Use `@ConfigurationProperties` for type-safe configuration binding.
-- Secrets Management: Externalize secrets using environment variables or secret management systems
+- Secrets Management: Externalize secrets using environment variables through the `application.yml` file.
 
 ### Code Organization
 
 - Package Structure: Organize by layer and functionality.
 - Separation of Concerns: Keep controllers thin, services focused, and repositories simple.
-- Utility Classes: Make utility classes final with private constructors
+- Utility Classes: Make utility classes final with private constructors.
 
 ### Observability
 
@@ -67,8 +67,6 @@ applyTo: '**/*.java'
 
 - Log exceptions only in the Infrastructure layer (adapters or exception handlers), never in the Domain layer.
 - Use a centralized exception handler (such as `@ControllerAdvice`) to log and map exceptions to HTTP responses.
-- Log domain exceptions at `warn` or `info` level, and unexpected technical exceptions at `error` level.
-- This separation keeps the domain pure and ensures logs have technical and request context.
 
 ### Validation
 

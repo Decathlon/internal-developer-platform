@@ -138,9 +138,8 @@ public class EntityTemplateController {
         @PostMapping
         @ResponseStatus(CREATED)
         public EntityTemplateDtoOut createTemplate(@Valid @RequestBody EntityTemplateDtoIn templateDto) {
-                EntityTemplate entity = templateMapper.fromDtoToEntityTemplate(templateDto);
-                EntityTemplate savedEntity = entityTemplateService.saveEntityTemplate(entity);
-                return templateMapper.fromEntityTemplatetoDto(savedEntity);
+                EntityTemplate entityTemplate = entityTemplateService.createEntityTemplate(templateMapper.fromDtoToEntityTemplate(templateDto));
+                return templateMapper.fromEntityTemplatetoDto(entityTemplate);
         }
 
         /// Updates existing entity template with complete replacement strategy.
@@ -156,8 +155,7 @@ public class EntityTemplateController {
         public EntityTemplateDtoOut updateTemplate(
                         @PathVariable(name = "identifier") String identifier,
                         @RequestBody @Valid EntityTemplateDtoIn updatedTemplateDto) {
-                EntityTemplate entityTemplate = entityTemplateService.putEntityTemplate(identifier,
-                                templateMapper.fromDtoToEntityTemplate(updatedTemplateDto));
+                EntityTemplate entityTemplate = entityTemplateService.putEntityTemplate(identifier, templateMapper.fromDtoToEntityTemplate(updatedTemplateDto));
                 return templateMapper.fromEntityTemplatetoDto(entityTemplate);
         }
 
