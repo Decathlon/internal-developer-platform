@@ -1,6 +1,6 @@
 name: Build and Push to Docker Hub
 
-on:
+on: # yamllint disable-line rule:truthy
   release:
     types: [released]  #  Trigger only for stable and public releases
 
@@ -22,6 +22,7 @@ jobs:
         with:
           distribution: 'temurin'
           java-version: 25
+          cache: maven
           overwrite-settings: false
       - name: Compile
         id: compile
