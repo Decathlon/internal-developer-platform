@@ -314,7 +314,7 @@ jobs:
             # check if the commit message contains "!:" to allow breaking changes
             COMMIT_SHA="${{ github.event.pull_request.head.sha || github.sha }}"
             COMMIT_MESSAGE=$(git log -1 --pretty=%B "$COMMIT_SHA")
-            if echo "$COMMIT_MESSAGE" | grep -qE "!:|BREAKING CHANGE:"
+            if echo "$COMMIT_MESSAGE" | grep -qE "\!:|BREAKING CHANGE:"
             then
               printf -- "::notice::Breaking change detected by API analysis, but it was correctly announced in the commit using '!: ' or 'BREAKING CHANGE:'. semantic-release will perform a MAJOR bump."
             else
