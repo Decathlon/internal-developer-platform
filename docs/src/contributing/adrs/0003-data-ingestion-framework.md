@@ -84,7 +84,7 @@ We have to create at least the following elements:
 
 ## Decision Outcome
 
-Chosen option: 2, "Use the Apache Camel framework for implementing the route configurations and data handling".
+Chosen option: 2, **"Use the Apache Camel framework for implementing the route configurations and data handling."**
 
 ### Positive Consequences
 
@@ -93,7 +93,7 @@ Chosen option: 2, "Use the Apache Camel framework for implementing the route con
 
 ### Negative Consequences
 
-* Steep Learning Curve: Requires an initial time investment for the team to master Camel DSL, its internal exchange model, and Enterprise Integration Patterns (EIPs).
+* Steep Learning Curve: Requires an initial time investment for the team to master Camel DSL, its internal exchange model, and Enterprise Integration Patterns (EIP).
 * "Black Box" Abstraction: The high level of framework abstraction can make the system feel like a "black box," potentially complicating deep debugging.
 
 ## Pros and Cons of the Options
