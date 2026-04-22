@@ -67,6 +67,11 @@ public class PostgresEntityTemplateAdapter implements EntityTemplateRepositoryPo
     }
 
     @Override
+    public boolean existsByName(String name) {
+        return jpaEntityTemplateRepository.existsByName(name);
+    }
+
+    @Override
     public EntityTemplate save(EntityTemplate entityTemplate) {
         EntityTemplateJpaEntity jpaEntity;
         if (entityTemplate.id() != null) {
@@ -89,6 +94,7 @@ public class PostgresEntityTemplateAdapter implements EntityTemplateRepositoryPo
 
     private void mergeIntoExisting(EntityTemplateJpaEntity jpa, EntityTemplate domain) {
         jpa.setIdentifier(domain.identifier());
+        jpa.setName(domain.name());
         jpa.setDescription(domain.description());
         mergePropertyDefinitions(jpa, domain);
         mergeRelationDefinitions(jpa, domain);

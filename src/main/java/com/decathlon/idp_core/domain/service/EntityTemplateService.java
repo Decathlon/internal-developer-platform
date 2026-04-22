@@ -3,6 +3,7 @@ package com.decathlon.idp_core.domain.service;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
@@ -12,6 +13,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.validation.annotation.Validated;
 
 import com.decathlon.idp_core.domain.exception.EntityTemplateAlreadyExistsException;
+import com.decathlon.idp_core.domain.exception.EntityTemplateNameAlreadyExistsException;
 import com.decathlon.idp_core.domain.exception.EntityTemplateNotFoundException;
 import com.decathlon.idp_core.domain.model.entity_template.EntityTemplate;
 import com.decathlon.idp_core.domain.model.entity_template.PropertyDefinition;
@@ -67,26 +69,38 @@ public class EntityTemplateService {
                 .orElseThrow(() -> new EntityTemplateNotFoundException("identifier", identifier));
     }
 
-    /// Creates an entity template.
+    /// Creates and persists a new entity template.
     ///
+    /// **Contract:** Validates the provided `EntityTemplate` and enforces uniqueness
+    /// constraints on both `identifier` and `name` when present. If validation passes,
+    /// the template is persisted and the persisted instance (including any generated
+    /// identifiers) is returned.
     ///
+    /// **Business rules enforced:**
+    /// - If `identifier` is provided it must not already exist in the system.
+    /// - If `name` is provided it must not already exist in the system.
     ///
-    ///
+    /// @param entityTemplate validated template to create and persist
+    /// @return the persisted template with generated identifiers
+    /// @throws EntityTemplateAlreadyExistsException when identifier already exists
+    /// @throws EntityTemplateNameAlreadyExistsException when name already exists
     @Transactional
     public EntityTemplate createEntityTemplate(@Valid EntityTemplate entityTemplate) {
         if (entityTemplate.identifier() != null &&
                 entityTemplateRepositoryPort.findByIdentifier(entityTemplate.identifier()).isPresent()) {
             throw new EntityTemplateAlreadyExistsException(entityTemplate.identifier());
         }
-
+        if (entityTemplate.name() != null &&
+                entityTemplateRepositoryPort.existsByName(entityTemplate.name())) {
+            throw new EntityTemplateNameAlreadyExistsException(entityTemplate.name());
+        }
         validateTemplateRules(entityTemplate);
-
-        return saveEntityTemplate(entityTemplate);
+        return entityTemplateRepositoryPort.save(entityTemplate);
     }
 
     /// Updates an existing entity template using full replacement with smart merging.
     ///
-    /// **Contract:** Replaces the template's scalar fields (identifier, description) with the
+    /// **Contract:** Replaces the template's scalar fields (identifier, name, description) with the
     /// incoming values, while performing an intelligent merge on nested collections
     /// (properties and relations). Matching children (by name) preserve their existing UUIDs
     /// so the persistence layer treats them as updates rather than delete-and-recreate,
@@ -114,9 +128,16 @@ public class EntityTemplateService {
             throw new EntityTemplateAlreadyExistsException(updatedTemplate.identifier());
         }
 
+        if (updatedTemplate.name() != null &&
+               !Objects.equals(existingTemplate.name(), updatedTemplate.name()) &&
+               entityTemplateRepositoryPort.existsByName(updatedTemplate.name())) {
+           throw new EntityTemplateNameAlreadyExistsException(updatedTemplate.name());
+        }
+
         EntityTemplate mergedTemplate = new EntityTemplate(
                 existingTemplate.id(),
                 updatedTemplate.identifier(),
+                updatedTemplate.name(),
                 updatedTemplate.description(),
                 mergePropertyDefinitions(existingTemplate.propertiesDefinitions(),
                         updatedTemplate.propertiesDefinitions()),
@@ -126,7 +147,7 @@ public class EntityTemplateService {
 
         validateTemplateRules(mergedTemplate);
 
-        return saveEntityTemplate(mergedTemplate);
+        return entityTemplateRepositoryPort.save(mergedTemplate);
     }
 
     private void validateTemplateRules(@Valid EntityTemplate entityTemplate) {
@@ -221,17 +242,6 @@ public class EntityTemplateService {
         }
 
         return result;
-    }
-
-    /// Persists the entity template
-    ///
-    /// **Contract:** Persists the template with all nested property and relation definitions.
-    /// Template identifiers must be unique across the entire system.
-    ///
-    /// @param entityTemplate template to persist
-    /// @return the persisted template
-    public EntityTemplate saveEntityTemplate(@Valid EntityTemplate entityTemplate) {
-        return entityTemplateRepositoryPort.save(entityTemplate);
     }
 
     /// Deletes an entity template by business identifier with existence validation.

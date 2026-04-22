@@ -13,25 +13,6 @@ This project follows **Pragmatic Hexagonal Architecture** (Ports & Adapters, all
 - **Ports** Interfaces that define the contracts between the domain and the outside world
 - **Adapters** Concrete implementations that connect the domain to external systems (REST API, database, etc.)
 
-```text
-┌─────────────────────────────────────────────────────┐
-│                   Infrastructure                     │
-│  ┌──────────────┐                ┌────────────────┐  │
-│  │  API Adapter  │               │  Persistence   │  │
-│  │  (Driving)    │               │  Adapter       │  │
-│  │  Controller ──┤               │  (Driven)      │  │
-│  │  DTO in/out   │    ┌──────┐   │  JPA Entity    │  │
-│  │  Mapper       ├───▶│Domain│◀──┤  Mapper        │  │
-│  │  Handler      │    │      │   │  Repository    │  │
-│  └──────────────┘    │Ports ◀┤   └────────────────┘  │
-│                      │Service│                        │
-│                      │Model  │                        │
-│                      └──────┘                         │
-└─────────────────────────────────────────────────────┘
-```
-
----
-
 ## Domain Layer (`com.decathlon.idp_core.domain`)
 
 Spring implementation with no JPA dependencies.
@@ -125,22 +106,22 @@ infrastructure/
 
 #### API Adapter (Driving-Inbound)
 
-| Concern | Responsibility |
-| --- | --- |
-| **Controllers** | Receive HTTP requests, delegate to domain services, return DTOs. **No business logic.** |
-| **DTOs** | Define the API contract shape (request/response). Carry validation annotations. |
-| **Mappers** | Convert between DTOs and domain models. Null-safe, no side effects. |
-| **Handler** | Map domain exceptions to HTTP status codes (`EntityTemplateNotFoundException` → 404) |
-| **Configuration** | Security (JWT, CORS), Swagger/OpenAPI, pagination, serialization settings |
+| Concern           | Responsibility                                                                          |
+| ----------------- | --------------------------------------------------------------------------------------- |
+| **Controllers**   | Receive HTTP requests, delegate to domain services, return DTOs. **No business logic.** |
+| **DTOs**          | Define the API contract shape (request/response). Carry validation annotations.         |
+| **Mappers**       | Convert between DTOs and domain models. Null-safe, no side effects.                     |
+| **Handler**       | Map domain exceptions to HTTP status codes (`EntityTemplateNotFoundException` → 404)    |
+| **Configuration** | Security (JWT, CORS), Swagger/OpenAPI, pagination, serialization settings               |
 
 #### Persistence Adapter (Driven—Outbound)
 
-| Concern | Responsibility |
-| --- | --- |
-| **Adapter classes** | Implement domain port interfaces using JPA repositories and persistence mappers |
-| **JPA Entities** | Database representation—may differ from domain models ( mutable, JPA annotations) |
-| **Persistence Mappers** | Convert between domain records and JPA entities |
-| **JPA Repositories** | Spring Data interfaces for database queries |
+| Concern                 | Responsibility                                                                    |
+| ----------------------- | ----------------------------------------------------------------------------------|
+| **Adapter classes**     | Implement domain port interfaces using JPA repositories and persistence mappers   |
+| **JPA Entities**        | Database representation—may differ from domain models (mutable, JPA annotations)  |
+| **Persistence Mappers** | Convert between domain records and JPA entities                                   |
+| **JPA Repositories**    | Spring Data interfaces for database queries                                       |
 
 ---
 
@@ -148,47 +129,70 @@ infrastructure/
 
 ### Read (GET request)
 
-```text
-HTTP Request
-  → Controller (validates params)
-    → Domain Service (applies business rules)
-      → Port interface
-        → Persistence Adapter (JPA query → domain mapping)
-    ← Domain model
-  ← DTO Mapper → HTTP Response
+```mermaid
+sequenceDiagram
+    participant Client
+    participant Controller
+    participant DomainService
+    participant Port
+    participant PersistenceAdapter
+    participant JPA
+    Client->>Controller: HTTP Request
+    Controller->>DomainService: Validate params, call business logic
+    DomainService->>Port: Call port
+    Port->>PersistenceAdapter: Call adapter
+    PersistenceAdapter->>JPA: Query DB, map to domain
+    JPA-->>PersistenceAdapter: Domain model
+    PersistenceAdapter-->>Port: Domain model
+    Port-->>DomainService: Domain model
+    DomainService-->>Controller: Domain model
+    Controller-->>Client: DTO Response
 ```
 
 ### Write (POST/PUT request)
 
-```text
-HTTP Request + JSON body
-  → Controller (DTO deserialization + Bean Validation)
-    → DTO-to-Domain Mapper
-      → Domain Service (enforces invariants, uniqueness check)
-        → Port interface
-          → Persistence Adapter (domain → JPA mapping → save)
-      ← Domain model
-    ← Domain-to-DTO Mapper
-  ← HTTP Response (201/200)
+```mermaid
+sequenceDiagram
+    participant Client
+    participant Controller
+    participant Mapper
+    participant DomainService
+    participant Port
+    participant PersistenceAdapter
+    participant JPA
+    Client->>Controller: HTTP Request + JSON body
+    Controller->>Mapper: DTO deserialization + Bean Validation
+    Mapper->>DomainService: Map to domain, enforce invariants
+    DomainService->>Port: Uniqueness check, business logic
+    Port->>PersistenceAdapter: Save domain as JPA
+    PersistenceAdapter->>JPA: Save to DB
+    JPA-->>PersistenceAdapter: JPA model
+    PersistenceAdapter-->>Port: Domain model
+    Port-->>DomainService: Domain model
+    DomainService-->>Mapper: Domain to DTO
+    Mapper-->>Controller: DTO
+    Controller-->>Client: HTTP Response (201/200)
 ```
 
 ### Error Flow
 
-```text
-Domain exception thrown (EntityTemplateAlreadyExistsException)
-  → ApiExceptionHandler catches
-    → Maps to HTTP status (409 Conflict) + ErrorResponse DTO
-  ← JSON error response
+```mermaid
+sequenceDiagram
+    participant DomainService
+    participant ApiExceptionHandler
+    participant Client
+    DomainService->>ApiExceptionHandler: Throw domain exception
+    ApiExceptionHandler->>Client: Map to HTTP status + ErrorResponse DTO
 ```
 
 ---
 
 ## Dependency Rules
 
-| From | May depend on | Must NOT depend on |
-| --- | --- | --- |
-| Domain models | Java standard library only | Spring, JPA, infrastructure |
-| Domain ports | Domain models | Any implementation |
-| Domain services | Ports + models + exceptions | Adapters, Spring |
-| API adapter | Domain services + ports + models | Persistence adapter |
-| Persistence adapter | Domain ports + models | API adapter |
+| From                | May depend on                    | Must NOT depend on          |
+| ------------------- | -------------------------------- | --------------------------- |
+| Domain models       | Java standard library only       | Spring, JPA, infrastructure |
+| Domain ports        | Domain models                    | Any implementation          |
+| Domain services     | Ports + models + exceptions      | Adapters, Spring            |
+| API adapter         | Domain services + ports + models | Persistence adapter         |
+| Persistence adapter | Domain ports + models            | API adapter                 |

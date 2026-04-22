@@ -1,5 +1,6 @@
 {
   "identifier": "temp-test-invalid-rules",
+  "name": "Temp Test Invalid Rules",
   "description": "Test template with invalid rules",
   "properties_definitions": [
     {

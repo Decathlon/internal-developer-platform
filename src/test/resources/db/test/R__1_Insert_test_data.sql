@@ -105,17 +105,17 @@ INSERT INTO relation_definition (id, name, target_entity_identifier, required, t
 ('550e8400-e29b-41d4-a716-446655440065', 'file_storage', 'storage', false, false);
 
 -- Insert 10 diverse entity templates
-INSERT INTO entity_template (id, identifier, description) VALUES
-('550e8400-e29b-41d4-a716-446655440070', 'web-service', 'Template for REST API web services'),
-('550e8400-e29b-41d4-a716-446655440071', 'microservice', 'Template for microservice applications'),
-('550e8400-e29b-41d4-a716-446655440072', 'batch-job', 'Template for batch processing jobs'),
-('550e8400-e29b-41d4-a716-446655440073', 'data-pipeline', 'Template for data processing pipelines'),
-('550e8400-e29b-41d4-a716-446655440074', 'frontend-app', 'Template for frontend applications'),
-('550e8400-e29b-41d4-a716-446655440075', 'worker-service', 'Template for background worker services'),
-('550e8400-e29b-41d4-a716-446655440076', 'api-gateway', 'Template for API gateway services'),
-('550e8400-e29b-41d4-a716-446655440077', 'database-service', 'Template for database services'),
-('550e8400-e29b-41d4-a716-446655440078', 'cache-service', 'Template for caching services'),
-('550e8400-e29b-41d4-a716-446655440079', 'monitoring-service', 'Template for monitoring and observability services');
+INSERT INTO entity_template (id, identifier, name, description) VALUES
+('550e8400-e29b-41d4-a716-446655440070', 'web-service', 'Web Service', 'Template for REST API web services'),
+('550e8400-e29b-41d4-a716-446655440071', 'microservice', 'Microservice', 'Template for microservice applications'),
+('550e8400-e29b-41d4-a716-446655440072', 'batch-job', 'Batch Job', 'Template for batch processing jobs'),
+('550e8400-e29b-41d4-a716-446655440073', 'data-pipeline', 'Data Pipeline', 'Template for data processing pipelines'),
+('550e8400-e29b-41d4-a716-446655440074', 'frontend-app', 'Frontend Application', 'Template for frontend applications'),
+('550e8400-e29b-41d4-a716-446655440075', 'worker-service', 'Worker Service', 'Template for background worker services'),
+('550e8400-e29b-41d4-a716-446655440076', 'api-gateway', 'API Gateway', 'Template for API gateway services'),
+('550e8400-e29b-41d4-a716-446655440077', 'database-service', 'Database Service', 'Template for database services'),
+('550e8400-e29b-41d4-a716-446655440078', 'cache-service', 'Cache Service', 'Template for caching services'),
+('550e8400-e29b-41d4-a716-446655440079', 'monitoring-service', 'Monitoring Service', 'Template for monitoring and observability services');
 
 -- Link web-service template (comprehensive web API)
 INSERT INTO entity_template_properties_definitions (entity_template_id, properties_definitions_id) VALUES

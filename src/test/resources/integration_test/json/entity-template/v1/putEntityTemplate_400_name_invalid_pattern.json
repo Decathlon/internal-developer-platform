@@ -1,6 +1,6 @@
 {
-  "identifier": "temp-test-99",
-  "name": "Temp Test 99",
+  "identifier": "temp-test-0",
+  "name": "Temp Test 0&@!;",
   "description": "This is a test template",
   "properties_definitions": [
     {
@@ -13,7 +13,9 @@
         "enum_values": [],
         "regex": "",
         "max_length": 200,
-        "min_length": 1
+        "min_length": 1,
+        "max_value": 0,
+        "min_value": 0
       }
     }
   ],

@@ -54,6 +54,7 @@ public class EntityTemplateMapper {
         return new EntityTemplate(
                 null,
                 dto.getIdentifier(),
+                dto.getName(),
                 dto.getDescription(),
                 toPropertyDefinitionEntities(dto.getPropertiesDefinitions()),
                 toRelationDefinitionEntities(dto.getRelationsDefinitions())
@@ -77,6 +78,7 @@ public class EntityTemplateMapper {
 
         return EntityTemplateDtoOut.builder()
                 .identifier(entity.identifier())
+                .name(entity.name())
                 .description(entity.description())
                 .propertiesDefinitions(toPropertyDefinitionDtos(entity.propertiesDefinitions()))
                 .relationsDefinitions(toRelationDefinitionDtos(entity.relationsDefinitions()))
