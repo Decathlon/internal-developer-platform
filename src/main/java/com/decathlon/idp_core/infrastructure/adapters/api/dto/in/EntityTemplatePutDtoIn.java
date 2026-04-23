@@ -1,6 +1,5 @@
 package com.decathlon.idp_core.infrastructure.adapters.api.dto.in;
 
-import static com.decathlon.idp_core.domain.constant.ValidationMessages.PROPERTY_DEFINITIONS_MANDATORY;
 import static com.decathlon.idp_core.domain.constant.ValidationMessages.TEMPLATE_NAME_FORMAT;
 import static com.decathlon.idp_core.domain.constant.ValidationMessages.TEMPLATE_NAME_MANDATORY;
 import static com.decathlon.idp_core.domain.constant.ValidationMessages.TEMPLATE_NAME_MAX_SIZE;
