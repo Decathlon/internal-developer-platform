@@ -220,7 +220,7 @@ public class EntityTemplateService {
                 RelationDefinition merged = new RelationDefinition(
                         existingRel.id(),
                         rel.name(),
-                        rel.targetEntityIdentifier(),
+                        rel.targetTemplateIdentifier(),
                         rel.required(),
                         rel.toMany()
                 );

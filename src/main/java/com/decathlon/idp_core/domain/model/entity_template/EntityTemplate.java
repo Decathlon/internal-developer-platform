@@ -1,6 +1,5 @@
 package com.decathlon.idp_core.domain.model.entity_template;
 
-import static com.decathlon.idp_core.domain.constant.ValidationMessages.PROPERTY_DEFINITIONS_MANDATORY;
 import static com.decathlon.idp_core.domain.constant.ValidationMessages.TEMPLATE_IDENTIFIER_MANDATORY;
 import static com.decathlon.idp_core.domain.constant.ValidationMessages.TEMPLATE_NAME_FORMAT;
 import static com.decathlon.idp_core.domain.constant.ValidationMessages.TEMPLATE_NAME_MANDATORY;
@@ -11,7 +10,6 @@ import java.util.List;
 import java.util.UUID;
 
 import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.NotEmpty;
 import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
 
@@ -24,9 +22,8 @@ import jakarta.validation.constraints.Size;
 /// **Business invariants:**
 /// - Template identifiers must be unique across the system
 /// - Template names must be unique across the system and respect the business regex
-/// - At least one property definition is required for meaningful entities
-/// - Property names must be unique within the template
-/// - Relation names must be unique within the template
+/// - Property names must be unique within the template (if any)
+/// - Relation names must be unique within the template (if any)
 /// - All property definitions must have valid types and constraints
 /// - Relations must reference valid target entity identifiers
 public record EntityTemplate(
@@ -42,7 +39,6 @@ public record EntityTemplate(
 
         String description,
 
-        @NotEmpty(message = PROPERTY_DEFINITIONS_MANDATORY)
         List<PropertyDefinition> propertiesDefinitions,
 
         List<RelationDefinition> relationsDefinitions

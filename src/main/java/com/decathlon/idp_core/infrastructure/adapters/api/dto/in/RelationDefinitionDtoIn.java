@@ -32,7 +32,7 @@ public class RelationDefinitionDtoIn {
 
     @NotBlank(message = RELATION_TARGET_IDENTIFIER_MANDATORY)
     @Schema(description = FIELD_RELATION_TARGET_IDENTIFIER, example = "service")
-    private String targetEntityIdentifier;
+    private String targetTemplateIdentifier;
 
     @Builder.Default
     @Schema(description = FIELD_RELATION_REQUIRED, example = "false", defaultValue = "false")

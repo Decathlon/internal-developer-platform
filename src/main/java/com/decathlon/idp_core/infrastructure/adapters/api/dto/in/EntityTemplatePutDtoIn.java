@@ -1,16 +1,14 @@
 package com.decathlon.idp_core.infrastructure.adapters.api.dto.in;
 
-import static com.decathlon.idp_core.domain.constant.ValidationMessages.TEMPLATE_IDENTIFIER_MANDATORY;
+import static com.decathlon.idp_core.domain.constant.ValidationMessages.PROPERTY_DEFINITIONS_MANDATORY;
 import static com.decathlon.idp_core.domain.constant.ValidationMessages.TEMPLATE_NAME_FORMAT;
 import static com.decathlon.idp_core.domain.constant.ValidationMessages.TEMPLATE_NAME_MANDATORY;
 import static com.decathlon.idp_core.domain.constant.ValidationMessages.TEMPLATE_NAME_MAX_SIZE;
 import static com.decathlon.idp_core.domain.constant.ValidationRegex.ENTITY_TEMPLATE_NAME_REGEX;
 import static com.decathlon.idp_core.infrastructure.adapters.api.configuration.SwaggerDescription.FIELD_TEMPLATE_DESCRIPTION;
-import static com.decathlon.idp_core.infrastructure.adapters.api.configuration.SwaggerDescription.FIELD_TEMPLATE_IDENTIFIER;
 import static com.decathlon.idp_core.infrastructure.adapters.api.configuration.SwaggerDescription.FIELD_TEMPLATE_NAME;
 import static com.decathlon.idp_core.infrastructure.adapters.api.configuration.SwaggerDescription.FIELD_TEMPLATE_PROPERTIES;
 import static com.decathlon.idp_core.infrastructure.adapters.api.configuration.SwaggerDescription.FIELD_TEMPLATE_RELATIONS;
-import static com.decathlon.idp_core.infrastructure.adapters.api.configuration.SwaggerDescription.SCHEMA_ENTITY_TEMPLATE_IN;
 
 import java.util.List;
 
@@ -32,12 +30,8 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @AllArgsConstructor
 @JsonNaming(SnakeCaseStrategy.class)
-@Schema(description = SCHEMA_ENTITY_TEMPLATE_IN)
-public class EntityTemplateDtoIn {
-
-    @NotBlank(message = TEMPLATE_IDENTIFIER_MANDATORY)
-    @Schema(description = FIELD_TEMPLATE_IDENTIFIER, example = "service")
-    private String identifier;
+@Schema(description = "Input DTO for updating entity templates")
+public class EntityTemplatePutDtoIn {
 
     @Size(max = 255, message = TEMPLATE_NAME_MAX_SIZE)
     @Schema(description = FIELD_TEMPLATE_NAME, example = "Service")

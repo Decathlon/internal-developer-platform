@@ -26,7 +26,7 @@ public record RelationDefinition(
     String name,
 
     @NotBlank(message = RELATION_TARGET_IDENTIFIER_MANDATORY_SIMPLE)
-    String targetEntityIdentifier,
+    String targetTemplateIdentifier,
 
     boolean required,
 

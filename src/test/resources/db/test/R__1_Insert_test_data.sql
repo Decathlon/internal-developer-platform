@@ -77,7 +77,7 @@ INSERT INTO property_definition (id, name, description, type, required, rules_id
 ('550e8400-e29b-41d4-a716-446655440044', 'dataRetentionDays', 'Data retention period in days', 'NUMBER', false, NULL);
 
 -- Insert diverse relation definitions
-INSERT INTO relation_definition (id, name, target_entity_identifier, required, to_many) VALUES
+INSERT INTO relation_definition (id, name, target_template_identifier, required, to_many) VALUES
 -- Service dependencies
 ('550e8400-e29b-41d4-a716-446655440050', 'dependencies', 'service', false, true),
 ('550e8400-e29b-41d4-a716-446655440051', 'upstream_services', 'service', false, true),

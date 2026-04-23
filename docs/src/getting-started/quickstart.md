@@ -169,13 +169,13 @@ curl -X POST http://localhost:8084/api/v1/entity-templates \
     "relations_definitions": [
       {
         "name": "owned_by",
-        "target_entity_identifier": "team",
+        "target_template_identifier": "team",
         "required": true,
         "to_many": false
       },
       {
         "name": "repository",
-        "target_entity_identifier": "github_repository",
+        "target_template_identifier": "github_repository",
         "required": false,
         "to_many": false
       }
@@ -235,7 +235,7 @@ You've just created three Entity Templates. Let's break down what each part mean
 ```json
 {
   "name": "owned_by",                    // Relation name
-  "target_entity_identifier": "team",    // Target template
+  "target_template_identifier": "team",    // Target template
   "required": true,                      // Is it mandatory?
   "to_many": false                       // One-to-one or one-to-many?
 }
