@@ -1,5 +1,7 @@
 package com.decathlon.idp_core.domain.model.entity;
 
+import static com.decathlon.idp_core.domain.constant.ValidationMessages.ENTITY_IDENTIFIER_MANDATORY;
+import static com.decathlon.idp_core.domain.constant.ValidationMessages.ENTITY_NAME_MANDATORY;
 import static com.decathlon.idp_core.domain.constant.ValidationMessages.TEMPLATE_IDENTIFIER_MANDATORY;
 
 import java.util.List;
@@ -24,9 +26,9 @@ public record Entity(
 
         @NotBlank(message = TEMPLATE_IDENTIFIER_MANDATORY)
         String templateIdentifier,
-
+        @NotBlank(message = ENTITY_NAME_MANDATORY)
         String name,
-
+        @NotBlank(message = ENTITY_IDENTIFIER_MANDATORY)
         String identifier,
 
         List<Property> properties,
