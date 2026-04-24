@@ -6,6 +6,7 @@ on: # yamllint disable-line rule:truthy
 
 permissions:
   contents: read
+  id-token: write
 
 jobs:
   build-and-push:
