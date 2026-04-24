@@ -3,9 +3,15 @@ name: Build and Push to Docker Hub
 on: # yamllint disable-line rule:truthy
   release:
     types: [released]  #  Trigger only for stable and public releases
+  workflow_dispatch:  # Allow manual triggering of the workflow
+    inputs:
+      tag_name:
+        description: 'Tag name for the release (e.g., v1.0.0)'
+        required: true
 
 permissions:
   contents: read
+  id-token: write
 
 jobs:
   build-and-push:
@@ -17,6 +23,7 @@ jobs:
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  #  v6.0.2
         with:
           fetch-depth: 0
+          ref: ${{ github.event.release.tag_name || github.event.inputs.tag_name }}
       - name: Set up JDK 25
         uses: actions/setup-java@be666c2fcd27ec809703dec50e508c2fdc7f6654  #  v5.2.0
         with:
@@ -32,9 +39,19 @@ jobs:
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@4d04d5d9486b7bd6fa91e7baf45bbb4f8b9deedd  #  v4.0.0
       - name: Build and push
         uses: docker/build-push-action@bcafcacb16a39f128d818304e6c9c0c18556b85f  #  v7.1.0
         with:
           context: .
           push: true
-          tags: decathlon/internal-developer-platform:${{ github.event.release.tag_name }},decathlon/internal-developer-platform:latest
+          sbom: true
+          provenance: mode=max
+          tags: decathlon/internal-developer-platform:${{ github.event.release.tag_name || github.event.inputs.tag_name }},decathlon/internal-developer-platform:latest
+      - name: Update repo description
+        uses: peter-evans/dockerhub-description@1b9a80c056b620d92cedb9d9b5a223409c68ddfa # v5.0.0
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+          repository: decathlon/internal-developer-platform
