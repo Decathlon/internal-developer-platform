@@ -1,9 +1,12 @@
+---
+version: "3.8"
+
 services:
   postgres:
-    image: postgres:18
+    image: postgres:14
     environment:
       POSTGRES_USER: idpcore
-      POSTGRES_PASSWORD: idpcore_password
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-idpcore_password}
     ports:
       - "5437:5432"
     networks:

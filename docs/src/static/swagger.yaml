@@ -310,7 +310,7 @@ components:
           minLength: 1
         target_template_identifier:
           type: string
-          description: Identifier of the target entity
+          description: Identifier of the target template
           example: service
           minLength: 1
         required:
@@ -448,7 +448,7 @@ components:
           example: dependencies
         target_template_identifier:
           type: string
-          description: Identifier of the target entity
+          description: Identifier of the target template
           example: component-template
         required:
           type: boolean

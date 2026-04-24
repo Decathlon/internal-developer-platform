@@ -25,7 +25,7 @@ import jakarta.validation.constraints.Size;
 /// - Property names must be unique within the template (if any)
 /// - Relation names must be unique within the template (if any)
 /// - All property definitions must have valid types and constraints
-/// - Relations must reference valid target entity identifiers
+/// - Relations must reference valid target template identifiers
 public record EntityTemplate(
         UUID id,
 
