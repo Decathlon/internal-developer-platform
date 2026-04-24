@@ -5,5 +5,10 @@
     "port": "8080",
     "environment": "dev"
   },
-  "relations": []
+  "relations": [
+    {
+      "name": "github_repository",
+      "target_entity_identifiers": ["microservice-repo-01"]
+    }
+  ]
 }

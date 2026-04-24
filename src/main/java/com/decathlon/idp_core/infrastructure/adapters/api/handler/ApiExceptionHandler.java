@@ -12,11 +12,13 @@ import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 
+import com.decathlon.idp_core.domain.exception.EntityAlreadyExistsException;
 import com.decathlon.idp_core.domain.exception.EntityNotFoundException;
 import com.decathlon.idp_core.domain.exception.EntityTemplateAlreadyExistsException;
 import com.decathlon.idp_core.domain.exception.EntityTemplateNameAlreadyExistsException;
 import com.decathlon.idp_core.domain.exception.EntityTemplateNotFoundException;
 
+import com.decathlon.idp_core.domain.exception.EntityValidationException;
 import jakarta.validation.ConstraintViolation;
 import jakarta.validation.ConstraintViolationException;
 import lombok.AllArgsConstructor;
@@ -134,12 +136,6 @@ public class ApiExceptionHandler {
         ErrorResponse errorResponse = new ErrorResponse(NOT_FOUND.name(), ex.getMessage());
         return ResponseEntity.status(NOT_FOUND).body(errorResponse);
     }
-
-    @ExceptionHandler(NoHandlerFoundException.class)
-    public ResponseEntity<ErrorResponse> handleNotFound(NoHandlerFoundException e) {
-        return createErrorResponse(NOT_FOUND, "Resource not found: " + e.getRequestURL());
-    }
-
     private String parseHttpMessageNotReadableError(String originalMessage) {
         if (originalMessage == null) {
             return "Invalid request body format";

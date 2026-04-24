@@ -311,10 +311,6 @@ class EntityTemplateControllerTest extends AbstractIntegrationTest {
         /// This test verifies that:
         /// - Validation error message indicates property definitions are
         /// @throws Exception if the MockMvc request fails
-        /// Tests the POST /api/v1/entity-templates endpoint when property name field is
-        /// missing.
-        /// This test verifies that:
-        /// @throws Exception if the MockMvc request fails
         @Test
         @WithMockUser()
         @DisplayName("Returns 400 when property name is missing")
@@ -576,7 +572,6 @@ class EntityTemplateControllerTest extends AbstractIntegrationTest {
             String updateJson = """
                     {
                       "identifier": "template-rel-test",
-                      "name": "Template Rel Test",
                       "description": "Updated template with new relation",
                       "properties_definitions": [
                         {
@@ -673,6 +668,21 @@ class EntityTemplateControllerTest extends AbstractIntegrationTest {
                     .andExpect(status().isNotFound())
                     .andExpect(content().string(
                             "{\"error\":\"NOT_FOUND\",\"error_description\":\"Template not found with identifier: unknown-identifier\"}"));
+        }
+
+        @Test
+        @WithMockUser()
+        void putTemplate_400_properties_empty() throws Exception {
+            String identifier = "unknown-identifier";
+            mockMvc.perform(MockMvcRequestBuilders.put("/api/v1/entity-templates/identifier/" + identifier)
+                    .contentType(APPLICATION_JSON)
+                    .accept(APPLICATION_JSON)
+                    .with(csrf())
+                    .content(getJsonTestFileContent(
+                            "integration_test/json/entity-template/v1/putEntityTemplate_400_withoutPropertiesDefinitions.json")))
+                    .andExpect(status().isBadRequest())
+                    .andExpect(content().string(
+                            "{\"error\":\"BAD_REQUEST\",\"error_description\":\"Entity Template property definitions are mandatory and cannot be empty\"}"));
         }
 
         @Test

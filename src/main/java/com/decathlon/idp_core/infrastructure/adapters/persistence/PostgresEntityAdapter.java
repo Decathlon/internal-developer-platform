@@ -40,6 +40,12 @@ public class PostgresEntityAdapter implements EntityRepositoryPort {
     }
 
     @Override
+    public Optional<Entity> findByTemplateIdentifierAndName(String templateIdentifier, String entityName) {
+        return jpaEntityRepository.findByTemplateIdentifierAndName(templateIdentifier, entityName)
+                .map(mapper::toDomain);
+    }
+
+    @Override
     public Page<Entity> findByTemplateIdentifier(String templateIdentifier, Pageable pageable) {
         return jpaEntityRepository.findByTemplateIdentifier(templateIdentifier, pageable).map(mapper::toDomain);
     }

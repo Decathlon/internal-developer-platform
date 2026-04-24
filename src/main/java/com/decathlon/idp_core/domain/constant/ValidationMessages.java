@@ -27,4 +27,13 @@ public class ValidationMessages {
     public static final String RELATION_NAME_MANDATORY_SIMPLE = "Relation name is mandatory";
     public static final String RELATION_TARGET_IDENTIFIER_MANDATORY_SIMPLE = "Relation target identifier is mandatory";
     public static final String RELATION_TARGET_IDENTIFIERS_NOT_NULL = "Target entity identifiers cannot be null";
+
+    // Entity input validation messages
+    public static final String ENTITY_NAME_MANDATORY = "Entity name is mandatory and cannot be blank";
+    public static final String ENTITY_IDENTIFIER_MANDATORY = "Entity identifier is mandatory and cannot be blank";
+
+    // Entity creation validation messages
+    public static final String ENTITY_NOT_FOUND = "Entity not found with template identifier %s and entity identifier '%s'";
+    public static final String ENTITY_ALREADY_EXISTS = "Entity with name '%s' already exists for template '%s'";
+    public static final String ENTITY_VALIDATION_FAILED = "Entity validation failed: ";
 }
