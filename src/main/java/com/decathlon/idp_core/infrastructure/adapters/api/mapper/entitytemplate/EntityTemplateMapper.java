@@ -48,17 +48,17 @@ public class EntityTemplateMapper {
     /// @param dto the input DTO to convert, may be null
     /// @return the converted EntityTemplate domain entity, or null if input is null
     public EntityTemplate fromDtoToEntityTemplate(EntityTemplateDtoIn dto) {
-        if (dto == null) {
+        if (dto == null || dto.getCommonFields() == null) {
             return null;
         }
 
         return new EntityTemplate(
                 null,
                 dto.getIdentifier(),
-                dto.getName(),
-                dto.getDescription(),
-                toPropertyDefinitionEntities(dto.getPropertiesDefinitions()),
-                toRelationDefinitionEntities(dto.getRelationsDefinitions())
+                dto.getCommonFields().getName(),
+                dto.getCommonFields().getDescription(),
+                toPropertyDefinitionEntities(dto.getCommonFields().getPropertiesDefinitions()),
+                toRelationDefinitionEntities(dto.getCommonFields().getRelationsDefinitions())
         );
     }
 
@@ -73,17 +73,17 @@ public class EntityTemplateMapper {
     /// @param dto the input DTO to convert, may be null
     /// @return the converted EntityTemplate domain entity, or null if input is null
     public EntityTemplate fromPutDtoToEntityTemplate(String identifier, EntityTemplatePutDtoIn dto) {
-        if (dto == null) {
+        if (dto == null || dto.getCommonFields() == null) {
             return null;
         }
 
         return new EntityTemplate(
                 null,
                 identifier,
-                dto.getName(),
-                dto.getDescription(),
-                toPropertyDefinitionEntities(dto.getPropertiesDefinitions()),
-                toRelationDefinitionEntities(dto.getRelationsDefinitions())
+                dto.getCommonFields().getName(),
+                dto.getCommonFields().getDescription(),
+                toPropertyDefinitionEntities(dto.getCommonFields().getPropertiesDefinitions()),
+                toRelationDefinitionEntities(dto.getCommonFields().getRelationsDefinitions())
         );
     }
 

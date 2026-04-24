@@ -17,6 +17,7 @@ import com.decathlon.idp_core.domain.model.entity_template.RelationDefinition;
 import com.decathlon.idp_core.domain.model.enums.PropertyFormat;
 import com.decathlon.idp_core.domain.model.enums.PropertyType;
 import com.decathlon.idp_core.infrastructure.adapters.api.dto.in.EntityTemplateDtoIn;
+import com.decathlon.idp_core.infrastructure.adapters.api.dto.in.EntityTemplateCommonFields;
 import com.decathlon.idp_core.infrastructure.adapters.api.dto.in.PropertyDefinitionDtoIn;
 import com.decathlon.idp_core.infrastructure.adapters.api.dto.in.PropertyRulesDtoIn;
 import com.decathlon.idp_core.infrastructure.adapters.api.dto.in.RelationDefinitionDtoIn;
@@ -69,11 +70,15 @@ class EntityTemplateMapperTest {
                     .toMany(true)
                     .build();
 
-            var dto = EntityTemplateDtoIn.builder()
-                    .identifier("service-template")
+            var commonFields = EntityTemplateCommonFields.builder()
                     .description("A service template")
                     .propertiesDefinitions(List.of(propertyDefinition))
                     .relationsDefinitions(List.of(relationDefinition))
+                    .build();
+
+            var dto = EntityTemplateDtoIn.builder()
+                    .identifier("service-template")
+                    .commonFields(commonFields)
                     .build();
 
             // When
