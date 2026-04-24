@@ -26,9 +26,12 @@ public class SwaggerDescription {
     public static final String NO_CONTENT_CODE = "204";
     public static final String PARTIAL_CONTENT_CODE = "206";
     public static final String BAD_REQUEST_CODE = "400";
+    public static final String UNAUTHORIZED_CODE = "401";
+    public static final String FORBIDDEN_CODE = "403";
     public static final String NOT_FOUND_CODE = "404";
     public static final String CONFLICT_CODE = "409";
     public static final String SERVICE_UNAVAILABLE_CODE = "503";
+    public static final String INTERNAL_SERVER_ERROR_CODE = "500";
 
     /// Entity Template API endpoint constants
     public static final String ENDPOINT_GET_TEMPLATES_SUMMARY = "Get all templates";
@@ -78,11 +81,15 @@ public class SwaggerDescription {
     public static final String RESPONSE_INVALID_TEMPLATE_DATA = "Invalid template data provided";
     public static final String RESPONSE_INVALID_PAGINATION = "Invalid pagination parameters";
     public static final String RESPONSE_TEMPLATE_CONFLICT = "Template with this identifier already exists";
+    public static final String RESPONSE_ENTITY_CONFLICT = "Entity already exists in this template";
     public static final String RESPONSE_ENTITIES_PAGINATED_SUCCESS = "Paginated entities retrieved successfully";
     public static final String RESPONSE_ENTITY_FOUND = "Entity found";
     public static final String RESPONSE_ENTITY_NOT_FOUND_IDENTIFIER = "Entity not found with the provided identifier";
     public static final String RESPONSE_ENTITY_CREATED = "Entity created successfully";
     public static final String RESPONSE_INVALID_ENTITY_DATA = "Invalid entity data provided";
+    public static final String RESPONSE_UNEXPECTED_SERVER_ERROR = "Unexpected server-side failure";
+    public static final String RESPONSE_INSUFFICIENT_RIGHTS = "Insufficient rights";
+    public static final String RESPONSE_UNAUTHORIZED = "Unauthorized - Missing or invalid token";
 
 
     // --- Schema (class) descriptions ---
@@ -95,6 +102,8 @@ public class SwaggerDescription {
     public static final String SCHEMA_PROPERTY_DEFINITION_OUT = "Output DTO for property definition";
     public static final String SCHEMA_RELATION_DEFINITION_OUT = "Output DTO for relation definition";
     public static final String SCHEMA_PROPERTY_RULES_OUT = "Output DTO for property validation rules";
+    public static final String SCHEMA_ENTITY_IN = "Input DTO for creating or updating an entity";
+    public static final String SCHEMA_ENTITY_RELATION_IN = "Input DTO for an entity relation instance";
 
     // --- Field descriptions (shared) ---
     public static final String FIELD_TEMPLATE_ID = "Unique generated identifier of the entity template";
@@ -103,6 +112,13 @@ public class SwaggerDescription {
     public static final String FIELD_TEMPLATE_DESCRIPTION = "Entity Template description";
     public static final String FIELD_TEMPLATE_PROPERTIES = "List of property definitions for this template";
     public static final String FIELD_TEMPLATE_RELATIONS = "List of relation definitions for this template";
+
+    public static final String FIELD_ENTITY_NAME = "Name of the entity";
+    public static final String FIELD_ENTITY_IDENTIFIER = "Unique identifier of the entity within the template scope";
+    public static final String FIELD_ENTITY_PROPERTIES = "Map of property name to value for this entity";
+    public static final String FIELD_ENTITY_RELATIONS = "List of relations for this entity";
+    public static final String FIELD_ENTITY_RELATION_NAME = "Name of the relation (must match a template relation definition)";
+    public static final String FIELD_ENTITY_RELATION_TARGETS = "List of target entity identifiers for this relation";
 
     public static final String FIELD_PROPERTY_ID = "Unique identifier of the property definition";
     public static final String FIELD_PROPERTY_NAME = "Property name";

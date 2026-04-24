@@ -311,10 +311,6 @@ class EntityTemplateControllerTest extends AbstractIntegrationTest {
         /// This test verifies that:
         /// - Validation error message indicates property definitions are
         /// @throws Exception if the MockMvc request fails
-        /// Tests the POST /api/v1/entity-templates endpoint when property name field is
-        /// missing.
-        /// This test verifies that:
-        /// @throws Exception if the MockMvc request fails
         @Test
         @WithMockUser()
         @DisplayName("Returns 400 when property name is missing")

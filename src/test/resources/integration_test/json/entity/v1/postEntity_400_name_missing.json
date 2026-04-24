@@ -1,0 +1,7 @@
+{
+  "identifier": "microservice-3",
+  "properties": {
+    "port": "8080"
+  },
+  "relations": []
+}

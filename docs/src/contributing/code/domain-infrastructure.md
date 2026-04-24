@@ -33,7 +33,12 @@ domain/
 │   ├── EntityTemplateRepositoryPort
 │   └── RelationRepositoryPort
 └── service/             # Domain services logic orchestration
-    ├── EntityService
+    ├── entity/
+    │   ├── EntityService              # Orchestrates entity CRUD with validation
+    │   ├── EntityValidationService    # Entity validation pipeline (template, uniqueness, structure, rules)
+    │   └── Violations                 # Mutable accumulator of validation violation messages
+    ├── property/
+    │   └── PropertyValidationService  # Validates property values against type and rules (STRING, NUMBER, BOOLEAN)
     ├── EntityTemplateService
     └── RelationService
 ```

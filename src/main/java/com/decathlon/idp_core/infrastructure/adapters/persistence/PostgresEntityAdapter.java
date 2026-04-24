@@ -4,6 +4,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
+import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Component;
@@ -13,8 +14,6 @@ import com.decathlon.idp_core.domain.model.entity.EntitySummary;
 import com.decathlon.idp_core.domain.port.EntityRepositoryPort;
 import com.decathlon.idp_core.infrastructure.adapters.persistence.mapper.EntityPersistenceMapper;
 import com.decathlon.idp_core.infrastructure.adapters.persistence.repository.JpaEntityRepository;
-
-import lombok.RequiredArgsConstructor;
 
 @Component
 @RequiredArgsConstructor
@@ -40,8 +39,15 @@ public class PostgresEntityAdapter implements EntityRepositoryPort {
     }
 
     @Override
-    public Page<Entity> findByTemplateIdentifier(String templateIdentifier, Pageable pageable) {
-        return jpaEntityRepository.findByTemplateIdentifier(templateIdentifier, pageable).map(mapper::toDomain);
+    public Optional<Entity> findByTemplateIdentifierAndName(String templateIdentifier, String entityName) {
+        return jpaEntityRepository.findByTemplateIdentifierAndName(templateIdentifier, entityName)
+                .map(mapper::toDomain);
+    }
+
+    @Override
+    public Optional<Page<Entity>> findByTemplateIdentifier(String templateIdentifier, Pageable pageable) {
+        var pageableEntity = jpaEntityRepository.findByTemplateIdentifier(templateIdentifier, pageable);
+        return Optional.of(pageableEntity.map(mapper::toDomain));
     }
 
     @Override

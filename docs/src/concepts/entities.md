@@ -3,17 +3,17 @@ title: Entities
 description: Understand Entities - instances of Entity Templates with actual data
 ---
 
-Entities are **instances** of Entity Templates containing actual data. If an Entity Template is the blueprint, an Entity is the house built from that blueprint.
+Entities are **instances** of Entity Templates containing actual data. If an Entity Template is the blueprint, an Entity
+is the house built from that blueprint.
 
 ## Overview
 
 An Entity contains:
 
-- **Identity** - Unique identifier and title
+- **Identity** - Unique identifier and name
 - **Template Reference** - Which template it instantiates
 - **Properties** - Actual values for the template's property definitions
 - **Relations** - Links to other entities
-- **Audit Fields** - Creation/modification timestamps and actors
 
 ```mermaid
 flowchart LR
@@ -36,26 +36,26 @@ flowchart LR
 
 ### Complete Example
 
-Here's an entity instantiated from the `sonar_project` template:
+Here's an entity instantiated from the `web-service` template:
 
 ```json
 {
-  "identifier": "decathlon_my-backend-project",
-  "title": "My Backend Project",
-  "template": "sonar_project",
+  "identifier": "my-web-service",
+  "name": "my-web-service",
+  "template_identifier": "web-service",
   "properties": {
-    "project_name": "My Backend Project",
-    "last_analysis_date": "2025-11-28T12:20:38+0000",
-    "issues_number": 137,
-    "loc": 20000
+    "port": "8080",
+    "environment": "dev"
   },
   "relations": {
-    "github_repository": "my-backend-repo"
+    "depends-on": [
+      {
+        "identifier": "web-api-1",
+        "name": "Web API 1"
+      }
+    ]
   },
-  "created_at": "2024-10-25T09:44:02.742Z",
-  "created_by": "1EOn3KYVK6L8Bh6Sm0dZ1AdG1AtAZmWt",
-  "updated_at": "2025-11-29T09:44:03.448Z",
-  "updated_by": "1EOn3KYVK6L8Bh6Sm0dZ1AdG1AtAZmWt"
+  "relations_as_target": {}
 }
 ```
 
@@ -63,17 +63,104 @@ Here's an entity instantiated from the `sonar_project` template:
 
 ## Core Fields
 
-| Field        | Type     | Description                                  |
-| ------------ | -------- | -------------------------------------------- |
-| `identifier` | String   | Unique identifier for this entity            |
-| `title`      | String   | Human-readable name                          |
-| `template`   | String   | The Entity Template this entity instantiates |
-| `properties` | Object   | Key-value pairs of property data             |
-| `relations`  | Object   | Links to other entities                      |
-| `created_at` | DateTime | When the entity was created                  |
-| `created_by` | String   | Who created the entity                       |
-| `updated_at` | DateTime | Last modification time                       |
-| `updated_by` | String   | Who last modified the entity                 |
+| Field                 | Type     | Description                                  |
+|-----------------------|----------|----------------------------------------------|
+| `identifier`          | String   | Unique identifier within the template scope  |
+| `name`                | String   | Human-readable name                          |
+| `template_identifier` | String   | The Entity Template this entity instantiates |
+| `properties`          | Object   | Key-value pairs of property data             |
+| `relations`           | Object   | Links to other entities (grouped by name)    |
+
+---
+
+## Creating an Entity
+
+You create an entity by sending a `POST` request to the entities endpoint, specifying the template identifier in the URL
+path.
+
+### Endpoint
+
+```text
+POST /api/v1/entities/{templateIdentifier}
+```
+
+### Request Body
+
+```json
+{
+  "name": "my-web-service",
+  "identifier": "my-web-service",
+  "properties": {
+    "port": "8080",
+    "environment": "dev"
+  },
+  "relations": [
+    {
+      "name": "depends-on",
+      "target_entity_identifiers": [
+        "web-api-1",
+        "web-api-2"
+      ]
+    }
+  ]
+}
+```
+
+### Validation
+
+IDP-Core validates entities at two levels: **syntactic validation** at the API boundary and **semantic validation**
+against the template definition.
+
+#### Syntactic Validation (API Layer)
+
+The API enforces basic structural rules on the request body before any business logic runs:
+
+| Field                                   | Rule                | Error Message                        |
+|-----------------------------------------|---------------------|--------------------------------------|
+| `name`                                  | Required, not blank | Entity name is mandatory             |
+| `identifier`                            | Required, not blank | Entity identifier is mandatory       |
+| `relations[].name`                      | Required, not blank | Relation name is mandatory           |
+| `relations[].target_entity_identifiers` | Required, not null  | Relation target identifiers required |
+
+If any rule fails, the API returns `400 Bad Request` with a description of the violation.
+
+#### Semantic Validation (Domain Layer)
+
+After syntactic checks pass, the domain service validates the entity against its template definition:
+
+- **Template existence** - The template identifier must match an existing template. Returns `404 Not Found` if the
+  template does not exist.
+- **Property value types** - Values must conform to the property definition type (STRING, NUMBER, BOOLEAN).
+- **Property rules** - Values must satisfy the template's property rules (min/max length, format, regex, enum).
+- **Required properties** - All properties marked as required in the template must be present.
+- **Duplicate check** - An entity with the same identifier must not already exist for the template. Returns
+  `409 Conflict` if it does.
+
+### Response Codes
+
+| Code  | Description                                                    |
+|-------|----------------------------------------------------------------|
+| `201` | Entity created successfully                                    |
+| `400` | Invalid request body or validation failure                     |
+| `401` | Missing or invalid authentication token                        |
+| `403` | Insufficient permissions                                       |
+| `404` | Template not found for the given identifier                    |
+| `409` | An entity with this identifier already exists for the template |
+| `500` | Unexpected server error                                        |
+
+### Minimal Example
+
+You can create an entity with only the required fields:
+
+```json
+{
+  "name": "microservice-minimal",
+  "identifier": "microservice-minimal"
+}
+```
+
+Properties and relations are optional in the request body. The domain layer validates that all *required* properties (as
+defined in the template) are present.
 
 ---
 
@@ -84,17 +171,17 @@ Properties contain the actual data values. The structure follows the template's 
 ```json
 {
   "properties": {
-    "project_name": "My Backend Project",  // STRING
-    "issues_number": 137,                  // NUMBER
-    "loc": 20000,                          // NUMBER
-    "last_analysis_date": "2025-11-28..."  // STRING (date-time)
+    "project_name": "My Backend Project",
+    "issues_number": 137,
+    "loc": 20000,
+    "last_analysis_date": "2025-11-28..."
   }
 }
 ```
 
-### Validation
+### Validation of properties
 
-System validates values against the template's property rules:
+The system validates values against the template's property rules:
 
 - Required properties must be present
 - Types must match: STRING, NUMBER, or BOOLEAN
@@ -104,7 +191,63 @@ System validates values against the template's property rules:
 
 ## Relations
 
-Relations link entities together, forming a graph. It references the entity identifiers of related entities.
+Relations link entities together, forming a graph. Each relation references the entity identifiers of related entities.
+
+### Creating Relations
+
+When creating an entity, you specify relations as an array of objects, each with a `name` and a list of
+`target_entity_identifiers`:
+
+```json
+{
+  "relations": [
+    {
+      "name": "depends-on",
+      "target_entity_identifiers": [
+        "web-api-1",
+        "web-api-2"
+      ]
+    },
+    {
+      "name": "owned-by",
+      "target_entity_identifiers": [
+        "platform-team"
+      ]
+    }
+  ]
+}
+```
+
+### Relations in Responses
+
+In API responses, relations are grouped by name and include summary information about each target entity:
+
+```json
+{
+  "relations": {
+    "depends-on": [
+      {
+        "identifier": "web-api-1",
+        "name": "Web API 1"
+      },
+      {
+        "identifier": "web-api-2",
+        "name": "Web API 2"
+      }
+    ]
+  },
+  "relations_as_target": {
+    "depends-on": [
+      {
+        "identifier": "frontend-app",
+        "name": "Frontend App"
+      }
+    ]
+  }
+}
+```
+
+The `relations_as_target` field shows reverse relationships—other entities that reference this entity.
 
 ### One-to-One Relations (`to_many: false`)
 
@@ -112,43 +255,55 @@ For consistency, even single relations are represented as arrays:
 
 ```json
 {
-  "relations": {
-    "owned_by": ["platform-team"]
-  }
+  "relations": [
+    {
+      "name": "owned_by",
+      "target_entity_identifiers": [
+        "platform-team"
+      ]
+    }
+  ]
 }
 ```
 
 ### One-to-Many Relations (`to_many: true`)
 
-When multiple related entities are allowed, you can list several identifiers in the relation array:
+When multiple related entities are allowed, list several identifiers:
 
 ```json
 {
-  "relations": {
-    "components": ["frontend", "backend", "database"]
-  }
+  "relations": [
+    {
+      "name": "components",
+      "target_entity_identifiers": [
+        "frontend",
+        "backend",
+        "database"
+      ]
+    }
+  ]
 }
 ```
 
 ---
 
-## Audit Fields
+## Retrieving Entities
 
-Every entity tracks who created/modified it and when:
+### List Entities by Template
 
-```json
-{
-  "created_at": "2024-10-25T09:44:02.742Z",
-  "created_by": "auth0|65c1d23377c9bea7d7adc415",
-  "updated_at": "2025-11-29T09:44:03.448Z",
-  "updated_by": "webhook_integration_sonar"
-}
+Retrieve a paginated list of entities for a given template:
+
+```text
+GET /api/v1/entities/{templateIdentifier}?page=0&size=20&sort=identifier,asc
 ```
 
-The `created_by` and `updated_by` fields contain:
+### Get Entity by Identifier
 
-- User IDs for manual operations
-- Integration IDs for automated data ingestion
+Retrieve a specific entity using its template and entity identifiers:
+
+```text
+GET /api/v1/entities/{templateIdentifier}/identifier/{entityIdentifier}
+```
 
 ---
 
@@ -157,7 +312,8 @@ The `created_by` and `updated_by` fields contain:
 Because templates are configured at runtime, the entity structure is **dynamic**:
 
 > [!WARNING]
-> The second-level JSON paths (`properties`, `relations`) are **not guaranteed by the API contract**. Their structure depends on the template configuration.
+> The second-level JSON paths (`properties`, `relations`) are **not guaranteed by the API contract**. Their structure
+> depends on the template configuration.
 >
 > This means:
 >
@@ -168,4 +324,4 @@ Because templates are configured at runtime, the entity structure is **dynamic**
 
 - **[Properties](properties.md)** - Property types and validation rules
 - **[Relations](relations.md)** - How entities connect
-- **[Calculated Properties](calculated-properties.md)** - Automatic computations
+- **[API Reference](../api/index.md)** - Interactive Swagger UI documentation

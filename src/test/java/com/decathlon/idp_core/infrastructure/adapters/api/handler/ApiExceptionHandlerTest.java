@@ -25,10 +25,11 @@ import org.springframework.validation.BeanPropertyBindingResult;
 import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 
+import com.decathlon.idp_core.domain.exception.EntityAlreadyExistsException;
 import com.decathlon.idp_core.domain.exception.EntityTemplateAlreadyExistsException;
 import com.decathlon.idp_core.domain.exception.EntityTemplateNotFoundException;
+import com.decathlon.idp_core.domain.exception.EntityValidationException;
 import com.decathlon.idp_core.infrastructure.adapters.api.handler.ApiExceptionHandler.ErrorResponse;
-
 import jakarta.validation.ConstraintViolation;
 import jakarta.validation.ConstraintViolationException;
 
@@ -104,6 +105,45 @@ class ApiExceptionHandlerTest {
             assertNotNull(body);
             assertEquals(HttpStatus.CONFLICT.name(), body.getError());
             assertEquals(expectedMessage, body.getErrorDescription());
+        }
+
+        /// Tests the handling of [EntityAlreadyExistsException] by the [ApiExceptionHandler].
+        ///
+        /// **This test verifies that:**
+        /// - EntityAlreadyExistsException is properly caught and handled
+        /// - HTTP 409 Conflict status is returned
+        /// - Error response contains the original domain exception message
+        @Test
+        @DisplayName("Should handle EntityAlreadyExistsException with 409 status")
+        void shouldHandleEntityAlreadyExistsException() {
+            // Given
+            EntityAlreadyExistsException exception = new EntityAlreadyExistsException("my-web-service", "api-gateway");
+
+            // When
+            ResponseEntity<ErrorResponse> response = exceptionHandler.handleEntityAlreadyExistsException(exception);
+
+            // Then
+            assertNotNull(response);
+            assertEquals(HttpStatus.CONFLICT, response.getStatusCode());
+            ErrorResponse body = response.getBody();
+            assertNotNull(body);
+            assertEquals(HttpStatus.CONFLICT.name(), body.getError());
+            assertEquals(exception.getMessage(), body.getErrorDescription());
+        }
+
+        @Test
+        @DisplayName("Should handle EntityValidationException with 400 status")
+        void shouldHandleEntityValidationException() {
+            EntityValidationException exception = new EntityValidationException(java.util.List.of("Invalid property"));
+
+            ResponseEntity<ErrorResponse> response = exceptionHandler.handleEntityValidationException(exception);
+
+            assertNotNull(response);
+            assertEquals(HttpStatus.BAD_REQUEST, response.getStatusCode());
+            ErrorResponse body = response.getBody();
+            assertNotNull(body);
+            assertEquals(HttpStatus.BAD_REQUEST.name(), body.getError());
+            assertEquals(exception.getMessage(), body.getErrorDescription());
         }
     }
 
@@ -226,6 +266,29 @@ class ApiExceptionHandlerTest {
     @DisplayName("HTTP Message Exception Handling")
     class HttpMessageExceptionTests {
 
+        /// Provides test data for [HttpMessageNotReadableException] scenarios.
+        /// Each argument contains: input message and expected error description.
+        static Stream<Arguments> httpMessageNotReadableExceptionTestData() {
+            return Stream.of(
+                    Arguments.of(
+                            "Required request body is missing: public ResponseEntity",
+                            "Request body is required"
+                    ),
+                    Arguments.of(
+                            "JSON parse error: Unexpected character",
+                            "Invalid JSON format in request body"
+                    ),
+                    Arguments.of(
+                            "Cannot deserialize value of type `PropertyType` from String \"INVALID_TYPE\": not one of the values accepted for Enum class",
+                            "Invalid value 'INVALID_TYPE' for property 'type'"
+                    ),
+                    Arguments.of(
+                            "Cannot deserialize value of type `UnknownEnum` from String \"VALUE\": not one of the values accepted for Enum class",
+                            "Invalid enum value in request body"
+                    )
+            );
+        }
+
         /// Tests the handling of [HttpMessageNotReadableException] when exception message is null.
         ///
         /// **This test verifies that:**
@@ -252,29 +315,6 @@ class ApiExceptionHandlerTest {
             assertEquals("Invalid request body format", body.getErrorDescription());
         }
 
-        /// Provides test data for [HttpMessageNotReadableException] scenarios.
-        /// Each argument contains: input message and expected error description.
-        static Stream<Arguments> httpMessageNotReadableExceptionTestData() {
-            return Stream.of(
-                    Arguments.of(
-                            "Required request body is missing: public ResponseEntity",
-                            "Request body is required"
-                    ),
-                    Arguments.of(
-                            "JSON parse error: Unexpected character",
-                            "Invalid JSON format in request body"
-                    ),
-                    Arguments.of(
-                            "Cannot deserialize value of type `PropertyType` from String \"INVALID_TYPE\": not one of the values accepted for Enum class",
-                            "Invalid value 'INVALID_TYPE' for property 'type'"
-                    ),
-                    Arguments.of(
-                            "Cannot deserialize value of type `UnknownEnum` from String \"VALUE\": not one of the values accepted for Enum class",
-                            "Invalid enum value in request body"
-                    )
-            );
-        }
-
         /// Parameterized test for handling [HttpMessageNotReadableException] with various error scenarios.
         ///
         /// **This test verifies that different types of HttpMessageNotReadableException are properly
@@ -290,7 +330,7 @@ class ApiExceptionHandlerTest {
         /// - User-friendly error description is provided
         /// - Error response structure is consistent
         ///
-        /// @param originalMessage the original exception message to be processed
+        /// @param originalMessage          the original exception message to be processed
         /// @param expectedErrorDescription the expected user-friendly error description
         @ParameterizedTest
         @MethodSource("httpMessageNotReadableExceptionTestData")
