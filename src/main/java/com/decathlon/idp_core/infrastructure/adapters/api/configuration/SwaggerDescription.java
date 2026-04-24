@@ -123,7 +123,7 @@ public class SwaggerDescription {
 
     public static final String FIELD_RELATION_ID = "Unique identifier of the relation definition";
     public static final String FIELD_RELATION_NAME = "Name of the relation";
-    public static final String FIELD_RELATION_TARGET_IDENTIFIER = "Identifier of the target entity";
+    public static final String FIELD_RELATION_TARGET_IDENTIFIER = "Identifier of the target template";
     public static final String FIELD_RELATION_REQUIRED = "Whether this relation is required";
     public static final String FIELD_RELATION_TO_MANY = "Whether this relation can have multiple targets";
 

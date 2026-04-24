@@ -40,7 +40,7 @@ public class EntityTemplateJpaEntity {
     @Column(nullable = false, unique = true)
     private String identifier;
 
-    @Column(unique = true)
+    @Column(nullable = false, unique = true)
     private String name;
 
     private String description;

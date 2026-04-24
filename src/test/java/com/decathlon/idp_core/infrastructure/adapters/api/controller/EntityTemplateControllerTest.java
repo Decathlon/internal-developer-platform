@@ -129,7 +129,7 @@ class EntityTemplateControllerTest extends AbstractIntegrationTest {
                     .andExpect(jsonPath("$.page.number").value(1));
         }
 
-        /// Tests the GET /api/v1/entity-templates/identifier/{identifier} endpoint for
+        /// Tests the GET /api/v1/entity-templates/{identifier} endpoint for
         /// retrieving a specific template.
         /// This test verifies that:
         /// @throws Exception if the MockMvc request fails
@@ -138,7 +138,7 @@ class EntityTemplateControllerTest extends AbstractIntegrationTest {
         @WithMockUser
         void getTemplates_paginated_200_invalid_pagination() throws Exception {
 
-            mockMvc.perform(get("/api/v1/entity-templates/identifier/frontend-app")
+            mockMvc.perform(get("/api/v1/entity-templates/frontend-app")
                     .accept(APPLICATION_JSON))
                     .andExpect(status().isOk())
                     .andExpect(jsonPath("$.identifier").value("frontend-app"));
@@ -311,16 +311,6 @@ class EntityTemplateControllerTest extends AbstractIntegrationTest {
         /// This test verifies that:
         /// - Validation error message indicates property definitions are
         /// @throws Exception if the MockMvc request fails
-        @Test
-        @WithMockUser()
-        @DisplayName("Returns 400 when properties array is empty")
-        void postTemplate_400_properties_empty() throws Exception {
-            MvcResult res = postBadRequestAndAssertEquals(ENTITY_TEMPLATE_PATH,
-                    ENTITY_TEMPLATE_JSON_TEST_PATH + "postEntityTemplate_400_properties_empty.json",
-                    ValidationMessages.PROPERTY_DEFINITIONS_MANDATORY);
-            assertNotNull(res, "Test executed successfully");
-        }
-
         /// Tests the POST /api/v1/entity-templates endpoint when property name field is
         /// missing.
         /// This test verifies that:
@@ -441,17 +431,42 @@ class EntityTemplateControllerTest extends AbstractIntegrationTest {
             assertNotNull(res, "Test executed successfully");
         }
 
-        /// Tests the POST /api/v1/entity-templates endpoint with invalid property rules.
-        /// This test verifies that rules incompatible with property type are rejected.
+        /// Tests the POST /api/v1/entity-templates endpoint with no property definitions.
+        /// This test verifies that:
+        /// - Templates can be created without any properties
+        /// - The endpoint returns HTTP 201 Created status
         /// @throws Exception if the MockMvc request fails
         @Test
         @WithMockUser()
-        @DisplayName("Returns 400 when STRING property has numeric rules")
-        void postTemplate_400_string_property_with_numeric_rules() throws Exception {
-            MvcResult res = postBadRequestAndAssertEquals(ENTITY_TEMPLATE_PATH,
-                    ENTITY_TEMPLATE_JSON_TEST_PATH + "postEntityTemplate_400_invalid_rules.json",
-                    "Property 'name' of type STRING: Numeric rule maxValue is not allowed for STRING properties");
-            assertNotNull(res, "Test executed successfully");
+        @DisplayName("Should create template without properties and return 201")
+        void postTemplate_201_without_properties() throws Exception {
+            mockMvc.perform(MockMvcRequestBuilders.post(ENTITY_TEMPLATE_PATH)
+                    .contentType(APPLICATION_JSON)
+                    .accept(APPLICATION_JSON)
+                    .with(csrf())
+                    .content(getJsonTestFileContent(
+                            ENTITY_TEMPLATE_JSON_TEST_PATH + "postEntityTemplate_201_without_properties.json")))
+                    .andExpect(status().isCreated())
+                    .andReturn();
+        }
+
+        /// Tests the POST /api/v1/entity-templates endpoint with empty property array.
+        /// This test verifies that:
+        /// - Templates can be created with an empty properties array
+        /// - The endpoint returns HTTP 201 Created status
+        /// @throws Exception if the MockMvc request fails
+        @Test
+        @WithMockUser()
+        @DisplayName("Should create template with empty properties array and return 201")
+        void postTemplate_201_with_empty_properties() throws Exception {
+            mockMvc.perform(MockMvcRequestBuilders.post(ENTITY_TEMPLATE_PATH)
+                    .contentType(APPLICATION_JSON)
+                    .accept(APPLICATION_JSON)
+                    .with(csrf())
+                    .content(getJsonTestFileContent(
+                            ENTITY_TEMPLATE_JSON_TEST_PATH + "postEntityTemplate_201_with_empty_properties.json")))
+                    .andExpect(status().isCreated())
+                    .andReturn();
         }
 
     }
@@ -464,7 +479,7 @@ class EntityTemplateControllerTest extends AbstractIntegrationTest {
         @Test
         void putTemplate_without_user_token_401() throws Exception {
             String identifier = "web-service";
-            mockMvc.perform(MockMvcRequestBuilders.put("/api/v1/entity-templates/identifier/" + identifier)
+            mockMvc.perform(MockMvcRequestBuilders.put("/api/v1/entity-templates/" + identifier)
                     .contentType(APPLICATION_JSON)
                     .accept(APPLICATION_JSON)
                     .with(csrf())
@@ -494,7 +509,7 @@ class EntityTemplateControllerTest extends AbstractIntegrationTest {
             PropertyDefinition initialProperty = initialTemplate.propertiesDefinitions().get(0);
             UUID initialRulesId = initialProperty.rules().id();
 
-            mockMvc.perform(MockMvcRequestBuilders.put("/api/v1/entity-templates/identifier/temp-test-99")
+            mockMvc.perform(MockMvcRequestBuilders.put("/api/v1/entity-templates/temp-test-99")
                     .contentType(APPLICATION_JSON)
                     .accept(APPLICATION_JSON)
                     .with(csrf())
@@ -549,7 +564,7 @@ class EntityTemplateControllerTest extends AbstractIntegrationTest {
                               "relations_definitions": [
                                 {
                                   "name": "owns",
-                                  "target_entity_identifier": "child-entity",
+                                  "target_template_identifier": "child-entity",
                                   "required": true,
                                   "to_many": true
                                 }
@@ -575,13 +590,13 @@ class EntityTemplateControllerTest extends AbstractIntegrationTest {
                       "relations_definitions": [
                         {
                           "name": "owns",
-                          "target_entity_identifier": "child-entity-updated",
+                          "target_template_identifier": "child-entity-updated",
                           "required": false,
                           "to_many": false
                         },
                         {
                           "name": "belongsTo",
-                          "target_entity_identifier": "parent-entity",
+                          "target_template_identifier": "parent-entity",
                           "required": true,
                           "to_many": false
                         }
@@ -589,7 +604,7 @@ class EntityTemplateControllerTest extends AbstractIntegrationTest {
                     }
                     """;
 
-            mockMvc.perform(MockMvcRequestBuilders.put(ENTITY_TEMPLATE_PATH + "/identifier/template-rel-test")
+            mockMvc.perform(MockMvcRequestBuilders.put(ENTITY_TEMPLATE_PATH + "/template-rel-test")
                     .contentType(APPLICATION_JSON)
                     .accept(APPLICATION_JSON)
                     .with(csrf())
@@ -617,11 +632,11 @@ class EntityTemplateControllerTest extends AbstractIntegrationTest {
                     .stream()
                     .collect(Collectors.toMap(RelationDefinition::name, r -> r));
 
-            assertThat(relationsMap.get("owns").targetEntityIdentifier()).isEqualTo("child-entity-updated");
+            assertThat(relationsMap.get("owns").targetTemplateIdentifier()).isEqualTo("child-entity-updated");
             assertThat(relationsMap.get("owns").required()).isFalse();
             assertThat(relationsMap.get("owns").toMany()).isFalse();
 
-            assertThat(relationsMap.get("belongsTo").targetEntityIdentifier()).isEqualTo("parent-entity");
+            assertThat(relationsMap.get("belongsTo").targetTemplateIdentifier()).isEqualTo("parent-entity");
             assertThat(relationsMap.get("belongsTo").required()).isTrue();
             assertThat(relationsMap.get("belongsTo").toMany()).isFalse();
         }
@@ -631,7 +646,7 @@ class EntityTemplateControllerTest extends AbstractIntegrationTest {
         @DisplayName("Should update template and return 201")
         void putTemplate_200() throws Exception {
             String identifier = "web-service";
-            mockMvc.perform(MockMvcRequestBuilders.put("/api/v1/entity-templates/identifier/" + identifier)
+            mockMvc.perform(MockMvcRequestBuilders.put("/api/v1/entity-templates/" + identifier)
                     .contentType(APPLICATION_JSON)
                     .accept(APPLICATION_JSON)
                     .with(csrf())
@@ -649,7 +664,7 @@ class EntityTemplateControllerTest extends AbstractIntegrationTest {
         @WithMockUser
         void putTemplate_withUnknownIdentifier_404() throws Exception {
             String identifier = "unknown-identifier";
-            mockMvc.perform(MockMvcRequestBuilders.put("/api/v1/entity-templates/identifier/" + identifier)
+            mockMvc.perform(MockMvcRequestBuilders.put("/api/v1/entity-templates/" + identifier)
                     .contentType(APPLICATION_JSON)
                     .accept(APPLICATION_JSON)
                     .with(csrf())
@@ -662,24 +677,9 @@ class EntityTemplateControllerTest extends AbstractIntegrationTest {
 
         @Test
         @WithMockUser()
-        void putTemplate_400_properties_empty() throws Exception {
-            String identifier = "unknown-identifier";
-            mockMvc.perform(MockMvcRequestBuilders.put("/api/v1/entity-templates/identifier/" + identifier)
-                    .contentType(APPLICATION_JSON)
-                    .accept(APPLICATION_JSON)
-                    .with(csrf())
-                    .content(getJsonTestFileContent(
-                            "integration_test/json/entity-template/v1/putEntityTemplate_400_withoutPropertiesDefinitions.json")))
-                    .andExpect(status().isBadRequest())
-                    .andExpect(content().string(
-                            "{\"error\":\"BAD_REQUEST\",\"error_description\":\"Entity Template property definitions are mandatory and cannot be empty\"}"));
-        }
-
-        @Test
-        @WithMockUser()
         void putTemplate_400_propertyNameIsMissing() throws Exception {
             String identifier = "web-service";
-            mockMvc.perform(MockMvcRequestBuilders.put("/api/v1/entity-templates/identifier/" + identifier)
+            mockMvc.perform(MockMvcRequestBuilders.put("/api/v1/entity-templates/" + identifier)
                     .contentType(APPLICATION_JSON)
                     .accept(APPLICATION_JSON)
                     .with(csrf())
@@ -694,7 +694,7 @@ class EntityTemplateControllerTest extends AbstractIntegrationTest {
         @WithMockUser()
         void putTemplate_400_propertyNameIsBlank() throws Exception {
             String identifier = "web-service";
-            mockMvc.perform(MockMvcRequestBuilders.put("/api/v1/entity-templates/identifier/" + identifier)
+            mockMvc.perform(MockMvcRequestBuilders.put("/api/v1/entity-templates/" + identifier)
                     .contentType(APPLICATION_JSON)
                     .accept(APPLICATION_JSON)
                     .with(csrf())
@@ -709,7 +709,7 @@ class EntityTemplateControllerTest extends AbstractIntegrationTest {
         @WithMockUser()
         void putTemplate_400_propertyDescriptionIsBlank() throws Exception {
             String identifier = "web-service";
-            mockMvc.perform(MockMvcRequestBuilders.put("/api/v1/entity-templates/identifier/" + identifier)
+            mockMvc.perform(MockMvcRequestBuilders.put("/api/v1/entity-templates/" + identifier)
                     .contentType(APPLICATION_JSON)
                     .accept(APPLICATION_JSON)
                     .with(csrf())
@@ -724,7 +724,7 @@ class EntityTemplateControllerTest extends AbstractIntegrationTest {
         @WithMockUser()
         void putTemplate_400_propertyDescriptionIsMissing() throws Exception {
             String identifier = "web-service";
-            mockMvc.perform(MockMvcRequestBuilders.put("/api/v1/entity-templates/identifier/" + identifier)
+            mockMvc.perform(MockMvcRequestBuilders.put("/api/v1/entity-templates/" + identifier)
                     .contentType(APPLICATION_JSON)
                     .accept(APPLICATION_JSON)
                     .with(csrf())
@@ -739,7 +739,7 @@ class EntityTemplateControllerTest extends AbstractIntegrationTest {
         @WithMockUser()
         void putTemplate_400_propertyTypeIsMissing() throws Exception {
             String identifier = "web-service";
-            mockMvc.perform(MockMvcRequestBuilders.put("/api/v1/entity-templates/identifier/" + identifier)
+            mockMvc.perform(MockMvcRequestBuilders.put("/api/v1/entity-templates/" + identifier)
                     .contentType(APPLICATION_JSON)
                     .accept(APPLICATION_JSON)
                     .with(csrf())
@@ -756,7 +756,7 @@ class EntityTemplateControllerTest extends AbstractIntegrationTest {
             String identifier = "web-service";
             Optional<EntityTemplate> entityTemplateUpdated = entityTemplateRepository.findByIdentifier("microservice");
             assertThat(entityTemplateUpdated).isPresent();
-            mockMvc.perform(MockMvcRequestBuilders.put("/api/v1/entity-templates/identifier/" + identifier)
+            mockMvc.perform(MockMvcRequestBuilders.put("/api/v1/entity-templates/" + identifier)
                     .contentType(APPLICATION_JSON)
                     .accept(APPLICATION_JSON)
                     .with(csrf())
@@ -764,10 +764,10 @@ class EntityTemplateControllerTest extends AbstractIntegrationTest {
                             "integration_test/json/entity-template/v1/putEntityTemplate_409_withIdentifierAlreadyExists.json")))
                     .andExpect(status().isConflict())
                     .andExpect(content().string(
-                            "{\"error\":\"CONFLICT\",\"error_description\":\"An Entity Template already exists with the same identifier:microservice\"}"));
+                            "{\"error\":\"CONFLICT\",\"error_description\":\"The entity template name Microservice already exists\"}"));
         }
 
-        /// Tests the PUT /api/v1/entity-templates/identifier/{identifier} endpoint when the name field is
+        /// Tests the PUT /api/v1/entity-templates/{identifier} endpoint when the name field is
         /// missing.
         /// This test verifies that:
         /// - Validation error message matches expected template name mandatory
@@ -776,7 +776,7 @@ class EntityTemplateControllerTest extends AbstractIntegrationTest {
         @WithMockUser()
         @DisplayName("Returns 400 when name is missing")
         void putTemplate_400_name_missing() throws Exception {
-            mockMvc.perform(MockMvcRequestBuilders.put("/api/v1/entity-templates/identifier/web-service")
+            mockMvc.perform(MockMvcRequestBuilders.put("/api/v1/entity-templates/web-service")
                     .contentType(APPLICATION_JSON)
                     .accept(APPLICATION_JSON)
                     .with(csrf())
@@ -786,7 +786,7 @@ class EntityTemplateControllerTest extends AbstractIntegrationTest {
                     .andExpect(jsonPath("$.error_description").value(ValidationMessages.TEMPLATE_NAME_MANDATORY));
         }
 
-        /// Tests the PUT /api/v1/entity-templates/identifier/{identifier} endpoint when name field is
+        /// Tests the PUT /api/v1/entity-templates/{identifier} endpoint when name field is
         /// blank.
         /// This test verifies that:
         /// - Validation error message contains expected template name mandatory message
@@ -795,7 +795,7 @@ class EntityTemplateControllerTest extends AbstractIntegrationTest {
         @WithMockUser()
         @DisplayName("Returns 400 when name is blank")
         void putTemplate_400_name_blank() throws Exception {
-            mockMvc.perform(MockMvcRequestBuilders.put("/api/v1/entity-templates/identifier/web-service")
+            mockMvc.perform(MockMvcRequestBuilders.put("/api/v1/entity-templates/web-service")
                     .contentType(APPLICATION_JSON)
                     .accept(APPLICATION_JSON)
                     .with(csrf())
@@ -805,7 +805,7 @@ class EntityTemplateControllerTest extends AbstractIntegrationTest {
                     .andExpect(jsonPath("$.error_description").value(containsString(ValidationMessages.TEMPLATE_NAME_MANDATORY)));
         }
 
-        /// Tests the PUT /api/v1/entity-templates/identifier/{identifier} endpoint when name field
+        /// Tests the PUT /api/v1/entity-templates/{identifier} endpoint when name field
         /// already exists.
         /// This test verifies that:
         /// - Validation error message contains expected template name already exists
@@ -814,7 +814,7 @@ class EntityTemplateControllerTest extends AbstractIntegrationTest {
         @WithMockUser()
         @DisplayName("Returns 409 when name already exists")
         void putTemplate_409_name_already_exists() throws Exception {
-            mockMvc.perform(MockMvcRequestBuilders.put("/api/v1/entity-templates/identifier/web-service")
+            mockMvc.perform(MockMvcRequestBuilders.put("/api/v1/entity-templates/web-service")
                     .contentType(APPLICATION_JSON)
                     .accept(APPLICATION_JSON)
                     .with(csrf())
@@ -823,7 +823,7 @@ class EntityTemplateControllerTest extends AbstractIntegrationTest {
                     .andExpect(content().string("{\"error\":\"CONFLICT\",\"error_description\":\"The entity template name Microservice already exists\"}"));
         }
 
-        /// Tests the PUT /api/v1/entity-templates/identifier/{identifier} endpoint when name field is
+        /// Tests the PUT /api/v1/entity-templates/{identifier} endpoint when name field is
         /// too long.
         /// This test verifies that:
         /// - Validation error message matches expected template name too long
@@ -832,7 +832,7 @@ class EntityTemplateControllerTest extends AbstractIntegrationTest {
         @WithMockUser()
         @DisplayName("Returns 400 when name is too long")
         void putTemplate_400_name_too_long() throws Exception {
-            mockMvc.perform(MockMvcRequestBuilders.put("/api/v1/entity-templates/identifier/web-service")
+            mockMvc.perform(MockMvcRequestBuilders.put("/api/v1/entity-templates/web-service")
                     .contentType(APPLICATION_JSON)
                     .accept(APPLICATION_JSON)
                     .with(csrf())
@@ -842,7 +842,7 @@ class EntityTemplateControllerTest extends AbstractIntegrationTest {
                     .andExpect(jsonPath("$.error_description").value(ValidationMessages.TEMPLATE_NAME_MAX_SIZE));
         }
 
-        /// Tests the PUT /api/v1/entity-templates/identifier/{identifier} endpoint when name field does
+        /// Tests the PUT /api/v1/entity-templates/{identifier} endpoint when name field does
         /// not respect regex pattern.
         /// This test verifies that:
         /// - Validation error message matches expected template name pattern
@@ -851,7 +851,7 @@ class EntityTemplateControllerTest extends AbstractIntegrationTest {
         @WithMockUser()
         @DisplayName("Returns 400 when name does not respect regex pattern")
         void putTemplate_400_name_invalid_pattern() throws Exception {
-            mockMvc.perform(MockMvcRequestBuilders.put("/api/v1/entity-templates/identifier/web-service")
+            mockMvc.perform(MockMvcRequestBuilders.put("/api/v1/entity-templates/web-service")
                     .contentType(APPLICATION_JSON)
                     .accept(APPLICATION_JSON)
                     .with(csrf())
@@ -859,6 +859,44 @@ class EntityTemplateControllerTest extends AbstractIntegrationTest {
                     .andExpect(status().isBadRequest())
                     .andExpect(jsonPath("$.error").value("BAD_REQUEST"))
                     .andExpect(jsonPath("$.error_description").value(ValidationMessages.TEMPLATE_NAME_FORMAT));
+        }
+
+        /// Tests the PUT /api/v1/entity-templates/{identifier} endpoint without properties.
+        /// This test verifies that:
+        /// - Templates can be updated without any properties
+        /// - The endpoint returns HTTP 200 OK status
+        /// @throws Exception if the MockMvc request fails
+        @Test
+        @WithMockUser()
+        @DisplayName("Should update template without properties and return 200")
+        void putTemplate_200_without_properties() throws Exception {
+            String identifier = "web-service";
+            mockMvc.perform(MockMvcRequestBuilders.put("/api/v1/entity-templates/" + identifier)
+                    .contentType(APPLICATION_JSON)
+                    .accept(APPLICATION_JSON)
+                    .with(csrf())
+                    .content(getJsonTestFileContent(
+                            PostTemplateTests.ENTITY_TEMPLATE_JSON_TEST_PATH + "putEntityTemplate_200_without_properties.json")))
+                    .andExpect(status().isOk());
+        }
+
+        /// Tests the PUT /api/v1/entity-templates/{identifier} endpoint with empty properties array.
+        /// This test verifies that:
+        /// - Templates can be updated with an empty properties array
+        /// - The endpoint returns HTTP 200 OK status
+        /// @throws Exception if the MockMvc request fails
+        @Test
+        @WithMockUser()
+        @DisplayName("Should update template with empty properties array and return 200")
+        void putTemplate_200_with_empty_properties() throws Exception {
+            String identifier = "web-service";
+            mockMvc.perform(MockMvcRequestBuilders.put("/api/v1/entity-templates/" + identifier)
+                    .contentType(APPLICATION_JSON)
+                    .accept(APPLICATION_JSON)
+                    .with(csrf())
+                    .content(getJsonTestFileContent(
+                            PostTemplateTests.ENTITY_TEMPLATE_JSON_TEST_PATH + "putEntityTemplate_200_with_empty_properties.json")))
+                    .andExpect(status().isOk());
         }
 
     }
@@ -881,7 +919,7 @@ class EntityTemplateControllerTest extends AbstractIntegrationTest {
             // Use an existing template ID from test data
             String templateId = "monitoring-service";
 
-            mockMvc.perform(MockMvcRequestBuilders.delete(ENTITY_TEMPLATE_PATH + "/identifier/" + templateId)
+            mockMvc.perform(MockMvcRequestBuilders.delete(ENTITY_TEMPLATE_PATH + "/" + templateId)
                     .accept(APPLICATION_JSON)
                     .with(csrf()))
                     .andExpect(status().isNoContent());
@@ -900,7 +938,7 @@ class EntityTemplateControllerTest extends AbstractIntegrationTest {
             // Use a non-existent template ID
             String nonExistentId = "non-existing-identifier";
 
-            mockMvc.perform(MockMvcRequestBuilders.delete(ENTITY_TEMPLATE_PATH + "/identifier/" + nonExistentId)
+            mockMvc.perform(MockMvcRequestBuilders.delete(ENTITY_TEMPLATE_PATH + "/" + nonExistentId)
                     .accept(APPLICATION_JSON)
                     .with(csrf()))
                     .andExpect(status().isNotFound())

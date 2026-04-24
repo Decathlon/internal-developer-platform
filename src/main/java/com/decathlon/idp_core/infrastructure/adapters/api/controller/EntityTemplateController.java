@@ -47,6 +47,7 @@ import com.decathlon.idp_core.domain.model.entity_template.EntityTemplate;
 import com.decathlon.idp_core.domain.service.EntityTemplateService;
 import com.decathlon.idp_core.infrastructure.adapters.api.configuration.SwaggerConfiguration.TemplatePageResponse;
 import com.decathlon.idp_core.infrastructure.adapters.api.dto.in.EntityTemplateDtoIn;
+import com.decathlon.idp_core.infrastructure.adapters.api.dto.in.EntityTemplatePutDtoIn;
 import com.decathlon.idp_core.infrastructure.adapters.api.dto.out.entitytemplate.EntityTemplateDtoOut;
 import com.decathlon.idp_core.infrastructure.adapters.api.handler.ApiExceptionHandler;
 import com.decathlon.idp_core.infrastructure.adapters.api.handler.ApiExceptionHandler.ErrorResponse;
@@ -118,7 +119,7 @@ public class EntityTemplateController {
                         @Content(schema = @Schema(implementation = EntityTemplateDtoOut.class)) })
         @ApiResponse(responseCode = NOT_FOUND_CODE, description = RESPONSE_TEMPLATE_NOT_FOUND_IDENTIFIER, content = {
                         @Content(schema = @Schema(implementation = ApiExceptionHandler.ErrorResponse.class)) })
-        @GetMapping("/identifier/{identifier}")
+        @GetMapping("/{identifier}")
         @ResponseStatus(OK)
         public EntityTemplateDtoOut getTemplateByIdentifier(@PathVariable String identifier) {
                 EntityTemplate entity = entityTemplateService.getEntityTemplateByIdentifier(identifier);
@@ -151,11 +152,11 @@ public class EntityTemplateController {
                         @Content(schema = @Schema(implementation = EntityTemplateDtoOut.class)) })
         @ApiResponse(responseCode = "404", description = RESPONSE_TEMPLATE_NOT_FOUND_IDENTIFIER, content = {
                         @Content(schema = @Schema(implementation = ApiExceptionHandler.ErrorResponse.class)) })
-        @PutMapping("identifier/{identifier}")
+        @PutMapping("/{identifier}")
         public EntityTemplateDtoOut updateTemplate(
                         @PathVariable(name = "identifier") String identifier,
-                        @RequestBody @Valid EntityTemplateDtoIn updatedTemplateDto) {
-                EntityTemplate entityTemplate = entityTemplateService.putEntityTemplate(identifier, templateMapper.fromDtoToEntityTemplate(updatedTemplateDto));
+                        @RequestBody @Valid EntityTemplatePutDtoIn updatedTemplateDto) {
+                EntityTemplate entityTemplate = entityTemplateService.putEntityTemplate(identifier, templateMapper.fromPutDtoToEntityTemplate(identifier, updatedTemplateDto));
                 return templateMapper.fromEntityTemplatetoDto(entityTemplate);
         }
 
@@ -170,7 +171,7 @@ public class EntityTemplateController {
                         @Content(schema = @Schema(implementation = ErrorResponse.class))
         })
         @ResponseStatus(NO_CONTENT)
-        @DeleteMapping("/identifier/{identifier}")
+        @DeleteMapping("/{identifier}")
         public void deleteTemplate(@PathVariable String identifier) {
                 entityTemplateService.deleteEntityTemplate(identifier);
         }

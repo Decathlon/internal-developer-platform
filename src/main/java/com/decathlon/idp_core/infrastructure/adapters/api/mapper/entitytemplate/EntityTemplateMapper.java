@@ -9,6 +9,7 @@ import com.decathlon.idp_core.domain.model.entity_template.PropertyDefinition;
 import com.decathlon.idp_core.domain.model.entity_template.PropertyRules;
 import com.decathlon.idp_core.domain.model.entity_template.RelationDefinition;
 import com.decathlon.idp_core.infrastructure.adapters.api.dto.in.EntityTemplateDtoIn;
+import com.decathlon.idp_core.infrastructure.adapters.api.dto.in.EntityTemplatePutDtoIn;
 import com.decathlon.idp_core.infrastructure.adapters.api.dto.in.PropertyDefinitionDtoIn;
 import com.decathlon.idp_core.infrastructure.adapters.api.dto.in.PropertyRulesDtoIn;
 import com.decathlon.idp_core.infrastructure.adapters.api.dto.in.RelationDefinitionDtoIn;
@@ -47,17 +48,42 @@ public class EntityTemplateMapper {
     /// @param dto the input DTO to convert, may be null
     /// @return the converted EntityTemplate domain entity, or null if input is null
     public EntityTemplate fromDtoToEntityTemplate(EntityTemplateDtoIn dto) {
-        if (dto == null) {
+        if (dto == null || dto.getCommonFields() == null) {
             return null;
         }
 
         return new EntityTemplate(
                 null,
                 dto.getIdentifier(),
-                dto.getName(),
-                dto.getDescription(),
-                toPropertyDefinitionEntities(dto.getPropertiesDefinitions()),
-                toRelationDefinitionEntities(dto.getRelationsDefinitions())
+                dto.getCommonFields().getName(),
+                dto.getCommonFields().getDescription(),
+                toPropertyDefinitionEntities(dto.getCommonFields().getPropertiesDefinitions()),
+                toRelationDefinitionEntities(dto.getCommonFields().getRelationsDefinitions())
+        );
+    }
+
+    ///
+    /// Converts an EntityTemplate PUT input DTO to a domain entity.
+    /// This method maps all fields from the PUT DTO to create a new EntityTemplate
+    /// domain entity, using the provided identifier from the path parameter.
+    /// Nested collections (properties and relations) are recursively converted using
+    /// their respective mapping methods.
+    ///
+    /// @param identifier the entity identifier from the path parameter
+    /// @param dto the input DTO to convert, may be null
+    /// @return the converted EntityTemplate domain entity, or null if input is null
+    public EntityTemplate fromPutDtoToEntityTemplate(String identifier, EntityTemplatePutDtoIn dto) {
+        if (dto == null || dto.getCommonFields() == null) {
+            return null;
+        }
+
+        return new EntityTemplate(
+                null,
+                identifier,
+                dto.getCommonFields().getName(),
+                dto.getCommonFields().getDescription(),
+                toPropertyDefinitionEntities(dto.getCommonFields().getPropertiesDefinitions()),
+                toRelationDefinitionEntities(dto.getCommonFields().getRelationsDefinitions())
         );
     }
 
@@ -204,7 +230,7 @@ public class EntityTemplateMapper {
         return new RelationDefinition(
                 null,
                 dto.getName(),
-                dto.getTargetEntityIdentifier(),
+                dto.getTargetTemplateIdentifier(),
                 dto.isRequired(),
                 dto.isToMany()
         );
@@ -217,7 +243,7 @@ public class EntityTemplateMapper {
 
         return RelationDefinitionDtoOut.builder()
                 .name(entity.name())
-                .targetEntityIdentifier(entity.targetEntityIdentifier())
+                .targetTemplateIdentifier(entity.targetTemplateIdentifier())
                 .required(entity.required())
                 .toMany(entity.toMany())
                 .build();

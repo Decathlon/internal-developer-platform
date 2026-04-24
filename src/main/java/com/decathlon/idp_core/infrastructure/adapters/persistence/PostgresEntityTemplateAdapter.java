@@ -198,13 +198,13 @@ public class PostgresEntityTemplateAdapter implements EntityTemplateRepositoryPo
         for (var domRel : domain.relationsDefinitions()) {
             RelationDefinitionJpaEntity ex = existingByName.get(domRel.name());
             if (ex != null) {
-                ex.setTargetEntityIdentifier(domRel.targetEntityIdentifier());
+                ex.setTargetTemplateIdentifier(domRel.targetTemplateIdentifier());
                 ex.setRequired(domRel.required());
                 ex.setToMany(domRel.toMany());
             } else {
                 RelationDefinitionJpaEntity newRel = RelationDefinitionJpaEntity.builder()
                         .name(domRel.name())
-                        .targetEntityIdentifier(domRel.targetEntityIdentifier())
+                        .targetTemplateIdentifier(domRel.targetTemplateIdentifier())
                         .required(domRel.required())
                         .toMany(domRel.toMany())
                         .build();

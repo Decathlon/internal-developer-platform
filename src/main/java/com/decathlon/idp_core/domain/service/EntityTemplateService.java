@@ -87,7 +87,7 @@ public class EntityTemplateService {
     @Transactional
     public EntityTemplate createEntityTemplate(@Valid EntityTemplate entityTemplate) {
         if (entityTemplate.identifier() != null &&
-                entityTemplateRepositoryPort.findByIdentifier(entityTemplate.identifier()).isPresent()) {
+                entityTemplateRepositoryPort.existsByIdentifier(entityTemplate.identifier())) {
             throw new EntityTemplateAlreadyExistsException(entityTemplate.identifier());
         }
         if (entityTemplate.name() != null &&
@@ -124,7 +124,7 @@ public class EntityTemplateService {
         EntityTemplate existingTemplate = getEntityTemplateByIdentifier(identifier);
 
         if (!identifier.equals(updatedTemplate.identifier()) &&
-                entityTemplateRepositoryPort.findByIdentifier(updatedTemplate.identifier()).isPresent()) {
+                entityTemplateRepositoryPort.existsByIdentifier(updatedTemplate.identifier())) {
             throw new EntityTemplateAlreadyExistsException(updatedTemplate.identifier());
         }
 
@@ -231,7 +231,7 @@ public class EntityTemplateService {
                 RelationDefinition merged = new RelationDefinition(
                         existingRel.id(),
                         rel.name(),
-                        rel.targetEntityIdentifier(),
+                        rel.targetTemplateIdentifier(),
                         rel.required(),
                         rel.toMany()
                 );

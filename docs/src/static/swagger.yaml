@@ -12,7 +12,7 @@ tags:
   - name: Entities Templates Management
     description: Operations related to entity template management
 paths:
-  /api/v1/entity-templates/identifier/{identifier}:
+  /api/v1/entity-templates/{identifier}:
     get:
       tags:
         - Entities Templates Management
@@ -54,7 +54,7 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/EntityTemplateDtoIn'
+              $ref: '#/components/schemas/EntityTemplatePutDtoIn'
         required: true
       responses:
         '200':
@@ -176,6 +176,8 @@ components:
           description: Unique Entity Template name
           example: Service
           maxLength: 255
+          minLength: 1
+          pattern: "^[a-zA-Z0-9 _-]+$"
         description:
           type: string
           description: Entity Template description
@@ -185,7 +187,6 @@ components:
           description: List of property definitions for this template
           items:
             $ref: '#/components/schemas/PropertyDefinitionDtoIn'
-          minItems: 1
         relations_definitions:
           type: array
           description: List of relation definitions for this template
@@ -194,7 +195,33 @@ components:
       required:
         - identifier
         - name
-        - properties_definitions
+    EntityTemplatePutDtoIn:
+      type: object
+      description: Input DTO for updating an entity template
+      properties:
+        name:
+          type: string
+          description: Entity Template name
+          example: Service
+          maxLength: 255
+          minLength: 1
+          pattern: "^[a-zA-Z0-9 _-]+$"
+        description:
+          type: string
+          description: Entity Template description
+          example: A comprehensive service template
+        properties_definitions:
+          type: array
+          description: List of property definitions for this template
+          items:
+            $ref: '#/components/schemas/PropertyDefinitionDtoIn'
+        relations_definitions:
+          type: array
+          description: List of relation definitions for this template
+          items:
+            $ref: '#/components/schemas/RelationDefinitionDtoIn'
+      required:
+        - name
     PropertyDefinitionDtoIn:
       type: object
       description: Input DTO for creating or updating a property definition
@@ -335,9 +362,9 @@ components:
           description: Name of the relation
           example: dependencies
           minLength: 1
-        target_entity_identifier:
+        target_template_identifier:
           type: string
-          description: Identifier of the target entity
+          description: Identifier of the target template
           example: service
           minLength: 1
         required:
@@ -352,7 +379,7 @@ components:
           example: true
       required:
         - name
-        - target_entity_identifier
+        - target_template_identifier
     EntityTemplateDtoOut:
       type: object
       description: Output for entity template
@@ -473,9 +500,9 @@ components:
           type: string
           description: Name of the relation
           example: dependencies
-        target_entity_identifier:
+        target_template_identifier:
           type: string
-          description: Identifier of the target entity
+          description: Identifier of the target template
           example: component-template
         required:
           type: boolean

@@ -16,7 +16,6 @@ import com.decathlon.idp_core.domain.exception.EntityNotFoundException;
 import com.decathlon.idp_core.domain.exception.EntityTemplateAlreadyExistsException;
 import com.decathlon.idp_core.domain.exception.EntityTemplateNameAlreadyExistsException;
 import com.decathlon.idp_core.domain.exception.EntityTemplateNotFoundException;
-import com.decathlon.idp_core.domain.exception.PropertyRulesConflictException;
 
 import jakarta.validation.ConstraintViolation;
 import jakarta.validation.ConstraintViolationException;
@@ -24,6 +23,9 @@ import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.web.servlet.NoHandlerFoundException;
+
+import static org.springframework.http.HttpStatus.NOT_FOUND;
 
 /// Global exception handler providing centralized error handling for all API endpoints.
 ///
@@ -53,8 +55,8 @@ public class ApiExceptionHandler {
     @ExceptionHandler(EntityTemplateNotFoundException.class)
     public ResponseEntity<ErrorResponse> handleTemplateNotFoundException(EntityTemplateNotFoundException ex) {
         log.warn("Template not found: {}", ex.getMessage());
-        ErrorResponse errorResponse = new ErrorResponse(HttpStatus.NOT_FOUND.name(), ex.getMessage());
-        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(errorResponse);
+        ErrorResponse errorResponse = new ErrorResponse(NOT_FOUND.name(), ex.getMessage());
+        return ResponseEntity.status(NOT_FOUND).body(errorResponse);
     }
 
     /// Handles domain exception when entity templates already exist.
@@ -67,18 +69,6 @@ public class ApiExceptionHandler {
         log.warn("Entity template already exists: {}", ex.getMessage());
         ErrorResponse errorResponse = new ErrorResponse(HttpStatus.CONFLICT.name(), ex.getMessage());
         return ResponseEntity.status(HttpStatus.CONFLICT).body(errorResponse);
-    }
-
-    /// Handles domain exception when property rules are incompatible with property type.
-    ///
-    /// **HTTP mapping:** Maps domain PropertyRulesConflictException to HTTP 400
-    /// status indicating a business rule violation in property rule configuration.
-    @ExceptionHandler(PropertyRulesConflictException.class)
-    public ResponseEntity<ErrorResponse> handlePropertyRulesConflictException(
-            PropertyRulesConflictException ex) {
-        log.warn("Property rules incompatibility: {}", ex.getMessage());
-        ErrorResponse errorResponse = new ErrorResponse(HttpStatus.BAD_REQUEST.name(), ex.getMessage());
-        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(errorResponse);
     }
 
     /// Handles domain exception when entity template names already exist.
@@ -141,9 +131,15 @@ public class ApiExceptionHandler {
     /// with specific entity context for API consumers.
     @ExceptionHandler(EntityNotFoundException.class)
     public ResponseEntity<ErrorResponse> handleEntityNotFoundException(EntityNotFoundException ex) {
-        ErrorResponse errorResponse = new ErrorResponse(HttpStatus.NOT_FOUND.name(), ex.getMessage());
-        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(errorResponse);
+        ErrorResponse errorResponse = new ErrorResponse(NOT_FOUND.name(), ex.getMessage());
+        return ResponseEntity.status(NOT_FOUND).body(errorResponse);
     }
+
+    @ExceptionHandler(NoHandlerFoundException.class)
+    public ResponseEntity<ErrorResponse> handleNotFound(NoHandlerFoundException e) {
+        return createErrorResponse(NOT_FOUND, "Resource not found: " + e.getRequestURL());
+    }
+
     private String parseHttpMessageNotReadableError(String originalMessage) {
         if (originalMessage == null) {
             return "Invalid request body format";

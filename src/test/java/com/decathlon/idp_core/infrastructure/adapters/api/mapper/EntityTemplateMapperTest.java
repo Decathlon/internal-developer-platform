@@ -17,6 +17,7 @@ import com.decathlon.idp_core.domain.model.entity_template.RelationDefinition;
 import com.decathlon.idp_core.domain.model.enums.PropertyFormat;
 import com.decathlon.idp_core.domain.model.enums.PropertyType;
 import com.decathlon.idp_core.infrastructure.adapters.api.dto.in.EntityTemplateDtoIn;
+import com.decathlon.idp_core.infrastructure.adapters.api.dto.in.EntityTemplateCommonFields;
 import com.decathlon.idp_core.infrastructure.adapters.api.dto.in.PropertyDefinitionDtoIn;
 import com.decathlon.idp_core.infrastructure.adapters.api.dto.in.PropertyRulesDtoIn;
 import com.decathlon.idp_core.infrastructure.adapters.api.dto.in.RelationDefinitionDtoIn;
@@ -64,16 +65,20 @@ class EntityTemplateMapperTest {
 
             var relationDefinition = RelationDefinitionDtoIn.builder()
                     .name("dependencies")
-                    .targetEntityIdentifier("service")
+                    .targetTemplateIdentifier("service")
                     .required(false)
                     .toMany(true)
                     .build();
 
-            var dto = EntityTemplateDtoIn.builder()
-                    .identifier("service-template")
+            var commonFields = EntityTemplateCommonFields.builder()
                     .description("A service template")
                     .propertiesDefinitions(List.of(propertyDefinition))
                     .relationsDefinitions(List.of(relationDefinition))
+                    .build();
+
+            var dto = EntityTemplateDtoIn.builder()
+                    .identifier("service-template")
+                    .commonFields(commonFields)
                     .build();
 
             // When
@@ -96,7 +101,7 @@ class EntityTemplateMapperTest {
             // Check relation definition
             RelationDefinition mappedRelation = result.relationsDefinitions().get(0);
             assertThat(mappedRelation.name()).isEqualTo("dependencies");
-            assertThat(mappedRelation.targetEntityIdentifier()).isEqualTo("service");
+            assertThat(mappedRelation.targetTemplateIdentifier()).isEqualTo("service");
             assertThat(mappedRelation.required()).isFalse();
             assertThat(mappedRelation.toMany()).isTrue();
         }
@@ -172,7 +177,7 @@ class EntityTemplateMapperTest {
             // Check relation definition
             RelationDefinitionDtoOut mappedRelation = result.getRelationsDefinitions().get(0);
             assertThat(mappedRelation.getName()).isEqualTo("dependencies");
-            assertThat(mappedRelation.getTargetEntityIdentifier()).isEqualTo("service");
+            assertThat(mappedRelation.getTargetTemplateIdentifier()).isEqualTo("service");
             assertThat(mappedRelation.isRequired()).isFalse();
             assertThat(mappedRelation.isToMany()).isTrue();
         }
@@ -421,7 +426,7 @@ class EntityTemplateMapperTest {
             // Given
             var dto = RelationDefinitionDtoIn.builder()
                     .name("parentService")
-                    .targetEntityIdentifier("service")
+                    .targetTemplateIdentifier("service")
                     .required(true)
                     .toMany(false)
                     .build();
@@ -432,7 +437,7 @@ class EntityTemplateMapperTest {
             // Then
             assertThat(result).isNotNull();
             assertThat(result.name()).isEqualTo("parentService");
-            assertThat(result.targetEntityIdentifier()).isEqualTo("service");
+            assertThat(result.targetTemplateIdentifier()).isEqualTo("service");
             assertThat(result.required()).isTrue();
             assertThat(result.toMany()).isFalse();
         }
@@ -465,7 +470,7 @@ class EntityTemplateMapperTest {
             // Then
             assertThat(result).isNotNull();
             assertThat(result.getName()).isEqualTo("childServices");
-            assertThat(result.getTargetEntityIdentifier()).isEqualTo("service");
+            assertThat(result.getTargetTemplateIdentifier()).isEqualTo("service");
             assertThat(result.isRequired()).isFalse();
             assertThat(result.isToMany()).isTrue();
         }
@@ -553,14 +558,14 @@ class EntityTemplateMapperTest {
             // Given
             var dto1 = RelationDefinitionDtoIn.builder()
                     .name("rel1")
-                    .targetEntityIdentifier("target1")
+                    .targetTemplateIdentifier("target1")
                     .required(true)
                     .toMany(false)
                     .build();
 
             var dto2 = RelationDefinitionDtoIn.builder()
                     .name("rel2")
-                    .targetEntityIdentifier("target2")
+                    .targetTemplateIdentifier("target2")
                     .required(false)
                     .toMany(true)
                     .build();
