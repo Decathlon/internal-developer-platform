@@ -6,6 +6,7 @@ on: # yamllint disable-line rule:truthy
 
 permissions:
   contents: read
+  id-token: write
 
 jobs:
   build-and-push:
@@ -37,4 +38,12 @@ jobs:
         with:
           context: .
           push: true
+          sbom: true
+          provenance: mode=max
           tags: decathlon/internal-developer-platform:${{ github.event.release.tag_name }},decathlon/internal-developer-platform:latest
+      - name: Update repo description
+        uses: peter-evans/dockerhub-description@1b9a80c056b620d92cedb9d9b5a223409c68ddfa # v5.0.0
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+          repository: decathlon/internal-developer-platform
