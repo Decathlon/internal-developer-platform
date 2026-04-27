@@ -299,7 +299,6 @@ components:
           format: int32
           description: Minimum value for numeric properties
           example: 0
-
     RelationDefinitionDtoIn:
       type: object
       description: Input DTO for creating or updating a relation definition
