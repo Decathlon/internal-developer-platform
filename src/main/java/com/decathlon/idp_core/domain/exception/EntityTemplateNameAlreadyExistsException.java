@@ -4,7 +4,6 @@ import static com.decathlon.idp_core.domain.constant.ValidationMessages.TEMPLATE
 
 import com.decathlon.idp_core.domain.model.entity_template.EntityTemplate;
 import com.decathlon.idp_core.domain.service.EntityTemplateService;
-import com.decathlon.idp_core.infrastructure.adapters.api.handler.ApiExceptionHandler;
 
 /// Exception thrown when attempting to create or update an [EntityTemplate] with a name that already exists.
 ///
