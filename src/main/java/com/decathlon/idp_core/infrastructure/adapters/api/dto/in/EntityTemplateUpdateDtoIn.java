@@ -11,15 +11,17 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import static com.decathlon.idp_core.infrastructure.adapters.api.configuration.SwaggerDescription.SCHEMA_ENTITY_TEMPLATE_UPDATE_IN;
+
 @Data
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
 @JsonNaming(SnakeCaseStrategy.class)
-@Schema(description = "Input DTO for updating entity templates")
-public class EntityTemplatePutDtoIn {
+@Schema(description = SCHEMA_ENTITY_TEMPLATE_UPDATE_IN)
+public class EntityTemplateUpdateDtoIn {
 
     @Valid
     @JsonUnwrapped
-    private EntityTemplateCommonFields commonFields;
+    private EntityTemplateDtoInCommonFields commonFields;
 }

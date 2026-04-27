@@ -16,8 +16,8 @@ import com.decathlon.idp_core.domain.model.entity_template.PropertyRules;
 import com.decathlon.idp_core.domain.model.entity_template.RelationDefinition;
 import com.decathlon.idp_core.domain.model.enums.PropertyFormat;
 import com.decathlon.idp_core.domain.model.enums.PropertyType;
-import com.decathlon.idp_core.infrastructure.adapters.api.dto.in.EntityTemplateDtoIn;
-import com.decathlon.idp_core.infrastructure.adapters.api.dto.in.EntityTemplateCommonFields;
+import com.decathlon.idp_core.infrastructure.adapters.api.dto.in.EntityTemplateCreateDtoIn;
+import com.decathlon.idp_core.infrastructure.adapters.api.dto.in.EntityTemplateDtoInCommonFields;
 import com.decathlon.idp_core.infrastructure.adapters.api.dto.in.PropertyDefinitionDtoIn;
 import com.decathlon.idp_core.infrastructure.adapters.api.dto.in.PropertyRulesDtoIn;
 import com.decathlon.idp_core.infrastructure.adapters.api.dto.in.RelationDefinitionDtoIn;
@@ -42,7 +42,7 @@ class EntityTemplateMapperTest {
     class EntityTemplateMappingTests {
 
         @Test
-        @DisplayName("Should map EntityTemplateDtoIn to EntityTemplate")
+        @DisplayName("Should map EntityTemplateCreateDtoIn to EntityTemplate")
         void shouldMapDtoInToEntity() {
             // Given
             var propertyRules = PropertyRulesDtoIn.builder()
@@ -70,13 +70,13 @@ class EntityTemplateMapperTest {
                     .toMany(true)
                     .build();
 
-            var commonFields = EntityTemplateCommonFields.builder()
+            var commonFields = EntityTemplateDtoInCommonFields.builder()
                     .description("A service template")
                     .propertiesDefinitions(List.of(propertyDefinition))
                     .relationsDefinitions(List.of(relationDefinition))
                     .build();
 
-            var dto = EntityTemplateDtoIn.builder()
+            var dto = EntityTemplateCreateDtoIn.builder()
                     .identifier("service-template")
                     .commonFields(commonFields)
                     .build();
@@ -107,10 +107,10 @@ class EntityTemplateMapperTest {
         }
 
         @Test
-        @DisplayName("Should handle null EntityTemplateDtoIn")
+        @DisplayName("Should handle null EntityTemplateCreateDtoIn")
         void shouldHandleNullDtoIn() {
             // When
-            EntityTemplate result = mapper.fromDtoToEntityTemplate((EntityTemplateDtoIn) null);
+            EntityTemplate result = mapper.fromDtoToEntityTemplate((EntityTemplateCreateDtoIn) null);
 
             // Then
             assertThat(result).isNull();

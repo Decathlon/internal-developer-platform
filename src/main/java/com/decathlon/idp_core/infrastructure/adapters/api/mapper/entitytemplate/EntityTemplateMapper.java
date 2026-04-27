@@ -8,8 +8,8 @@ import com.decathlon.idp_core.domain.model.entity_template.EntityTemplate;
 import com.decathlon.idp_core.domain.model.entity_template.PropertyDefinition;
 import com.decathlon.idp_core.domain.model.entity_template.PropertyRules;
 import com.decathlon.idp_core.domain.model.entity_template.RelationDefinition;
-import com.decathlon.idp_core.infrastructure.adapters.api.dto.in.EntityTemplateDtoIn;
-import com.decathlon.idp_core.infrastructure.adapters.api.dto.in.EntityTemplatePutDtoIn;
+import com.decathlon.idp_core.infrastructure.adapters.api.dto.in.EntityTemplateCreateDtoIn;
+import com.decathlon.idp_core.infrastructure.adapters.api.dto.in.EntityTemplateUpdateDtoIn;
 import com.decathlon.idp_core.infrastructure.adapters.api.dto.in.PropertyDefinitionDtoIn;
 import com.decathlon.idp_core.infrastructure.adapters.api.dto.in.PropertyRulesDtoIn;
 import com.decathlon.idp_core.infrastructure.adapters.api.dto.in.RelationDefinitionDtoIn;
@@ -47,7 +47,7 @@ public class EntityTemplateMapper {
     ///
     /// @param dto the input DTO to convert, may be null
     /// @return the converted EntityTemplate domain entity, or null if input is null
-    public EntityTemplate fromDtoToEntityTemplate(EntityTemplateDtoIn dto) {
+    public EntityTemplate fromDtoToEntityTemplate(EntityTemplateCreateDtoIn dto) {
         if (dto == null || dto.getCommonFields() == null) {
             return null;
         }
@@ -72,7 +72,7 @@ public class EntityTemplateMapper {
     /// @param identifier the entity identifier from the path parameter
     /// @param dto the input DTO to convert, may be null
     /// @return the converted EntityTemplate domain entity, or null if input is null
-    public EntityTemplate fromPutDtoToEntityTemplate(String identifier, EntityTemplatePutDtoIn dto) {
+    public EntityTemplate fromPutDtoToEntityTemplate(String identifier, EntityTemplateUpdateDtoIn dto) {
         if (dto == null || dto.getCommonFields() == null) {
             return null;
         }

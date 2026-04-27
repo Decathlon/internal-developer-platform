@@ -54,7 +54,7 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/EntityTemplatePutDtoIn'
+              $ref: '#/components/schemas/EntityTemplateUpdateDtoIn'
         required: true
       responses:
         '200':
@@ -145,7 +145,7 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/EntityTemplateDtoIn'
+              $ref: '#/components/schemas/EntityTemplateCreateDtoIn'
         required: true
       responses:
         '201':
@@ -162,9 +162,9 @@ paths:
                 $ref: '#/components/schemas/ErrorResponse'
 components:
   schemas:
-    EntityTemplateDtoIn:
+    EntityTemplateCreateDtoIn:
       type: object
-      description: Input DTO for creating or updating an entity template
+      description: Input DTO for creating an entity template
       properties:
         identifier:
           type: string
@@ -195,7 +195,7 @@ components:
       required:
         - identifier
         - name
-    EntityTemplatePutDtoIn:
+    EntityTemplateUpdateDtoIn:
       type: object
       description: Input DTO for updating an entity template
       properties:

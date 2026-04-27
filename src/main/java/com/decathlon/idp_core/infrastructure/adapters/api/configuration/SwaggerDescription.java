@@ -86,7 +86,8 @@ public class SwaggerDescription {
 
 
     // --- Schema (class) descriptions ---
-    public static final String SCHEMA_ENTITY_TEMPLATE_IN = "Input DTO for creating or updating an entity template";
+    public static final String SCHEMA_ENTITY_TEMPLATE_CREATE_IN = "Input DTO for creating an entity template";
+    public static final String SCHEMA_ENTITY_TEMPLATE_UPDATE_IN = "Input DTO for updating an entity template";
     public static final String SCHEMA_PROPERTY_DEFINITION_IN = "Input DTO for creating or updating a property definition";
     public static final String SCHEMA_RELATION_DEFINITION_IN = "Input DTO for creating or updating a relation definition";
     public static final String SCHEMA_PROPERTY_RULES_IN = "Input DTO for property validation rules";

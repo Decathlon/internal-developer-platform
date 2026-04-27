@@ -2,7 +2,7 @@ package com.decathlon.idp_core.infrastructure.adapters.api.dto.in;
 
 import static com.decathlon.idp_core.domain.constant.ValidationMessages.TEMPLATE_IDENTIFIER_MANDATORY;
 import static com.decathlon.idp_core.infrastructure.adapters.api.configuration.SwaggerDescription.FIELD_TEMPLATE_IDENTIFIER;
-import static com.decathlon.idp_core.infrastructure.adapters.api.configuration.SwaggerDescription.SCHEMA_ENTITY_TEMPLATE_IN;
+import static com.decathlon.idp_core.infrastructure.adapters.api.configuration.SwaggerDescription.SCHEMA_ENTITY_TEMPLATE_CREATE_IN;
 
 import com.fasterxml.jackson.annotation.JsonUnwrapped;
 import com.fasterxml.jackson.databind.PropertyNamingStrategies.SnakeCaseStrategy;
@@ -21,8 +21,8 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @AllArgsConstructor
 @JsonNaming(SnakeCaseStrategy.class)
-@Schema(description = SCHEMA_ENTITY_TEMPLATE_IN)
-public class EntityTemplateDtoIn {
+@Schema(description = SCHEMA_ENTITY_TEMPLATE_CREATE_IN)
+public class EntityTemplateCreateDtoIn {
 
     @NotBlank(message = TEMPLATE_IDENTIFIER_MANDATORY)
     @Schema(description = FIELD_TEMPLATE_IDENTIFIER, example = "service")
@@ -30,5 +30,5 @@ public class EntityTemplateDtoIn {
 
     @Valid
     @JsonUnwrapped
-    private EntityTemplateCommonFields commonFields;
+    private EntityTemplateDtoInCommonFields commonFields;
 }

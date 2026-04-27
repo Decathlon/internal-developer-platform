@@ -25,14 +25,14 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 /**
- * Common fields shared between EntityTemplateDtoIn (POST) and EntityTemplatePutDtoIn (PUT).
+ * Common fields shared between EntityTemplateCreateDtoIn (POST) and EntityTemplateUpdateDtoIn (PUT).
  */
 @Data
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
 @JsonNaming(SnakeCaseStrategy.class)
-public class EntityTemplateCommonFields {
+public class EntityTemplateDtoInCommonFields {
 
     @Size(max = 255, message = TEMPLATE_NAME_MAX_SIZE)
     @Schema(description = FIELD_TEMPLATE_NAME, example = "Service")
