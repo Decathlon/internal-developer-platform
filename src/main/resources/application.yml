@@ -5,8 +5,12 @@ spring:
       # Disables serving of static resources (HTML, JS, CSS, images).
       add-mappings: false
     cors:
-      # URLs allowed to make cross-origin API calls, set via SPRING_WEB_CORS_ALLOWED_ORIGINS env var (comma-separated list).
+      # Exact origins — set via SPRING_WEB_CORS_ALLOWED_ORIGINS env var (comma-separated).
+      # Use for known, fixed origins.
       allowed-origins: ${SPRING_WEB_CORS_ALLOWED_ORIGINS:}
+      # Pattern-based origins — set via SPRING_WEB_CORS_ALLOWED_ORIGIN_PATTERNS env var (comma-separated).
+      # Supports wildcards, e.g. https://*.decathlon.io. Compatible with allowCredentials(true).
+      allowed-origin-patterns: ${SPRING_WEB_CORS_ALLOWED_ORIGIN_PATTERNS:}
 
   jackson:
     # Serializes all JSON fields as snake_case (for example templateIdentifier → template_identifier).
