@@ -12,7 +12,7 @@ tags:
   - name: Entities Templates Management
     description: Operations related to entity template management
 paths:
-  /api/v1/entity-templates/identifier/{identifier}:
+  /api/v1/entity-templates/{identifier}:
     get:
       tags:
         - Entities Templates Management
@@ -54,7 +54,7 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/EntityTemplateDtoIn'
+              $ref: '#/components/schemas/EntityTemplateUpdateDtoIn'
         required: true
       responses:
         '200':
@@ -145,7 +145,7 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/EntityTemplateDtoIn'
+              $ref: '#/components/schemas/EntityTemplateCreateDtoIn'
         required: true
       responses:
         '201':
@@ -162,15 +162,22 @@ paths:
                 $ref: '#/components/schemas/ErrorResponse'
 components:
   schemas:
-    EntityTemplateDtoIn:
+    EntityTemplateCreateDtoIn:
       type: object
-      description: Input DTO for creating or updating an entity template
+      description: Input DTO for creating an entity template
       properties:
         identifier:
           type: string
           description: Unique Entity Template identifier
           example: service
           minLength: 1
+        name:
+          type: string
+          description: Unique Entity Template name
+          example: Service
+          maxLength: 255
+          minLength: 1
+          pattern: "^[a-zA-Z0-9 _-]+$"
         description:
           type: string
           description: Entity Template description
@@ -180,7 +187,6 @@ components:
           description: List of property definitions for this template
           items:
             $ref: '#/components/schemas/PropertyDefinitionDtoIn'
-          minItems: 1
         relations_definitions:
           type: array
           description: List of relation definitions for this template
@@ -188,7 +194,34 @@ components:
             $ref: '#/components/schemas/RelationDefinitionDtoIn'
       required:
         - identifier
-        - properties_definitions
+        - name
+    EntityTemplateUpdateDtoIn:
+      type: object
+      description: Input DTO for updating an entity template
+      properties:
+        name:
+          type: string
+          description: Entity Template name
+          example: Service
+          maxLength: 255
+          minLength: 1
+          pattern: "^[a-zA-Z0-9 _-]+$"
+        description:
+          type: string
+          description: Entity Template description
+          example: A comprehensive service template
+        properties_definitions:
+          type: array
+          description: List of property definitions for this template
+          items:
+            $ref: '#/components/schemas/PropertyDefinitionDtoIn'
+        relations_definitions:
+          type: array
+          description: List of relation definitions for this template
+          items:
+            $ref: '#/components/schemas/RelationDefinitionDtoIn'
+      required:
+        - name
     PropertyDefinitionDtoIn:
       type: object
       description: Input DTO for creating or updating a property definition
@@ -275,9 +308,9 @@ components:
           description: Name of the relation
           example: dependencies
           minLength: 1
-        target_entity_identifier:
+        target_template_identifier:
           type: string
-          description: Identifier of the target entity
+          description: Identifier of the target template
           example: service
           minLength: 1
         required:
@@ -292,20 +325,19 @@ components:
           example: true
       required:
         - name
-        - target_entity_identifier
+        - target_template_identifier
     EntityTemplateDtoOut:
       type: object
       description: Output for entity template
       properties:
-        id:
-          type: string
-          format: uuid
-          description: Unique generated identifier of the entity template
-          example: 123e4567-e89b-12d3-a456-426614174000
         identifier:
           type: string
           description: Unique Entity Template identifier
           example: service
+        name:
+          type: string
+          description: Unique Entity Template name
+          example: Service
         description:
           type: string
           description: Entity Template description
@@ -414,9 +446,9 @@ components:
           type: string
           description: Name of the relation
           example: dependencies
-        target_entity_identifier:
+        target_template_identifier:
           type: string
-          description: Identifier of the target entity
+          description: Identifier of the target template
           example: component-template
         required:
           type: boolean

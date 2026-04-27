@@ -1,11 +1,10 @@
 {
-  "identifier": "temp-test-0",
-  "name": "Temp Test 0",
+  "name": "Temp Test 00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
   "description": "This is a test template",
   "properties_definitions": [
     {
       "name": "property-test",
-      "description": "",
+      "description": "description",
       "required": true,
       "type": "STRING",
       "rules": {

@@ -23,6 +23,9 @@ public class EntityTemplateDtoOut {
     @Schema(description = FIELD_TEMPLATE_IDENTIFIER, example = "service")
     private String identifier;
 
+    @Schema(description = FIELD_TEMPLATE_NAME, example = "Service")
+    private String name;
+
     @Schema(description = FIELD_TEMPLATE_DESCRIPTION, example = "A comprehensive service template")
     private String description;
 

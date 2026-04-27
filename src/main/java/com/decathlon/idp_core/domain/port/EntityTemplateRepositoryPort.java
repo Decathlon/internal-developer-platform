@@ -30,6 +30,8 @@ public interface EntityTemplateRepositoryPort {
 
     boolean existsByIdentifier(String identifier);
 
+    boolean existsByName(String name);
+
     EntityTemplate save(EntityTemplate entityTemplate);
 
     void deleteByIdentifier(String identifier);

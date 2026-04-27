@@ -29,6 +29,8 @@ public interface JpaEntityTemplateRepository extends JpaRepository<EntityTemplat
 
     boolean existsByIdentifier(String identifier);
 
+    boolean existsByName(String name);
+
     @Transactional
     void deleteByIdentifier(String identifier);
 }

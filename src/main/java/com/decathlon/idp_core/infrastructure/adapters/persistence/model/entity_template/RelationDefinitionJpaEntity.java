@@ -28,7 +28,8 @@ public class RelationDefinitionJpaEntity {
 
     @EqualsAndHashCode.Include
     private String name;
-    private String targetEntityIdentifier;
+
+    private String targetTemplateIdentifier;
 
     @Builder.Default
     private boolean required = false;
