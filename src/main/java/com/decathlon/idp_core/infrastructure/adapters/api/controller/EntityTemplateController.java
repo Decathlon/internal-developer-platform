@@ -44,7 +44,7 @@ import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.decathlon.idp_core.domain.model.entity_template.EntityTemplate;
-import com.decathlon.idp_core.domain.service.entity_template.entity_template.EntityTemplateService;
+import com.decathlon.idp_core.domain.service.entity_template.EntityTemplateService;
 import com.decathlon.idp_core.infrastructure.adapters.api.configuration.SwaggerConfiguration.TemplatePageResponse;
 import com.decathlon.idp_core.infrastructure.adapters.api.dto.in.EntityTemplateCreateDtoIn;
 import com.decathlon.idp_core.infrastructure.adapters.api.dto.in.EntityTemplateUpdateDtoIn;

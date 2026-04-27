@@ -440,7 +440,7 @@ class EntityTemplateControllerTest extends AbstractIntegrationTest {
         void postTemplate_400_string_property_with_numeric_rules() throws Exception {
             MvcResult res = postBadRequestAndAssertEquals(ENTITY_TEMPLATE_PATH,
                     ENTITY_TEMPLATE_JSON_TEST_PATH + "postEntityTemplate_400_invalid_rules.json",
-                    "Property 'property-test' of type STRING: Numeric rule maxValue is not allowed for STRING properties");
+                    "Property 'property-test' of type STRING: Numeric rule max_value is not allowed for STRING properties");
             assertNotNull(res, "Test executed successfully");
         }
 

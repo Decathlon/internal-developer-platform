@@ -35,7 +35,7 @@ import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.decathlon.idp_core.domain.model.entity.Entity;
-import com.decathlon.idp_core.domain.service.entity_template.EntityService;
+import com.decathlon.idp_core.domain.service.EntityService;
 import com.decathlon.idp_core.infrastructure.adapters.api.configuration.SwaggerConfiguration.EntityPageResponse;
 import com.decathlon.idp_core.infrastructure.adapters.api.dto.in.EntityDtoIn;
 import com.decathlon.idp_core.infrastructure.adapters.api.dto.out.entity.EntityDtoOut;
