@@ -108,7 +108,7 @@ Here is how we could implement each block using only Spring Boot code:
 | Template Fetching  | Easy: Standard `@Service` lookup.                                                              |
 | Security validator | Manual: Requires creating the component for each security strategy.                            |
 | Messaging client   | Heavy: Requires importing the client library and writing a `@Service` for each type of client. |
-| Mapping         | Manual: Requires importing a mapping library and writing a `@Service`.                             |
+| Mapping            | Manual: Requires importing a mapping library and writing a `@Service`.                         |
 | Web client         | Manual: Requires creating a new connector with exception management.                           |
 | Queueing           | Manual: Requires creating a new `@Service` and templates for pushing and pulling.              |
 | DLQ Logic          | Manual: Requires custom `@ExceptionHandler` logic.                                             |
@@ -130,7 +130,7 @@ Here is how we could implement each block using only Spring Boot code:
 | Template Fetching  | Easy: Use `pollEnrich` or a simple Bean lookup.                                                   |
 | Security validator | Manual: Requires creating the component for each security strategy.                               |
 | Messaging client   | Native: Built-in `kafka:topicName` or `google-pubsub:{{project.name}}:{{subscription.name}}`.     |
-| Mapping         | Native: Built-in `transform().jq(...)` (as well for JSLT).                                         |
+| Mapping            | Native: Built-in `transform().jq(...)` (as well for JSLT).                                        |
 | Queueing           | Seamless: Just use `.to("seda:queue")` or `.to("kafka:...")`.                                     |
 | DLQ Logic          | Superior: `deadLetterChannel` handles retries and routing automatically.                          |
 
