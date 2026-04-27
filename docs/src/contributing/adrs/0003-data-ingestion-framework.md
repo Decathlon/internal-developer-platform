@@ -25,7 +25,7 @@ We have defined a high-level architecture to implement the flow from event recep
 ```mermaid
 graph TD
     %% Entry Point
-    A[External Event Source] -->|HTTP POST| B[Ingestion Service]
+    A[External Event Source] -->|HTTP POST / Message received / API response| B[Ingestion Service]
 
     subgraph "Metadata Fetching Phase"
         B --> C[Lookup inbound configuration]
@@ -113,15 +113,15 @@ Here is how we could implement each block using only Spring Boot code:
 | Queueing           | Manual: Requires creating a new `@Service` and templates for pushing and pulling.              |
 | DLQ Logic          | Manual: Requires custom `@ExceptionHandler` logic.                                             |
 
-* Good because we have total control. We have 100% transparency over the execution. Standard Spring Services are easier to write and unit test.
-* Good because of developer familiarity. The team already knows Spring Boot. We won't need specialized Camel knowledge to maintain the code.
-* Good because for extremely high-throughput systems, removing the framework abstraction can reduce CPU cycles per message.
-* Bad because of high boilerplate. We have to manually write the "plumbing." We'll spend time writing Pub/Sub clients, producers, retry logic, and HTTP clients instead of focusing on the business value of idp-core : the conception of templates, relationships and entities.
-* Good because contributor onboarding on the open source repository is facilitated. Spring Boot is one of the most popular Java frameworks in the engineering community. Apache Camel is maybe less known and requires a learning curve.
-* Good because we limit our framework dependencies.
-* Bad because of less flexibility by default. Integrating a new type of source or migrate an existing one will require more development time, which adds boilerplate code and maintenance overhead.
-* Bad because of manual DLQ management. We must manually catch exceptions, wrap the failed message, and send it to a DLQ topic.
-* Bad because of more conception time. We will focus more on the infrastructure side of the architecture and not the functional one.
+* Good, because we have total control. We have 100% transparency over the execution. Standard Spring Services are easier to write and unit test.
+* Good, because of developer familiarity. The team already knows Spring Boot. We won't need specialized Camel knowledge to maintain the code.
+* Good, because for extremely high-throughput systems, removing the framework abstraction can reduce CPU cycles per message.
+* Bad, because of high boilerplate. We have to manually write the "plumbing." We'll spend time writing Pub/Sub clients, producers, retry logic, and HTTP clients instead of focusing on the business value of idp-core : the conception of templates, relationships and entities.
+* Good, because contribution is facilitated. Spring Boot is one of the most popular Java frameworks in the engineering community. Apache Camel is maybe less known and requires a learning curve.
+* Good, because we limit our framework dependencies.
+* Bad, because of less flexibility by default. Integrating a new type of source or migrate an existing one will require more development time, which adds boilerplate code and maintenance overhead.
+* Bad, because of manual DLQ management. We must manually catch exceptions, wrap the failed message, and send it to a DLQ topic.
+* Bad, because of more conception time. We will focus more on the infrastructure side of the architecture and not the functional one.
 
 ### 2. Use the Apache Camel framework for implementing the route configurations and data handling
 
@@ -134,19 +134,19 @@ Here is how we could implement each block using only Spring Boot code:
 | Queueing           | Seamless: Just use `.to("seda:queue")` or `.to("kafka:...")`.                                     |
 | DLQ Logic          | Superior: `deadLetterChannel` handles retries and routing automatically.                          |
 
-* Good because of built-in Enterprise Integration Patterns (EIP): Patterns like Dead Letter Channel, Wire Tap, and Message Translator are native. We don't write the logic, we just configure it.
+* Good, because of built-in Enterprise Integration Patterns (EIP): Patterns like Dead Letter Channel, Wire Tap, and Message Translator are native. We don't write the logic, we just configure it.
 * Good because of its large component library: Camel has 300+ components. Switching from a Webhook to a Kafka source is just changing a URI (for example, `platform-http:/hook` to `kafka:my-topic`).
-* Good because of flexibility. We can leverage the Camel components to easily add functionalities to IDP-Core. For example, using Pub/Sub instead of the database for queuing.
-* Good because Camel has a native JQ and JSLT expression language. We can apply the template mapping in one line of DSL.
-* Good because of error handling. Managing different Dead Letter Queues for "Mapping Errors" vs. "Database Errors" is handled via simple `onException` blocks.
-* Good because of less conception time. We will focus more on the route logic.
-* Good because of documentation. Camel is a well-documented framework with a recently added LLM accessibility for assistance and coding agents.
-* Good because of observability. Camel has OpenTelemetry with integrated metrics and traces for the routes.
-* Bad because for a simple "pass-through" service, Camel adds a layer of abstraction that might slightly increase memory usage in the Cloud Run container.
-* Bad because of complex debugging. Camel error logs can be less clear than a native Spring Boot solution.
-* Bad because it may be overkill for our use case.
-* Bad because if we cannot implement a generic route, the high volume of individual routes will significantly delay the container startup.
-* Bad because there is no typing contract between treatments at build. It will not break during the build if the route n+1 expects another object type.
+* Good, because of flexibility. We can leverage the Camel components to easily add functionalities to IDP-Core. For example, using Pub/Sub instead of the database for queuing.
+* Good, because Camel has a native JQ and JSLT expression language. We can apply the template mapping in one line of DSL.
+* Good, because of error handling. Managing different Dead Letter Queues for "Mapping Errors" vs. "Database Errors" is handled via simple `onException` blocks.
+* Good, because of less conception time. We will focus more on the route logic.
+* Good, because of documentation. Camel is a well-documented framework with a recently added LLM accessibility for assistance and coding agents.
+* Good, because of observability. Camel has OpenTelemetry with integrated metrics and traces for the routes.
+* Bad, because for a simple "pass-through" service, Camel adds a layer of abstraction that might slightly increase memory usage in the Cloud Run container.
+* Bad, because of complex debugging. Camel error logs can be less clear than a native Spring Boot solution.
+* Bad, because it may be overkill for our use case.
+* Bad, because if we cannot implement a generic route, the high volume of individual routes will significantly delay the container startup.
+* Bad, because there is no typing contract between treatments at build. It will not break during the build if the route n+1 expects another object type.
 
 ## More Information
 
