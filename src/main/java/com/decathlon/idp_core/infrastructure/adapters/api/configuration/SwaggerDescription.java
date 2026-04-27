@@ -86,7 +86,8 @@ public class SwaggerDescription {
 
 
     // --- Schema (class) descriptions ---
-    public static final String SCHEMA_ENTITY_TEMPLATE_IN = "Input DTO for creating or updating an entity template";
+    public static final String SCHEMA_ENTITY_TEMPLATE_CREATE_IN = "Input DTO for creating an entity template";
+    public static final String SCHEMA_ENTITY_TEMPLATE_UPDATE_IN = "Input DTO for updating an entity template";
     public static final String SCHEMA_PROPERTY_DEFINITION_IN = "Input DTO for creating or updating a property definition";
     public static final String SCHEMA_RELATION_DEFINITION_IN = "Input DTO for creating or updating a relation definition";
     public static final String SCHEMA_PROPERTY_RULES_IN = "Input DTO for property validation rules";
@@ -98,6 +99,7 @@ public class SwaggerDescription {
     // --- Field descriptions (shared) ---
     public static final String FIELD_TEMPLATE_ID = "Unique generated identifier of the entity template";
     public static final String FIELD_TEMPLATE_IDENTIFIER = "Unique Entity Template identifier";
+    public static final String FIELD_TEMPLATE_NAME = "Unique Entity Template name";
     public static final String FIELD_TEMPLATE_DESCRIPTION = "Entity Template description";
     public static final String FIELD_TEMPLATE_PROPERTIES = "List of property definitions for this template";
     public static final String FIELD_TEMPLATE_RELATIONS = "List of relation definitions for this template";
@@ -122,7 +124,7 @@ public class SwaggerDescription {
 
     public static final String FIELD_RELATION_ID = "Unique identifier of the relation definition";
     public static final String FIELD_RELATION_NAME = "Name of the relation";
-    public static final String FIELD_RELATION_TARGET_IDENTIFIER = "Identifier of the target entity";
+    public static final String FIELD_RELATION_TARGET_IDENTIFIER = "Identifier of the target template";
     public static final String FIELD_RELATION_REQUIRED = "Whether this relation is required";
     public static final String FIELD_RELATION_TO_MANY = "Whether this relation can have multiple targets";
 

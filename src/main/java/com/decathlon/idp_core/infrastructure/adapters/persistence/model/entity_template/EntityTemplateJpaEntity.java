@@ -40,6 +40,9 @@ public class EntityTemplateJpaEntity {
     @Column(nullable = false, unique = true)
     private String identifier;
 
+    @Column(nullable = false, unique = true)
+    private String name;
+
     private String description;
 
     @Getter(lombok.AccessLevel.NONE)

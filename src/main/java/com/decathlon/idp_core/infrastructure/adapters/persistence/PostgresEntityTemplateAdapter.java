@@ -67,6 +67,11 @@ public class PostgresEntityTemplateAdapter implements EntityTemplateRepositoryPo
     }
 
     @Override
+    public boolean existsByName(String name) {
+        return jpaEntityTemplateRepository.existsByName(name);
+    }
+
+    @Override
     public EntityTemplate save(EntityTemplate entityTemplate) {
         EntityTemplateJpaEntity jpaEntity;
         if (entityTemplate.id() != null) {
@@ -89,6 +94,7 @@ public class PostgresEntityTemplateAdapter implements EntityTemplateRepositoryPo
 
     private void mergeIntoExisting(EntityTemplateJpaEntity jpa, EntityTemplate domain) {
         jpa.setIdentifier(domain.identifier());
+        jpa.setName(domain.name());
         jpa.setDescription(domain.description());
         mergePropertyDefinitions(jpa, domain);
         mergeRelationDefinitions(jpa, domain);
@@ -192,13 +198,13 @@ public class PostgresEntityTemplateAdapter implements EntityTemplateRepositoryPo
         for (var domRel : domain.relationsDefinitions()) {
             RelationDefinitionJpaEntity ex = existingByName.get(domRel.name());
             if (ex != null) {
-                ex.setTargetEntityIdentifier(domRel.targetEntityIdentifier());
+                ex.setTargetTemplateIdentifier(domRel.targetTemplateIdentifier());
                 ex.setRequired(domRel.required());
                 ex.setToMany(domRel.toMany());
             } else {
                 RelationDefinitionJpaEntity newRel = RelationDefinitionJpaEntity.builder()
                         .name(domRel.name())
-                        .targetEntityIdentifier(domRel.targetEntityIdentifier())
+                        .targetTemplateIdentifier(domRel.targetTemplateIdentifier())
                         .required(domRel.required())
                         .toMany(domRel.toMany())
                         .build();

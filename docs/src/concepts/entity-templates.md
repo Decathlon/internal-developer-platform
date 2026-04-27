@@ -33,7 +33,7 @@ classDiagram
 
     class RelationDefinition {
         +String name
-        +String target_entity_identifier
+        +String target_template_identifier
         +Boolean required
         +Boolean to_many
     }
@@ -98,7 +98,7 @@ Here's a complete Entity Template for a Sonar project:
   "relations_definitions": [
     {
       "name": "depends_on",
-      "target_entity_identifier": "github_repository",
+      "target_template_identifier": "github_repository",
       "required": true,
       "to_many": false
     }
@@ -160,13 +160,13 @@ See **[Relations](relations.md)** for detailed documentation.
   "relations_definitions": [
     {
       "name": "owned_by",
-      "target_entity_identifier": "team",
+      "target_template_identifier": "team",
       "required": true,
       "to_many": false
     },
     {
       "name": "components",
-      "target_entity_identifier": "component",
+      "target_template_identifier": "component",
       "required": false,
       "to_many": true
     }

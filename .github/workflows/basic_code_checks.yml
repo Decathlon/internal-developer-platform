@@ -308,18 +308,23 @@ jobs:
 
       - name: Fail Job if Breaking Changes Found
         if: steps.breaking_check.outputs.breaking_found == 'true'
+        env:
+          PR_TITLE: ${{ github.event.pull_request.title }}
         run: |
           EXIT_CODE="${{ steps.breaking_check.outputs.oasdiff_exit_code }}"
           if [ "$EXIT_CODE" -ne 0 ]; then
-            # check if the commit message contains "!:" to allow breaking changes
+            # Both PR title and commit must contain "!:" or "BREAKING CHANGE" for breaking changes
             COMMIT_SHA="${{ github.event.pull_request.head.sha || github.sha }}"
             COMMIT_MESSAGE=$(git log -1 --pretty=%B "$COMMIT_SHA")
-            if echo "$COMMIT_MESSAGE" | grep -qE "!:|BREAKING CHANGE:"
-            then
-              printf -- "::notice::Breaking change detected by API analysis, but it was correctly announced in the commit using '!: ' or 'BREAKING CHANGE:'. semantic-release will perform a MAJOR bump."
+
+            PR_HAS_INDICATOR=$(echo "$PR_TITLE" | grep -qE "!:|BREAKING CHANGE" && echo "true" || echo "false")
+            COMMIT_HAS_INDICATOR=$(echo "$COMMIT_MESSAGE" | grep -qE "!:|BREAKING CHANGE" && echo "true" || echo "false")
+
+            if [ "$PR_HAS_INDICATOR" = "true" ] && [ "$COMMIT_HAS_INDICATOR" = "true" ]; then
+              printf -- "::notice::Breaking change announced in both PR title and commit. semantic-release will perform a MAJOR bump."
             else
-              printf -- "::error:: Unannounced Breaking Change! The API analysis detected a backward-incompatible change, but the commit message does not include '!: ' or 'BREAKING CHANGE:'."
-              printf -- "Please fix the commit message to follow the convention, e.g.: 'feat!: description' or 'feat: description\\n\\nBREAKING CHANGE: description of change'."
+              printf -- "::error:: Unannounced Breaking Change! The API analysis detected a backward-incompatible change, but the commit message or PR title does not include '!: ' or 'BREAKING CHANGE:'."
+              printf -- "Please fix the commit message and PR title to follow the convention, e.g.: 'feat!: description' or 'feat: description\\n\\nBREAKING CHANGE: description of change'."
               exit 1
             fi
           fi
