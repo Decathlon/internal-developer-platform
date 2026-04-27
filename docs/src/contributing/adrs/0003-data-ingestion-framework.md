@@ -115,8 +115,10 @@ Here is how we could implement each block using only Spring Boot code:
 * Good because we have total control. We have 100% transparency over the execution. Standard Spring Services are easier to write and unit test.
 * Good because of developer familiarity. The team already knows Spring Boot. We won't need specialized Camel knowledge to maintain the code.
 * Good because for extremely high-throughput systems, removing the framework abstraction can reduce CPU cycles per message.
-* Bad because of high boilerplate. We have to manually write the "plumbing." We'll spend time writing Pub/Sub clients, producers, retry logic, and HTTP clients instead of focusing on other subjects.
-* Bad because of less flexibility by default. We have to create new components or clients if we want to migrate to them or add them as alternatives.
+* Bad because of high boilerplate. We have to manually write the "plumbing." We'll spend time writing Pub/Sub clients, producers, retry logic, and HTTP clients instead of focusing on the business value of idp-core : the conception of templates, relationships and entities.
+* Good because contributor onboarding on the open source repository is facilitated. Spring Boot is one of the most popular Java frameworks in the engineering community. Apache Camel is maybe less known and requires a learning curve.
+* Good because we limit our framework dependencies.
+* Bad because of less flexibility by default. Integrating a new type of source or migrate an existing one will require more development time, which adds boilerplate code and maintenance overhead.
 * Bad because of manual DLQ management. We must manually catch exceptions, wrap the failed message, and send it to a DLQ topic.
 * Bad because of more conception time. We will focus more on the infrastructure side of the architecture and not the functional one.
 
@@ -143,6 +145,7 @@ Here is how we could implement each block using only Spring Boot code:
 * Bad because of complex debugging. Camel error logs can be less clear than a native Spring Boot solution.
 * Bad because it may be overkill for our use case.
 * Bad because if we cannot implement a generic route, the high volume of individual routes will significantly delay the container startup.
+* Bad because there is no typing contract between treatments at build. It will not break during the build if the route n+1 expects another object type.
 
 ## More information
 
