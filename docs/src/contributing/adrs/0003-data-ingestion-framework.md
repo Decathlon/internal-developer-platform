@@ -2,8 +2,8 @@
 
 * Status: Accepted
 * Deciders:
-  * Maintainers team: Andrés BRAND, Matthieu WALTERSPIELER, Eve BERNHARD, Ferial OUKOUKES, Renny VANDOMBER
-  * Contributors team: `N/A`
+  * maintainers team: Andrés BRAND, Matthieu WALTERSPIELER, Eve BERNHARD, Ferial OUKOUKES, Renny VANDOMBER
+  * contributors team: `N/A`
 * Consulted: Étienne JACQUOT
 * Informed: `N/A`
 * Date: 2026-04-22
@@ -12,11 +12,11 @@
 
 One of the main features of the IDP is the ability to import data from external sources for creating or modifying entities. We call these components "connectors." The external sources can be an Inbound Webhook, a Message System subscription, or a scheduled API puller. The event treatment must be stateless.
 
-For the Inbound Webhook connector, we expect to create a generic HTTP route with a configuration ID as a URL parameter.
-For the Message connector, we need to subscribe to multiple topics to begin receiving incoming events.
-For the API puller connector, we need to be able to call an API using the target URL.
+* For the Inbound Webhook connector, we expect to create a generic HTTP route with a configuration ID as a URL parameter.
+* For the Message connector, we need to subscribe to multiple topics to begin receiving incoming events.
+* For the API puller connector, we need to be able to call an API using the target URL.
 
-For all connectors, we will have to manage the security layer.
+For all connectors, we will have to manage the security layer. The mapping capability is configured at runtime (all the mapping definition is in the database).
 
 ### Proposed architecture and Problem Statement
 
@@ -30,7 +30,7 @@ graph TD
     subgraph "Metadata Fetching Phase"
         B --> C[Lookup inbound configuration]
         C -->|Not Found| D[404 Not Found]
-        C -->|Found| E[Fetch Security Profile & JQ Mapping]
+        C -->|Found| E[Fetch Security Profile & Mapping]
     end
 
     subgraph "Validation Phase"
@@ -47,7 +47,7 @@ graph TD
 
     subgraph "Processing Phase (Worker)"
         L[Consumer] -->|Pull| I
-        L --> M{Apply JQ Mapping}
+        L --> M{Apply Mapping}
         M -->|JQ Error| N[DLQ: Mapping]
         M -->|Success| O[Save Entity to DB]
         O -->|DB Error| P[DLQ: Storage]
@@ -62,7 +62,7 @@ graph TD
 We have to create at least the following elements:
 
 * Security validator
-* JQ/JSLT mapper
+* Mapper (using technologies such as JQ, JSLT, or other)
 * Message broker client
 * Queue management system
 * Web client with retry configuration
@@ -76,6 +76,7 @@ We have to create at least the following elements:
 * Reliability
 * Complexity of implementation
 * Flexibility
+* Scalability
 
 ## Considered Options
 
@@ -84,7 +85,7 @@ We have to create at least the following elements:
 
 ## Decision Outcome
 
-Chosen option: 2, **"Use the Apache Camel framework for implementing the route configurations and data handling."**
+Chosen option: 2, **"Use the Apache Camel framework for implementing the route configurations and data handling."** because it mainly can help us to speed the time to market the product.
 
 ### Positive Consequences
 
@@ -107,7 +108,7 @@ Here is how we could implement each block using only Spring Boot code:
 | Template Fetching  | Easy: Standard `@Service` lookup.                                                              |
 | Security validator | Manual: Requires creating the component for each security strategy.                            |
 | Messaging client   | Heavy: Requires importing the client library and writing a `@Service` for each type of client. |
-| JQ Mapping         | Manual: Requires importing a JQ library and writing a `@Service`.                              |
+| Mapping         | Manual: Requires importing a mapping library and writing a `@Service`.                             |
 | Web client         | Manual: Requires creating a new connector with exception management.                           |
 | Queueing           | Manual: Requires creating a new `@Service` and templates for pushing and pulling.              |
 | DLQ Logic          | Manual: Requires custom `@ExceptionHandler` logic.                                             |
@@ -129,13 +130,13 @@ Here is how we could implement each block using only Spring Boot code:
 | Template Fetching  | Easy: Use `pollEnrich` or a simple Bean lookup.                                                   |
 | Security validator | Manual: Requires creating the component for each security strategy.                               |
 | Messaging client   | Native: Built-in `kafka:topicName` or `google-pubsub:{{project.name}}:{{subscription.name}}`.     |
-| JQ Mapping         | Native: Built-in `transform().jq(...)`.                                                           |
+| Mapping         | Native: Built-in `transform().jq(...)` (as well for JSLT).                                         |
 | Queueing           | Seamless: Just use `.to("seda:queue")` or `.to("kafka:...")`.                                     |
 | DLQ Logic          | Superior: `deadLetterChannel` handles retries and routing automatically.                          |
 
 * Good because of built-in Enterprise Integration Patterns (EIP): Patterns like Dead Letter Channel, Wire Tap, and Message Translator are native. We don't write the logic, we just configure it.
 * Good because of its large component library: Camel has 300+ components. Switching from a Webhook to a Kafka source is just changing a URI (for example, `platform-http:/hook` to `kafka:my-topic`).
-* Good because of flexibility. We can leverage the Camel components to easily add functionalities to IDP-CORE. For example, using Pub/Sub instead of the database for queuing.
+* Good because of flexibility. We can leverage the Camel components to easily add functionalities to IDP-Core. For example, using Pub/Sub instead of the database for queuing.
 * Good because Camel has a native JQ and JSLT expression language. We can apply the template mapping in one line of DSL.
 * Good because of error handling. Managing different Dead Letter Queues for "Mapping Errors" vs. "Database Errors" is handled via simple `onException` blocks.
 * Good because of less conception time. We will focus more on the route logic.
@@ -147,8 +148,8 @@ Here is how we could implement each block using only Spring Boot code:
 * Bad because if we cannot implement a generic route, the high volume of individual routes will significantly delay the container startup.
 * Bad because there is no typing contract between treatments at build. It will not break during the build if the route n+1 expects another object type.
 
-## More information
+## More Information
 
-* [Apache Camel for Spring Boot documentation](https://camel.apache.org/camel-spring-boot/4.18.x/)
+* [Apache Camel for Spring Boot documentation](https://camel.apache.org/camel-spring-boot/latest/)
 * [Apache Documentation for LLM](https://camel.apache.org/blog/2025/11/camel-website-llmstxt)
-* [Apache Documentation for Open Telemetry integration](https://camel.apache.org/components/4.18.x/others/opentelemetry.html)
+* [Apache Documentation for Open Telemetry integration](https://camel.apache.org/components/latest/others/opentelemetry.html)
