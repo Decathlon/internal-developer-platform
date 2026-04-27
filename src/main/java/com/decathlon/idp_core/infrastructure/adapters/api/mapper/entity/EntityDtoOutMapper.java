@@ -20,9 +20,9 @@ import com.decathlon.idp_core.domain.model.entity.RelationAsTargetSummary;
 import com.decathlon.idp_core.domain.model.entity_template.EntityTemplate;
 import com.decathlon.idp_core.domain.model.entity_template.PropertyDefinition;
 import com.decathlon.idp_core.domain.model.enums.PropertyType;
-import com.decathlon.idp_core.domain.service.EntityService;
-import com.decathlon.idp_core.domain.service.EntityTemplateService;
-import com.decathlon.idp_core.domain.service.RelationService;
+import com.decathlon.idp_core.domain.service.entity_template.EntityService;
+import com.decathlon.idp_core.domain.service.entity_template.entity_template.EntityTemplateService;
+import com.decathlon.idp_core.domain.service.entity_template.RelationService;
 import com.decathlon.idp_core.infrastructure.adapters.api.dto.out.entity.EntityDtoOut;
 import com.decathlon.idp_core.infrastructure.adapters.api.dto.out.entity.EntitySummaryDto;
 

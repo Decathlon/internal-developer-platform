@@ -431,6 +431,19 @@ class EntityTemplateControllerTest extends AbstractIntegrationTest {
             assertNotNull(res, "Test executed successfully");
         }
 
+        /// Tests the POST /api/v1/entity-templates endpoint with invalid property rules.
+        /// This test verifies that rules incompatible with property type are rejected.
+        /// @throws Exception if the MockMvc request fails
+        @Test
+        @WithMockUser()
+        @DisplayName("Returns 400 when STRING property has numeric rules")
+        void postTemplate_400_string_property_with_numeric_rules() throws Exception {
+            MvcResult res = postBadRequestAndAssertEquals(ENTITY_TEMPLATE_PATH,
+                    ENTITY_TEMPLATE_JSON_TEST_PATH + "postEntityTemplate_400_invalid_rules.json",
+                    "Property 'property-test' of type STRING: Numeric rule maxValue is not allowed for STRING properties");
+            assertNotNull(res, "Test executed successfully");
+        }
+
         /// Tests the POST /api/v1/entity-templates endpoint with no property definitions.
         /// This test verifies that:
         /// - Templates can be created without any properties

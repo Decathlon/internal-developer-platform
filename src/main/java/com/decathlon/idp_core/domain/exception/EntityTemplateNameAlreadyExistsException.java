@@ -3,7 +3,7 @@ package com.decathlon.idp_core.domain.exception;
 import static com.decathlon.idp_core.domain.constant.ValidationMessages.TEMPLATE_NAME_ALREADY_EXISTS;
 
 import com.decathlon.idp_core.domain.model.entity_template.EntityTemplate;
-import com.decathlon.idp_core.domain.service.EntityTemplateService;
+import com.decathlon.idp_core.domain.service.entity_template.entity_template.EntityTemplateService;
 
 /// Exception thrown when attempting to create or update an [EntityTemplate] with a name that already exists.
 ///

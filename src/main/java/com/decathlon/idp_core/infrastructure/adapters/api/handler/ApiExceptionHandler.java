@@ -5,6 +5,7 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
+import com.decathlon.idp_core.domain.exception.PropertyRulesConflictException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
@@ -81,6 +82,18 @@ public class ApiExceptionHandler {
         log.warn("Entity template name already exists: {}", ex.getMessage());
         ErrorResponse errorResponse = new ErrorResponse(HttpStatus.CONFLICT.name(), ex.getMessage());
         return ResponseEntity.status(HttpStatus.CONFLICT).body(errorResponse);
+    }
+
+    /// Handles domain exception for wrong entity template property rules.
+    ///
+    /// **HTTP mapping:** Maps domain PropertyRulesConflictException to HTTP 400
+    /// status indicating validation error for wrong property rules.
+    @ExceptionHandler(PropertyRulesConflictException.class)
+    public ResponseEntity<ErrorResponse> handleWrongPropertyRulesException(
+            PropertyRulesConflictException ex) {
+        log.warn("Wrong Entity template property rules: {}", ex.getMessage());
+        ErrorResponse errorResponse = new ErrorResponse(HttpStatus.BAD_REQUEST.name(), ex.getMessage());
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(errorResponse);
     }
 
     /// Handles Bean Validation constraint violations from domain model validation.

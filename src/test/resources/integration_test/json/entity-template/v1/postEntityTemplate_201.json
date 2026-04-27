@@ -14,8 +14,8 @@
         "regex": "",
         "max_length": 200,
         "min_length": 1,
-        "max_value": 0,
-        "min_value": 0
+        "max_value": null,
+        "min_value": null
       }
     }
   ],

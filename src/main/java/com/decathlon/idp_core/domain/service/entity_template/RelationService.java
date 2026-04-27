@@ -1,4 +1,4 @@
-package com.decathlon.idp_core.domain.service;
+package com.decathlon.idp_core.domain.service.entity_template;
 
 import java.util.List;
 
