@@ -1,4 +1,4 @@
-package com.decathlon.idp_core.infrastructure.adapters.api.dto.out.entitytemplate;
+package com.decathlon.idp_core.infrastructure.adapters.api.dto.out.entity_template;
 
 import static com.decathlon.idp_core.infrastructure.adapters.api.configuration.SwaggerDescription.FIELD_RELATION_NAME;
 import static com.decathlon.idp_core.infrastructure.adapters.api.configuration.SwaggerDescription.FIELD_RELATION_REQUIRED;

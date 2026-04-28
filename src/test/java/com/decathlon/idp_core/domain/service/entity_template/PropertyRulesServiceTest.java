@@ -243,6 +243,36 @@ class PropertyRulesServiceTest {
             assertTrue(ex.getMessage().contains("min_length"));
             assertTrue(ex.getMessage().contains("0"));
         }
+
+        @Test
+        @DisplayName("Error: STRING with invalid regex pattern")
+        void testStringWithInvalidRegexPattern() {
+            PropertyRules rules = new PropertyRules(
+                    UUID.randomUUID(),
+                    null,
+                    null,
+                    "[invalid-regex",
+                    255,
+                    null,
+                    null,
+                    null
+            );
+            PropertyDefinition property = new PropertyDefinition(
+                    UUID.randomUUID(),
+                    "field",
+                    "A field",
+                    PropertyType.STRING,
+                    true,
+                    rules
+            );
+
+            PropertyRulesConflictException ex = assertThrows(
+                    PropertyRulesConflictException.class,
+                    () -> PropertyRulesService.validatePropertyRules(property)
+            );
+            assertTrue(ex.getMessage().contains("regex"));
+            assertTrue(ex.getMessage().contains("[invalid-regex"));
+        }
     }
 
     @Nested

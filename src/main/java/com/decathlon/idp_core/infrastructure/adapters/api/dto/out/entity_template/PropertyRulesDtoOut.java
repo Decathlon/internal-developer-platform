@@ -1,4 +1,4 @@
-package com.decathlon.idp_core.infrastructure.adapters.api.dto.out.entitytemplate;
+package com.decathlon.idp_core.infrastructure.adapters.api.dto.out.entity_template;
 
 import static com.decathlon.idp_core.infrastructure.adapters.api.configuration.SwaggerDescription.FIELD_PROPERTY_RULES_ENUM_VALUES;
 import static com.decathlon.idp_core.infrastructure.adapters.api.configuration.SwaggerDescription.FIELD_PROPERTY_RULES_FORMAT;

@@ -588,7 +588,6 @@ class EntityTemplateControllerTest extends AbstractIntegrationTest {
 
             String updateJson = """
                     {
-                      "identifier": "template-rel-test",
                       "name": "Template Rel Test",
                       "description": "Updated template with new relation",
                       "properties_definitions": [

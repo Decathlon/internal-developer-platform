@@ -48,10 +48,10 @@ import com.decathlon.idp_core.domain.service.entity_template.EntityTemplateServi
 import com.decathlon.idp_core.infrastructure.adapters.api.configuration.SwaggerConfiguration.TemplatePageResponse;
 import com.decathlon.idp_core.infrastructure.adapters.api.dto.in.EntityTemplateCreateDtoIn;
 import com.decathlon.idp_core.infrastructure.adapters.api.dto.in.EntityTemplateUpdateDtoIn;
-import com.decathlon.idp_core.infrastructure.adapters.api.dto.out.entitytemplate.EntityTemplateDtoOut;
+import com.decathlon.idp_core.infrastructure.adapters.api.dto.out.entity_template.EntityTemplateDtoOut;
 import com.decathlon.idp_core.infrastructure.adapters.api.handler.ApiExceptionHandler;
 import com.decathlon.idp_core.infrastructure.adapters.api.handler.ApiExceptionHandler.ErrorResponse;
-import com.decathlon.idp_core.infrastructure.adapters.api.mapper.entitytemplate.EntityTemplateMapper;
+import com.decathlon.idp_core.infrastructure.adapters.api.mapper.entity_template.EntityTemplateMapper;
 
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;

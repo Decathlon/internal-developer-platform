@@ -11,6 +11,9 @@ spring:
   jackson:
     # Serializes all JSON fields as snake_case (for example templateIdentifier → template_identifier).
     property-naming-strategy: SNAKE_CASE
+    deserialization:
+      # Fails deserialization if JSON contains unknown fields not mapped to Java properties.
+      fail-on-unknown-properties: true
 
   profiles:
     # Activates a Spring profile from the env var SPRING_PROFILE (defaults to none).

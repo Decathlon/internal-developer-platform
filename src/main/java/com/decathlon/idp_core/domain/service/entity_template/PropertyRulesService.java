@@ -6,6 +6,9 @@ import static com.decathlon.idp_core.domain.constant.ValidationMessages.PROPERTY
 import static com.decathlon.idp_core.domain.constant.ValidationMessages.minMaxConstraintViolated;
 import static com.decathlon.idp_core.domain.constant.ValidationMessages.ruleNotAllowed;
 
+import java.util.regex.Pattern;
+import java.util.regex.PatternSyntaxException;
+
 import com.decathlon.idp_core.domain.exception.PropertyRulesConflictException;
 import com.decathlon.idp_core.domain.model.entity_template.PropertyDefinition;
 import com.decathlon.idp_core.domain.model.entity_template.PropertyRules;
@@ -73,12 +76,12 @@ public final class PropertyRulesService {
     ///
     /// **Allowed rules:** format, enum_values, regex, max_length, min_length
     /// **Rejected rules:** max_value, min_value (numeric)
-    /// **Constraints:** 0 ≤ min_length ≤ max_length
+    /// **Constraints:** 0 ≤ min_length ≤ max_length, regex must be valid
     ///
     /// @param propertyName name of the property (for error reporting)
     /// @param rules the property rules to validate
     /// @throws PropertyRulesConflictException when numeric rules are present
-    ///         or min/max length constraints are violated
+    ///         or min/max length constraints are violated or regex is invalid
     private static void validateStringPropertyRules(String propertyName, PropertyRules rules) {
         // Reject numeric rules for STRING type
         if (rules.maxValue() != null || rules.minValue() != null) {
@@ -88,6 +91,11 @@ public final class PropertyRulesService {
                     PropertyType.STRING,
                     PROPERTY_RULES_NUMERIC_RULE_NOT_ALLOWED.replace("{rule}", ruleName)
             );
+        }
+
+        // Validate regex pattern is valid
+        if (rules.regex() != null && !rules.regex().isBlank()) {
+            validateRegexPattern(propertyName, rules.regex());
         }
 
         // Validate min_length is below max_length
@@ -193,4 +201,22 @@ public final class PropertyRulesService {
             );
         }
     }
+
+    /// Validates that the provided regex pattern is syntactically valid.
+    ///
+    /// @param propertyName name of the property (for error reporting)
+    /// @param regexPattern the regex pattern to validate
+    /// @throws PropertyRulesConflictException if the pattern is syntactically invalid
+    private static void validateRegexPattern(String propertyName, String regexPattern) {
+        try {
+            Pattern.compile(regexPattern);
+        } catch (PatternSyntaxException e) {
+            throw new PropertyRulesConflictException(
+                    propertyName,
+                    PropertyType.STRING,
+                    "Invalid regex pattern: " + e.getMessage()
+            );
+        }
+    }
+
 }
