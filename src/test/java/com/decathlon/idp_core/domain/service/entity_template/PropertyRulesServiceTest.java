@@ -7,6 +7,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import java.util.List;
 import java.util.UUID;
 
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -19,6 +20,13 @@ import com.decathlon.idp_core.domain.model.enums.PropertyType;
 
 @DisplayName("PropertyRulesService Tests")
 class PropertyRulesServiceTest {
+
+    private PropertyRulesService propertyRulesService;
+
+    @BeforeEach
+    void setUp() {
+        propertyRulesService = new PropertyRulesService();
+    }
 
     @Nested
     @DisplayName("STRING Property Type")
@@ -46,7 +54,7 @@ class PropertyRulesServiceTest {
                     rules
             );
 
-            assertDoesNotThrow(() -> PropertyRulesService.validatePropertyRules(property));
+            assertDoesNotThrow(() -> propertyRulesService.validatePropertyRules(property));
         }
 
         @Test
@@ -71,7 +79,7 @@ class PropertyRulesServiceTest {
                     rules
             );
 
-            assertDoesNotThrow(() -> PropertyRulesService.validatePropertyRules(property));
+            assertDoesNotThrow(() -> propertyRulesService.validatePropertyRules(property));
         }
 
         @Test
@@ -96,7 +104,7 @@ class PropertyRulesServiceTest {
                     rules
             );
 
-            assertDoesNotThrow(() -> PropertyRulesService.validatePropertyRules(property));
+            assertDoesNotThrow(() -> propertyRulesService.validatePropertyRules(property));
         }
 
         @Test
@@ -121,7 +129,7 @@ class PropertyRulesServiceTest {
                     rules
             );
 
-            assertDoesNotThrow(() -> PropertyRulesService.validatePropertyRules(property));
+            assertDoesNotThrow(() -> propertyRulesService.validatePropertyRules(property));
         }
 
         @Test
@@ -148,7 +156,7 @@ class PropertyRulesServiceTest {
 
             PropertyRulesConflictException ex = assertThrows(
                     PropertyRulesConflictException.class,
-                    () -> PropertyRulesService.validatePropertyRules(property)
+                    () -> propertyRulesService.validatePropertyRules(property)
             );
             assertTrue(ex.getMessage().contains("name"));
             assertTrue(ex.getMessage().contains("STRING"));
@@ -178,7 +186,7 @@ class PropertyRulesServiceTest {
 
             PropertyRulesConflictException ex = assertThrows(
                     PropertyRulesConflictException.class,
-                    () -> PropertyRulesService.validatePropertyRules(property)
+                    () -> propertyRulesService.validatePropertyRules(property)
             );
             assertTrue(ex.getMessage().contains("counter"));
             assertTrue(ex.getMessage().contains("STRING"));
@@ -208,7 +216,7 @@ class PropertyRulesServiceTest {
 
             PropertyRulesConflictException ex = assertThrows(
                     PropertyRulesConflictException.class,
-                    () -> PropertyRulesService.validatePropertyRules(property)
+                    () -> propertyRulesService.validatePropertyRules(property)
             );
             assertTrue(ex.getMessage().contains("min_length"));
             assertTrue(ex.getMessage().contains("max_length"));
@@ -238,7 +246,7 @@ class PropertyRulesServiceTest {
 
             PropertyRulesConflictException ex = assertThrows(
                     PropertyRulesConflictException.class,
-                    () -> PropertyRulesService.validatePropertyRules(property)
+                    () -> propertyRulesService.validatePropertyRules(property)
             );
             assertTrue(ex.getMessage().contains("min_length"));
             assertTrue(ex.getMessage().contains("0"));
@@ -268,10 +276,80 @@ class PropertyRulesServiceTest {
 
             PropertyRulesConflictException ex = assertThrows(
                     PropertyRulesConflictException.class,
-                    () -> PropertyRulesService.validatePropertyRules(property)
+                    () -> propertyRulesService.validatePropertyRules(property)
             );
             assertTrue(ex.getMessage().contains("regex"));
             assertTrue(ex.getMessage().contains("[invalid-regex"));
+        }
+
+        @Test
+        @DisplayName("Happy path: STRING with null rules")
+        void testStringWithNullRules() {
+            PropertyDefinition property = new PropertyDefinition(
+                    UUID.randomUUID(),
+                    "field",
+                    "A field",
+                    PropertyType.STRING,
+                    true,
+                    null
+            );
+
+            assertDoesNotThrow(() -> propertyRulesService.validatePropertyRules(property));
+        }
+
+        @Test
+        @DisplayName("Happy path: STRING with min_length = 0 and max_length > 0")
+        void testStringWithZeroMinLength() {
+            PropertyRules rules = new PropertyRules(
+                    UUID.randomUUID(),
+                    null,
+                    null,
+                    null,
+                    100,
+                    0,
+                    null,
+                    null
+            );
+            PropertyDefinition property = new PropertyDefinition(
+                    UUID.randomUUID(),
+                    "optional_field",
+                    "An optional field",
+                    PropertyType.STRING,
+                    false,
+                    rules
+            );
+
+            assertDoesNotThrow(() -> propertyRulesService.validatePropertyRules(property));
+        }
+
+        @Test
+        @DisplayName("Error: STRING with max_length <= 0")
+        void testStringWithNonPositiveMaxLength() {
+            PropertyRules rules = new PropertyRules(
+                    UUID.randomUUID(),
+                    null,
+                    null,
+                    null,
+                    0,
+                    null,
+                    null,
+                    null
+            );
+            PropertyDefinition property = new PropertyDefinition(
+                    UUID.randomUUID(),
+                    "field",
+                    "A field",
+                    PropertyType.STRING,
+                    true,
+                    rules
+            );
+
+            PropertyRulesConflictException ex = assertThrows(
+                    PropertyRulesConflictException.class,
+                    () -> propertyRulesService.validatePropertyRules(property)
+            );
+            assertTrue(ex.getMessage().contains("max_length"));
+            assertTrue(ex.getMessage().contains("greater than 0"));
         }
     }
 
@@ -301,7 +379,7 @@ class PropertyRulesServiceTest {
                     rules
             );
 
-            assertDoesNotThrow(() -> PropertyRulesService.validatePropertyRules(property));
+            assertDoesNotThrow(() -> propertyRulesService.validatePropertyRules(property));
         }
 
         @Test
@@ -326,7 +404,7 @@ class PropertyRulesServiceTest {
                     rules
             );
 
-            assertDoesNotThrow(() -> PropertyRulesService.validatePropertyRules(property));
+            assertDoesNotThrow(() -> propertyRulesService.validatePropertyRules(property));
         }
 
         @Test
@@ -353,7 +431,7 @@ class PropertyRulesServiceTest {
 
             PropertyRulesConflictException ex = assertThrows(
                     PropertyRulesConflictException.class,
-                    () -> PropertyRulesService.validatePropertyRules(property)
+                    () -> propertyRulesService.validatePropertyRules(property)
             );
             assertTrue(ex.getMessage().contains("value"));
             assertTrue(ex.getMessage().contains("NUMBER"));
@@ -384,7 +462,7 @@ class PropertyRulesServiceTest {
 
             PropertyRulesConflictException ex = assertThrows(
                     PropertyRulesConflictException.class,
-                    () -> PropertyRulesService.validatePropertyRules(property)
+                    () -> propertyRulesService.validatePropertyRules(property)
             );
             assertTrue(ex.getMessage().contains("enum_values"));
         }
@@ -413,7 +491,7 @@ class PropertyRulesServiceTest {
 
             PropertyRulesConflictException ex = assertThrows(
                     PropertyRulesConflictException.class,
-                    () -> PropertyRulesService.validatePropertyRules(property)
+                    () -> propertyRulesService.validatePropertyRules(property)
             );
             assertTrue(ex.getMessage().contains("regex"));
         }
@@ -442,7 +520,7 @@ class PropertyRulesServiceTest {
 
             PropertyRulesConflictException ex = assertThrows(
                     PropertyRulesConflictException.class,
-                    () -> PropertyRulesService.validatePropertyRules(property)
+                    () -> propertyRulesService.validatePropertyRules(property)
             );
             assertTrue(ex.getMessage().contains("min_length"));
         }
@@ -471,7 +549,7 @@ class PropertyRulesServiceTest {
 
             PropertyRulesConflictException ex = assertThrows(
                     PropertyRulesConflictException.class,
-                    () -> PropertyRulesService.validatePropertyRules(property)
+                    () -> propertyRulesService.validatePropertyRules(property)
             );
             assertTrue(ex.getMessage().contains("max_length"));
         }
@@ -500,10 +578,75 @@ class PropertyRulesServiceTest {
 
             PropertyRulesConflictException ex = assertThrows(
                     PropertyRulesConflictException.class,
-                    () -> PropertyRulesService.validatePropertyRules(property)
+                    () -> propertyRulesService.validatePropertyRules(property)
             );
             assertTrue(ex.getMessage().contains("min_value"));
             assertTrue(ex.getMessage().contains("max_value"));
+        }
+
+        @Test
+        @DisplayName("Happy path: NUMBER with only min_value")
+        void testNumberWithOnlyMinValue() {
+            PropertyRules rules = new PropertyRules(
+                    UUID.randomUUID(),
+                    null,
+                    null,
+                    null,
+                    null,
+                    null,
+                    null,
+                    10
+            );
+            PropertyDefinition property = new PropertyDefinition(
+                    UUID.randomUUID(),
+                    "minimum_age",
+                    "Minimum age",
+                    PropertyType.NUMBER,
+                    false,
+                    rules
+            );
+
+            assertDoesNotThrow(() -> propertyRulesService.validatePropertyRules(property));
+        }
+
+        @Test
+        @DisplayName("Happy path: NUMBER with negative min_value and max_value")
+        void testNumberWithNegativeValues() {
+            PropertyRules rules = new PropertyRules(
+                    UUID.randomUUID(),
+                    null,
+                    null,
+                    null,
+                    null,
+                    null,
+                    100,
+                    -100
+            );
+            PropertyDefinition property = new PropertyDefinition(
+                    UUID.randomUUID(),
+                    "temperature",
+                    "Temperature",
+                    PropertyType.NUMBER,
+                    false,
+                    rules
+            );
+
+            assertDoesNotThrow(() -> propertyRulesService.validatePropertyRules(property));
+        }
+
+        @Test
+        @DisplayName("Happy path: NUMBER with null rules")
+        void testNumberWithNullRules() {
+            PropertyDefinition property = new PropertyDefinition(
+                    UUID.randomUUID(),
+                    "count",
+                    "A count",
+                    PropertyType.NUMBER,
+                    true,
+                    null
+            );
+
+            assertDoesNotThrow(() -> propertyRulesService.validatePropertyRules(property));
         }
     }
 
@@ -523,7 +666,7 @@ class PropertyRulesServiceTest {
                     null
             );
 
-            assertDoesNotThrow(() -> PropertyRulesService.validatePropertyRules(property));
+            assertDoesNotThrow(() -> propertyRulesService.validatePropertyRules(property));
         }
 
         @Test
@@ -550,7 +693,7 @@ class PropertyRulesServiceTest {
 
             PropertyRulesConflictException ex = assertThrows(
                     PropertyRulesConflictException.class,
-                    () -> PropertyRulesService.validatePropertyRules(property)
+                    () -> propertyRulesService.validatePropertyRules(property)
             );
             assertTrue(ex.getMessage().contains("BOOLEAN"));
             assertTrue(ex.getMessage().contains("rules"));
@@ -580,7 +723,7 @@ class PropertyRulesServiceTest {
 
             PropertyRulesConflictException ex = assertThrows(
                     PropertyRulesConflictException.class,
-                    () -> PropertyRulesService.validatePropertyRules(property)
+                    () -> propertyRulesService.validatePropertyRules(property)
             );
             assertTrue(ex.getMessage().contains("BOOLEAN"));
         }
@@ -609,7 +752,7 @@ class PropertyRulesServiceTest {
 
             PropertyRulesConflictException ex = assertThrows(
                     PropertyRulesConflictException.class,
-                    () -> PropertyRulesService.validatePropertyRules(property)
+                    () -> propertyRulesService.validatePropertyRules(property)
             );
             assertTrue(ex.getMessage().contains("BOOLEAN"));
         }
@@ -638,7 +781,7 @@ class PropertyRulesServiceTest {
 
             PropertyRulesConflictException ex = assertThrows(
                     PropertyRulesConflictException.class,
-                    () -> PropertyRulesService.validatePropertyRules(property)
+                    () -> propertyRulesService.validatePropertyRules(property)
             );
             assertTrue(ex.getMessage().contains("BOOLEAN"));
         }
@@ -667,7 +810,7 @@ class PropertyRulesServiceTest {
 
             PropertyRulesConflictException ex = assertThrows(
                     PropertyRulesConflictException.class,
-                    () -> PropertyRulesService.validatePropertyRules(property)
+                    () -> propertyRulesService.validatePropertyRules(property)
             );
             assertTrue(ex.getMessage().contains("BOOLEAN"));
         }

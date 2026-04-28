@@ -43,6 +43,7 @@ import lombok.RequiredArgsConstructor;
 public class EntityTemplateService {
 
     private final EntityTemplateRepositoryPort entityTemplateRepositoryPort;
+    private final PropertyRulesService propertyRulesService;
 
     /// Retrieves paginated entity templates for management interface display.
     ///
@@ -154,7 +155,7 @@ public class EntityTemplateService {
     private void validateTemplateRules(@Valid EntityTemplate entityTemplate) {
         if (entityTemplate.propertiesDefinitions() != null) {
             for (PropertyDefinition property : entityTemplate.propertiesDefinitions()) {
-                PropertyRulesService.validatePropertyRules(property);
+                propertyRulesService.validatePropertyRules(property);
             }
         }
     }

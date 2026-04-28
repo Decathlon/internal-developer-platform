@@ -31,7 +31,8 @@ public class ValidationMessages {
     // Property Rules validation messages - templates and specific constraints
     public static final String PROPERTY_RULES_RULE_NOT_ALLOWED_FOR_TYPE = "{rule} rule is not allowed for {type} property type";
     public static final String PROPERTY_RULES_MIN_MAX_CONSTRAINT_VIOLATED = "min_{constraint} must be less than or equal to max_{constraint}";
-    public static final String PROPERTY_RULES_MIN_VALUE_NON_NEGATIVE = "min_length must be greater than or equal to 0";
+    public static final String PROPERTY_RULES_MIN_LENGTH_NON_NEGATIVE = "min_length must be greater than or equal to 0";
+    public static final String PROPERTY_RULES_MAX_LENGTH_POSITIVE = "max_length must be greater than 0";
     public static final String PROPERTY_RULES_BOOLEAN_NOT_ALLOWED = "Boolean properties do not accept any rules";
     public static final String PROPERTY_RULES_NUMERIC_RULE_NOT_ALLOWED = "Numeric rule {rule} is not allowed for STRING properties";
 
