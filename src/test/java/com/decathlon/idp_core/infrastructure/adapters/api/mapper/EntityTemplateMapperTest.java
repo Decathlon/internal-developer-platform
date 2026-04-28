@@ -21,11 +21,11 @@ import com.decathlon.idp_core.infrastructure.adapters.api.dto.in.EntityTemplateD
 import com.decathlon.idp_core.infrastructure.adapters.api.dto.in.PropertyDefinitionDtoIn;
 import com.decathlon.idp_core.infrastructure.adapters.api.dto.in.PropertyRulesDtoIn;
 import com.decathlon.idp_core.infrastructure.adapters.api.dto.in.RelationDefinitionDtoIn;
-import com.decathlon.idp_core.infrastructure.adapters.api.dto.out.entitytemplate.EntityTemplateDtoOut;
-import com.decathlon.idp_core.infrastructure.adapters.api.dto.out.entitytemplate.PropertyDefinitionDtoOut;
-import com.decathlon.idp_core.infrastructure.adapters.api.dto.out.entitytemplate.PropertyRulesDtoOut;
-import com.decathlon.idp_core.infrastructure.adapters.api.dto.out.entitytemplate.RelationDefinitionDtoOut;
-import com.decathlon.idp_core.infrastructure.adapters.api.mapper.entitytemplate.EntityTemplateMapper;
+import com.decathlon.idp_core.infrastructure.adapters.api.dto.out.entity_template.EntityTemplateDtoOut;
+import com.decathlon.idp_core.infrastructure.adapters.api.dto.out.entity_template.PropertyDefinitionDtoOut;
+import com.decathlon.idp_core.infrastructure.adapters.api.dto.out.entity_template.PropertyRulesDtoOut;
+import com.decathlon.idp_core.infrastructure.adapters.api.dto.out.entity_template.RelationDefinitionDtoOut;
+import com.decathlon.idp_core.infrastructure.adapters.api.mapper.entity_template.EntityTemplateMapper;
 
 @DisplayName("EntityTemplateMapper Tests")
 class EntityTemplateMapperTest {

@@ -1,4 +1,4 @@
-package com.decathlon.idp_core.domain.service;
+package com.decathlon.idp_core.domain.service.entity_template;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -79,6 +79,7 @@ public class EntityTemplateService {
     /// **Business rules enforced:**
     /// - If `identifier` is provided it must not already exist in the system.
     /// - If `name` is provided it must not already exist in the system.
+    /// - Validation of property rules according to their defined constraints.
     ///
     /// @param entityTemplate validated template to create and persist
     /// @return the persisted template with generated identifiers
@@ -94,6 +95,7 @@ public class EntityTemplateService {
                 entityTemplateRepositoryPort.existsByName(entityTemplate.name())) {
             throw new EntityTemplateNameAlreadyExistsException(entityTemplate.name());
         }
+        validateTemplateRules(entityTemplate);
         return entityTemplateRepositoryPort.save(entityTemplate);
     }
 
@@ -112,39 +114,49 @@ public class EntityTemplateService {
     ///   - *Matched by name* → existing ID is preserved, other fields are overwritten.
     ///   - *Not matched* → treated as a new definition (no ID yet).
     ///   - *Missing from update* → removed (handled downstream by the persistence adapter).
+    ///   - Validation of property rules according to their defined constraints.
     ///
     /// @param identifier current business identifier of the template to update
-    /// @param updatedTemplate validated template carrying the desired state
+    /// @param entityTemplate validated template carrying the desired state
     /// @return the persisted template after merge, with generated or preserved identifiers
     /// @throws EntityTemplateNotFoundException when no template matches `identifier`
     /// @throws EntityTemplateAlreadyExistsException when renaming would cause a duplicate
     @Transactional
-    public EntityTemplate putEntityTemplate(String identifier, @Valid EntityTemplate updatedTemplate) {
+    public EntityTemplate updateEntityTemplate(String identifier, @Valid EntityTemplate entityTemplate) {
         EntityTemplate existingTemplate = getEntityTemplateByIdentifier(identifier);
 
-        if (!identifier.equals(updatedTemplate.identifier()) &&
-                entityTemplateRepositoryPort.existsByIdentifier(updatedTemplate.identifier())) {
-            throw new EntityTemplateAlreadyExistsException(updatedTemplate.identifier());
+        if (!identifier.equals(entityTemplate.identifier()) &&
+                entityTemplateRepositoryPort.existsByIdentifier(entityTemplate.identifier())) {
+            throw new EntityTemplateAlreadyExistsException(entityTemplate.identifier());
         }
 
-        if (updatedTemplate.name() != null &&
-               !Objects.equals(existingTemplate.name(), updatedTemplate.name()) &&
-               entityTemplateRepositoryPort.existsByName(updatedTemplate.name())) {
-           throw new EntityTemplateNameAlreadyExistsException(updatedTemplate.name());
+        if (entityTemplate.name() != null &&
+               !Objects.equals(existingTemplate.name(), entityTemplate.name()) &&
+               entityTemplateRepositoryPort.existsByName(entityTemplate.name())) {
+           throw new EntityTemplateNameAlreadyExistsException(entityTemplate.name());
         }
 
         EntityTemplate mergedTemplate = new EntityTemplate(
                 existingTemplate.id(),
-                updatedTemplate.identifier(),
-                updatedTemplate.name(),
-                updatedTemplate.description(),
+                entityTemplate.identifier(),
+                entityTemplate.name(),
+                entityTemplate.description(),
                 mergePropertyDefinitions(existingTemplate.propertiesDefinitions(),
-                        updatedTemplate.propertiesDefinitions()),
+                        entityTemplate.propertiesDefinitions()),
                 mergeRelationDefinitions(existingTemplate.relationsDefinitions(),
-                        updatedTemplate.relationsDefinitions())
+                        entityTemplate.relationsDefinitions())
         );
+        validateTemplateRules(mergedTemplate);
 
         return entityTemplateRepositoryPort.save(mergedTemplate);
+    }
+
+    private void validateTemplateRules(@Valid EntityTemplate entityTemplate) {
+        if (entityTemplate.propertiesDefinitions() != null) {
+            for (PropertyDefinition property : entityTemplate.propertiesDefinitions()) {
+                PropertyRulesService.validatePropertyRules(property);
+            }
+        }
     }
 
     private List<PropertyDefinition> mergePropertyDefinitions(
