@@ -53,7 +53,7 @@ Chosen option: option 1, **"JSLT (JSON Standard Transformation Language),"** bec
 
 JSLT is a JSON transformation language inspired by XSLT, designed for transforming JSON data using a declarative, functional approach. It supports variables, functions, conditionals, and modular script organization. JSLT uses the pipe operator (`|`) for default values and relies on `if...else` blocks, often inside custom helper functions, for conditional logic. Is used for Data ingestion pipelines, ETL, API payload transformation, and scenarios where mapping logic should be externalized from the core application.
 
-```text
+```json
 {
   "identifier": .metadata.namespace + "-" + string(.metadata.id),
   "status": if (any([for (.analysis.findings) .severity == "critical"]))
@@ -87,9 +87,9 @@ JSLT is a JSON transformation language inspired by XSLT, designed for transformi
 
 ### 2. Use the Jackson-JQ Java Library
 
-JQ is a lightweight, command-line JSON processor with a functional, pipeline-based syntax. It excels at concise, inline transformations and is widely used for scripting and quick data manipulation. Jq uses the alternative operator (`//`) for fallbacks and is designed for highly concise, functional chaining of filters. All logic can be written inline.
+JQ is a lightweight, command-line JSON processor with a functional, pipeline-based syntax. It excels at concise, inline transformations and is widely used for scripting and quick data manipulation. JQ uses the alternative operator (`//`) for fallbacks and is designed for highly concise, functional chaining of filters. All logic can be written inline.
 
-```text
+```json
 {
   "identifier": "\(.metadata.namespace)-\(.metadata.id | tostring)",
   "status": (
