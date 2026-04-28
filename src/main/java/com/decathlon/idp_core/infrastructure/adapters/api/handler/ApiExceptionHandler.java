@@ -17,6 +17,10 @@ import com.decathlon.idp_core.domain.exception.EntityNotFoundException;
 import com.decathlon.idp_core.domain.exception.EntityTemplateAlreadyExistsException;
 import com.decathlon.idp_core.domain.exception.EntityTemplateNameAlreadyExistsException;
 import com.decathlon.idp_core.domain.exception.EntityTemplateNotFoundException;
+import com.decathlon.idp_core.domain.exception.PropertyNameAlreadyExistsException;
+import com.decathlon.idp_core.domain.exception.RelationNameAlreadyExistsException;
+import com.decathlon.idp_core.domain.exception.TargetTemplateNotFoundException;
+import com.decathlon.idp_core.domain.exception.UnsafeTypeConversionException;
 
 import jakarta.validation.ConstraintViolation;
 import jakarta.validation.ConstraintViolationException;
@@ -94,6 +98,50 @@ public class ApiExceptionHandler {
         log.warn("Wrong Entity template property rules: {}", ex.getMessage());
         ErrorResponse errorResponse = new ErrorResponse(HttpStatus.BAD_REQUEST.name(), ex.getMessage());
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(errorResponse);
+    }
+
+    /// Handles domain exception when property names are duplicated within a template.
+    ///
+    /// **HTTP mapping:** Maps domain DuplicatePropertyNameException to HTTP 400
+    /// status indicating validation error for duplicate property names.
+    @ExceptionHandler(PropertyNameAlreadyExistsException.class)
+    public ResponseEntity<ErrorResponse> handleDuplicatePropertyNameException(
+            PropertyNameAlreadyExistsException ex) {
+        log.warn("Duplicate property name: {}", ex.getMessage());
+        return createErrorResponse(HttpStatus.BAD_REQUEST, ex.getMessage());
+    }
+
+    /// Handles domain exception when relation names are duplicated within a template.
+    ///
+    /// **HTTP mapping:** Maps domain DuplicateRelationNameException to HTTP 400
+    /// status indicating validation error for duplicate relation names.
+    @ExceptionHandler(RelationNameAlreadyExistsException.class)
+    public ResponseEntity<ErrorResponse> handleDuplicateRelationNameException(
+            RelationNameAlreadyExistsException ex) {
+        log.warn("Duplicate relation name: {}", ex.getMessage());
+        return createErrorResponse(HttpStatus.BAD_REQUEST, ex.getMessage());
+    }
+
+    /// Handles domain exception when a relation references a non-existent target template.
+    ///
+    /// **HTTP mapping:** Maps domain TargetTemplateNotFoundException to HTTP 400
+    /// status indicating validation error for missing target template.
+    @ExceptionHandler(TargetTemplateNotFoundException.class)
+    public ResponseEntity<ErrorResponse> handleTargetTemplateNotFoundException(
+            TargetTemplateNotFoundException ex) {
+        log.warn("Target template not found: {}", ex.getMessage());
+        return createErrorResponse(HttpStatus.BAD_REQUEST, ex.getMessage());
+    }
+
+    /// Handles domain exception when unsafe type conversion is attempted on existing entities.
+    ///
+    /// **HTTP mapping:** Maps domain UnsafeTypeConversionException to HTTP 400
+    /// status indicating validation error for unsafe type changes.
+    @ExceptionHandler(UnsafeTypeConversionException.class)
+    public ResponseEntity<ErrorResponse> handleUnsafeTypeConversionException(
+            UnsafeTypeConversionException ex) {
+        log.warn("Unsafe type conversion: {}", ex.getMessage());
+        return createErrorResponse(HttpStatus.BAD_REQUEST, ex.getMessage());
     }
 
     /// Handles Bean Validation constraint violations from domain model validation.

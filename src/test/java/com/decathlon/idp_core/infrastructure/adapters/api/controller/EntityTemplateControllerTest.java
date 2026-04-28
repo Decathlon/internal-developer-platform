@@ -556,6 +556,77 @@ class EntityTemplateControllerTest extends AbstractIntegrationTest {
         @WithMockUser
         @DisplayName("Should update template with relations and return 200")
         void putTemplate_updateRelations_200() throws Exception {
+            // Create target templates first
+            mockMvc.perform(MockMvcRequestBuilders.post(ENTITY_TEMPLATE_PATH)
+                    .contentType(APPLICATION_JSON)
+                    .accept(APPLICATION_JSON)
+                    .with(csrf())
+                    .content("""
+                            {
+                              "identifier": "child-entity",
+                              "name": "Child Entity",
+                              "description": "Target template",
+                              "properties_definitions": [
+                                {
+                                  "name": "id",
+                                  "description": "Identifier",
+                                  "required": true,
+                                  "type": "STRING",
+                                  "rules": {}
+                                }
+                              ],
+                              "relations_definitions": []
+                            }
+                            """))
+                    .andExpect(status().isCreated());
+
+            mockMvc.perform(MockMvcRequestBuilders.post(ENTITY_TEMPLATE_PATH)
+                    .contentType(APPLICATION_JSON)
+                    .accept(APPLICATION_JSON)
+                    .with(csrf())
+                    .content("""
+                            {
+                              "identifier": "child-entity-updated",
+                              "name": "Child Entity Updated",
+                              "description": "Target template",
+                              "properties_definitions": [
+                                {
+                                  "name": "id",
+                                  "description": "Identifier",
+                                  "required": true,
+                                  "type": "STRING",
+                                  "rules": {}
+                                }
+                              ],
+                              "relations_definitions": []
+                            }
+                            """))
+                    .andExpect(status().isCreated());
+
+            mockMvc.perform(MockMvcRequestBuilders.post(ENTITY_TEMPLATE_PATH)
+                    .contentType(APPLICATION_JSON)
+                    .accept(APPLICATION_JSON)
+                    .with(csrf())
+                    .content("""
+                            {
+                              "identifier": "parent-entity",
+                              "name": "Parent Entity",
+                              "description": "Target template",
+                              "properties_definitions": [
+                                {
+                                  "name": "id",
+                                  "description": "Identifier",
+                                  "required": true,
+                                  "type": "STRING",
+                                  "rules": {}
+                                }
+                              ],
+                              "relations_definitions": []
+                            }
+                            """))
+                    .andExpect(status().isCreated());
+
+            // Now create the template with relations to existing templates
             mockMvc.perform(MockMvcRequestBuilders.post(ENTITY_TEMPLATE_PATH)
                     .contentType(APPLICATION_JSON)
                     .accept(APPLICATION_JSON)
@@ -909,6 +980,25 @@ class EntityTemplateControllerTest extends AbstractIntegrationTest {
                     .content(getJsonTestFileContent(
                             PostTemplateTests.ENTITY_TEMPLATE_JSON_TEST_PATH + "putEntityTemplate_200_with_empty_properties.json")))
                     .andExpect(status().isOk());
+        }
+
+        /// Tests that the PUT /api/v1/entity-templates/{identifier} endpoint rejects
+        /// requests with an identifier field in the request body.
+        /// **This test verifies that:**
+        /// - The endpoint returns HTTP 400 Bad Request when identifier is in body
+        /// @throws Exception if the MockMvc request fails
+        @Test
+        @WithMockUser()
+        @DisplayName("Should reject PUT request with identifier in body and return 400")
+        void putTemplate_400_identifier_in_body() throws Exception {
+            String identifier = "web-service";
+            mockMvc.perform(MockMvcRequestBuilders.put("/api/v1/entity-templates/" + identifier)
+                    .contentType(APPLICATION_JSON)
+                    .accept(APPLICATION_JSON)
+                    .with(csrf())
+                    .content(getJsonTestFileContent(
+                            PostTemplateTests.ENTITY_TEMPLATE_JSON_TEST_PATH + "putEntityTemplate_400_identifier_in_body.json")))
+                    .andExpect(status().isBadRequest());
         }
 
     }
