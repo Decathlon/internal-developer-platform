@@ -1,4 +1,4 @@
-# 0004 - Dynamic Mapping DSL
+# 0004 - Domain Specific Language (DSL) for Dynamic Mapping implementation
 
 * Status: Accepted
 * Deciders:
@@ -10,9 +10,9 @@
 
 ## Context and Problem Statement
 
-Mapping source objects to a target object is a central functionality that enables some IDP features like data connectors, calculated properties and Scorecard definitions among others.That’s why we need to do a prior analysis in order to implement, what we call, a mapping engine. This engine must allow dynamic mapping based on a user given query. This query should be user friendly and standardized.
+Mapping source objects to a target object is a central functionality that enables some IDP features like data connectors, calculated properties and Scorecard definitions among others. That’s why we need to do a prior analysis in order to implement, what we call, a mapping engine. This engine must allow dynamic mapping based on a user given query. This query should be user friendly and standardized.
 
-Dynamic mapping allows an application to change how it interprets incoming data without a recompilation or redeployment. This is typically achieved by using a Domain Specific Language (DSL) stored in a database or configuration file. Given that the IDP-Core is a Springboot application, in this study we will discuss two main DSL; JSLT and JQ.
+Dynamic mapping allows an application to change how it interprets incoming data without a recompilation or redeployment. This is typically achieved by using a Domain Specific Language (DSL) stored in a database or configuration file. Given that the IDP-Core is a SpringBoot application, in this study we will discuss two main DSL; JSLT and JQ.
 
 ## Decision Drivers
 
@@ -28,7 +28,7 @@ Dynamic mapping allows an application to change how it interprets incoming data 
 
 ## Decision Outcome
 
-Chosen option: option 1, **"JSLT (JSON Standard Transformation Language),"** because JSLT provides a capable DSL that meets our requirements for modularity, maintainability, scalability and extensibility. Its explicit use of helper functions for complex logic, while more verbose than jq, results in clearer, more maintainable scripts and better long-term debugging.
+Chosen option: option 1, **"JSLT (JSON Standard Transformation Language),"** because JSLT provides a capable DSL that meets our requirements for modularity, maintainability, scalability and extensibility. Its explicit use of helper functions for complex logic, while more verbose than JQ, results in clearer, more maintainable scripts and better long-term debugging.
 
 ### Positive Consequences
 
@@ -38,7 +38,7 @@ Chosen option: option 1, **"JSLT (JSON Standard Transformation Language),"** bec
 
 ### Negative Consequences
 
-* **Learning Curve:** JSLT is less common than JQ; contributors aund final users may need time to learn its XSLT-inspired syntax.
+* **Learning Curve:** JSLT is less common than JQ; contributors and final users may need time to learn its XSLT-inspired syntax.
 * **Verbosity:** Simple mappings require more lines of code than equivalent JQ expressions.
 * **Complex Use Cases:** Certain scenarios (complex grouping/aggregation, cross-referencing arrays, recursive structures, date/time math, dynamic key generation) remain difficult or unreadable, potentially requiring custom Java functions.
 
@@ -71,7 +71,6 @@ JSLT is a JSON transformation language inspired by XSLT, designed for transformi
 
 * Good, because **Performance:** It is a native Java implementation designed for the JVM, performing significantly faster than the Jackson-JQ emulation. (Performance)
 * Good, because **Helper Functions:** Requires defining helpers (`def function-name(...)`), which makes the main transformation body cleaner and enhances long-term script modularity and debugging. (Maintainability, Extensibility)
-* Good, because of the speed of treament. JSLT java library is at least 5 times faster that the jackson-jq one. (Perfomance)
 * Good, because **Extensibility:** Logic is easy to reuse across multiple mappings via defined helpers. (Extensibility)
 * Good, because **Standardized Reusability:** By identifying frequently used transformations, we can centralize them into a "Core IDP Library." This ensures that if a transformation rule changes (for example, a naming convention update), we update it in one place instead of modifying hundreds of mapping scripts. (Maintainability / Extensibility)
 * Good, because **User-Driven Extensibility:** Allowing users to contribute their own functions to the library empowers the community to solve niche problems while keeping the core engine clean and high-performing. (Contributing in open source mode)
@@ -83,12 +82,12 @@ JSLT is a JSON transformation language inspired by XSLT, designed for transformi
 * Bad, because **Maintenance Overhead**: To provide a "no-code" experience for end-users, the core team must build and maintain a custom library of helper functions. This creates a permanent maintenance layer that requires versioning, testing, and documentation. (Complexity of implementation / Maintainability)
 * Bad, because **Limited Built-ins:** Some advanced math, date or recursive operations may require custom Java function extensions. (Complexity of implementation)
 * Bad, because **Smaller Community:** Has a smaller ecosystem and fewer online resources and answers than JQ. (Contributor and end users UX)
-* Bad, because **Higher Entry Barrier:** Even with a library, the initial "blank page" experience for a new user is harder with JSLT than with JQ's simple piping syntax. (Contributor UX)
+* Bad, because **Higher Entry Barrier:** Even with a library, the initial "blank page" experience for a new user is harder with JSLT than with the JQ simple piping syntax. (Contributor UX)
 * Bad, because **Configuration Integrity Risk:** Allowing runtime or volume-mounted functions introduces the risk of "broken" configurations preventing system startup. We must implement a validation stage during the application's lifecycle to ensure all external scripts are syntactically correct before they are utilized. (Complexity of implementation / Reliability)
 
 ### 2. Use the Jackson-JQ Java Library
 
-JQ is a lightweight, command-line JSON processor with a functional, pipeline-based syntax. It excels at concise, inline transformations and is widely used for scripting and quick data manipulation.Jq uses the alternative operator (`//`) for fallbacks and is designed for highly concise, functional chaining of filters. All logic can be written inline.
+JQ is a lightweight, command-line JSON processor with a functional, pipeline-based syntax. It excels at concise, inline transformations and is widely used for scripting and quick data manipulation. Jq uses the alternative operator (`//`) for fallbacks and is designed for highly concise, functional chaining of filters. All logic can be written inline.
 
 ```text
 {
@@ -110,8 +109,8 @@ JQ is a lightweight, command-line JSON processor with a functional, pipeline-bas
 
 * Good, because **Conciseness:** Allows complex logic to be written almost entirely inline, resulting in shorter, dense code blocks. (Readability/Conciseness)
 * Good, because **Ubiquity:** JQ is the "de-facto" standard for JSON manipulation; most technical users already know the syntax. (Contributor UX)
-* Good, because **Logic:** Provides very flexible and concise string manipulation (for example, `split`, `ascii_downcase`). (Complexity of implementation)
-* Bad, because **Readability:** Deeply nested or very complex inline logic can sometimes compromise immediate readability and debuggingg. (Readability, Maintainability)
+* Good, because **Logic:** Provides flexible and concise string manipulation (for example, `split`, `ascii_downcase`). (Complexity of implementation)
+* Bad, because **Readability:** Deeply nested or complex inline logic can sometimes compromise immediate readability and debugging. (Readability, Maintainability)
 * Bad, because **Performance Penalty:** The Jackson-JQ library is an emulation of the original C-based JQ and is notably slower on large payloads. (Performance)
 * Bad, because **Maintenance Debt:** Lacks formal modularity; code reuse is usually achieved via copy-pasting, which leads to duplication across blueprints. (Maintainability, Extensibility)
 * Bad, because **Incomplete Parity:** Jackson-JQ is not a 100% port of the official C-based JQ. It lacks several built-in functions and advanced filters, leading to "documentation drift" where developers write code based on official JQ manuals that fails to execute in the Java environment. (Complexity of implementation / Maintainability)
