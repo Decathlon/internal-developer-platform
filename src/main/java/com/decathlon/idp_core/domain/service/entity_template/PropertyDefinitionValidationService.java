@@ -10,8 +10,8 @@ import static com.decathlon.idp_core.domain.constant.ValidationMessages.ruleNotA
 import java.util.regex.Pattern;
 import java.util.regex.PatternSyntaxException;
 
+import com.decathlon.idp_core.domain.exception.entity_template.PropertyDefinitionRulesConflictException;
 import org.springframework.stereotype.Service;
-import com.decathlon.idp_core.domain.exception.PropertyRulesConflictException;
 import com.decathlon.idp_core.domain.model.entity_template.PropertyDefinition;
 import com.decathlon.idp_core.domain.model.entity_template.PropertyRules;
 import com.decathlon.idp_core.domain.model.enums.PropertyType;
@@ -24,7 +24,7 @@ import com.decathlon.idp_core.domain.model.enums.PropertyType;
 /// - BOOLEAN: Rejects all rules; rules field must be null or empty.
 ///
 @Service
-public class PropertyRulesService {
+public class PropertyDefinitionValidationService {
 
     // Rule name constants
     public static final String REGEX = "regex";
@@ -45,8 +45,8 @@ public class PropertyRulesService {
     /// - Boolean properties reject all rules
     ///
     /// @param propertyDefinition the property definition containing type and rules
-    /// @throws PropertyRulesConflictException when rules violate business invariants
-    public void validatePropertyRules(PropertyDefinition propertyDefinition) {
+    /// @throws PropertyDefinitionRulesConflictException when rules violate business invariants
+    public void validatePropertyDefinitionRules(PropertyDefinition propertyDefinition) {
         if (propertyDefinition.rules() == null) {
             return;
         }
@@ -77,13 +77,13 @@ public class PropertyRulesService {
     ///
     /// @param propertyName name of the property (for error reporting)
     /// @param rules the property rules to validate
-    /// @throws PropertyRulesConflictException when numeric rules are present
+    /// @throws PropertyDefinitionRulesConflictException when numeric rules are present
     ///         or min/max length constraints are violated or regex is invalid
     private void validateStringPropertyRules(String propertyName, PropertyRules rules) {
         // Reject numeric rules for STRING type
         if (rules.maxValue() != null || rules.minValue() != null) {
             String ruleName = rules.maxValue() != null ? MAX_VALUE : MIN_VALUE;
-            throw new PropertyRulesConflictException(
+            throw new PropertyDefinitionRulesConflictException(
                     propertyName,
                     PropertyType.STRING,
                     PROPERTY_RULES_NUMERIC_RULE_NOT_ALLOWED.replace("{rule}", ruleName)
@@ -97,7 +97,7 @@ public class PropertyRulesService {
 
         // Validate min_length is non-negative
         if (rules.minLength() != null && rules.minLength() < 0) {
-            throw new PropertyRulesConflictException(
+            throw new PropertyDefinitionRulesConflictException(
                     propertyName,
                     PropertyType.STRING,
                     PROPERTY_RULES_MIN_LENGTH_NON_NEGATIVE
@@ -105,7 +105,7 @@ public class PropertyRulesService {
         }
         // Validate max_length is not zero or negative
         if (rules.maxLength() != null && rules.maxLength() <= 0) {
-            throw new PropertyRulesConflictException(
+            throw new PropertyDefinitionRulesConflictException(
                     propertyName,
                     PropertyType.STRING,
                     PROPERTY_RULES_MAX_LENGTH_POSITIVE
@@ -113,7 +113,7 @@ public class PropertyRulesService {
         }
         // Validate min_length is below or equal to max_length
         if (rules.minLength() != null && rules.maxLength() != null && rules.minLength() > rules.maxLength()) {
-            throw new PropertyRulesConflictException(
+            throw new PropertyDefinitionRulesConflictException(
                     propertyName,
                     PropertyType.STRING,
                     minMaxConstraintViolated(LENGTH)
@@ -129,11 +129,11 @@ public class PropertyRulesService {
     ///
     /// @param propertyName name of the property (for error reporting)
     /// @param rules the property rules to validate
-    /// @throws PropertyRulesConflictException when string rules are present
+    /// @throws PropertyDefinitionRulesConflictException when string rules are present
     ///         or min/max value constraints are violated
     private void validateNumberPropertyRules(String propertyName, PropertyRules rules) {
         if (rules.format() != null) {
-            throw new PropertyRulesConflictException(
+            throw new PropertyDefinitionRulesConflictException(
                     propertyName,
                     PropertyType.NUMBER,
                     ruleNotAllowed(FORMAT, PropertyType.NUMBER.name())
@@ -141,7 +141,7 @@ public class PropertyRulesService {
         }
 
         if (rules.enumValues() != null) {
-            throw new PropertyRulesConflictException(
+            throw new PropertyDefinitionRulesConflictException(
                     propertyName,
                     PropertyType.NUMBER,
                     ruleNotAllowed(ENUM_VALUES, PropertyType.NUMBER.name())
@@ -149,7 +149,7 @@ public class PropertyRulesService {
         }
 
         if (rules.regex() != null) {
-            throw new PropertyRulesConflictException(
+            throw new PropertyDefinitionRulesConflictException(
                     propertyName,
                     PropertyType.NUMBER,
                     ruleNotAllowed(REGEX, PropertyType.NUMBER.name())
@@ -157,7 +157,7 @@ public class PropertyRulesService {
         }
 
         if (rules.minLength() != null) {
-            throw new PropertyRulesConflictException(
+            throw new PropertyDefinitionRulesConflictException(
                     propertyName,
                     PropertyType.NUMBER,
                     ruleNotAllowed(MIN_LENGTH, PropertyType.NUMBER.name())
@@ -165,7 +165,7 @@ public class PropertyRulesService {
         }
 
         if (rules.maxLength() != null) {
-            throw new PropertyRulesConflictException(
+            throw new PropertyDefinitionRulesConflictException(
                     propertyName,
                     PropertyType.NUMBER,
                     ruleNotAllowed(MAX_LENGTH, PropertyType.NUMBER.name())
@@ -173,7 +173,7 @@ public class PropertyRulesService {
         }
 
         if (rules.minValue() != null && rules.maxValue() != null && rules.minValue() > rules.maxValue()) {
-            throw new PropertyRulesConflictException(
+            throw new PropertyDefinitionRulesConflictException(
                     propertyName,
                     PropertyType.NUMBER,
                     minMaxConstraintViolated(VALUE)
@@ -188,7 +188,7 @@ public class PropertyRulesService {
     ///
     /// @param propertyName name of the property (for error reporting)
     /// @param rules the property rules to validate
-    /// @throws PropertyRulesConflictException when any rule is set for BOOLEAN
+    /// @throws PropertyDefinitionRulesConflictException when any rule is set for BOOLEAN
     private void validateBooleanPropertyRules(String propertyName, PropertyRules rules) {
         if (rules.format() != null ||
                 rules.enumValues() != null ||
@@ -198,7 +198,7 @@ public class PropertyRulesService {
                 rules.maxValue() != null ||
                 rules.minValue() != null) {
 
-            throw new PropertyRulesConflictException(
+            throw new PropertyDefinitionRulesConflictException(
                     propertyName,
                     PropertyType.BOOLEAN,
                     PROPERTY_RULES_BOOLEAN_NOT_ALLOWED
@@ -210,12 +210,12 @@ public class PropertyRulesService {
     ///
     /// @param propertyName name of the property (for error reporting)
     /// @param regexPattern the regex pattern to validate
-    /// @throws PropertyRulesConflictException if the pattern is syntactically invalid
+    /// @throws PropertyDefinitionRulesConflictException if the pattern is syntactically invalid
     private void validateRegexPattern(String propertyName, String regexPattern) {
         try {
             Pattern.compile(regexPattern);
         } catch (PatternSyntaxException e) {
-            throw new PropertyRulesConflictException(
+            throw new PropertyDefinitionRulesConflictException(
                     propertyName,
                     PropertyType.STRING,
                     "Invalid regex pattern: " + e.getMessage()

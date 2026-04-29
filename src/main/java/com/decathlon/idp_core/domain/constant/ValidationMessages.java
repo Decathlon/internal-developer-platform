@@ -9,7 +9,6 @@ public class ValidationMessages {
     // Entity Template validation messages
     public static final String TEMPLATE_ALREADY_EXISTS = "An Entity Template already exists with the same identifier";
     public static final String TEMPLATE_IDENTIFIER_MANDATORY = "Entity Template identifier is mandatory and cannot be blank";
-    public static final String PROPERTY_DEFINITIONS_MANDATORY = "Entity Template property definitions are mandatory and cannot be empty";
     public static final String TEMPLATE_NAME_ALREADY_EXISTS = "The entity template name %s already exists";
     public static final String TEMPLATE_NAME_MANDATORY = "Entity template name is mandatory and cannot be blank";
     public static final String TEMPLATE_NAME_MAX_SIZE = "Entity template name must not exceed 255 characters";

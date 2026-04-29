@@ -1,4 +1,4 @@
-package com.decathlon.idp_core.domain.exception;
+package com.decathlon.idp_core.domain.exception.entity_template;
 
 import com.decathlon.idp_core.domain.model.enums.PropertyType;
 
@@ -11,14 +11,14 @@ import com.decathlon.idp_core.domain.model.enums.PropertyType;
 /// **Usage patterns:**
 /// - Property template creation with invalid rules
 /// - Property template updates introducing rule conflicts
-public class PropertyRulesConflictException extends RuntimeException {
+public class PropertyDefinitionRulesConflictException extends RuntimeException {
 
     /// Constructs a new exception for rule type conflict.
     ///
     /// @param propertyName     the name of the property with invalid rules
     /// @param propertyType     the data type of the property
     /// @param violationMessage detailed explanation of what rule is invalid
-    public PropertyRulesConflictException(String propertyName, PropertyType propertyType, String violationMessage) {
+    public PropertyDefinitionRulesConflictException(String propertyName, PropertyType propertyType, String violationMessage) {
         super("Property '" + propertyName + "' of type " + propertyType +
                 ": " + violationMessage);
     }
