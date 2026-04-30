@@ -114,3 +114,8 @@ JSLT is a JSON transformation language inspired by XSLT, designed for transformi
 * Bad, because **Security:** Running external binaries can introduce security risks if not properly sandboxed. (Security)
 * Bad, because **Cold Start Latency:** Every execution requires the OS to fork a process and initialize the binary, creating a performance bottleneck. (Performance)
 * Bad, because **Process Management:** If the JVM crashes or a Virtual Thread is interrupted while the JQ process is running, there is a risk creating "Zombie Processes." (Integration)
+
+## More Information
+
+1. [JSLT documentation](https://github.com/schibsted/jslt)
+2. [JQ documentation](https://jqlang.org)
