@@ -35,18 +35,18 @@ graph LR
 ```json
 {
   "name": "owned_by",
-  "target_entity_identifier": "team",
+  "target_template_identifier": "team",
   "required": true,
   "to_many": false
 }
 ```
 
-| Field                      | Type    | Required | Description                                | Default |
-| -------------------------- | ------- | -------- | -------------------------------------------| ------- |
-| `name`                     | String  | Yes      | Semantic name for the relationship         | `N/A`   |
-| `target_entity_identifier` | String  | Yes      | Entity template identifier to link to      | `N/A`   |
-| `required`                 | Boolean | No       | Whether the relation must exist            | `false` |
-| `to_many`                  | Boolean | No       | `false` = one-to-one, `true` = one-to-many | `false` |
+| Field                        | Type    | Required | Description                                | Default |
+|------------------------------|---------|----------|--------------------------------------------|---------|
+| `name`                       | String  | Yes      | Semantic name for the relationship         | `N/A`   |
+| `target_template_identifier` | String  | Yes      | Entity template identifier to link to      | `N/A`   |
+| `required`                   | Boolean | No       | Whether the relation must exist            | `false` |
+| `to_many`                    | Boolean | No       | `false` = one-to-one, `true` = one-to-many | `false` |
 
 ---
 
@@ -59,7 +59,7 @@ Each entity can link to **exactly one** target entity.
 ```json
 {
   "name": "owned_by",
-  "target_entity_identifier": "team",
+  "target_template_identifier": "team",
   "required": true,
   "to_many": false
 }
@@ -88,7 +88,7 @@ Each entity can link to **multiple** target entities.
 ```json
 {
   "name": "components",
-  "target_entity_identifier": "component",
+  "target_template_identifier": "component",
   "required": false,
   "to_many": true
 }
@@ -152,19 +152,19 @@ Here's a complete example with multiple templates and relations:
   "relations_definitions": [
     {
       "name": "owned_by",
-      "target_entity_identifier": "team",
+      "target_template_identifier": "team",
       "required": true,
       "to_many": false
     },
     {
       "name": "repository",
-      "target_entity_identifier": "github_repository",
+      "target_template_identifier": "github_repository",
       "required": false,
       "to_many": false
     },
     {
       "name": "depends_on",
-      "target_entity_identifier": "component",
+      "target_template_identifier": "component",
       "required": false,
       "to_many": true
     }
@@ -180,12 +180,12 @@ Here's a complete example with multiple templates and relations:
 
 ```json
 // ✅ Good - clear meaning
-{"name": "owned_by", "target_entity_identifier": "team"}
-{"name": "depends_on", "target_entity_identifier": "service"}
+{"name": "owned_by", "target_template_identifier": "team"}
+{"name": "depends_on", "target_template_identifier": "service"}
 
 // ❌ Bad - unclear
-{"name": "team_link", "target_entity_identifier": "team"}
-{"name": "service_ref", "target_entity_identifier": "service"}
+{"name": "team_link", "target_template_identifier": "team"}
+{"name": "service_ref", "target_template_identifier": "service"}
 ```
 
 ### 2. Choose Cardinality Carefully

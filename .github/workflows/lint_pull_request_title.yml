@@ -34,10 +34,9 @@ jobs:
             perf
             test
             chore
-            build
-            ci
             revert
           scopes: |
+            ci
             core
             api
             service

@@ -1,5 +1,5 @@
 {
-  "identifier": "microservice",
+  "name": "Microservice",
   "description": "This is a test template",
   "properties_definitions": [
     {

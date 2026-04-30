@@ -1,0 +1,6 @@
+{
+  "identifier": "template-empty-props-1",
+  "name": "Template Empty Properties",
+  "description": "A template with an empty properties array",
+  "properties_definitions": []
+}
