@@ -23,11 +23,10 @@ Mapping source objects to a target model is a core capability that enables IDP f
 * Readability
 * Extensibility
 * Scalability
-* User Experience (UX)
 
 ## Decision Outcome
 
-Chosen option: option 1, **"JSLT (JSON Standard Transformation Language),"** because it provides a robust, JVM-native DSL that meets our requirements for perfomance, modularity, maintainability, and scalability. Its explicit use of helper functions for complex logic, while occasionally more verbose than JQ, results in clearer, more maintainable scripts that are easier to troubleshoot over the long term.
+Chosen option: option 1, **"JSLT (JSON Standard Transformation Language),"** because it provides a robust, JVM-native DSL that meets our requirements for performance, modularity, maintainability, and scalability. Its explicit use of helper functions for complex logic, while occasionally more verbose than JQ, results in clearer, more maintainable scripts that are easier to troubleshoot over the long term.
 
 ### Positive Consequences
 
@@ -52,9 +51,9 @@ Chosen option: option 1, **"JSLT (JSON Standard Transformation Language),"** bec
 
 ### 1. Use JSLT (JSON Standard Transformation Language) Java library
 
-JSLT is a JSON transformation language inspired by XSLT, designed for transforming JSON data using a declarative, functional approach. It supports variables, functions, conditionals, and modular script organization. JSLT uses the pipe operator (`|`) for default values and relies on `if...else` blocks, often inside custom helper functions, for conditional logic. Is used for Data ingestion pipelines, ETL, API payload transformation, and scenarios where mapping logic should be externalized from the core application.
+JSLT is a JSON transformation language inspired by XSLT, designed for transforming JSON data using a declarative, functional approach. It supports variables, functions, conditionals, and modular script organization. JSLT uses the pipe operator (`|`) for default values and relies on `if...else` blocks, often inside custom helper functions, for conditional logic. It is used for data ingestion pipelines, ETL, API payload transformation, and scenarios where mapping logic should be externalized from the core application.
 
-```json
+```jslt
 {
   "identifier": .metadata.namespace + "-" + string(.metadata.id),
   "status": if (any([for (.analysis.findings) .severity == "critical"]))
@@ -81,7 +80,7 @@ JSLT is a JSON transformation language inspired by XSLT, designed for transformi
 * Bad, because **Limitations:** Becomes overly complex or unreadable for tasks like complex grouping/aggregation, cross-referencing arrays, recursive structures, date/time math, and dynamic key generation. (Complexity of implementation)
 * Bad, because **Maintenance Overhead**: To provide a "no-code" experience for end-users, the core team must build and maintain a custom library of helper functions. This creates a permanent maintenance layer that requires versioning, testing, and documentation. (Complexity of implementation / Maintainability)
 * Bad, because **Limited Built-ins:** Some advanced math, date or recursive operations may require custom Java function extensions. (Complexity of implementation)
-* Bad, because **Smaller Community:** Has a smaller ecosystem and fewer online resources and answers than JQ. (Contributor and end users UX)
+* Bad, because **Smaller Community:** Has a smaller ecosystem and fewer online resources and answers than JQ. (Contributor / end users UX)
 * Bad, because **Higher Entry Barrier:** Even with a library, the initial "blank page" experience for a new user is harder with JSLT than with the JQ simple piping syntax. (Contributor UX)
 * Bad, because **Configuration Integrity Risk:** Allowing runtime or volume-mounted functions introduces the risk of "broken" configurations preventing system startup. We must implement a validation stage during the application's lifecycle to ensure all external scripts are syntactically correct before they are utilized. (Complexity of implementation / Reliability)
 
@@ -106,12 +105,12 @@ JSLT is a JSON transformation language inspired by XSLT, designed for transformi
 
 #### 2.b Use the JQ binary via process execution
 
-* Good, because **Full JQ Feature Set:** Access to 100% of the JQ specification and latest updates.. (Functionality)
-* Good, because **Decoupled Lyfecycle:** Allows the mapping engine version to be updated independently of the Java application. (Maintenance)
-* Bad, because **Perfomance** While native JQ is optimized in C, its performance is negated in a JVM context by Inter-Process Communication (IPC) overhead and the Double-Serialization Tax (marshalling JSON to/from a system pipe). (Performance)
+* Good, because **Full JQ Feature Set:** Access to 100% of the JQ specification and latest updates. (Functionality)
+* Good, because **Decoupled Lifecycle:** Allows the mapping engine version to be updated independently of the Java application. (Maintenance)
+* Bad, because **Performance:** While native JQ is optimized in C, its performance is negated in a JVM context by Inter-Process Communication (IPC) overhead and the Double-Serialization Tax (marshalling JSON to/from a system pipe). (Performance)
 * Bad, because **System Dependency:** Requires handling a JQ binary complicating deployment and portability. (Portability, Maintenance)
 * Bad, because **Process Overhead:** Involves spawning external processes, which adds overhead and complexity to error handling and resource management. (Performance)
-* Bad, because **Security:** Running external binaries can introduce security risks if not properly sandboxed. (Security)
+* Bad, because **Security:** Running external binaries can introduce security risks if not safely run in a mastered OS isoleted context. (Security)
 * Bad, because **Cold Start Latency:** Every execution requires the OS to fork a process and initialize the binary, creating a performance bottleneck. (Performance)
 * Bad, because **Process Management:** If the JVM crashes or a Virtual Thread is interrupted while the JQ process is running, there is a risk creating "Zombie Processes." (Integration)
 
