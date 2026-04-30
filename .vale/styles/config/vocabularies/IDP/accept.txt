@@ -48,3 +48,5 @@ Optionals
 untracked
 Perfomance
 Reusability
+Lyfecycle
+sandboxed

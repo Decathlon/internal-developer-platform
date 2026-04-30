@@ -27,7 +27,7 @@ Mapping source objects to a target model is a core capability that enables IDP f
 
 ## Decision Outcome
 
-Chosen option: option 1, **"JSLT (JSON Standard Transformation Language),"** because it provides a robust, JVM-native DSL that meets our requirements for perfomance, modularity, maintainability, and scalability. Its explicit use of helper functions for complex logic—while occasionally more verbose than JQ—results in clearer, more maintainable scripts and superior long-term debuggability.
+Chosen option: option 1, **"JSLT (JSON Standard Transformation Language),"** because it provides a robust, JVM-native DSL that meets our requirements for perfomance, modularity, maintainability, and scalability. Its explicit use of helper functions for complex logic, while occasionally more verbose than JQ, results in clearer, more maintainable scripts that are easier to troubleshoot over the long term.
 
 ### Positive Consequences
 
@@ -102,7 +102,7 @@ JSLT is a JSON transformation language inspired by XSLT, designed for transformi
 * Good, because **No system dependencies:** Works in any environment where Java runs. (Portability)
 * Bad, because **Performance:** Jackson-JQ is an emulation and is significantly slower than native JQ or JSLT. (Performance)
 * Bad, because **Feature Gaps:** Does not support the full JQ specification; advanced filters may fail.
-* Bad, because **Error Handling:** Error messages and debugging are less clear than with native JQ. (Debuggability)
+* Bad, because **Error Handling:** Error messages and debugging are less clear than with native JQ. (Maintainability)
 
 #### 2.b Use the JQ binary via process execution
 
@@ -113,4 +113,4 @@ JSLT is a JSON transformation language inspired by XSLT, designed for transformi
 * Bad, because **Process Overhead:** Involves spawning external processes, which adds overhead and complexity to error handling and resource management. (Performance)
 * Bad, because **Security:** Running external binaries can introduce security risks if not properly sandboxed. (Security)
 * Bad, because **Cold Start Latency:** Every execution requires the OS to fork a process and initialize the binary, creating a performance bottleneck. (Performance)
-* Bad, because **Process Management:** If the JVM crashes or a Virtual Thread is interrupted while the JQ process is running, there is a risk creating "Zombie Processes". (Integration)
+* Bad, because **Process Management:** If the JVM crashes or a Virtual Thread is interrupted while the JQ process is running, there is a risk creating "Zombie Processes." (Integration)
