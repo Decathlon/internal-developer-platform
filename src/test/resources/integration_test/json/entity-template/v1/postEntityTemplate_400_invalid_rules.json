@@ -1,6 +1,6 @@
 {
-  "identifier": "temp-test-0",
-  "name": "Temp Test 0",
+  "identifier": "temp-test-wrong-property-rules",
+  "name": "Temp Test Wrong Property Rules",
   "description": "This is a test template",
   "properties_definitions": [
     {
@@ -10,12 +10,12 @@
       "type": "STRING",
       "rules": {
         "format": "URL",
-        "enum_values": null,
-        "regex": null,
+        "enum_values": [],
+        "regex": "",
         "max_length": 200,
         "min_length": 1,
-        "max_value": null,
-        "min_value": null
+        "max_value": 0,
+        "min_value": 0
       }
     }
   ],
