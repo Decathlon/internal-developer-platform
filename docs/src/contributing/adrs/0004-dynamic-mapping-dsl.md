@@ -28,6 +28,8 @@ Mapping source objects to a target model is a core capability that enables IDP f
 
 Chosen option: option 1, **"JSLT (JSON Standard Transformation Language),"** because it provides a robust, JVM-native DSL that meets our requirements for performance, modularity, maintainability, and scalability. Its explicit use of helper functions for complex logic, while occasionally more verbose than JQ, results in clearer, more maintainable scripts that are easier to troubleshoot over the long term.
 
+The first implementation will only handle JSLT classic usage. Extensibility through custom functions will come later on to ensure long term security and robustness.
+
 ### Positive Consequences
 
 * **Modular Logic:** Explicit helper functions enhance script modularity and simplify long-term maintenance.
