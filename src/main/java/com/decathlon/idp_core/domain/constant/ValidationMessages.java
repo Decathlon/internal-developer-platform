@@ -35,6 +35,15 @@ public class ValidationMessages {
     public static final String PROPERTY_RULES_BOOLEAN_NOT_ALLOWED = "Boolean properties do not accept any rules";
     public static final String PROPERTY_RULES_NUMERIC_RULE_NOT_ALLOWED = "Numeric rule {rule} is not allowed for STRING properties";
 
+    public static final String PROPERTY_RULES_MUTUALLY_EXCLUSIVE = "{rule1} and {rule2} are mutually exclusive for STRING properties";
+
+    // Helper method to construct rules incompatibility message
+    public static String rulesAreIncompatible(String rule1, String rule2) {
+        return PROPERTY_RULES_MUTUALLY_EXCLUSIVE
+                .replace("{rule1}", rule1)
+                .replace("{rule2}", rule2);
+    }
+
     // Helper method to construct rule-not-allowed message
     public static String ruleNotAllowed(String rule, String propertyType) {
         return PROPERTY_RULES_RULE_NOT_ALLOWED_FOR_TYPE

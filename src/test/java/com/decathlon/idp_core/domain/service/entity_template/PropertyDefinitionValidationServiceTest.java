@@ -351,6 +351,156 @@ class PropertyDefinitionValidationServiceTest {
             assertTrue(ex.getMessage().contains("max_length"));
             assertTrue(ex.getMessage().contains("greater than 0"));
         }
+
+        @Test
+        @DisplayName("Error: STRING with format and enum_values combined")
+        void testStringRejectsFormatWithEnumValues() {
+            PropertyRules rules = new PropertyRules(
+                    UUID.randomUUID(),
+                    PropertyFormat.EMAIL,
+                    List.of("EMAIL", "POSTAL_CODE"),
+                    null,
+                    null,
+                    null,
+                    null,
+                    null
+            );
+            PropertyDefinition property = new PropertyDefinition(
+                    UUID.randomUUID(),
+                    "contact",
+                    "Contact field",
+                    PropertyType.STRING,
+                    true,
+                    rules
+            );
+
+            PropertyDefinitionRulesConflictException ex = assertThrows(
+                    PropertyDefinitionRulesConflictException.class,
+                    () -> propertyDefinitionValidationService.validatePropertyDefinitionRules(property)
+            );
+            assertTrue(ex.getMessage().contains("format"));
+            assertTrue(ex.getMessage().contains("enum_values"));
+        }
+
+        @Test
+        @DisplayName("Error: STRING with format and regex combined")
+        void testStringRejectsFormatWithRegex() {
+            PropertyRules rules = new PropertyRules(
+                    UUID.randomUUID(),
+                    PropertyFormat.EMAIL,
+                    null,
+                    "^[a-zA-Z]+$",
+                    null,
+                    null,
+                    null,
+                    null
+            );
+            PropertyDefinition property = new PropertyDefinition(
+                    UUID.randomUUID(),
+                    "contact",
+                    "Contact field",
+                    PropertyType.STRING,
+                    true,
+                    rules
+            );
+
+            PropertyDefinitionRulesConflictException ex = assertThrows(
+                    PropertyDefinitionRulesConflictException.class,
+                    () -> propertyDefinitionValidationService.validatePropertyDefinitionRules(property)
+            );
+            assertTrue(ex.getMessage().contains("format"));
+            assertTrue(ex.getMessage().contains("regex"));
+        }
+
+        @Test
+        @DisplayName("Error: STRING with regex and enum_values combined")
+        void testStringRejectsRegexWithEnumValues() {
+            PropertyRules rules = new PropertyRules(
+                    UUID.randomUUID(),
+                    null,
+                    List.of("ACTIVE", "INACTIVE"),
+                    "^[A-Z]+$",
+                    null,
+                    null,
+                    null,
+                    null
+            );
+            PropertyDefinition property = new PropertyDefinition(
+                    UUID.randomUUID(),
+                    "status",
+                    "Status field",
+                    PropertyType.STRING,
+                    true,
+                    rules
+            );
+
+            PropertyDefinitionRulesConflictException ex = assertThrows(
+                    PropertyDefinitionRulesConflictException.class,
+                    () -> propertyDefinitionValidationService.validatePropertyDefinitionRules(property)
+            );
+            assertTrue(ex.getMessage().contains("regex"));
+            assertTrue(ex.getMessage().contains("enum_values"));
+        }
+
+        @Test
+        @DisplayName("Error: STRING with enum_values and max_length combined")
+        void testStringRejectsEnumValuesWithMaxLength() {
+            PropertyRules rules = new PropertyRules(
+                    UUID.randomUUID(),
+                    null,
+                    List.of("EMAIL", "POSTAL_CODE"),
+                    null,
+                    12,
+                    null,
+                    null,
+                    null
+            );
+            PropertyDefinition property = new PropertyDefinition(
+                    UUID.randomUUID(),
+                    "contact_type",
+                    "Contact type field",
+                    PropertyType.STRING,
+                    true,
+                    rules
+            );
+
+            PropertyDefinitionRulesConflictException ex = assertThrows(
+                    PropertyDefinitionRulesConflictException.class,
+                    () -> propertyDefinitionValidationService.validatePropertyDefinitionRules(property)
+            );
+            assertTrue(ex.getMessage().contains("enum_values"));
+            assertTrue(ex.getMessage().contains("max_length"));
+        }
+
+        @Test
+        @DisplayName("Error: STRING with enum_values and min_length combined")
+        void testStringRejectsEnumValuesWithMinLength() {
+            PropertyRules rules = new PropertyRules(
+                    UUID.randomUUID(),
+                    null,
+                    List.of("EMAIL", "POSTAL_CODE"),
+                    null,
+                    null,
+                    3,
+                    null,
+                    null
+            );
+            PropertyDefinition property = new PropertyDefinition(
+                    UUID.randomUUID(),
+                    "contact_type",
+                    "Contact type field",
+                    PropertyType.STRING,
+                    true,
+                    rules
+            );
+
+            PropertyDefinitionRulesConflictException ex = assertThrows(
+                    PropertyDefinitionRulesConflictException.class,
+                    () -> propertyDefinitionValidationService.validatePropertyDefinitionRules(property)
+            );
+            assertTrue(ex.getMessage().contains("enum_values"));
+            assertTrue(ex.getMessage().contains("min_length"));
+        }
     }
 
     @Nested
