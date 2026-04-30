@@ -28,38 +28,38 @@ import lombok.AllArgsConstructor;
 ///
 /// **API contract support:** Enables clean separation between API request format
 /// and internal domain model structure for maintainable API evolution.
-
 @Component
 @AllArgsConstructor
 public class EntityDtoInMapper {
+
     public Entity fromEntityDtoInToEntity(EntityDtoIn entityDtoIn, String entityTemplateIdentifier) {
 
         List<Property> properties = entityDtoIn.getProperties() == null ? Collections.emptyList()
                 : entityDtoIn.getProperties().entrySet().stream()
-                        .map((Map.Entry<String, Object> entry) -> {
-                            String value;
-                            if (entry.getValue() != null) {
-                                value = String.valueOf(entry.getValue());
-                            } else {
-                                value = null;
-                            }
-                            return new Property(
-                                    null,
-                                    entry.getKey(),
-                                    value
-                            );
-                        })
-                        .toList();
+                .map((Map.Entry<String, Object> entry) -> {
+                    String value;
+                    if (entry.getValue() != null) {
+                        value = String.valueOf(entry.getValue());
+                    } else {
+                        value = null;
+                    }
+                    return new Property(
+                            null,
+                            entry.getKey(),
+                            value
+                    );
+                })
+                .toList();
 
         List<Relation> relations = entityDtoIn.getRelations() == null ? Collections.emptyList()
                 : entityDtoIn.getRelations().stream()
-                        .map(relDto -> new Relation(
-                                null,
-                                relDto.getName(),
-                                null, // targetTemplateIdentifier not available in DTO
-                                relDto.getTargetEntityIdentifiers()
-                        ))
-                        .toList();
+                .map(relDto -> new Relation(
+                        null,
+                        relDto.getName(),
+                        null,
+                        relDto.getTargetEntityIdentifiers()
+                ))
+                .toList();
 
         return new Entity(
                 null,
@@ -70,5 +70,4 @@ public class EntityDtoInMapper {
                 relations
         );
     }
-
 }

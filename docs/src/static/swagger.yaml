@@ -9,6 +9,8 @@ security:
   - clientId: []
   - bearer: []
 tags:
+  - name: Entities Management
+    description: Operations related to entity management
   - name: Entities Templates Management
     description: Operations related to entity template management
 paths:
@@ -156,6 +158,136 @@ paths:
                 $ref: '#/components/schemas/EntityTemplateDtoOut'
         '400':
           description: Invalid template data provided
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /api/v1/entities/{templateIdentifier}:
+    get:
+      tags:
+        - Entities Management
+      summary: Get entities by template identifier
+      description: Retrieve a paginated list of entities with optional sorting
+      operationId: getEntities
+      parameters:
+        - name: page
+          in: query
+          description: Page number for pagination. Defaults to 0.
+          required: false
+          content:
+            '*/*':
+              schema:
+                type: integer
+                default: '0'
+        - name: size
+          in: query
+          description: Number of items per page. Defaults to 20.
+          required: false
+          content:
+            '*/*':
+              schema:
+                type: integer
+                default: '20'
+        - name: templateIdentifier
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: sort
+          in: query
+          description: 'Sorting criteria in the format: property(,asc|desc). Defaults to identifier,asc.'
+          content:
+            '*/*':
+              schema:
+                type: string
+                default: identifier,asc
+      responses:
+        '200':
+          description: Paginated entities retrieved successfully
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/EntityPageResponse'
+        '400':
+          description: Invalid pagination parameters
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+    post:
+      tags:
+        - Entities Management
+      summary: Create a new entity
+      description: Create a new entity in the system with the provided information
+      operationId: createEntity
+      parameters:
+        - name: templateIdentifier
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EntityDtoIn'
+        required: true
+      responses:
+        '201':
+          description: Entity created successfully
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/EntityDtoOut'
+        '400':
+          description: Invalid entity data provided
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Unauthorized - Missing or invalid token
+        '403':
+          description: Insufficient rights
+        '409':
+          description: Template with this identifier already exists
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Unexpected server-side failure
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /api/v1/entities/{templateIdentifier}/identifier/{entityIdentifier}:
+    get:
+      tags:
+        - Entities Management
+      summary: Get entity by entity template and identifier
+      description: Retrieve a specific entity using its string identifier and its template identifier
+      operationId: getEntity
+      parameters:
+        - name: templateIdentifier
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: entityIdentifier
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Entity found
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/EntityDtoOut'
+        '404':
+          description: Entity not found with the provided identifier
           content:
             '*/*':
               schema:
@@ -356,11 +488,6 @@ components:
       type: object
       description: Output DTO for property definition
       properties:
-        id:
-          type: string
-          format: uuid
-          description: Unique identifier of the property definition
-          example: 123e4567-e89b-12d3-a456-426614174000
         name:
           type: string
           description: Property name
@@ -437,11 +564,6 @@ components:
       type: object
       description: Output DTO for relation definition
       properties:
-        id:
-          type: string
-          format: uuid
-          description: Unique identifier of the relation definition
-          example: 123e4567-e89b-12d3-a456-426614174000
         name:
           type: string
           description: Name of the relation
@@ -463,77 +585,87 @@ components:
       properties:
         error:
           type: string
-          enum:
-            - 100 CONTINUE
-            - 101 SWITCHING_PROTOCOLS
-            - 102 PROCESSING
-            - 103 EARLY_HINTS
-            - 103 CHECKPOINT
-            - 200 OK
-            - 201 CREATED
-            - 202 ACCEPTED
-            - 203 NON_AUTHORITATIVE_INFORMATION
-            - 204 NO_CONTENT
-            - 205 RESET_CONTENT
-            - 206 PARTIAL_CONTENT
-            - 207 MULTI_STATUS
-            - 208 ALREADY_REPORTED
-            - 226 IM_USED
-            - 300 MULTIPLE_CHOICES
-            - 301 MOVED_PERMANENTLY
-            - 302 FOUND
-            - 302 MOVED_TEMPORARILY
-            - 303 SEE_OTHER
-            - 304 NOT_MODIFIED
-            - 305 USE_PROXY
-            - 307 TEMPORARY_REDIRECT
-            - 308 PERMANENT_REDIRECT
-            - 400 BAD_REQUEST
-            - 401 UNAUTHORIZED
-            - 402 PAYMENT_REQUIRED
-            - 403 FORBIDDEN
-            - 404 NOT_FOUND
-            - 405 METHOD_NOT_ALLOWED
-            - 406 NOT_ACCEPTABLE
-            - 407 PROXY_AUTHENTICATION_REQUIRED
-            - 408 REQUEST_TIMEOUT
-            - 409 CONFLICT
-            - 410 GONE
-            - 411 LENGTH_REQUIRED
-            - 412 PRECONDITION_FAILED
-            - 413 PAYLOAD_TOO_LARGE
-            - 413 REQUEST_ENTITY_TOO_LARGE
-            - 414 URI_TOO_LONG
-            - 414 REQUEST_URI_TOO_LONG
-            - 415 UNSUPPORTED_MEDIA_TYPE
-            - 416 REQUESTED_RANGE_NOT_SATISFIABLE
-            - 417 EXPECTATION_FAILED
-            - 418 I_AM_A_TEAPOT
-            - 419 INSUFFICIENT_SPACE_ON_RESOURCE
-            - 420 METHOD_FAILURE
-            - 421 DESTINATION_LOCKED
-            - 422 UNPROCESSABLE_ENTITY
-            - 423 LOCKED
-            - 424 FAILED_DEPENDENCY
-            - 425 TOO_EARLY
-            - 426 UPGRADE_REQUIRED
-            - 428 PRECONDITION_REQUIRED
-            - 429 TOO_MANY_REQUESTS
-            - 431 REQUEST_HEADER_FIELDS_TOO_LARGE
-            - 451 UNAVAILABLE_FOR_LEGAL_REASONS
-            - 500 INTERNAL_SERVER_ERROR
-            - 501 NOT_IMPLEMENTED
-            - 502 BAD_GATEWAY
-            - 503 SERVICE_UNAVAILABLE
-            - 504 GATEWAY_TIMEOUT
-            - 505 HTTP_VERSION_NOT_SUPPORTED
-            - 506 VARIANT_ALSO_NEGOTIATES
-            - 507 INSUFFICIENT_STORAGE
-            - 508 LOOP_DETECTED
-            - 509 BANDWIDTH_LIMIT_EXCEEDED
-            - 510 NOT_EXTENDED
-            - 511 NETWORK_AUTHENTICATION_REQUIRED
         errorDescription:
+          type: string
+    EntityDtoIn:
+      type: object
+      description: Input DTO for creating or updating an entity
+      properties:
+        name:
+          type: string
+          description: Name of the entity
+          example: my-web-service
+          minLength: 1
+        identifier:
+          type: string
+          description: Unique identifier of the entity within the template scope
+          example: my-web-service
+          minLength: 1
+        properties:
+          type: object
+          additionalProperties: {}
+          description: Map of property name to value for this entity
+          example:
+            port: '8080'
+            environment: dev
+        relations:
+          type: array
+          description: List of relations for this entity
+          items:
+            $ref: '#/components/schemas/RelationDtoIn'
+      required:
+        - identifier
+        - name
+    RelationDtoIn:
+      type: object
+      description: Input DTO for an entity relation instance
+      properties:
+        name:
+          type: string
+          description: Name of the relation (must match a template relation definition)
+          example: depends-on
+          minLength: 1
+        target_entity_identifiers:
+          type: array
+          description: List of target entity identifiers for this relation
+          example:
+            - web-api-1
+            - web-api-2
+          items:
+            type: string
+      required:
+        - name
+        - target_entity_identifiers
+    EntityDtoOut:
+      type: object
+      properties:
+        template_identifier:
+          type: string
+        name:
+          type: string
+        identifier:
+          type: string
+        properties:
+          type: object
+          additionalProperties: {}
+        relations:
+          type: object
+          additionalProperties:
+            type: array
+            items:
+              $ref: '#/components/schemas/EntitySummaryDto'
+        relations_as_target:
+          type: object
+          additionalProperties:
+            type: array
+            items:
+              $ref: '#/components/schemas/EntitySummaryDto'
+    EntitySummaryDto:
+      type: object
+      properties:
+        identifier:
+          type: string
+        name:
           type: string
     PageableObject:
       type: object
@@ -541,10 +673,6 @@ components:
         offset:
           type: integer
           format: int64
-        sort:
-          $ref: '#/components/schemas/SortObject'
-        unpaged:
-          type: boolean
         paged:
           type: boolean
         pageNumber:
@@ -553,6 +681,10 @@ components:
         pageSize:
           type: integer
           format: int32
+        sort:
+          $ref: '#/components/schemas/SortObject'
+        unpaged:
+          type: boolean
     SortObject:
       type: object
       properties:
@@ -572,15 +704,13 @@ components:
             $ref: '#/components/schemas/EntityTemplateDtoOut'
         pageable:
           $ref: '#/components/schemas/PageableObject'
-        last:
-          type: boolean
-        totalPages:
-          type: integer
-          format: int32
         totalElements:
           type: integer
           format: int64
-        first:
+        totalPages:
+          type: integer
+          format: int32
+        last:
           type: boolean
         size:
           type: integer
@@ -590,6 +720,41 @@ components:
           format: int32
         sort:
           $ref: '#/components/schemas/SortObject'
+        first:
+          type: boolean
+        numberOfElements:
+          type: integer
+          format: int32
+        empty:
+          type: boolean
+    EntityPageResponse:
+      type: object
+      description: Paginated response containing Entity objects
+      properties:
+        content:
+          type: array
+          items:
+            $ref: '#/components/schemas/EntityDtoOut'
+        pageable:
+          $ref: '#/components/schemas/PageableObject'
+        totalElements:
+          type: integer
+          format: int64
+        totalPages:
+          type: integer
+          format: int32
+        last:
+          type: boolean
+        size:
+          type: integer
+          format: int32
+        number:
+          type: integer
+          format: int32
+        sort:
+          $ref: '#/components/schemas/SortObject'
+        first:
+          type: boolean
         numberOfElements:
           type: integer
           format: int32
@@ -602,7 +767,7 @@ components:
       name: clientId
       flows:
         clientCredentials:
-          tokenUrl: https://my-oauth-server.com/as/token.oauth2
+          tokenUrl: http://localhost:9999/mock/token
     bearer:
       type: http
       description: bearer authentication

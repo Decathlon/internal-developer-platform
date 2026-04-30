@@ -1,0 +1,8 @@
+{
+  "name": "entity-prop-no-value",
+  "identifier": "entity-prop-no-value",
+  "properties": {
+    "applicationName": ""
+  },
+  "relations": []
+}

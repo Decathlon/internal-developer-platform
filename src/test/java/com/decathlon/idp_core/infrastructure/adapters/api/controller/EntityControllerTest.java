@@ -17,10 +17,10 @@ import org.springframework.test.web.servlet.request.MockMvcRequestBuilders;
 
 import com.decathlon.idp_core.AbstractIntegrationTest;
 
-    /// Integration tests for the EntityController REST API endpoints.
-    /// These tests verify the behavior of entity retrieval endpoints, including
-    /// pagination, authentication, and lookup by template identifier and entity
-    /// identifier.
+/// Integration tests for the EntityController REST API endpoints.
+/// These tests verify the behavior of entity retrieval endpoints, including
+/// pagination, authentication, and lookup by template identifier and entity
+/// identifier.
 public class EntityControllerTest extends AbstractIntegrationTest {
 
     @Autowired
@@ -44,9 +44,9 @@ public class EntityControllerTest extends AbstractIntegrationTest {
         @WithMockUser
         void getEntities_paginated_200() throws Exception {
             mockMvc.perform(get(ENTITIES_BY_TEMPLATE_IDENTIFIER_PATH, TEMPLATE_IDENTIFIER)
-                    .param("page", "0")
-                    .param("size", "15")
-                    .accept(APPLICATION_JSON))
+                            .param("page", "0")
+                            .param("size", "15")
+                            .accept(APPLICATION_JSON))
                     .andExpect(status().isOk())
                     .andExpect(content().contentType(APPLICATION_JSON))
                     .andExpect(jsonPath("$.content").isArray())
@@ -63,7 +63,7 @@ public class EntityControllerTest extends AbstractIntegrationTest {
         @WithMockUser
         void getEntities_paginated_404_when_non_existent_template() throws Exception {
             mockMvc.perform(get(ENTITIES_BY_TEMPLATE_IDENTIFIER_PATH, "non-existent-template-identifier")
-                    .accept(APPLICATION_JSON))
+                            .accept(APPLICATION_JSON))
                     .andExpect(status().isNotFound());
         }
 
@@ -71,7 +71,7 @@ public class EntityControllerTest extends AbstractIntegrationTest {
         @DisplayName("Should return 401 without authentication")
         void getTemplates_paginated_401_without_user_token() throws Exception {
             mockMvc.perform(get(ENTITIES_BY_TEMPLATE_IDENTIFIER_PATH, TEMPLATE_IDENTIFIER)
-                    .accept(APPLICATION_JSON))
+                            .accept(APPLICATION_JSON))
                     .andExpect(status().isUnauthorized());
         }
 
@@ -81,10 +81,10 @@ public class EntityControllerTest extends AbstractIntegrationTest {
         void getEntities_paginated_200_custom() throws Exception {
 
             mockMvc.perform(get(ENTITIES_BY_TEMPLATE_IDENTIFIER_PATH, "monitoring-service")
-                    .param("page", "1")
-                    .param("size", "5")
-                    .param("sort", "template_identifier,asc")
-                    .accept(APPLICATION_JSON))
+                            .param("page", "1")
+                            .param("size", "5")
+                            .param("sort", "template_identifier,asc")
+                            .accept(APPLICATION_JSON))
                     .andExpect(status().isOk())
                     .andExpect(content().contentType(APPLICATION_JSON))
                     .andExpect(jsonPath("$.content.length()").value(1))
@@ -100,7 +100,7 @@ public class EntityControllerTest extends AbstractIntegrationTest {
         @WithMockUser
         void getEntities_invalid_pagination_200() throws Exception {
             mockMvc.perform(get(ENTITIES_BY_TEMPLATE_IDENTIFIER_PATH, TEMPLATE_IDENTIFIER)
-                    .accept(APPLICATION_JSON))
+                            .accept(APPLICATION_JSON))
                     .andExpect(status().isOk())
                     .andExpect(content().contentType(APPLICATION_JSON))
                     .andExpect(jsonPath("$.content").isArray())
@@ -124,7 +124,7 @@ public class EntityControllerTest extends AbstractIntegrationTest {
         @WithMockUser
         void getEntityByTemplateAndIdentifier_200() throws Exception {
             mockMvc.perform(get(ENTITIES_BY_IDENTIFIER_PATH, TEMPLATE_IDENTIFIER, ENTITY_IDENTIFIER)
-                    .accept(APPLICATION_JSON))
+                            .accept(APPLICATION_JSON))
                     .andExpect(status().isOk())
                     .andExpect(content().contentType(APPLICATION_JSON))
                     .andExpect(jsonPath("$.identifier").value(ENTITY_IDENTIFIER))
@@ -136,7 +136,7 @@ public class EntityControllerTest extends AbstractIntegrationTest {
         @WithMockUser
         void getEntityByTemplateAndIdentifier_404_non_existent_entity() throws Exception {
             mockMvc.perform(get(ENTITIES_BY_IDENTIFIER_PATH, TEMPLATE_IDENTIFIER, "non-existent-identifier")
-                    .accept(APPLICATION_JSON))
+                            .accept(APPLICATION_JSON))
                     .andExpect(status().isNotFound());
         }
 
@@ -145,28 +145,162 @@ public class EntityControllerTest extends AbstractIntegrationTest {
         @WithMockUser
         void getEntityByTemplateAndIdentifier_404_non_existent_template() throws Exception {
             mockMvc.perform(get(ENTITIES_BY_IDENTIFIER_PATH, "non-existent-template", "non-existent-identifier")
-                    .accept(APPLICATION_JSON))
+                            .accept(APPLICATION_JSON))
                     .andExpect(status().isNotFound());
         }
     }
 
+    /// Tests for POST /api/v1/entities/{template-identifier} endpoint (entity creation).
     @Nested
-    @DisplayName("POST /api/v1/entities/{template-identifier} - Get Entities by template identifier and entity identifier")
+    @DisplayName("POST /api/v1/entities/{template-identifier} - Create Entity")
     class PostEntitiesTests {
 
         @Test
-        @WithMockUser()
+        @WithMockUser
         @DisplayName("Should create entity and return 201")
         void postEntity_201() throws Exception {
             mockMvc.perform(MockMvcRequestBuilders.post(ENTITIES_BY_TEMPLATE_IDENTIFIER_PATH, TEMPLATE_IDENTIFIER)
-                    .contentType(APPLICATION_JSON)
-                    .accept(APPLICATION_JSON)
-                    .with(csrf())
-                    .content(getJsonTestFileContent(ENTITY_JSON_FILES_TEST_PATH + "postEntity_201.json")))
+                            .contentType(APPLICATION_JSON)
+                            .accept(APPLICATION_JSON)
+                            .with(csrf())
+                            .content(getJsonTestFileContent(ENTITY_JSON_FILES_TEST_PATH + "postEntity_201.json")))
                     .andExpect(status().isCreated())
-                    .andReturn();
+                    .andExpect(jsonPath("$.identifier").value("microservice-2"))
+                    .andExpect(jsonPath("$.name").value("microservice-2"))
+                    .andExpect(jsonPath("$.template_identifier").value(TEMPLATE_IDENTIFIER));
         }
 
+        @Test
+        @WithMockUser
+        @DisplayName("Should create entity with minimal payload and return 201")
+        void postEntity_201_minimal() throws Exception {
+            mockMvc.perform(MockMvcRequestBuilders.post(ENTITIES_BY_TEMPLATE_IDENTIFIER_PATH, TEMPLATE_IDENTIFIER)
+                            .contentType(APPLICATION_JSON)
+                            .accept(APPLICATION_JSON)
+                            .with(csrf())
+                            .content(getJsonTestFileContent(ENTITY_JSON_FILES_TEST_PATH + "postEntity_201_minimal.json")))
+                    .andExpect(status().isCreated())
+                    .andExpect(jsonPath("$.identifier").value("microservice-minimal"))
+                    .andExpect(jsonPath("$.template_identifier").value(TEMPLATE_IDENTIFIER));
+        }
+
+        @Test
+        @WithMockUser
+        @DisplayName("Should create entity with relations and return 201")
+        void postEntity_201_with_relations() throws Exception {
+            mockMvc.perform(MockMvcRequestBuilders.post(ENTITIES_BY_TEMPLATE_IDENTIFIER_PATH, TEMPLATE_IDENTIFIER)
+                            .contentType(APPLICATION_JSON)
+                            .accept(APPLICATION_JSON)
+                            .with(csrf())
+                            .content(getJsonTestFileContent(ENTITY_JSON_FILES_TEST_PATH + "postEntity_201_with_relations.json")))
+                    .andExpect(status().isCreated())
+                    .andExpect(jsonPath("$.identifier").value("microservice-with-relations"))
+                    .andExpect(jsonPath("$.template_identifier").value(TEMPLATE_IDENTIFIER));
+        }
+
+        @Test
+        @DisplayName("Should return 401 without authentication")
+        void postEntity_401_without_user_token() throws Exception {
+            mockMvc.perform(MockMvcRequestBuilders.post(ENTITIES_BY_TEMPLATE_IDENTIFIER_PATH, TEMPLATE_IDENTIFIER)
+                            .contentType(APPLICATION_JSON)
+                            .accept(APPLICATION_JSON)
+                            .with(csrf())
+                            .content(getJsonTestFileContent(ENTITY_JSON_FILES_TEST_PATH + "postEntity_201.json")))
+                    .andExpect(status().isUnauthorized());
+        }
+
+        @Test
+        @WithMockUser
+        @DisplayName("Should return 400 for invalid JSON body")
+        void postEntity_400_invalid_json() throws Exception {
+            mockMvc.perform(MockMvcRequestBuilders.post(ENTITIES_BY_TEMPLATE_IDENTIFIER_PATH, TEMPLATE_IDENTIFIER)
+                            .contentType(APPLICATION_JSON)
+                            .accept(APPLICATION_JSON)
+                            .with(csrf())
+                            .content("{ invalid json format"))
+                    .andExpect(status().isBadRequest())
+                    .andExpect(jsonPath("$.error").value("BAD_REQUEST"));
+        }
+
+        @Test
+        @WithMockUser
+        @DisplayName("Should return 400 when request body is missing")
+        void postEntity_400_missing_body() throws Exception {
+            mockMvc.perform(MockMvcRequestBuilders.post(ENTITIES_BY_TEMPLATE_IDENTIFIER_PATH, TEMPLATE_IDENTIFIER)
+                            .contentType(APPLICATION_JSON)
+                            .accept(APPLICATION_JSON)
+                            .with(csrf()))
+                    .andExpect(status().isBadRequest())
+                    .andExpect(jsonPath("$.error").value("BAD_REQUEST"));
+        }
+
+        @Test
+        @WithMockUser
+        @DisplayName("Should return 403 without CSRF token")
+        void postEntity_403_without_csrf() throws Exception {
+            mockMvc.perform(MockMvcRequestBuilders.post(ENTITIES_BY_TEMPLATE_IDENTIFIER_PATH, TEMPLATE_IDENTIFIER)
+                            .contentType(APPLICATION_JSON)
+                            .accept(APPLICATION_JSON)
+                            .content(getJsonTestFileContent(ENTITY_JSON_FILES_TEST_PATH + "postEntity_201.json")))
+                    .andExpect(status().isForbidden());
+        }
     }
 
+    @Test
+    @WithMockUser
+    @DisplayName("Should return 404 for non-existent template identifier")
+    void postEntity_404_non_existent_template() throws Exception {
+        mockMvc.perform(MockMvcRequestBuilders.post(ENTITIES_BY_TEMPLATE_IDENTIFIER_PATH, "non-existent-template")
+                        .contentType(APPLICATION_JSON)
+                        .accept(APPLICATION_JSON)
+                        .with(csrf())
+                        .content(getJsonTestFileContent(ENTITY_JSON_FILES_TEST_PATH + "postEntity_201.json")))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.error").value("NOT_FOUND"));
+    }
+
+    @Test
+    @WithMockUser
+    @DisplayName("Should return 400 when property value is blank")
+    void postEntity_400_property_value_blank() throws Exception {
+        mockMvc.perform(MockMvcRequestBuilders.post(ENTITIES_BY_TEMPLATE_IDENTIFIER_PATH, TEMPLATE_IDENTIFIER)
+                        .contentType(APPLICATION_JSON)
+                        .accept(APPLICATION_JSON)
+                        .with(csrf())
+                        .content(getJsonTestFileContent(ENTITY_JSON_FILES_TEST_PATH + "postEntity_400_property_value_blank.json")))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.error").value("BAD_REQUEST"))
+                .andExpect(jsonPath("$.error_description").value(
+                        org.hamcrest.Matchers.containsString("Property value is mandatory")));
+    }
+
+    @Test
+    @WithMockUser
+    @DisplayName("Should return 400 when relation name is blank")
+    void postEntity_400_relation_name_blank() throws Exception {
+        mockMvc.perform(MockMvcRequestBuilders.post(ENTITIES_BY_TEMPLATE_IDENTIFIER_PATH, TEMPLATE_IDENTIFIER)
+                        .contentType(APPLICATION_JSON)
+                        .accept(APPLICATION_JSON)
+                        .with(csrf())
+                        .content(getJsonTestFileContent(ENTITY_JSON_FILES_TEST_PATH + "postEntity_400_relation_name_blank.json")))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.error").value("BAD_REQUEST"))
+                .andExpect(jsonPath("$.error_description").value(
+                        org.hamcrest.Matchers.containsString("Relation name is mandatory")));
+    }
+
+    @Test
+    @WithMockUser
+    @DisplayName("Should return 409 when entity identifier already exists for template")
+    void postEntity_409_duplicate_identifier() throws Exception {
+        mockMvc.perform(MockMvcRequestBuilders.post(ENTITIES_BY_TEMPLATE_IDENTIFIER_PATH, TEMPLATE_IDENTIFIER)
+                        .contentType(APPLICATION_JSON)
+                        .accept(APPLICATION_JSON)
+                        .with(csrf())
+                        .content(getJsonTestFileContent(ENTITY_JSON_FILES_TEST_PATH + "postEntity_409_duplicate.json")))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.error").value("CONFLICT"))
+                .andExpect(jsonPath("$.error_description").value(
+                        org.hamcrest.Matchers.containsString("already exists")));
+    }
 }

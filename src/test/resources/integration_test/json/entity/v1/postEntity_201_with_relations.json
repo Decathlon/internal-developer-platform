@@ -1,0 +1,14 @@
+{
+  "name": "microservice-with-relations",
+  "identifier": "microservice-with-relations",
+  "properties": {
+    "port": "9090",
+    "environment": "staging"
+  },
+  "relations": [
+    {
+      "name": "depends-on",
+      "target_entity_identifiers": ["web-api-1"]
+    }
+  ]
+}
