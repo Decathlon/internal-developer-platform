@@ -45,8 +45,8 @@ Chosen option: option 1, **"JSLT (JSON Standard Transformation Language),"** bec
 
 1. **Use the JSLT (JSON Standard Transformation Language) Java library**
 2. **Use JQ as the mapping DSL**
-   - 2.a **Use the Jackson-jq (Java library)**
-   - 2.b **Use the JQ binary (via process execution)**
+   * 2.a **Use the Jackson-jq (Java library)**
+   * 2.b **Use the JQ binary (via process execution)**
 
 ## Pros and Cons of the Options
 
@@ -94,7 +94,7 @@ JSLT is a JSON transformation language inspired by XSLT, designed for transformi
 * Good, because **Powerful Built-ins:** Provides a rich set of built-in functions for string manipulation, filtering, and aggregation. (Functionality)
 * Bad, because **Extensibility:** JQ lacks formal modularity; code reuse is achieved by copy-pasting or composing filters, which can lead to duplication. (Maintainability)
 * Bad, because **Readability:** Deeply nested or complex inline logic can compromise immediate readability. (Readability)
-* Bad, because **Integration:** Integrating JQ into a Java application is less seamless than JSLT, particularly reagrding error handling and type safety. (Integration)
+* Bad, because **Integration:** Integrating JQ into a Java application is less seamless than JSLT, particularly regarding error handling and type safety. (Integration)
 
 #### 2.a Use the Jackson-jq Java library
 
