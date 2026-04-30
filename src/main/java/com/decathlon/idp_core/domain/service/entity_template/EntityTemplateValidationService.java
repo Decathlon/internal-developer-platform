@@ -37,13 +37,11 @@ public class EntityTemplateValidationService {
     /// @throws EntityTemplateAlreadyExistsException when identifier is already taken
     /// @throws EntityTemplateNameAlreadyExistsException when name is already taken
     public void validateForCreate(EntityTemplate entityTemplate) {
-        if (entityTemplate.identifier() != null &&
-                entityTemplateRepositoryPort.existsByIdentifier(entityTemplate.identifier())) {
-            throw new EntityTemplateAlreadyExistsException(entityTemplate.identifier());
+        if (entityTemplate.identifier() != null) {
+            validateIdentifierUniqueness(entityTemplate.identifier());
         }
-        if (entityTemplate.name() != null &&
-                entityTemplateRepositoryPort.existsByName(entityTemplate.name())) {
-            throw new EntityTemplateNameAlreadyExistsException(entityTemplate.name());
+        if (entityTemplate.name() != null) {
+            validateNameUniqueness(entityTemplate.name());
         }
         validatePropertyRules(entityTemplate);
     }
@@ -61,14 +59,11 @@ public class EntityTemplateValidationService {
     /// @throws EntityTemplateAlreadyExistsException when the new identifier is already taken
     /// @throws EntityTemplateNameAlreadyExistsException when the new name is already taken
     public void validateForUpdate(String currentIdentifier, String existingName, EntityTemplate mergedTemplate) {
-        if (!currentIdentifier.equals(mergedTemplate.identifier()) &&
-                entityTemplateRepositoryPort.existsByIdentifier(mergedTemplate.identifier())) {
-            throw new EntityTemplateAlreadyExistsException(mergedTemplate.identifier());
+        if (!currentIdentifier.equals(mergedTemplate.identifier())) {
+            validateIdentifierUniqueness(mergedTemplate.identifier());
         }
-        if (mergedTemplate.name() != null &&
-                !Objects.equals(existingName, mergedTemplate.name()) &&
-                entityTemplateRepositoryPort.existsByName(mergedTemplate.name())) {
-            throw new EntityTemplateNameAlreadyExistsException(mergedTemplate.name());
+        if (mergedTemplate.name() != null && !Objects.equals(existingName, mergedTemplate.name())) {
+            validateNameUniqueness(mergedTemplate.name());
         }
         validatePropertyRules(mergedTemplate);
     }
@@ -84,6 +79,26 @@ public class EntityTemplateValidationService {
         }
         if (!entityTemplateRepositoryPort.existsByIdentifier(identifier)) {
             throw new EntityTemplateNotFoundException("identifier", identifier);
+        }
+    }
+
+    /// Checks that no other template already uses the given identifier.
+    ///
+    /// @param identifier the identifier to check for uniqueness
+    /// @throws EntityTemplateAlreadyExistsException when identifier is already taken
+    private void validateIdentifierUniqueness(String identifier) {
+        if (entityTemplateRepositoryPort.existsByIdentifier(identifier)) {
+            throw new EntityTemplateAlreadyExistsException(identifier);
+        }
+    }
+
+    /// Checks that no other template already uses the given name.
+    ///
+    /// @param name the name to check for uniqueness
+    /// @throws EntityTemplateNameAlreadyExistsException when name is already taken
+    private void validateNameUniqueness(String name) {
+        if (entityTemplateRepositoryPort.existsByName(name)) {
+            throw new EntityTemplateNameAlreadyExistsException(name);
         }
     }
 
