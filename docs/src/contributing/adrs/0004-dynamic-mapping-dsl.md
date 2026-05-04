@@ -110,7 +110,6 @@ Good, because **Unified Transformation Standards:** Centralizing common logic in
 * Good, because **Full JQ Feature Set:** Access to 100% of the JQ specification and latest updates. (Functionality)
 * Good, because **Decoupled Lifecycle:** Allows the mapping engine version to be updated independently of the Java application. (Maintenance)
 * Bad, because **Performance:** While native JQ is optimized in C, its performance is negated in a JVM context by Inter-Process Communication (IPC) overhead and the Double-Serialization Tax (marshalling JSON to/from a system pipe). (Performance)
-* Bad, because **System Dependency:** Requires handling a JQ binary complicating deployment and portability. (Portability, Maintenance)
 * Bad, because **Process Overhead:** Involves spawning external processes, which adds overhead and complexity to error handling and resource management. (Performance)
 * Bad, because **Security:** External binaries increase the attack surface and can introduce risks if they are not restricted to a secure, isolated execution context. (Security)
 * Bad, because **Cold Start Latency:** Every execution requires the OS to fork a process and initialize the binary, creating a performance bottleneck. (Performance)
