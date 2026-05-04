@@ -8,7 +8,7 @@
     <parent>
         <groupId>org.springframework.boot</groupId>
         <artifactId>spring-boot-starter-parent</artifactId>
-        <version>4.0.5</version>
+        <version>4.0.6</version>
         <relativePath/>
     </parent>
 
@@ -20,13 +20,13 @@
 
     <properties>
         <java.version>25</java.version>
-        <jakarta.version>2.2.48</jakarta.version>
-        <lombok.version>1.18.44</lombok.version>
+        <jakarta.version>2.2.49</jakarta.version>
+        <lombok.version>1.18.46</lombok.version>
         <mockserver.version>5.15.0</mockserver.version>
         <testcontainers.version>1.21.4</testcontainers.version>
         <maven-compiler.version>3.15.0</maven-compiler.version>
         <jacoco-maven.version>0.8.14</jacoco-maven.version>
-        <mapstruct.version>1.5.5.Final</mapstruct.version>
+        <mapstruct.version>1.6.3</mapstruct.version>
     </properties>
 
     <!--  Swagger version management to avoid conflicts -->
@@ -206,7 +206,7 @@
         <dependency>
             <groupId>io.swagger.parser.v3</groupId>
             <artifactId>swagger-parser</artifactId>
-            <version>2.1.40</version>
+            <version>2.1.41</version>
             <scope>test</scope>
             <exclusions>
                 <exclusion>
