@@ -5,7 +5,6 @@ import static org.springframework.security.config.Customizer.withDefaults;
 import java.util.List;
 
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.config.Customizer;
