@@ -50,7 +50,8 @@ public class EntityDtoInMapper {
                     return new Property(
                             null,
                             entry.getKey(),
-                            value
+                            value,
+                            entry.getValue()
                     );
                 })
                 .toList();

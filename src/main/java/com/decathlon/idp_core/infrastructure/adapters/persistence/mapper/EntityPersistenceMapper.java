@@ -1,6 +1,7 @@
 package com.decathlon.idp_core.infrastructure.adapters.persistence.mapper;
 
 import org.mapstruct.Mapper;
+import org.mapstruct.Mapping;
 import org.mapstruct.MappingConstants;
 
 import com.decathlon.idp_core.domain.model.entity.Entity;
@@ -17,6 +18,7 @@ public interface EntityPersistenceMapper {
 
     EntityJpaEntity toJpa(Entity domain);
 
+    @Mapping(target = "rawValue", ignore = true)
     Property toDomain(PropertyJpaEntity jpa);
 
     PropertyJpaEntity toJpa(Property domain);

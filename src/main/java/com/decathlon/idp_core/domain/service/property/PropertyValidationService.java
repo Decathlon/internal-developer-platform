@@ -38,17 +38,54 @@ public class PropertyValidationService {
 
     /**
      * Validates a concrete property value against its property definition.
+     * Type compatibility is checked first against the original raw value
+     * before applying any rule-based validations.
      *
      * @param propertyDefinition property definition with expected type and optional rules
-     * @param rawValue raw property value
+     * @param rawValue raw property value as string
+     * @param originalValue the original untyped value from the API input for type checking,
+     *                      may be null when loaded from persistence
      * @return list of violations for this value; empty when valid
      */
-    public List<String> validatePropertyValue(PropertyDefinition propertyDefinition, String rawValue) {
+    public List<String> validatePropertyValue(PropertyDefinition propertyDefinition, String rawValue, Object originalValue) {
+        List<String> typeMismatch = checkOriginalValueType(propertyDefinition.name(), propertyDefinition.type(), originalValue);
+        if (!typeMismatch.isEmpty()) {
+            return typeMismatch;
+        }
         return switch (propertyDefinition.type()) {
             case STRING -> validateStringPropertyValue(propertyDefinition.name(), rawValue, propertyDefinition.rules());
             case NUMBER -> validateNumberPropertyValue(propertyDefinition.name(), rawValue, propertyDefinition.rules());
             case BOOLEAN -> validateBooleanPropertyValue(propertyDefinition.name(), rawValue);
         };
+    }
+
+    /// Checks that the original JSON value type is compatible with the expected [PropertyType].
+    ///
+    /// When `originalValue` is non-null, its Java type is inspected:
+    /// - STRING expects a Java `String`
+    /// - NUMBER expects a Java `Number`
+    /// - BOOLEAN expects a Java `Boolean`
+    ///
+    /// If `originalValue` is null (e.g. loaded from persistence), the check is skipped
+    /// and type validation falls through to the string-based validators.
+    ///
+    /// @param propertyName   property name for error reporting
+    /// @param expectedType   the expected property type from the template definition
+    /// @param originalValue  the original untyped value from the API input
+    /// @return a single-element list with a type mismatch message, or an empty list if compatible
+    private List<String> checkOriginalValueType(String propertyName, PropertyType expectedType, Object originalValue) {
+        if (originalValue == null) {
+            return List.of();
+        }
+        boolean compatible = switch (expectedType) {
+            case STRING  -> originalValue instanceof String;
+            case NUMBER  -> originalValue instanceof Number || originalValue instanceof String;
+            case BOOLEAN -> originalValue instanceof Boolean || originalValue instanceof String;
+        };
+        if (!compatible) {
+            return List.of(PROPERTY_TYPE_MISMATCH.formatted(propertyName, expectedType));
+        }
+        return List.of();
     }
 
     private List<String> validateStringPropertyValue(String propertyName, String rawValue, PropertyRules rules) {

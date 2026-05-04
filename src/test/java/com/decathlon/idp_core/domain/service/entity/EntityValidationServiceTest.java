@@ -142,7 +142,7 @@ class EntityValidationServiceTest {
 
         when(entityTemplateRepository.findByIdentifier("web-service")).thenReturn(Optional.of(template));
         when(entityRepository.findByTemplateIdentifierAndIdentifier("web-service", " ")).thenReturn(Optional.empty());
-        when(propertyValidationService.validatePropertyValue(portDefinition, "80"))
+        when(propertyValidationService.validatePropertyValue(portDefinition, "80", null))
                 .thenReturn(List.of("Property 'port' value must be greater than or equal to 1024"));
 
         var exception = assertThrows(EntityValidationException.class, () -> entityValidationService.validateEntity(entity));
@@ -157,7 +157,7 @@ class EntityValidationServiceTest {
         assertEquals(PROPERTY_REQUIRED_MISSING.formatted("ownerEmail", "web-service"), exception.getViolations().get(6));
         assertEquals("Property 'port' value must be greater than or equal to 1024", exception.getViolations().get(7));
 
-        verify(propertyValidationService).validatePropertyValue(portDefinition, "80");
+        verify(propertyValidationService).validatePropertyValue(portDefinition, "80", null);
     }
 
     @Test
@@ -189,10 +189,10 @@ class EntityValidationServiceTest {
         when(entityTemplateRepository.findByIdentifier("web-service")).thenReturn(Optional.of(template));
         when(entityRepository.findByTemplateIdentifierAndIdentifier("web-service", "catalog-api"))
                 .thenReturn(Optional.empty());
-        when(propertyValidationService.validatePropertyValue(versionDefinition, "1.0.0")).thenReturn(List.of());
+        when(propertyValidationService.validatePropertyValue(versionDefinition, "1.0.0", null)).thenReturn(List.of());
 
         assertDoesNotThrow(() -> entityValidationService.validateEntity(entity));
-        verify(propertyValidationService).validatePropertyValue(versionDefinition, "1.0.0");
+        verify(propertyValidationService).validatePropertyValue(versionDefinition, "1.0.0", null);
     }
 
     @Test
