@@ -37,12 +37,8 @@ public class EntityTemplateValidationService {
     /// @throws EntityTemplateAlreadyExistsException when identifier is already taken
     /// @throws EntityTemplateNameAlreadyExistsException when name is already taken
     public void validateForCreate(EntityTemplate entityTemplate) {
-        if (entityTemplate.identifier() != null) {
-            validateIdentifierUniqueness(entityTemplate.identifier());
-        }
-        if (entityTemplate.name() != null) {
-            validateNameUniqueness(entityTemplate.name());
-        }
+        validateIdentifierUniqueness(entityTemplate.identifier());
+        validateNameUniqueness(entityTemplate.name());
         validatePropertyRules(entityTemplate);
     }
 
@@ -62,7 +58,7 @@ public class EntityTemplateValidationService {
         if (!currentIdentifier.equals(mergedTemplate.identifier())) {
             validateIdentifierUniqueness(mergedTemplate.identifier());
         }
-        if (mergedTemplate.name() != null && !Objects.equals(existingName, mergedTemplate.name())) {
+        if (!Objects.equals(existingName, mergedTemplate.name())) {
             validateNameUniqueness(mergedTemplate.name());
         }
         validatePropertyRules(mergedTemplate);
@@ -77,6 +73,14 @@ public class EntityTemplateValidationService {
         if (identifier == null) {
             throw new IllegalArgumentException("Template identifier must not be null");
         }
+        checkTemplateExists(identifier);
+    }
+
+    /// Checks that the entity template exists.
+    ///
+    /// @param identifier the identifier to check for existence
+    /// @throws EntityTemplateNotFoundException when no template matches `identifier`
+    public void checkTemplateExists(String identifier) {
         if (!entityTemplateRepositoryPort.existsByIdentifier(identifier)) {
             throw new EntityTemplateNotFoundException("identifier", identifier);
         }
@@ -86,7 +90,7 @@ public class EntityTemplateValidationService {
     ///
     /// @param identifier the identifier to check for uniqueness
     /// @throws EntityTemplateAlreadyExistsException when identifier is already taken
-    private void validateIdentifierUniqueness(String identifier) {
+    public void validateIdentifierUniqueness(String identifier) {
         if (entityTemplateRepositoryPort.existsByIdentifier(identifier)) {
             throw new EntityTemplateAlreadyExistsException(identifier);
         }
@@ -96,13 +100,13 @@ public class EntityTemplateValidationService {
     ///
     /// @param name the name to check for uniqueness
     /// @throws EntityTemplateNameAlreadyExistsException when name is already taken
-    private void validateNameUniqueness(String name) {
+    public void validateNameUniqueness(String name) {
         if (entityTemplateRepositoryPort.existsByName(name)) {
             throw new EntityTemplateNameAlreadyExistsException(name);
         }
     }
 
-    private void validatePropertyRules(EntityTemplate entityTemplate) {
+    public void validatePropertyRules(EntityTemplate entityTemplate) {
         if (entityTemplate.propertiesDefinitions() == null) {
             return;
         }
