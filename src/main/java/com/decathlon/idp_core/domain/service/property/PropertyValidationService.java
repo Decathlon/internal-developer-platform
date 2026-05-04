@@ -12,6 +12,8 @@ import static com.decathlon.idp_core.domain.constant.ValidationMessages.PROPERTY
 import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.regex.Pattern;
 
 import org.springframework.stereotype.Service;
@@ -29,6 +31,10 @@ public class PropertyValidationService {
 
     private static final Pattern EMAIL_PATTERN = Pattern.compile("^[A-Za-z0-9+_.-]+@(.+)$");
     private static final Pattern URL_PATTERN = Pattern.compile("^https?://.*$");
+
+    /// Cache of compiled regex patterns keyed by their source string.
+    /// Avoids recompiling the same pattern on every property validation call.
+    private final Map<String, Pattern> patternCache = new ConcurrentHashMap<>();
 
     /**
      * Validates a concrete property value against its property definition.
@@ -62,7 +68,8 @@ public class PropertyValidationService {
         if (rules.maxLength() != null && rawValue.length() > rules.maxLength()) {
             violations.add(PROPERTY_MAX_LENGTH_VIOLATION.formatted(propertyName, rules.maxLength()));
         }
-        if (rules.regex() != null && !Pattern.matches(rules.regex(), rawValue)) {
+        if (rules.regex() != null
+                && !patternCache.computeIfAbsent(rules.regex(), Pattern::compile).matcher(rawValue).matches()) {
             violations.add(PROPERTY_REGEX_VIOLATION.formatted(propertyName));
         }
         if (rules.enumValues() != null && !rules.enumValues().isEmpty()
@@ -80,7 +87,7 @@ public class PropertyValidationService {
         final BigDecimal parsedValue;
         try {
             parsedValue = new BigDecimal(rawValue);
-        } catch (RuntimeException exception) {
+        } catch (NumberFormatException _) {
             return List.of(PROPERTY_TYPE_MISMATCH.formatted(propertyName, PropertyType.NUMBER));
         }
 
