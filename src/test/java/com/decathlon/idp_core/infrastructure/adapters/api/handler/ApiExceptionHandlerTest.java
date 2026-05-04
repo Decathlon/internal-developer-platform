@@ -26,7 +26,9 @@ import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 
 import com.decathlon.idp_core.domain.exception.EntityAlreadyExistsException;
+import com.decathlon.idp_core.domain.exception.EntityNotFoundException;
 import com.decathlon.idp_core.domain.exception.EntityTemplateAlreadyExistsException;
+import com.decathlon.idp_core.domain.exception.EntityTemplateNameAlreadyExistsException;
 import com.decathlon.idp_core.domain.exception.EntityTemplateNotFoundException;
 import com.decathlon.idp_core.domain.exception.EntityValidationException;
 import com.decathlon.idp_core.infrastructure.adapters.api.handler.ApiExceptionHandler.ErrorResponse;
@@ -143,6 +145,55 @@ class ApiExceptionHandlerTest {
             ErrorResponse body = response.getBody();
             assertNotNull(body);
             assertEquals(HttpStatus.BAD_REQUEST.name(), body.getError());
+            assertEquals(exception.getMessage(), body.getErrorDescription());
+        }
+
+        /// Tests the handling of [EntityTemplateNameAlreadyExistsException] by the [ApiExceptionHandler].
+        ///
+        /// **This test verifies that:**
+        /// - EntityTemplateNameAlreadyExistsException is properly caught and handled
+        /// - HTTP 409 Conflict status is returned
+        /// - Error response contains the correct error status and description
+        @Test
+        @DisplayName("Should handle EntityTemplateNameAlreadyExistsException with 409 status")
+        void shouldHandleEntityTemplateNameAlreadyExistsException() {
+            // Given
+            String name = "Duplicate Name";
+            EntityTemplateNameAlreadyExistsException exception = new EntityTemplateNameAlreadyExistsException(name);
+
+            // When
+            ResponseEntity<ErrorResponse> response = exceptionHandler.handleEntityTemplateNameAlreadyExistsException(exception);
+
+            // Then
+            assertNotNull(response);
+            assertEquals(HttpStatus.CONFLICT, response.getStatusCode());
+            ErrorResponse body = response.getBody();
+            assertNotNull(body);
+            assertEquals(HttpStatus.CONFLICT.name(), body.getError());
+            assertEquals(exception.getMessage(), body.getErrorDescription());
+        }
+
+        /// Tests the handling of [EntityNotFoundException] by the [ApiExceptionHandler].
+        ///
+        /// **This test verifies that:**
+        /// - EntityNotFoundException is properly caught and handled
+        /// - HTTP 404 Not Found status is returned
+        /// - Error response contains the entity-specific context message
+        @Test
+        @DisplayName("Should handle EntityNotFoundException with 404 status")
+        void shouldHandleEntityNotFoundException() {
+            // Given
+            EntityNotFoundException exception = new EntityNotFoundException("web-service", "my-entity");
+
+            // When
+            ResponseEntity<ErrorResponse> response = exceptionHandler.handleEntityNotFoundException(exception);
+
+            // Then
+            assertNotNull(response);
+            assertEquals(HttpStatus.NOT_FOUND, response.getStatusCode());
+            ErrorResponse body = response.getBody();
+            assertNotNull(body);
+            assertEquals(HttpStatus.NOT_FOUND.name(), body.getError());
             assertEquals(exception.getMessage(), body.getErrorDescription());
         }
     }
@@ -283,8 +334,24 @@ class ApiExceptionHandlerTest {
                             "Invalid value 'INVALID_TYPE' for property 'type'"
                     ),
                     Arguments.of(
+                            "Cannot deserialize value of type `PropertyFormat` from String \"INVALID_FORMAT\": not one of the values accepted for Enum class",
+                            "Invalid value 'INVALID_FORMAT' for property 'format'"
+                    ),
+                    Arguments.of(
                             "Cannot deserialize value of type `UnknownEnum` from String \"VALUE\": not one of the values accepted for Enum class",
                             "Invalid enum value in request body"
+                    ),
+                    Arguments.of(
+                            "Cannot deserialize value of type `com.example.SomeType`: some other error",
+                            "Cannot deserialize request body property"
+                    ),
+                    Arguments.of(
+                            "Something completely unexpected happened",
+                            "Invalid request body format"
+                    ),
+                    Arguments.of(
+                            "Cannot deserialize value of type `PropertyType`: not one of the values accepted for Enum class",
+                            "Invalid value for property 'type'"
                     )
             );
         }
