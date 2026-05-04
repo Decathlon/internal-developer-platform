@@ -133,7 +133,7 @@ public class EntityValidationService {
             }
 
             propertyValidationService
-                    .validatePropertyValue(definition, property.value())
+                    .validatePropertyValue(definition, property.value(), property.rawValue())
                     .forEach(violations::add);
         }
     }
