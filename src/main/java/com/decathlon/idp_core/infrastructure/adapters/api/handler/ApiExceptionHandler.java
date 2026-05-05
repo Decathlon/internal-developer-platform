@@ -13,12 +13,12 @@ import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.method.annotation.HandlerMethodValidationException;
 
-import com.decathlon.idp_core.domain.exception.EntityNotFoundException;
-import com.decathlon.idp_core.domain.exception.EntityAlreadyExistsException;
-import com.decathlon.idp_core.domain.exception.EntityTemplateAlreadyExistsException;
-import com.decathlon.idp_core.domain.exception.EntityTemplateNameAlreadyExistsException;
-import com.decathlon.idp_core.domain.exception.EntityTemplateNotFoundException;
-import com.decathlon.idp_core.domain.exception.EntityValidationException;
+import com.decathlon.idp_core.domain.exception.entity.EntityNotFoundException;
+import com.decathlon.idp_core.domain.exception.entity.EntityAlreadyExistsException;
+import com.decathlon.idp_core.domain.exception.entity_template.EntityTemplateAlreadyExistsException;
+import com.decathlon.idp_core.domain.exception.entity_template.EntityTemplateNameAlreadyExistsException;
+import com.decathlon.idp_core.domain.exception.entity_template.EntityTemplateNotFoundException;
+import com.decathlon.idp_core.domain.exception.entity.EntityValidationException;
 
 import jakarta.validation.ConstraintViolation;
 import jakarta.validation.ConstraintViolationException;

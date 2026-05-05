@@ -1,4 +1,4 @@
-package com.decathlon.idp_core.domain.exception;
+package com.decathlon.idp_core.domain.exception.entity;
 
 import static com.decathlon.idp_core.domain.constant.ValidationMessages.ENTITY_NOT_FOUND;
 

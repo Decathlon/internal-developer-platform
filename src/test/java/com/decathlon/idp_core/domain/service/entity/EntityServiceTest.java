@@ -23,12 +23,15 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
 
-import com.decathlon.idp_core.domain.exception.EntityAlreadyExistsException;
-import com.decathlon.idp_core.domain.exception.EntityNotFoundException;
-import com.decathlon.idp_core.domain.exception.EntityTemplateNotFoundException;
+import com.decathlon.idp_core.domain.exception.entity.EntityAlreadyExistsException;
+import com.decathlon.idp_core.domain.exception.entity.EntityNotFoundException;
+import com.decathlon.idp_core.domain.exception.entity_template.EntityTemplateNotFoundException;
 import com.decathlon.idp_core.domain.model.entity.Entity;
 import com.decathlon.idp_core.domain.model.entity.EntitySummary;
+import com.decathlon.idp_core.domain.model.entity_template.EntityTemplate;
 import com.decathlon.idp_core.domain.port.EntityRepositoryPort;
+import com.decathlon.idp_core.domain.port.EntityTemplateRepositoryPort;
+import com.decathlon.idp_core.domain.service.entity_template.EntityTemplateValidationService;
 
 @ExtendWith(MockitoExtension.class)
 @DisplayName("EntityService Tests")
@@ -38,7 +41,13 @@ class EntityServiceTest {
     private EntityRepositoryPort entityRepository;
 
     @Mock
+    private EntityTemplateRepositoryPort entityTemplateRepository;
+
+    @Mock
     private EntityValidationService entityValidationService;
+
+    @Mock
+    private EntityTemplateValidationService entityTemplateValidationService;
 
     @InjectMocks
     private EntityService entityService;
@@ -87,10 +96,10 @@ class EntityServiceTest {
         when(entityRepository.findByTemplateIdentifierAndIdentifier("web-service", "catalog-api"))
                 .thenReturn(Optional.of(entity));
 
-        var result = entityService.getEntityByTemplateIdentifierAnIdentifier("web-service", "catalog-api");
+        var result = entityService.getEntityByTemplateIdentifierAndIdentifier("web-service", "catalog-api");
 
         assertSame(entity, result);
-        verify(entityValidationService).checkTemplateExist("web-service");
+        verify(entityTemplateValidationService).checkTemplateExists("web-service");
         verify(entityRepository).findByTemplateIdentifierAndIdentifier("web-service", "catalog-api");
     }
 
@@ -101,38 +110,43 @@ class EntityServiceTest {
                 .thenReturn(Optional.empty());
 
         assertThrows(EntityNotFoundException.class,
-                () -> entityService.getEntityByTemplateIdentifierAnIdentifier("web-service", "missing-entity"));
+                () -> entityService.getEntityByTemplateIdentifierAndIdentifier("web-service", "missing-entity"));
     }
 
     @Test
     @DisplayName("Should create entity when validations pass")
     void shouldCreateEntityWhenValidationsPass() {
         var entity = entity("web-service", "catalog-api", "Catalog API");
+        var template = new EntityTemplate(UUID.randomUUID(), "web-service", "Web Service", "desc", List.of(), List.of());
+        when(entityTemplateRepository.findByIdentifier("web-service")).thenReturn(Optional.of(template));
         when(entityRepository.save(entity)).thenReturn(entity);
 
         var result = entityService.createEntity(entity);
 
         assertSame(entity, result);
 
-        InOrder inOrder = inOrder(entityValidationService, entityRepository);
-        inOrder.verify(entityValidationService).checkTemplateExist("web-service");
-        inOrder.verify(entityValidationService).checkEntityAlreadyExist(entity);
-        inOrder.verify(entityValidationService).validateEntity(entity);
+        InOrder inOrder = inOrder(entityTemplateRepository, entityValidationService, entityRepository);
+        inOrder.verify(entityTemplateRepository).findByIdentifier("web-service");
+        inOrder.verify(entityValidationService).checkUniqueness(entity);
+        inOrder.verify(entityValidationService).validateEntity(entity, template);
         inOrder.verify(entityRepository).save(entity);
+        verifyNoInteractions(entityTemplateValidationService);
     }
 
     @Test
     @DisplayName("Should not save when entity already exists")
     void shouldNotSaveWhenEntityAlreadyExists() {
         var entity = entity("web-service", "catalog-api", "Catalog API");
+        var template = new EntityTemplate(UUID.randomUUID(), "web-service", "Web Service", "desc", List.of(), List.of());
         var alreadyExists = new EntityAlreadyExistsException("web-service", "catalog-api");
 
-        org.mockito.Mockito.doThrow(alreadyExists).when(entityValidationService).checkEntityAlreadyExist(entity);
+        when(entityTemplateRepository.findByIdentifier("web-service")).thenReturn(Optional.of(template));
+        org.mockito.Mockito.doThrow(alreadyExists).when(entityValidationService).checkUniqueness(entity);
 
         assertThrows(EntityAlreadyExistsException.class, () -> entityService.createEntity(entity));
 
-        verify(entityValidationService).checkTemplateExist("web-service");
-        verify(entityValidationService).checkEntityAlreadyExist(entity);
+        verify(entityTemplateRepository).findByIdentifier("web-service");
+        verify(entityValidationService).checkUniqueness(entity);
         verifyNoMoreInteractions(entityRepository);
     }
 
@@ -140,16 +154,14 @@ class EntityServiceTest {
     @DisplayName("Should stop immediately when template does not exist")
     void shouldStopWhenTemplateDoesNotExistOnCreate() {
         var entity = entity("missing-template", "catalog-api", "Catalog API");
-        var templateNotFound = new EntityTemplateNotFoundException("identifier", "missing-template");
 
-        org.mockito.Mockito.doThrow(templateNotFound)
-                .when(entityValidationService)
-                .checkTemplateExist("missing-template");
+        when(entityTemplateRepository.findByIdentifier("missing-template")).thenReturn(Optional.empty());
 
         assertThrows(EntityTemplateNotFoundException.class, () -> entityService.createEntity(entity));
 
-        verify(entityValidationService).checkTemplateExist("missing-template");
-        verifyNoInteractions(entityRepository);
+        verify(entityTemplateRepository).findByIdentifier("missing-template");
+        verifyNoInteractions(entityValidationService);
+        verifyNoMoreInteractions(entityRepository);
     }
 
     private Entity entity(String templateIdentifier, String identifier, String name) {

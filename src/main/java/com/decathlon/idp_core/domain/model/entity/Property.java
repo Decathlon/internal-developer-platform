@@ -1,7 +1,6 @@
 package com.decathlon.idp_core.domain.model.entity;
 
 import static com.decathlon.idp_core.domain.constant.ValidationMessages.PROPERTY_NAME_MANDATORY;
-import static com.decathlon.idp_core.domain.constant.ValidationMessages.PROPERTY_VALUE_MANDATORY;
 
 import java.util.UUID;
 
@@ -20,24 +19,16 @@ import jakarta.validation.constraints.NotBlank;
 /// **Business invariants:**
 /// - Property names must match a [PropertyDefinition] name in the entity's template
 /// - Property values must satisfy all validation rules from [PropertyRules]
-/// - Required properties cannot have empty values
-/// - Property types must align with the template's [PropertyType] definition
-///
-/// @param rawValue the original untyped value from the API input, used for type checking
-///                 during validation. May be null when loaded from persistence.
+/// - Required properties cannot have null/blank values
+/// - Property values must be typed according to the template's [PropertyType] definition
+///   (carried as [Object] so the original JSON type — String, Number, Boolean — is preserved
+///   for strict type-mismatch detection at validation time).
 public record Property(
     UUID id,
 
     @NotBlank(message = PROPERTY_NAME_MANDATORY)
     String name,
 
-    @NotBlank(message = PROPERTY_VALUE_MANDATORY)
-    String value,
-
-    Object rawValue
+    Object value
 ) {
-    /// Convenience constructor for persistence and test scenarios where raw value is not needed.
-    public Property(UUID id, String name, String value) {
-        this(id, name, value, null);
-    }
 }

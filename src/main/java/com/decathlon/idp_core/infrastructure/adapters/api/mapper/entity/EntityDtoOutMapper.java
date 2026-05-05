@@ -9,6 +9,7 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.stereotype.Component;
 
@@ -20,13 +21,11 @@ import com.decathlon.idp_core.domain.model.entity.RelationAsTargetSummary;
 import com.decathlon.idp_core.domain.model.entity_template.EntityTemplate;
 import com.decathlon.idp_core.domain.model.entity_template.PropertyDefinition;
 import com.decathlon.idp_core.domain.model.enums.PropertyType;
-import com.decathlon.idp_core.domain.service.entity.EntityService;
 import com.decathlon.idp_core.domain.service.EntityTemplateService;
 import com.decathlon.idp_core.domain.service.RelationService;
+import com.decathlon.idp_core.domain.service.entity.EntityService;
 import com.decathlon.idp_core.infrastructure.adapters.api.dto.out.entity.EntityDtoOut;
 import com.decathlon.idp_core.infrastructure.adapters.api.dto.out.entity.EntitySummaryDto;
-
-import lombok.AllArgsConstructor;
 
 /// Adapter mapper for converting domain [Entity] objects to API DTOs.
 ///
@@ -46,7 +45,7 @@ import lombok.AllArgsConstructor;
 /// - Integrates with Jackson for JSON serialization patterns
 /// - Stateless design ensures thread safety in web containers
 @Component
-@AllArgsConstructor
+@RequiredArgsConstructor
 public class EntityDtoOutMapper {
 
     private final EntityTemplateService entityTemplateService;
@@ -72,11 +71,11 @@ public class EntityDtoOutMapper {
     /// to minimize database queries. Builds summary maps for efficient relationship
     /// resolution across the entire page.
     ///
-    /// @param entities paginated domain entities from repository layer
+    /// @param entities                 paginated domain entities from repository layer
     /// @param entityTemplateIdentifier template identifier for batch template resolution
     /// @return paginated API DTOs with complete relationship data
     public Page<EntityDtoOut> fromEntitiesPageToDtoPage(Page<Entity> entities,
-            String entityTemplateIdentifier) {
+                                                        String entityTemplateIdentifier) {
 
         Map<String, EntitySummaryDto> pageEntitiesSummaries = buildRelatedEntitiesSummaryMapByPage(entities);
         Map<String, List<RelationAsTargetSummary>> relationTargetOwnershipsMap = buildRelationsAsTargetSummaryMapByPage(
@@ -94,7 +93,7 @@ public class EntityDtoOutMapper {
     /// @param entity         the entity to map
     /// @param entityTemplate the template for property type mapping
     /// @return the mapped DTO
-      private EntityDtoOut fromEntityUsingEntityTemplate(Entity entity, EntityTemplate entityTemplate) {
+    private EntityDtoOut fromEntityUsingEntityTemplate(Entity entity, EntityTemplate entityTemplate) {
         Map<String, Object> props = mapPropertiesDto(entity, entityTemplate);
 
         List<String> allTargetIdentifiers = getAllTargetIdentifiersFromEntityRelations(entity);
@@ -120,13 +119,13 @@ public class EntityDtoOutMapper {
     ///
     /// @param entity                      the entity to map
     /// @param entityTemplate              the template for property type mapping
-    /// @param relatedEntitiesSummaries          map of entity summaries for relation
-    ///                                    targets
+    /// @param relatedEntitiesSummaries    map of entity summaries for relation
+    ///                                                                       targets
     /// @param relationTargetOwnershipsMap map of relations-as-target for the entity
     /// @return the mapped DTO
     private EntityDtoOut fromEntityUsingEntityTemplateAndSummaryMap(Entity entity, EntityTemplate entityTemplate,
-            Map<String, EntitySummaryDto> relatedEntitiesSummaries,
-            Map<String, List<RelationAsTargetSummary>> relationTargetOwnershipsMap) {
+                                                                    Map<String, EntitySummaryDto> relatedEntitiesSummaries,
+                                                                    Map<String, List<RelationAsTargetSummary>> relationTargetOwnershipsMap) {
 
         Map<String, Object> props = mapPropertiesDto(entity, entityTemplate);
         Map<String, List<EntitySummaryDto>> relationMap = mapRelationsDto(entity, relatedEntitiesSummaries);
@@ -163,44 +162,42 @@ public class EntityDtoOutMapper {
                         Property::name,
                         prop -> {
                             PropertyDefinition def = propertiesDefinitions.get(prop.name());
-                            if (def != null) {
-                                PropertyType type = def.type();
-                                String value = prop.value();
-                                if (PropertyType.NUMBER.equals(type)) {
-                                    try {
-                                        return Double.valueOf(value);
-                                    } catch (NumberFormatException _) {
-                                        return null;
-                                    }
-                                } else if (PropertyType.BOOLEAN.equals(type)) {
-                                    return Boolean.valueOf(value);
-                                }
-                                // Default to string
-                                return value;
-                            } else {
-                                // Fallback if propertyDefinition is missing
-                                return prop.value();
+                            Object rawValue = prop.value();
+                            if (def == null || rawValue == null) {
+                                return rawValue;
                             }
+                            String stringValue = String.valueOf(rawValue);
+                            PropertyType type = def.type();
+                            if (PropertyType.NUMBER.equals(type)) {
+                                try {
+                                    return Double.valueOf(stringValue);
+                                } catch (NumberFormatException _) {
+                                    return null;
+                                }
+                            } else if (PropertyType.BOOLEAN.equals(type)) {
+                                return Boolean.valueOf(stringValue);
+                            }
+                            return stringValue;
                         }));
     }
 
     /// Maps the relations of an entity to a map of relation names to lists of target
     /// entity summaries.
     ///
-    /// @param entity     the entity whose relations to map
+    /// @param entity                   the entity whose relations to map
     /// @param relatedEntitiesSummaries map of entity summaries for relation targets
     /// @return a map of relation names to lists of target entity summaries
     private Map<String, List<EntitySummaryDto>> mapRelationsDto(Entity entity,
-            Map<String, EntitySummaryDto> relatedEntitiesSummaries) {
+                                                                Map<String, EntitySummaryDto> relatedEntitiesSummaries) {
         return entity.relations() == null
                 ? Collections.emptyMap()
                 : entity.relations().stream()
-                        .collect(Collectors.groupingBy(
-                                Relation::name,
-                                Collectors.flatMapping(rel -> rel.targetEntityIdentifiers().stream()
+                .collect(Collectors.groupingBy(
+                        Relation::name,
+                        Collectors.flatMapping(rel -> rel.targetEntityIdentifiers().stream()
                                         .map(relatedEntitiesSummaries::get)
                                         .filter(Objects::nonNull),
-                                        Collectors.toList())));
+                                Collectors.toList())));
     }
 
     ///
@@ -208,11 +205,11 @@ public class EntityDtoOutMapper {
     /// lists of source entity summaries.
     ///
     /// @param entity                      the entity whose relations-as-target to
-    ///                                    map
+    ///                                                                       map
     /// @param relationTargetOwnershipsMap map of relations-as-target for the entity
     /// @return a map of relation names to lists of source entity summaries
     private Map<String, List<EntitySummaryDto>> mapRelationsAsTargetDto(Entity entity,
-            Map<String, List<RelationAsTargetSummary>> relationTargetOwnershipsMap) {
+                                                                        Map<String, List<RelationAsTargetSummary>> relationTargetOwnershipsMap) {
         List<RelationAsTargetSummary> relationAsTargetSummaries = relationTargetOwnershipsMap
                 .get(entity.identifier());
         if (relationAsTargetSummaries == null) {
@@ -271,8 +268,8 @@ public class EntityDtoOutMapper {
         return entity.relations() == null
                 ? Collections.emptyList()
                 : new ArrayList<>(entity.relations().stream()
-                        .flatMap(rel -> rel.targetEntityIdentifiers().stream())
-                        .collect(Collectors.toSet()));
+                .flatMap(rel -> rel.targetEntityIdentifiers().stream())
+                .collect(Collectors.toSet()));
     }
 
     ///
@@ -286,7 +283,7 @@ public class EntityDtoOutMapper {
                 .flatMap(entity -> entity.relations() == null
                         ? Stream.empty()
                         : entity.relations().stream()
-                                .flatMap(rel -> rel.targetEntityIdentifiers().stream()))
+                        .flatMap(rel -> rel.targetEntityIdentifiers().stream()))
                 .collect(Collectors.toSet()));
 
     }
@@ -309,10 +306,10 @@ public class EntityDtoOutMapper {
         return targetIdentifiers.isEmpty()
                 ? Collections.emptyMap()
                 : entityService.getEntitiesSummariesByIndentifiers(targetIdentifiers)
-                        .stream()
-                        .collect(Collectors.toMap(
-                                EntitySummary::identifier,
-                                es -> new EntitySummaryDto(es.identifier(), es.name())));
+                .stream()
+                .collect(Collectors.toMap(
+                        EntitySummary::identifier,
+                        es -> new EntitySummaryDto(es.identifier(), es.name())));
     }
 
 }

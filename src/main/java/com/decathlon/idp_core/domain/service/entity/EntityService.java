@@ -2,18 +2,22 @@ package com.decathlon.idp_core.domain.service.entity;
 
 import java.util.List;
 
-import lombok.AllArgsConstructor;
+import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
+import org.springframework.validation.annotation.Validated;
 
-import com.decathlon.idp_core.domain.exception.EntityAlreadyExistsException;
-import com.decathlon.idp_core.domain.exception.EntityNotFoundException;
-import com.decathlon.idp_core.domain.exception.EntityTemplateNotFoundException;
-import com.decathlon.idp_core.domain.exception.EntityValidationException;
+import com.decathlon.idp_core.domain.exception.entity.EntityAlreadyExistsException;
+import com.decathlon.idp_core.domain.exception.entity.EntityNotFoundException;
+import com.decathlon.idp_core.domain.exception.entity_template.EntityTemplateNotFoundException;
+import com.decathlon.idp_core.domain.exception.entity.EntityValidationException;
 import com.decathlon.idp_core.domain.model.entity.Entity;
 import com.decathlon.idp_core.domain.model.entity.EntitySummary;
+import com.decathlon.idp_core.domain.model.entity_template.EntityTemplate;
 import com.decathlon.idp_core.domain.port.EntityRepositoryPort;
+import com.decathlon.idp_core.domain.port.EntityTemplateRepositoryPort;
+import com.decathlon.idp_core.domain.service.entity_template.EntityTemplateValidationService;
 import jakarta.transaction.Transactional;
 import jakarta.validation.Valid;
 
@@ -29,10 +33,13 @@ import jakarta.validation.Valid;
 /// - Entity data integrity validation (entity, properties, relations)
 /// - Entity summary generation for efficient queries
 @Service
-@AllArgsConstructor
+@Validated
+@RequiredArgsConstructor
 public class EntityService {
     private final EntityRepositoryPort entityRepository;
+    private final EntityTemplateRepositoryPort entityTemplateRepository;
     private final EntityValidationService entityValidationService;
+    private final EntityTemplateValidationService entityTemplateValidationService;
 
     /// Retrieves entities filtered by template with existence validation.
     ///
@@ -72,8 +79,8 @@ public class EntityService {
     /// @throws EntityTemplateNotFoundException when template doesn't exist
     /// @throws EntityNotFoundException         when entity doesn't exist
     @Transactional
-    public Entity getEntityByTemplateIdentifierAnIdentifier(String templateIdentifier, String entityIdentifier) {
-        entityValidationService.checkTemplateExist(templateIdentifier);
+    public Entity getEntityByTemplateIdentifierAndIdentifier(String templateIdentifier, String entityIdentifier) {
+        entityTemplateValidationService.checkTemplateExists(templateIdentifier);
         return entityRepository.findByTemplateIdentifierAndIdentifier(templateIdentifier, entityIdentifier)
                 .orElseThrow(() -> new EntityNotFoundException(templateIdentifier,
                         entityIdentifier));
@@ -81,8 +88,10 @@ public class EntityService {
 
     /// Creates and persists a new entity with business validation.
     ///
-    /// **Contract:** Validates template existence, entity identifier uniqueness within
-    /// the template scope, and entity/property/relation data integrity before persisting.
+    /// **Contract:** Resolves the referenced template (single round-trip — combined
+    /// existence check and fetch), enforces entity identifier uniqueness within the
+    /// template scope, then validates entity/property data integrity against the
+    /// resolved template before persisting.
     ///
     /// @param entity validated entity to create and persist
     /// @return the persisted entity with generated identifiers
@@ -91,9 +100,10 @@ public class EntityService {
     /// @throws EntityValidationException       when entity, property, or relation data is invalid
     @Transactional
     public Entity createEntity(@Valid Entity entity) {
-        entityValidationService.checkTemplateExist(entity.templateIdentifier());
-        entityValidationService.checkEntityAlreadyExist(entity);
-        entityValidationService.validateEntity(entity);
+        EntityTemplate template = entityTemplateRepository.findByIdentifier(entity.templateIdentifier())
+                .orElseThrow(() -> new EntityTemplateNotFoundException("identifier", entity.templateIdentifier()));
+        entityValidationService.checkUniqueness(entity);
+        entityValidationService.validateEntity(entity, template);
         return entityRepository.save(entity);
     }
 

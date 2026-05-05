@@ -4,7 +4,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
-import lombok.AllArgsConstructor;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
 import com.decathlon.idp_core.domain.model.entity.Entity;
@@ -28,7 +28,7 @@ import com.decathlon.idp_core.infrastructure.adapters.api.dto.in.EntityDtoIn;
 /// **API contract support:** Enables clean separation between API request format
 /// and internal domain model structure for maintainable API evolution.
 @Component
-@AllArgsConstructor
+@RequiredArgsConstructor
 public class EntityDtoInMapper {
 
     /// Converts an entity creation request DTO to a domain entity.
@@ -40,20 +40,11 @@ public class EntityDtoInMapper {
 
         List<Property> properties = entityDtoIn.getProperties() == null ? Collections.emptyList()
                 : entityDtoIn.getProperties().entrySet().stream()
-                .map((Map.Entry<String, Object> entry) -> {
-                    String value;
-                    if (entry.getValue() != null) {
-                        value = String.valueOf(entry.getValue());
-                    } else {
-                        value = null;
-                    }
-                    return new Property(
-                            null,
-                            entry.getKey(),
-                            value,
-                            entry.getValue()
-                    );
-                })
+                .map((Map.Entry<String, Object> entry) -> new Property(
+                        null,
+                        entry.getKey(),
+                        entry.getValue()
+                ))
                 .toList();
 
         List<Relation> relations = entityDtoIn.getRelations() == null ? Collections.emptyList()

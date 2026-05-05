@@ -31,7 +31,7 @@ import static com.decathlon.idp_core.infrastructure.adapters.api.configuration.S
 import static org.springframework.http.HttpStatus.CREATED;
 import static org.springframework.http.HttpStatus.OK;
 
-import lombok.AllArgsConstructor;
+import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -74,7 +74,7 @@ import jakarta.validation.constraints.NotBlank;
 @RestController
 @RequestMapping("/api/v1/entities")
 @Tag(name = "Entities Management", description = "Operations related to entity management")
-@AllArgsConstructor
+@RequiredArgsConstructor
 public class EntityController {
 
     private final EntityService entityService;
@@ -127,7 +127,7 @@ public class EntityController {
     public EntityDtoOut getEntity(
             @PathVariable String templateIdentifier,
             @PathVariable String entityIdentifier) {
-        Entity entity = entityService.getEntityByTemplateIdentifierAnIdentifier(templateIdentifier, entityIdentifier);
+        Entity entity = entityService.getEntityByTemplateIdentifierAndIdentifier(templateIdentifier, entityIdentifier);
         return entityDtoOutMapper.fromEntity(entity);
     }
 
