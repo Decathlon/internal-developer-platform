@@ -87,7 +87,7 @@ public class EntityTemplateService {
     /// @throws EntityTemplateNameAlreadyExistsException when name already exists
     @Transactional
     public EntityTemplate createEntityTemplate(@Valid EntityTemplate entityTemplate) {
-        entityTemplateValidationService.validateForCreate(entityTemplate);
+        entityTemplateValidationService.validateForCreation(entityTemplate);
         return entityTemplateRepositoryPort.save(entityTemplate);
     }
 
@@ -140,7 +140,7 @@ public class EntityTemplateService {
     /// @throws EntityTemplateNotFoundException when template doesn't exist
     @Transactional
     public void deleteEntityTemplate(String identifier) {
-        entityTemplateValidationService.validateForDelete(identifier);
+        entityTemplateValidationService.validateForDeletion(identifier);
         entityTemplateRepositoryPort.deleteByIdentifier(identifier);
     }
 

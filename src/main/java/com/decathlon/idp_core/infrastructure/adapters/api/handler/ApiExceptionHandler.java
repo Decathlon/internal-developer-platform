@@ -15,6 +15,7 @@ import org.springframework.web.bind.annotation.ExceptionHandler;
 
 import com.decathlon.idp_core.domain.exception.EntityNotFoundException;
 import com.decathlon.idp_core.domain.exception.entity_template.EntityTemplateAlreadyExistsException;
+import com.decathlon.idp_core.domain.exception.entity_template.EntityTemplateIdentifierCannotChangeException;
 import com.decathlon.idp_core.domain.exception.entity_template.EntityTemplateNameAlreadyExistsException;
 import com.decathlon.idp_core.domain.exception.entity_template.EntityTemplateNotFoundException;
 
@@ -82,6 +83,18 @@ public class ApiExceptionHandler {
         log.warn("Entity template name already exists: {}", ex.getMessage());
         ErrorResponse errorResponse = new ErrorResponse(HttpStatus.CONFLICT.name(), ex.getMessage());
         return ResponseEntity.status(HttpStatus.CONFLICT).body(errorResponse);
+    }
+
+    /// Handles domain exception when attempting to change an entity template identifier.
+    ///
+    /// **HTTP mapping:** Maps domain EntityTemplateIdentifierCannotChangeException to HTTP 400
+    /// status indicating validation error for immutable identifier field.
+    @ExceptionHandler(EntityTemplateIdentifierCannotChangeException.class)
+    public ResponseEntity<ErrorResponse> handleEntityTemplateIdentifierCannotChangeException(
+            EntityTemplateIdentifierCannotChangeException ex) {
+        log.warn("Entity template identifier cannot be changed: {}", ex.getMessage());
+        ErrorResponse errorResponse = new ErrorResponse(HttpStatus.BAD_REQUEST.name(), ex.getMessage());
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(errorResponse);
     }
 
     /// Handles domain exception for wrong entity template property rules.

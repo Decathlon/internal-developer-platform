@@ -8,6 +8,12 @@ import static com.decathlon.idp_core.domain.constant.ValidationMessages.minMaxCo
 import static com.decathlon.idp_core.domain.constant.ValidationMessages.ruleNotAllowed;
 import static com.decathlon.idp_core.domain.constant.ValidationMessages.rulesAreIncompatible;
 
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 import java.util.regex.Pattern;
 import java.util.regex.PatternSyntaxException;
 
@@ -27,6 +33,18 @@ import com.decathlon.idp_core.domain.model.enums.PropertyType;
 ///
 @Service
 public class PropertyDefinitionValidationService {
+
+    // Static and thread-safe regex validator executor
+    private static final ExecutorService VALIDATION_EXECUTOR = Executors.newFixedThreadPool(
+            Runtime.getRuntime().availableProcessors(),
+            runnable -> {
+                Thread thread = new Thread(runnable, "regex-validator-thread");
+                thread.setDaemon(true);
+                return thread;
+            }
+    );
+    // Validation ReDoS probe string designed to trigger backtracking in vulnerable patterns
+    private static final String STRESS_PROBE = "a".repeat(50) + "!";
 
     // Rule name constants
     public static final String REGEX = "regex";
@@ -276,21 +294,86 @@ public class PropertyDefinitionValidationService {
         }
     }
 
-    /// Validates that the provided regex pattern is syntactically valid.
+    /// Validates the user-provided regex pattern against ReDoS and injection risks.
+    ///
+    /// **Security checks:**
+    /// 1. Rejects patterns exceeding 1,000 characters.
+    /// 2. Rejects known dangerous regex patterns.
+    /// 3. Ensures the pattern is valid Java regex.
+    /// 4. Detects ReDoS by executing pattern matching within 100ms timeout.
     ///
     /// @param propertyName name of the property (for error reporting)
     /// @param regexPattern the regex pattern to validate
-    /// @throws PropertyDefinitionRulesConflictException if the pattern is syntactically invalid
+    /// @throws PropertyDefinitionRulesConflictException if any security check fails
     private void validateRegexPattern(String propertyName, String regexPattern) {
+        if (regexPattern.length() > 1000) {
+            throw new PropertyDefinitionRulesConflictException(
+                    propertyName, PropertyType.STRING, "Regex pattern too long (max 1,000 characters)");
+        }
+
+        if (containsDangerousPatterns(regexPattern)) {
+            throw new PropertyDefinitionRulesConflictException(
+                    propertyName, PropertyType.STRING, "Regex pattern contains potentially unsafe constructs");
+        }
+
+        Pattern compiledRegexPattern;
         try {
-            Pattern.compile(regexPattern);
+            compiledRegexPattern = Pattern.compile(regexPattern);
         } catch (PatternSyntaxException e) {
             throw new PropertyDefinitionRulesConflictException(
-                    propertyName,
-                    PropertyType.STRING,
-                    "Invalid regex pattern: " + e.getMessage()
-            );
+                    propertyName, PropertyType.STRING, "Invalid regex pattern: " + e.getMessage());
         }
+
+        validatePatternWithTimeout(propertyName, compiledRegexPattern);
+    }
+
+    /// Validates pattern matching with a timeout to detect ReDoS (Regular Expression Denial of Service) vulnerabilities.
+    ///
+    /// Executes a pattern match against a stress probe within a 100 ms timeout using a shared, bounded executor
+    /// If the pattern takes longer than the timeout, it is rejected as potentially vulnerable to catastrophic backtracking.
+    ///
+    /// @param propertyName name of the property (for error reporting)
+    /// @param pattern the compiled pattern to test
+    /// @throws PropertyDefinitionRulesConflictException if the pattern times out or validation fails
+    private void validatePatternWithTimeout(String propertyName, Pattern pattern) {
+        Future<Boolean> future = VALIDATION_EXECUTOR.submit(() -> pattern.matcher(STRESS_PROBE).matches());
+        try {
+            future.get(100, TimeUnit.MILLISECONDS);
+        } catch (TimeoutException _) {
+            future.cancel(true);
+            throw new PropertyDefinitionRulesConflictException(
+                    propertyName, PropertyType.STRING, "Regex pattern rejected: execution time exceeded safety limits (ReDoS risk)");
+        } catch (InterruptedException _) {
+            Thread.currentThread().interrupt();
+            throw new PropertyDefinitionRulesConflictException(
+                    propertyName, PropertyType.STRING, "Regex pattern validation was interrupted");
+        } catch (ExecutionException e) {
+            throw new PropertyDefinitionRulesConflictException(
+                    propertyName, PropertyType.STRING, "Regex validation failed: " + e.getCause().getMessage());
+        }
+    }
+
+    /// Checks for known dangerous regex constructs.
+    ///
+    /// - Nested quantifiers: `(a+)+`, `(a*)*`, `(a+)*`, etc.
+    /// - Quantified alternation groups: `(a|b)+`, `(a|b)*.
+    /// - Unbounded repetition upper bounds greater than 1 000 (e.g. `{5,9999}`).
+    ///
+    /// @param pattern the raw regex string to analyse
+    /// @return `true` if the pattern contains at least one dangerous construct
+    private boolean containsDangerousPatterns(String pattern) {
+        // Nested quantifiers
+        if (pattern.matches(".*\\([^)]*[+*]\\)[+*].*")) {
+            return true;
+        }
+
+        // Quantified alternation groups
+        if (pattern.matches(".*\\([^)]*\\|[^)]*\\)[+*].*")) {
+            return true;
+        }
+
+        // Repetition upper bound > 1000
+        return pattern.matches(".*\\{\\d*,(\\d{4,}|[1-9]\\d{3,})\\}.*");
     }
 
 }
