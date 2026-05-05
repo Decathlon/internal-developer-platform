@@ -14,6 +14,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
+import java.util.function.Predicate;
 import java.util.regex.Pattern;
 import java.util.regex.PatternSyntaxException;
 
@@ -338,7 +339,7 @@ public class PropertyDefinitionValidationService {
     private void validatePatternWithTimeout(String propertyName, Pattern pattern) {
         Future<Boolean> future = VALIDATION_EXECUTOR.submit(() -> pattern.matcher(STRESS_PROBE).matches());
         try {
-            future.get(100, TimeUnit.MILLISECONDS);
+            future.get(10, TimeUnit.MILLISECONDS);
         } catch (TimeoutException _) {
             future.cancel(true);
             throw new PropertyDefinitionRulesConflictException(
@@ -353,27 +354,229 @@ public class PropertyDefinitionValidationService {
         }
     }
 
-    /// Checks for known dangerous regex constructs.
+    /// Checks for known dangerous regex constructs using static string analysis.
     ///
+    /// **Patterns detected:**
     /// - Nested quantifiers: `(a+)+`, `(a*)*`, `(a+)*`, etc.
-    /// - Quantified alternation groups: `(a|b)+`, `(a|b)*.
-    /// - Unbounded repetition upper bounds greater than 1 000 (e.g. `{5,9999}`).
+    /// - Quantified alternation groups: `(a|b)+`, `(a|b)*`
+    /// - Unbounded repetition upper bounds greater than 1,000 (e.g. `{5,9999}`)
+    /// - Lookarounds with quantifiers: `(?=a+)`, `(?!a*)`
+    ///
+    /// **Implementation:** Uses static string analysis without regex matching
+    /// to avoid ReDoS vulnerabilities in the validator itself.
     ///
     /// @param pattern the raw regex string to analyse
-    /// @return `true` if the pattern contains at least one dangerous construct
+    /// @return `true` if potentially dangerous constructs are detected
     private boolean containsDangerousPatterns(String pattern) {
-        // Nested quantifiers
-        if (pattern.matches(".*\\([^)]*[+*]\\)[+*].*")) {
-            return true;
-        }
-
-        // Quantified alternation groups
-        if (pattern.matches(".*\\([^)]*\\|[^)]*\\)[+*].*")) {
-            return true;
-        }
-
-        // Repetition upper bound > 1000
-        return pattern.matches(".*\\{\\d*,(\\d{4,}|[1-9]\\d{3,})\\}.*");
+        return hasNestedQuantifiers(pattern) ||
+               hasQuantifiedAlternation(pattern) ||
+               hasLargeRepetitionBounds(pattern) ||
+               hasLookaroundsWithQuantifiers(pattern);
     }
+
+    /// Detects nested quantifiers like `(a+)+`, `(a*)*`, `(a+)*`, etc.
+    /// Uses simple character-by-character analysis without regex.
+    ///
+    /// @param pattern the regex pattern string
+    /// @return true if nested quantifiers are found
+    private boolean hasNestedQuantifiers(String pattern) {
+        for (int i = 0; i < pattern.length(); i++) {
+            if (pattern.charAt(i) == '(' && matchesQuantifiedGroup(pattern, i, this::containsQuantifier)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /// Checks if a group starting at index i matches the quantified pattern criteria.
+    /// The pattern must have a closing paren followed by a quantifier (+, *, ?, {),
+    /// and the group content must match the provided test.
+    ///
+    /// @param pattern the regex pattern string
+    /// @param groupStartIndex the index of the opening parenthesis
+    /// @param test the test to apply to group content
+    /// @return true if the group matches the criteria
+    private boolean matchesQuantifiedGroup(String pattern, int groupStartIndex, Predicate<String> test) {
+        int closeIdx = findMatchingCloseParenthesis(pattern, groupStartIndex);
+        if (closeIdx == -1 || closeIdx + 1 >= pattern.length()) {
+            return false;
+        }
+
+        char nextChar = pattern.charAt(closeIdx + 1);
+        if (!isQuantifier(nextChar)) {
+            return false;
+        }
+
+        String groupContent = pattern.substring(groupStartIndex + 1, closeIdx);
+        return test.test(groupContent);
+    }
+
+    /// Detects quantified alternation groups like `(a|b)+` or `(a|b)*`.
+    /// Uses simple character-by-character analysis without regex.
+    ///
+    /// @param pattern the regex pattern string
+    /// @return true if quantified alternation is found
+    private boolean hasQuantifiedAlternation(String pattern) {
+        for (int i = 0; i < pattern.length(); i++) {
+            if (pattern.charAt(i) == '(' && matchesQuantifiedGroup(pattern, i, groupContent -> groupContent.contains("|"))) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /// Detects repetition bounds with excessively large upper limits like `{5,9999}`.
+    /// Uses simple character-by-character analysis without regex.
+    ///
+    /// @param pattern the regex pattern string
+    /// @return true if large repetition bounds are found
+    private boolean hasLargeRepetitionBounds(String pattern) {
+        int i = 0;
+        while (i < pattern.length()) {
+            if (pattern.charAt(i) == '{') {
+                if (isLargeRepetitionBound(pattern, i)) {
+                    return true;
+                }
+                int closeIdx = pattern.indexOf('}', i);
+                i = closeIdx != -1 ? closeIdx + 1 : i + 1;
+            } else {
+                i++;
+            }
+        }
+        return false;
+    }
+
+    /// Checks if the repetition bound starting at position i exceeds the safe limit.
+    ///
+    /// @param pattern the regex pattern string
+    /// @param startIndex the index of the opening brace
+    /// @return true if the upper bound is greater than 1000
+    private boolean isLargeRepetitionBound(String pattern, int startIndex) {
+        int closeIdx = pattern.indexOf('}', startIndex);
+        if (closeIdx == -1) {
+            return false;
+        }
+
+        String bounds = pattern.substring(startIndex + 1, closeIdx);
+        return hasExcessiveUpperBound(bounds);
+    }
+
+    /// Parses a repetition bound string and checks if the upper limit exceeds 1000.
+    ///
+    /// @param bounds the bounds string (e.g., "5,9999" or "1,100")
+    /// @return true if upper bound is greater than 1000
+    private boolean hasExcessiveUpperBound(String bounds) {
+        if (!bounds.contains(",")) {
+            return false;
+        }
+
+        String[] parts = bounds.split(",");
+        if (parts.length != 2 || parts[1].trim().isEmpty()) {
+            return false;
+        }
+
+        try {
+            int upper = Integer.parseInt(parts[1].trim());
+            return upper > 1000;
+        } catch (NumberFormatException _) {
+            return false;
+        }
+    }
+
+    /// Detects lookarounds with quantifiers like `(?=a+)`, `(?!a*)`, etc.
+    /// These can amplify backtracking behavior and pose ReDoS risks.
+    /// Uses simple character-by-character analysis without regex.
+    ///
+    /// @param pattern the regex pattern string
+    /// @return true if lookarounds with quantifiers are found
+    private boolean hasLookaroundsWithQuantifiers(String pattern) {
+        for (int i = 0; i < pattern.length() - 3; i++) {
+            if (isLookaroundAt(pattern, i)) {
+                int closeIdx = findMatchingCloseParenthesis(pattern, i);
+                if (closeIdx != -1) {
+                    String lookaroundContent = pattern.substring(i, closeIdx + 1);
+                    if (containsQuantifier(lookaroundContent)) {
+                        return true;
+                    }
+                }
+            }
+        }
+        return false;
+    }
+
+    /// Checks if position i in pattern is the start of a lookaround construct.
+    /// Lookarounds are: `(?=...)`, `(?!...)`, `(?<=...)`, `(?<!...)`
+    ///
+    /// @param pattern the regex pattern string
+    /// @param i the position to check
+    /// @return true if a lookaround starts at position i
+    private boolean isLookaroundAt(String pattern, int i) {
+        if (pattern.charAt(i) != '(' || pattern.charAt(i + 1) != '?') {
+            return false;
+        }
+
+        // Lookahead: (?= or (?!
+        if (isLookaroundType(pattern, i + 2, '=', '!')) {
+            return true;
+        }
+
+        // Lookbehind: (?<= or (?<!
+        return i + 3 < pattern.length() && pattern.charAt(i + 2) == '<' &&
+               isLookaroundType(pattern, i + 3, '=', '!');
+    }
+
+    /// Checks if the character at position i is one of the expected lookaround markers.
+    ///
+    /// @param pattern the regex pattern string
+    /// @param i the position to check
+    /// @param marker1 first expected marker
+    /// @param marker2 second expected marker
+    /// @return true if the character matches either marker
+    private boolean isLookaroundType(String pattern, int i, char marker1, char marker2) {
+        return pattern.charAt(i) == marker1 || pattern.charAt(i) == marker2;
+    }
+
+    /// Helper: Checks if a character is a regex quantifier (+, *, ?, {).
+    ///
+    /// @param c the character to check
+    /// @return true if the character is a quantifier
+    private boolean isQuantifier(char c) {
+        return c == '+' || c == '*' || c == '?' || c == '{';
+    }
+
+    /// Helper: Checks if a string contains regex quantifiers (+, *, ?, {n,m}).
+    ///
+    /// @param str the string to check
+    /// @return true if any quantifier is found
+    private boolean containsQuantifier(String str) {
+        for (char c : str.toCharArray()) {
+            if (isQuantifier(c)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /// Helper: Finds the matching closing parenthesis for an opening paren at index startIdx.
+    /// Handles nested parentheses correctly. Returns -1 if no matching close paren exists.
+    ///
+    /// @param pattern the pattern string
+    /// @param startIndex the index of the opening parenthesis
+    /// @return the index of the matching closing paren, or -1 if not found
+    private int findMatchingCloseParenthesis(String pattern, int startIndex) {
+        int depth = 0;
+        for (int i = startIndex; i < pattern.length(); i++) {
+            if (pattern.charAt(i) == '(' && (i == 0 || pattern.charAt(i - 1) != '\\')) {
+                depth++;
+            } else if (pattern.charAt(i) == ')' && (i == 0 || pattern.charAt(i - 1) != '\\')) {
+                depth--;
+                if (depth == 0) {
+                    return i;
+                }
+            }
+        }
+        return -1;
+    }
+
 
 }
