@@ -24,5 +24,7 @@ public interface JpaEntityRepository extends JpaRepository<EntityJpaEntity, UUID
 
     Optional<EntityJpaEntity> findByTemplateIdentifierAndIdentifier(String templateIdentifier, String identifier);
 
+    Optional<EntityJpaEntity> findByTemplateIdentifierAndName(String templateIdentifier, String name);
+
     Page<EntityJpaEntity> findByTemplateIdentifier(String templateIdentifier, Pageable pageable);
 }

@@ -1,0 +1,11 @@
+{
+  "name": "entity-rel-no-name",
+  "identifier": "entity-rel-no-name",
+  "properties": {},
+  "relations": [
+    {
+      "name": "",
+      "target_entity_identifiers": ["some-target"]
+    }
+  ]
+}

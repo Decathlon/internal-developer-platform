@@ -4,14 +4,13 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
 import com.decathlon.idp_core.domain.model.entity.Entity;
 import com.decathlon.idp_core.domain.model.entity.Property;
 import com.decathlon.idp_core.domain.model.entity.Relation;
 import com.decathlon.idp_core.infrastructure.adapters.api.dto.in.EntityDtoIn;
-
-import lombok.AllArgsConstructor;
 
 /// Adapter mapper for converting API request DTOs to domain [Entity] objects.
 ///
@@ -28,38 +27,35 @@ import lombok.AllArgsConstructor;
 ///
 /// **API contract support:** Enables clean separation between API request format
 /// and internal domain model structure for maintainable API evolution.
-
 @Component
-@AllArgsConstructor
+@RequiredArgsConstructor
 public class EntityDtoInMapper {
+
+    /// Converts an entity creation request DTO to a domain entity.
+    ///
+    /// @param entityDtoIn              the entity creation request payload
+    /// @param entityTemplateIdentifier the target template identifier
+    /// @return the mapped domain entity with audit fields populated
     public Entity fromEntityDtoInToEntity(EntityDtoIn entityDtoIn, String entityTemplateIdentifier) {
 
         List<Property> properties = entityDtoIn.getProperties() == null ? Collections.emptyList()
                 : entityDtoIn.getProperties().entrySet().stream()
-                        .map((Map.Entry<String, Object> entry) -> {
-                            String value;
-                            if (entry.getValue() != null) {
-                                value = String.valueOf(entry.getValue());
-                            } else {
-                                value = null;
-                            }
-                            return new Property(
-                                    null,
-                                    entry.getKey(),
-                                    value
-                            );
-                        })
-                        .toList();
+                .map((Map.Entry<String, Object> entry) -> new Property(
+                        null,
+                        entry.getKey(),
+                        entry.getValue()
+                ))
+                .toList();
 
         List<Relation> relations = entityDtoIn.getRelations() == null ? Collections.emptyList()
                 : entityDtoIn.getRelations().stream()
-                        .map(relDto -> new Relation(
-                                null,
-                                relDto.getName(),
-                                null, // targetTemplateIdentifier not available in DTO
-                                relDto.getTargetEntityIdentifiers()
-                        ))
-                        .toList();
+                .map(relDto -> new Relation(
+                        null,
+                        relDto.getName(),
+                        null,
+                        relDto.getTargetEntityIdentifiers()
+                ))
+                .toList();
 
         return new Entity(
                 null,
@@ -70,5 +66,4 @@ public class EntityDtoInMapper {
                 relations
         );
     }
-
 }
