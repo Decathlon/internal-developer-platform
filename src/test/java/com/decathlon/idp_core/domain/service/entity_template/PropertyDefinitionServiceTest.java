@@ -1,10 +1,9 @@
 package com.decathlon.idp_core.domain.service.entity_template;
 
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.mockito.Mockito.when;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -14,30 +13,21 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.Mock;
-import org.mockito.junit.jupiter.MockitoExtension;
 
 import com.decathlon.idp_core.domain.exception.PropertyNameAlreadyExistsException;
 import com.decathlon.idp_core.domain.exception.UnsafeTypeConversionException;
 import com.decathlon.idp_core.domain.model.entity_template.PropertyDefinition;
 import com.decathlon.idp_core.domain.model.enums.PropertyType;
-import com.decathlon.idp_core.domain.port.EntityRepositoryPort;
 
 @DisplayName("PropertyDefinitionService Tests")
-@ExtendWith(MockitoExtension.class)
 class PropertyDefinitionServiceTest {
-
-    @Mock
-    private EntityRepositoryPort entityRepositoryPort;
 
     private PropertyDefinitionService propertyDefinitionService;
 
     @BeforeEach
     void setUp() {
-        propertyDefinitionService = new PropertyDefinitionService(entityRepositoryPort);
+        propertyDefinitionService = new PropertyDefinitionService();
     }
-
     @Nested
     @DisplayName("validateUniquePropertyNames")
     class ValidateUniquePropertyNamesTests {
@@ -125,13 +115,12 @@ class PropertyDefinitionServiceTest {
                     new PropertyDefinition(propertyId, "name", "Updated Name", PropertyType.STRING, false, null)
             );
 
-            when(entityRepositoryPort.existsByTemplateIdentifier("template-1")).thenReturn(true);
             assertDoesNotThrow(() -> propertyDefinitionService.validateTypeChanges(existing, updated, "template-1"));
         }
 
         @Test
-        @DisplayName("Happy path: safe conversion NUMBER to STRING without entities")
-        void testSafeConversionNumberToStringNoEntities() {
+        @DisplayName("Error: conversion NUMBER to STRING is forbidden")
+        void testConversionNumberToStringForbidden() {
             List<PropertyDefinition> existing = List.of(
                     new PropertyDefinition(UUID.randomUUID(), "age", "Age", PropertyType.NUMBER, true, null)
             );
@@ -139,13 +128,18 @@ class PropertyDefinitionServiceTest {
                     new PropertyDefinition(UUID.randomUUID(), "age", "Age", PropertyType.STRING, true, null)
             );
 
-            when(entityRepositoryPort.existsByTemplateIdentifier("template-1")).thenReturn(false);
-            assertDoesNotThrow(() -> propertyDefinitionService.validateTypeChanges(existing, updated, "template-1"));
+            UnsafeTypeConversionException ex = assertThrows(
+                    UnsafeTypeConversionException.class,
+                    () -> propertyDefinitionService.validateTypeChanges(existing, updated, "template-1")
+            );
+            assertTrue(ex.getMessage().contains("age"));
+            assertTrue(ex.getMessage().contains("NUMBER"));
+            assertTrue(ex.getMessage().contains("STRING"));
         }
 
         @Test
-        @DisplayName("Happy path: safe conversion BOOLEAN to STRING with entities")
-        void testSafeConversionBooleanToStringWithEntities() {
+        @DisplayName("Error: conversion BOOLEAN to STRING is forbidden")
+        void testConversionBooleanToStringForbidden() {
             List<PropertyDefinition> existing = List.of(
                     new PropertyDefinition(UUID.randomUUID(), "active", "Active", PropertyType.BOOLEAN, true, null)
             );
@@ -153,13 +147,18 @@ class PropertyDefinitionServiceTest {
                     new PropertyDefinition(UUID.randomUUID(), "active", "Active", PropertyType.STRING, true, null)
             );
 
-            when(entityRepositoryPort.existsByTemplateIdentifier("template-1")).thenReturn(true);
-            assertDoesNotThrow(() -> propertyDefinitionService.validateTypeChanges(existing, updated, "template-1"));
+            UnsafeTypeConversionException ex = assertThrows(
+                    UnsafeTypeConversionException.class,
+                    () -> propertyDefinitionService.validateTypeChanges(existing, updated, "template-1")
+            );
+            assertTrue(ex.getMessage().contains("active"));
+            assertTrue(ex.getMessage().contains("BOOLEAN"));
+            assertTrue(ex.getMessage().contains("STRING"));
         }
 
         @Test
-        @DisplayName("Happy path: safe conversion NUMBER to STRING with entities")
-        void testSafeConversionNumberToStringWithEntities() {
+        @DisplayName("Error: conversion NUMBER to STRING is forbidden with entities")
+        void testConversionNumberToStringForbiddenWithEntities() {
             List<PropertyDefinition> existing = List.of(
                     new PropertyDefinition(UUID.randomUUID(), "score", "Score", PropertyType.NUMBER, true, null)
             );
@@ -167,21 +166,24 @@ class PropertyDefinitionServiceTest {
                     new PropertyDefinition(UUID.randomUUID(), "score", "Score", PropertyType.STRING, true, null)
             );
 
-            when(entityRepositoryPort.existsByTemplateIdentifier("template-1")).thenReturn(true);
-            assertDoesNotThrow(() -> propertyDefinitionService.validateTypeChanges(existing, updated, "template-1"));
+            UnsafeTypeConversionException ex = assertThrows(
+                    UnsafeTypeConversionException.class,
+                    () -> propertyDefinitionService.validateTypeChanges(existing, updated, "template-1")
+            );
+            assertTrue(ex.getMessage().contains("score"));
+            assertTrue(ex.getMessage().contains("NUMBER"));
+            assertTrue(ex.getMessage().contains("STRING"));
         }
 
         @Test
-        @DisplayName("Error: unsafe conversion STRING to NUMBER with existing entities")
-        void testUnsafeConversionStringToNumberWithEntities() {
+        @DisplayName("Error: any type conversion STRING to NUMBER is forbidden")
+        void testConversionStringToNumberForbidden() {
             List<PropertyDefinition> existing = List.of(
                     new PropertyDefinition(UUID.randomUUID(), "code", "Code", PropertyType.STRING, true, null)
             );
             List<PropertyDefinition> updated = List.of(
                     new PropertyDefinition(UUID.randomUUID(), "code", "Code", PropertyType.NUMBER, true, null)
             );
-
-            when(entityRepositoryPort.existsByTemplateIdentifier("template-1")).thenReturn(true);
 
             UnsafeTypeConversionException ex = assertThrows(
                     UnsafeTypeConversionException.class,
@@ -193,16 +195,14 @@ class PropertyDefinitionServiceTest {
         }
 
         @Test
-        @DisplayName("Error: unsafe conversion NUMBER to BOOLEAN with existing entities")
-        void testUnsafeConversionNumberToBooleanWithEntities() {
+        @DisplayName("Error: any type conversion NUMBER to BOOLEAN is forbidden")
+        void testConversionNumberToBooleanForbidden() {
             List<PropertyDefinition> existing = List.of(
                     new PropertyDefinition(UUID.randomUUID(), "count", "Count", PropertyType.NUMBER, true, null)
             );
             List<PropertyDefinition> updated = List.of(
                     new PropertyDefinition(UUID.randomUUID(), "count", "Count", PropertyType.BOOLEAN, true, null)
             );
-
-            when(entityRepositoryPort.existsByTemplateIdentifier("template-1")).thenReturn(true);
 
             UnsafeTypeConversionException ex = assertThrows(
                     UnsafeTypeConversionException.class,
@@ -214,16 +214,14 @@ class PropertyDefinitionServiceTest {
         }
 
         @Test
-        @DisplayName("Error: unsafe conversion BOOLEAN to NUMBER with existing entities")
-        void testUnsafeConversionBooleanToNumberWithEntities() {
+        @DisplayName("Error: any type conversion BOOLEAN to NUMBER is forbidden")
+        void testConversionBooleanToNumberForbidden() {
             List<PropertyDefinition> existing = List.of(
                     new PropertyDefinition(UUID.randomUUID(), "active", "Active", PropertyType.BOOLEAN, true, null)
             );
             List<PropertyDefinition> updated = List.of(
                     new PropertyDefinition(UUID.randomUUID(), "active", "Active", PropertyType.NUMBER, true, null)
             );
-
-            when(entityRepositoryPort.existsByTemplateIdentifier("template-1")).thenReturn(true);
 
             UnsafeTypeConversionException ex = assertThrows(
                     UnsafeTypeConversionException.class,
@@ -235,8 +233,8 @@ class PropertyDefinitionServiceTest {
         }
 
         @Test
-        @DisplayName("Happy path: unsafe conversion without existing entities")
-        void testUnsafeConversionNoEntities() {
+        @DisplayName("Error: any type conversion is forbidden even without existing entities")
+        void testAnyTypeConversionForbiddenNoEntities() {
             List<PropertyDefinition> existing = List.of(
                     new PropertyDefinition(UUID.randomUUID(), "data", "Data", PropertyType.STRING, true, null)
             );
@@ -244,8 +242,13 @@ class PropertyDefinitionServiceTest {
                     new PropertyDefinition(UUID.randomUUID(), "data", "Data", PropertyType.BOOLEAN, true, null)
             );
 
-            when(entityRepositoryPort.existsByTemplateIdentifier("template-1")).thenReturn(false);
-            assertDoesNotThrow(() -> propertyDefinitionService.validateTypeChanges(existing, updated, "template-1"));
+            UnsafeTypeConversionException ex = assertThrows(
+                    UnsafeTypeConversionException.class,
+                    () -> propertyDefinitionService.validateTypeChanges(existing, updated, "template-1")
+            );
+            assertTrue(ex.getMessage().contains("data"));
+            assertTrue(ex.getMessage().contains("STRING"));
+            assertTrue(ex.getMessage().contains("BOOLEAN"));
         }
 
         @Test
@@ -259,7 +262,6 @@ class PropertyDefinitionServiceTest {
                     new PropertyDefinition(UUID.randomUUID(), "name", "Name", PropertyType.STRING, true, null)
             );
 
-            when(entityRepositoryPort.existsByTemplateIdentifier("template-1")).thenReturn(true);
             assertDoesNotThrow(() -> propertyDefinitionService.validateTypeChanges(existing, updated, "template-1"));
         }
 
@@ -274,13 +276,12 @@ class PropertyDefinitionServiceTest {
                     new PropertyDefinition(UUID.randomUUID(), "email", "Email", PropertyType.STRING, false, null)
             );
 
-            when(entityRepositoryPort.existsByTemplateIdentifier("template-1")).thenReturn(true);
             assertDoesNotThrow(() -> propertyDefinitionService.validateTypeChanges(existing, updated, "template-1"));
         }
 
         @Test
-        @DisplayName("Error: multiple unsafe conversions, fails on first")
-        void testMultipleUnsafeConversions() {
+        @DisplayName("Error: multiple type conversions forbidden, fails on first")
+        void testMultipleTypeConversionsForbidden() {
             List<PropertyDefinition> existing = List.of(
                     new PropertyDefinition(UUID.randomUUID(), "field1", "Field 1", PropertyType.STRING, true, null),
                     new PropertyDefinition(UUID.randomUUID(), "field2", "Field 2", PropertyType.NUMBER, true, null)
@@ -289,8 +290,6 @@ class PropertyDefinitionServiceTest {
                     new PropertyDefinition(UUID.randomUUID(), "field1", "Field 1", PropertyType.NUMBER, true, null),
                     new PropertyDefinition(UUID.randomUUID(), "field2", "Field 2", PropertyType.BOOLEAN, true, null)
             );
-
-            when(entityRepositoryPort.existsByTemplateIdentifier("template-1")).thenReturn(true);
 
             UnsafeTypeConversionException ex = assertThrows(
                     UnsafeTypeConversionException.class,
