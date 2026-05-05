@@ -12,8 +12,6 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.ValueSource;
 
 import com.decathlon.idp_core.domain.model.entity_template.PropertyDefinition;
 import com.decathlon.idp_core.domain.model.entity_template.PropertyRules;
@@ -27,7 +25,7 @@ class PropertyDefinitionValidationServiceTest {
 
     @BeforeEach
     void setUp() {
-        propertyDefinitionValidationService = new PropertyDefinitionValidationService();
+        propertyDefinitionValidationService = new PropertyDefinitionValidationService(new PropertyRegexValidationService());
     }
 
     @Nested
@@ -502,184 +500,6 @@ class PropertyDefinitionValidationServiceTest {
             );
             assertTrue(ex.getMessage().contains("enum_values"));
             assertTrue(ex.getMessage().contains("min_length"));
-        }
-
-        @Nested
-        @DisplayName("Regex Validation Security Tests")
-        class RegexSecurityTests {
-
-            @Test
-            @DisplayName("Happy path: STRING with simple valid regex")
-            void testRegexWithSimpleValidPattern() {
-                PropertyRules rules = new PropertyRules(
-                        UUID.randomUUID(),
-                        null,
-                        null,
-                        "^[a-z0-9]+@[a-z0-9]+\\.[a-z]{2,}$",
-                        null,
-                        null,
-                        null,
-                        null
-                );
-                PropertyDefinition property = new PropertyDefinition(
-                        UUID.randomUUID(),
-                        "email",
-                        "Email field",
-                        PropertyType.STRING,
-                        true,
-                        rules
-                );
-
-                assertDoesNotThrow(() -> propertyDefinitionValidationService.validatePropertyDefinitionRules(property));
-            }
-
-            @Test
-            @DisplayName("Error: Regex pattern exceeds maximum length (1000 chars)")
-            void testRegexPatternTooLong() {
-                String longPattern = "a".repeat(1001);
-                PropertyRules rules = new PropertyRules(
-                        UUID.randomUUID(),
-                        null,
-                        null,
-                        longPattern,
-                        null,
-                        null,
-                        null,
-                        null
-                );
-                PropertyDefinition property = new PropertyDefinition(
-                        UUID.randomUUID(),
-                        "field",
-                        "A field",
-                        PropertyType.STRING,
-                        true,
-                        rules
-                );
-
-                PropertyDefinitionRulesConflictException ex = assertThrows(
-                        PropertyDefinitionRulesConflictException.class,
-                        () -> propertyDefinitionValidationService.validatePropertyDefinitionRules(property)
-                );
-                assertTrue(ex.getMessage().contains("too long"));
-                assertTrue(ex.getMessage().contains("1,000"));
-            }
-
-            @ParameterizedTest
-            @ValueSource(strings = {
-                    "(a+)+",           // nested quantifiers with +
-                    "(a*)*",           // nested quantifiers with *
-                    "(a+)*",           // mixed nested quantifiers
-                    "(a|b)+",          // quantified alternation with +
-                    "(foo|bar)*",      // quantified alternation with *
-                    "a{1,5000}"        // excessive repetition bound
-            })
-            @DisplayName("Error: Regex patterns with ReDoS vulnerabilities")
-            void testRegexWithDangerousPatterns(String dangerousPattern) {
-                PropertyRules rules = new PropertyRules(
-                        UUID.randomUUID(),
-                        null,
-                        null,
-                        dangerousPattern,
-                        null,
-                        null,
-                        null,
-                        null
-                );
-                PropertyDefinition property = new PropertyDefinition(
-                        UUID.randomUUID(),
-                        "field",
-                        "A field",
-                        PropertyType.STRING,
-                        true,
-                        rules
-                );
-
-                PropertyDefinitionRulesConflictException ex = assertThrows(
-                        PropertyDefinitionRulesConflictException.class,
-                        () -> propertyDefinitionValidationService.validatePropertyDefinitionRules(property)
-                );
-                assertTrue(ex.getMessage().contains("unsafe"),
-                        "Expected 'unsafe' in error message for pattern: " + dangerousPattern);
-            }
-
-            @Test
-            @DisplayName("Happy path: Regex with safe alternation (not quantified)")
-            void testRegexWithSafeAlternation() {
-                PropertyRules rules = new PropertyRules(
-                        UUID.randomUUID(),
-                        null,
-                        null,
-                        "^(foo|bar)$",
-                        null,
-                        null,
-                        null,
-                        null
-                );
-                PropertyDefinition property = new PropertyDefinition(
-                        UUID.randomUUID(),
-                        "field",
-                        "A field",
-                        PropertyType.STRING,
-                        true,
-                        rules
-                );
-
-                assertDoesNotThrow(() -> propertyDefinitionValidationService.validatePropertyDefinitionRules(property));
-            }
-
-            @Test
-            @DisplayName("Happy path: Regex with safe repetition bounds")
-            void testRegexWithSafeRepetitionBounds() {
-                PropertyRules rules = new PropertyRules(
-                        UUID.randomUUID(),
-                        null,
-                        null,
-                        "a{1,999}",
-                        null,
-                        null,
-                        null,
-                        null
-                );
-                PropertyDefinition property = new PropertyDefinition(
-                        UUID.randomUUID(),
-                        "field",
-                        "A field",
-                        PropertyType.STRING,
-                        true,
-                        rules
-                );
-
-                assertDoesNotThrow(() -> propertyDefinitionValidationService.validatePropertyDefinitionRules(property));
-            }
-
-            @Test
-            @DisplayName("Error: Regex with invalid syntax")
-            void testRegexWithInvalidSyntax() {
-                PropertyRules rules = new PropertyRules(
-                        UUID.randomUUID(),
-                        null,
-                        null,
-                        "[unclosed-bracket",
-                        null,
-                        null,
-                        null,
-                        null
-                );
-                PropertyDefinition property = new PropertyDefinition(
-                        UUID.randomUUID(),
-                        "field",
-                        "A field",
-                        PropertyType.STRING,
-                        true,
-                        rules
-                );
-
-                PropertyDefinitionRulesConflictException ex = assertThrows(
-                        PropertyDefinitionRulesConflictException.class,
-                        () -> propertyDefinitionValidationService.validatePropertyDefinitionRules(property)
-                );
-                assertTrue(ex.getMessage().contains("Invalid regex"));
-            }
         }
     }
 
