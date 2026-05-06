@@ -1,4 +1,4 @@
-package com.decathlon.idp_core.infrastructure.adapters.api.dto.out.entitytemplate;
+package com.decathlon.idp_core.infrastructure.adapters.api.dto.out.entity_template;
 
 import com.decathlon.idp_core.domain.model.enums.PropertyType;
 import com.fasterxml.jackson.databind.PropertyNamingStrategies.SnakeCaseStrategy;

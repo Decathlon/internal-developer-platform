@@ -1,4 +1,4 @@
-package com.decathlon.idp_core.infrastructure.adapters.api.dto.out.entitytemplate;
+package com.decathlon.idp_core.infrastructure.adapters.api.dto.out.entity_template;
 
 import com.fasterxml.jackson.databind.PropertyNamingStrategies.SnakeCaseStrategy;
 import com.fasterxml.jackson.databind.annotation.JsonNaming;

@@ -1,4 +1,4 @@
-package com.decathlon.idp_core.domain.exception;
+package com.decathlon.idp_core.domain.exception.entity_template;
 
 import java.util.UUID;
 
