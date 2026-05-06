@@ -53,7 +53,7 @@ class EntityValidationServiceTest {
         when(entityRepository.findByTemplateIdentifierAndIdentifier("web-service", "catalog-api"))
                 .thenReturn(Optional.of(entity));
 
-        assertThrows(EntityAlreadyExistsException.class, () -> entityValidationService.checkUniqueness(entity));
+        assertThrows(EntityAlreadyExistsException.class, () -> entityValidationService.validateUniqueness(entity));
     }
 
     @Test
@@ -61,7 +61,7 @@ class EntityValidationServiceTest {
     void shouldNotQueryRepositoryWhenIdentifierIsNull() {
         var entity = entity("web-service", null, "Catalog API", List.of(), List.of());
 
-        assertDoesNotThrow(() -> entityValidationService.checkUniqueness(entity));
+        assertDoesNotThrow(() -> entityValidationService.validateUniqueness(entity));
 
         verify(entityRepository, never()).findByTemplateIdentifierAndIdentifier(org.mockito.ArgumentMatchers.any(), org.mockito.ArgumentMatchers.any());
     }

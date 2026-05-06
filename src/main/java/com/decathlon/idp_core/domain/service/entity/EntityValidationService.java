@@ -7,7 +7,6 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
-import lombok.AllArgsConstructor;
 import org.springframework.stereotype.Service;
 
 import com.decathlon.idp_core.domain.exception.entity.EntityAlreadyExistsException;
@@ -18,6 +17,8 @@ import com.decathlon.idp_core.domain.model.entity_template.EntityTemplate;
 import com.decathlon.idp_core.domain.model.entity_template.PropertyDefinition;
 import com.decathlon.idp_core.domain.port.EntityRepositoryPort;
 import com.decathlon.idp_core.domain.service.property.PropertyValidationService;
+
+import lombok.AllArgsConstructor;
 
 /// Domain validator for [Entity] aggregates.
 ///
@@ -86,7 +87,7 @@ public class EntityValidationService {
     /// Checks for existing entity with same template and identifier to prevent duplicates.
     /// @param entity the entity to check for existence
     /// @throws EntityAlreadyExistsException if an entity with the same template and identifier already exists
-    void checkUniqueness(final Entity entity) {
+    void validateUniqueness(final Entity entity) {
         if (entity.identifier() != null
                 && entityRepository
                         .findByTemplateIdentifierAndIdentifier(entity.templateIdentifier(), entity.identifier())
