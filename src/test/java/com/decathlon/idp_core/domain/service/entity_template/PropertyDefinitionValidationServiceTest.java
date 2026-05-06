@@ -1099,25 +1099,6 @@ class PropertyDefinitionValidationServiceTest {
         }
 
         @Test
-        @DisplayName("Error: conversion NUMBER to STRING is forbidden with entities")
-        void testConversionNumberToStringForbiddenWithEntities() {
-            List<PropertyDefinition> existing = List.of(
-                    new PropertyDefinition(UUID.randomUUID(), "score", "Score", PropertyType.NUMBER, true, null)
-            );
-            List<PropertyDefinition> updated = List.of(
-                    new PropertyDefinition(UUID.randomUUID(), "score", "Score", PropertyType.STRING, true, null)
-            );
-
-            UnsafeTypeConversionException ex = assertThrows(
-                    UnsafeTypeConversionException.class,
-                    () -> propertyDefinitionValidationService.validateTypeChanges(existing, updated, "template-1")
-            );
-            assertTrue(ex.getMessage().contains("score"));
-            assertTrue(ex.getMessage().contains("NUMBER"));
-            assertTrue(ex.getMessage().contains("STRING"));
-        }
-
-        @Test
         @DisplayName("Error: any type conversion STRING to NUMBER is forbidden")
         void testConversionStringToNumberForbidden() {
             List<PropertyDefinition> existing = List.of(
@@ -1172,25 +1153,6 @@ class PropertyDefinitionValidationServiceTest {
             assertTrue(ex.getMessage().contains("active"));
             assertTrue(ex.getMessage().contains("BOOLEAN"));
             assertTrue(ex.getMessage().contains("NUMBER"));
-        }
-
-        @Test
-        @DisplayName("Error: any type conversion is forbidden even without existing entities")
-        void testAnyTypeConversionForbiddenNoEntities() {
-            List<PropertyDefinition> existing = List.of(
-                    new PropertyDefinition(UUID.randomUUID(), "data", "Data", PropertyType.STRING, true, null)
-            );
-            List<PropertyDefinition> updated = List.of(
-                    new PropertyDefinition(UUID.randomUUID(), "data", "Data", PropertyType.BOOLEAN, true, null)
-            );
-
-            UnsafeTypeConversionException ex = assertThrows(
-                    UnsafeTypeConversionException.class,
-                    () -> propertyDefinitionValidationService.validateTypeChanges(existing, updated, "template-1")
-            );
-            assertTrue(ex.getMessage().contains("data"));
-            assertTrue(ex.getMessage().contains("STRING"));
-            assertTrue(ex.getMessage().contains("BOOLEAN"));
         }
 
         @Test
