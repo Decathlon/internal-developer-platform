@@ -2,7 +2,6 @@ package com.decathlon.idp_core.domain.service.entity;
 
 import java.util.List;
 
-import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -10,16 +9,18 @@ import org.springframework.validation.annotation.Validated;
 
 import com.decathlon.idp_core.domain.exception.entity.EntityAlreadyExistsException;
 import com.decathlon.idp_core.domain.exception.entity.EntityNotFoundException;
-import com.decathlon.idp_core.domain.exception.entity_template.EntityTemplateNotFoundException;
 import com.decathlon.idp_core.domain.exception.entity.EntityValidationException;
+import com.decathlon.idp_core.domain.exception.entity_template.EntityTemplateNotFoundException;
 import com.decathlon.idp_core.domain.model.entity.Entity;
 import com.decathlon.idp_core.domain.model.entity.EntitySummary;
 import com.decathlon.idp_core.domain.model.entity_template.EntityTemplate;
 import com.decathlon.idp_core.domain.port.EntityRepositoryPort;
-import com.decathlon.idp_core.domain.port.EntityTemplateRepositoryPort;
+import com.decathlon.idp_core.domain.service.EntityTemplateService;
 import com.decathlon.idp_core.domain.service.entity_template.EntityTemplateValidationService;
+
 import jakarta.transaction.Transactional;
 import jakarta.validation.Valid;
+import lombok.RequiredArgsConstructor;
 
 /// Domain service orchestrating [Entity] business operations and validations.
 ///
@@ -37,9 +38,9 @@ import jakarta.validation.Valid;
 @RequiredArgsConstructor
 public class EntityService {
     private final EntityRepositoryPort entityRepository;
-    private final EntityTemplateRepositoryPort entityTemplateRepository;
     private final EntityValidationService entityValidationService;
     private final EntityTemplateValidationService entityTemplateValidationService;
+    private final EntityTemplateService entityTemplateService;
 
     /// Retrieves entities filtered by template with existence validation.
     ///
@@ -52,9 +53,9 @@ public class EntityService {
     /// @throws EntityTemplateNotFoundException when template doesn't exist
     @Transactional
     public Page<Entity> getEntitiesByTemplateIdentifier(Pageable pageable, String templateIdentifier) {
+        entityTemplateValidationService.checkTemplateExists(templateIdentifier);
+        return entityRepository.findByTemplateIdentifier(templateIdentifier, pageable);
 
-        return entityRepository.findByTemplateIdentifier(templateIdentifier, pageable)
-                .orElseThrow(() -> new EntityTemplateNotFoundException(templateIdentifier));
     }
 
     /// Provides lightweight entity summaries for efficient bulk operations.
@@ -100,9 +101,8 @@ public class EntityService {
     /// @throws EntityValidationException       when entity, property, or relation data is invalid
     @Transactional
     public Entity createEntity(@Valid Entity entity) {
-        EntityTemplate template = entityTemplateRepository.findByIdentifier(entity.templateIdentifier())
-                .orElseThrow(() -> new EntityTemplateNotFoundException("identifier", entity.templateIdentifier()));
-        entityValidationService.checkUniqueness(entity);
+        EntityTemplate template = entityTemplateService.getEntityTemplateByIdentifier(entity.templateIdentifier());
+        entityValidationService.validateUniqueness(entity);
         entityValidationService.validateEntity(entity, template);
         return entityRepository.save(entity);
     }
