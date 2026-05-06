@@ -35,6 +35,8 @@ public class PropertyRegexValidationService {
 				return thread;
 			}
 	);
+	private static final int MAX_REGEX_LENGTH = 1000;
+	private static final int VALIDATION_TIMEOUT_MS = 30;
 	// Validation ReDoS probe string designed to trigger backtracking in vulnerable patterns
 	private static final String STRESS_PROBE = "a".repeat(50) + "!";
 
@@ -50,9 +52,9 @@ public class PropertyRegexValidationService {
 	/// @param regexPattern the regex pattern to validate
 	/// @throws PropertyDefinitionRulesConflictException if any security check fails
 	public void validateRegexPattern(String propertyName, String regexPattern) {
-		if (regexPattern.length() > 1000) {
+		if (regexPattern.length() > MAX_REGEX_LENGTH) {
 			throw new PropertyDefinitionRulesConflictException(
-					propertyName, PropertyType.STRING, "Regex pattern too long (max 1,000 characters)");
+					propertyName, PropertyType.STRING, "Regex pattern too long (max " + MAX_REGEX_LENGTH + " characters)");
 		}
 
 		if (containsDangerousPatterns(regexPattern)) {
@@ -82,7 +84,7 @@ public class PropertyRegexValidationService {
 	private void validatePatternWithTimeout(String propertyName, Pattern pattern) {
 		Future<Boolean> future = VALIDATION_EXECUTOR.submit(() -> pattern.matcher(STRESS_PROBE).matches());
 		try {
-			future.get(10, TimeUnit.MILLISECONDS);
+			future.get(VALIDATION_TIMEOUT_MS, TimeUnit.MILLISECONDS);
 		} catch (TimeoutException _) {
 			future.cancel(true);
 			throw new PropertyDefinitionRulesConflictException(
@@ -140,17 +142,17 @@ public class PropertyRegexValidationService {
 	/// @param test the test to apply to group content
 	/// @return true if the group matches the criteria
 	private boolean matchesQuantifiedGroup(String pattern, int groupStartIndex, Predicate<String> test) {
-		int closeIdx = findMatchingCloseParenthesis(pattern, groupStartIndex);
-		if (closeIdx == -1 || closeIdx + 1 >= pattern.length()) {
+		int closeIndex = findMatchingCloseParenthesis(pattern, groupStartIndex);
+		if (closeIndex == -1 || closeIndex + 1 >= pattern.length()) {
 			return false;
 		}
 
-		char nextChar = pattern.charAt(closeIdx + 1);
+		char nextChar = pattern.charAt(closeIndex + 1);
 		if (!isQuantifier(nextChar)) {
 			return false;
 		}
 
-		String groupContent = pattern.substring(groupStartIndex + 1, closeIdx);
+		String groupContent = pattern.substring(groupStartIndex + 1, closeIndex);
 		return test.test(groupContent);
 	}
 
@@ -180,8 +182,8 @@ public class PropertyRegexValidationService {
 				if (isLargeRepetitionBound(pattern, i)) {
 					return true;
 				}
-				int closeIdx = pattern.indexOf('}', i);
-				i = closeIdx != -1 ? closeIdx + 1 : i + 1;
+				int closeIndex = pattern.indexOf('}', i);
+				i = closeIndex != -1 ? closeIndex + 1 : i + 1;
 			} else {
 				i++;
 			}
@@ -195,12 +197,12 @@ public class PropertyRegexValidationService {
 	/// @param startIndex the index of the opening brace
 	/// @return true if the upper bound is greater than 1000
 	private boolean isLargeRepetitionBound(String pattern, int startIndex) {
-		int closeIdx = pattern.indexOf('}', startIndex);
-		if (closeIdx == -1) {
+		int closeIndex = pattern.indexOf('}', startIndex);
+		if (closeIndex == -1) {
 			return false;
 		}
 
-		String bounds = pattern.substring(startIndex + 1, closeIdx);
+		String bounds = pattern.substring(startIndex + 1, closeIndex);
 		return hasExcessiveUpperBound(bounds);
 	}
 
@@ -235,9 +237,9 @@ public class PropertyRegexValidationService {
 	private boolean hasLookaroundsWithQuantifiers(String pattern) {
 		for (int i = 0; i < pattern.length() - 3; i++) {
 			if (isLookaroundAt(pattern, i)) {
-				int closeIdx = findMatchingCloseParenthesis(pattern, i);
-				if (closeIdx != -1) {
-					String lookaroundContent = pattern.substring(i, closeIdx + 1);
+				int closeIndex = findMatchingCloseParenthesis(pattern, i);
+				if (closeIndex != -1) {
+					String lookaroundContent = pattern.substring(i, closeIndex + 1);
 					if (containsQuantifier(lookaroundContent)) {
 						return true;
 					}
@@ -300,7 +302,7 @@ public class PropertyRegexValidationService {
 		return false;
 	}
 
-	/// Helper: Finds the matching closing parenthesis for an opening paren at index startIdx.
+	/// Helper: Finds the matching closing parenthesis for an opening paren at index startIndex.
 	/// Handles nested parentheses correctly. Returns -1 if no matching close paren exists.
 	///
 	/// @param pattern the pattern string

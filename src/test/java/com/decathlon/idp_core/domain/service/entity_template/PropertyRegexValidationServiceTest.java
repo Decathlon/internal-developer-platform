@@ -46,7 +46,7 @@ class PropertyRegexValidationServiceTest {
 				() -> propertyRegexValidationService.validateRegexPattern(propertyName, longPattern)
 		);
 		assertTrue(ex.getMessage().contains("too long"));
-		assertTrue(ex.getMessage().contains("1,000"));
+		assertTrue(ex.getMessage().contains("1000"));
 	}
 
 	@ParameterizedTest
