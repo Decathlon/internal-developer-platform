@@ -12,18 +12,26 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
 
 import com.decathlon.idp_core.domain.exception.RelationNameAlreadyExistsException;
 import com.decathlon.idp_core.domain.model.entity_template.RelationDefinition;
+import com.decathlon.idp_core.domain.port.EntityTemplateRepositoryPort;
 
-@DisplayName("RelationDefinitionService Tests")
-class RelationDefinitionServiceTest {
+@DisplayName("RelationDefinitionValidationService Tests")
+@ExtendWith(MockitoExtension.class)
+class RelationDefinitionValidationServiceTest {
 
-    private RelationDefinitionService relationDefinitionService;
+    @Mock
+    private EntityTemplateRepositoryPort entityTemplateRepositoryPort;
+
+    private RelationDefinitionValidationService relationDefinitionValidationService;
 
     @BeforeEach
     void setUp() {
-        relationDefinitionService = new RelationDefinitionService();
+        relationDefinitionValidationService = new RelationDefinitionValidationService(entityTemplateRepositoryPort);
     }
 
     @Nested
@@ -39,7 +47,7 @@ class RelationDefinitionServiceTest {
                     new RelationDefinition(UUID.randomUUID(), "owner", "owner-template", true, false)
             );
 
-            assertDoesNotThrow(() -> relationDefinitionService.validateUniqueRelationNames(relations));
+            assertDoesNotThrow(() -> relationDefinitionValidationService.validateUniqueRelationNames(relations));
         }
 
         @Test
@@ -49,13 +57,13 @@ class RelationDefinitionServiceTest {
                     new RelationDefinition(UUID.randomUUID(), "owner", "owner-template", true, false)
             );
 
-            assertDoesNotThrow(() -> relationDefinitionService.validateUniqueRelationNames(relations));
+            assertDoesNotThrow(() -> relationDefinitionValidationService.validateUniqueRelationNames(relations));
         }
 
         @Test
         @DisplayName("Happy path: empty relation list")
         void testEmptyRelationList() {
-            assertDoesNotThrow(() -> relationDefinitionService.validateUniqueRelationNames(new ArrayList<>()));
+            assertDoesNotThrow(() -> relationDefinitionValidationService.validateUniqueRelationNames(new ArrayList<>()));
         }
 
         @Test
@@ -66,7 +74,7 @@ class RelationDefinitionServiceTest {
                     new RelationDefinition(UUID.randomUUID(), "valid", "template-2", false, true)
             );
 
-            assertDoesNotThrow(() -> relationDefinitionService.validateUniqueRelationNames(relations));
+            assertDoesNotThrow(() -> relationDefinitionValidationService.validateUniqueRelationNames(relations));
         }
 
         @Test
@@ -79,7 +87,7 @@ class RelationDefinitionServiceTest {
 
             RelationNameAlreadyExistsException ex = assertThrows(
                     RelationNameAlreadyExistsException.class,
-                    () -> relationDefinitionService.validateUniqueRelationNames(relations)
+                    () -> relationDefinitionValidationService.validateUniqueRelationNames(relations)
             );
             assertTrue(ex.getMessage().contains("parent"));
         }
@@ -96,7 +104,7 @@ class RelationDefinitionServiceTest {
 
             RelationNameAlreadyExistsException ex = assertThrows(
                     RelationNameAlreadyExistsException.class,
-                    () -> relationDefinitionService.validateUniqueRelationNames(relations)
+                    () -> relationDefinitionValidationService.validateUniqueRelationNames(relations)
             );
             // Should fail on first duplicate found
             assertTrue(ex.getMessage().contains("parent"));
@@ -113,7 +121,7 @@ class RelationDefinitionServiceTest {
 
             RelationNameAlreadyExistsException ex = assertThrows(
                     RelationNameAlreadyExistsException.class,
-                    () -> relationDefinitionService.validateUniqueRelationNames(relations)
+                    () -> relationDefinitionValidationService.validateUniqueRelationNames(relations)
             );
             assertTrue(ex.getMessage().contains("member"));
         }
@@ -130,7 +138,7 @@ class RelationDefinitionServiceTest {
 
             RelationNameAlreadyExistsException ex = assertThrows(
                     RelationNameAlreadyExistsException.class,
-                    () -> relationDefinitionService.validateUniqueRelationNames(relations)
+                    () -> relationDefinitionValidationService.validateUniqueRelationNames(relations)
             );
             assertTrue(ex.getMessage().contains("org"));
         }
@@ -144,7 +152,7 @@ class RelationDefinitionServiceTest {
             );
 
             // "Parent" and "parent" are different names, so this should pass
-            assertDoesNotThrow(() -> relationDefinitionService.validateUniqueRelationNames(relations));
+            assertDoesNotThrow(() -> relationDefinitionValidationService.validateUniqueRelationNames(relations));
         }
 
         @Test
@@ -157,7 +165,7 @@ class RelationDefinitionServiceTest {
 
             RelationNameAlreadyExistsException ex = assertThrows(
                     RelationNameAlreadyExistsException.class,
-                    () -> relationDefinitionService.validateUniqueRelationNames(relations)
+                    () -> relationDefinitionValidationService.validateUniqueRelationNames(relations)
             );
             assertTrue(ex.getMessage().contains("items"));
         }

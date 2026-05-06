@@ -2,15 +2,12 @@ package com.decathlon.idp_core.infrastructure.adapters.api.dto.out.entity_templa
 
 import static com.decathlon.idp_core.infrastructure.adapters.api.configuration.SwaggerDescription.FIELD_PROPERTY_RULES_ENUM_VALUES;
 import static com.decathlon.idp_core.infrastructure.adapters.api.configuration.SwaggerDescription.FIELD_PROPERTY_RULES_FORMAT;
-import static com.decathlon.idp_core.infrastructure.adapters.api.configuration.SwaggerDescription.FIELD_PROPERTY_RULES_ID;
 import static com.decathlon.idp_core.infrastructure.adapters.api.configuration.SwaggerDescription.FIELD_PROPERTY_RULES_MAX_LENGTH;
 import static com.decathlon.idp_core.infrastructure.adapters.api.configuration.SwaggerDescription.FIELD_PROPERTY_RULES_MAX_VALUE;
 import static com.decathlon.idp_core.infrastructure.adapters.api.configuration.SwaggerDescription.FIELD_PROPERTY_RULES_MIN_LENGTH;
 import static com.decathlon.idp_core.infrastructure.adapters.api.configuration.SwaggerDescription.FIELD_PROPERTY_RULES_MIN_VALUE;
 import static com.decathlon.idp_core.infrastructure.adapters.api.configuration.SwaggerDescription.FIELD_PROPERTY_RULES_REGEX;
 import static com.decathlon.idp_core.infrastructure.adapters.api.configuration.SwaggerDescription.SCHEMA_PROPERTY_RULES_OUT;
-
-import java.util.UUID;
 
 import com.decathlon.idp_core.domain.model.enums.PropertyFormat;
 import com.fasterxml.jackson.databind.PropertyNamingStrategies.SnakeCaseStrategy;
@@ -29,9 +26,6 @@ import lombok.NoArgsConstructor;
 @JsonNaming(SnakeCaseStrategy.class)
 @Schema(description = SCHEMA_PROPERTY_RULES_OUT)
 public class PropertyRulesDtoOut {
-
-    @Schema(description = FIELD_PROPERTY_RULES_ID, example = "123e4567-e89b-12d3-a456-426614174000")
-    private UUID id;
 
     @Schema(description = FIELD_PROPERTY_RULES_FORMAT, example = "STRING")
     private PropertyFormat format;

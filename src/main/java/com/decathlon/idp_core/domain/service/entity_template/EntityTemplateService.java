@@ -3,7 +3,6 @@ package com.decathlon.idp_core.domain.service.entity_template;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
@@ -12,13 +11,9 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.validation.annotation.Validated;
 
-import com.decathlon.idp_core.domain.exception.EntityTemplateAlreadyExistsException;
-import com.decathlon.idp_core.domain.exception.EntityTemplateNameAlreadyExistsException;
-import com.decathlon.idp_core.domain.exception.EntityTemplateNotFoundException;
-import com.decathlon.idp_core.domain.exception.PropertyNameAlreadyExistsException;
-import com.decathlon.idp_core.domain.exception.PropertyRulesConflictException;
-import com.decathlon.idp_core.domain.exception.RelationNameAlreadyExistsException;
-import com.decathlon.idp_core.domain.exception.TargetTemplateNotFoundException;
+import com.decathlon.idp_core.domain.exception.entity_template.EntityTemplateNotFoundException;
+import com.decathlon.idp_core.domain.exception.entity_template.EntityTemplateAlreadyExistsException;
+import com.decathlon.idp_core.domain.exception.entity_template.EntityTemplateNameAlreadyExistsException;
 import com.decathlon.idp_core.domain.model.entity_template.EntityTemplate;
 import com.decathlon.idp_core.domain.model.entity_template.PropertyDefinition;
 import com.decathlon.idp_core.domain.model.entity_template.PropertyRules;
@@ -47,8 +42,7 @@ import lombok.RequiredArgsConstructor;
 public class EntityTemplateService {
 
     private final EntityTemplateRepositoryPort entityTemplateRepositoryPort;
-    private final PropertyDefinitionService propertyDefinitionService;
-    private final RelationDefinitionService relationDefinitionService;
+    private final EntityTemplateValidationService entityTemplateValidationService;
 
     /// Retrieves paginated entity templates for management interface display.
     ///
@@ -93,16 +87,7 @@ public class EntityTemplateService {
     /// @throws EntityTemplateNameAlreadyExistsException when name already exists
     @Transactional
     public EntityTemplate createEntityTemplate(@Valid EntityTemplate entityTemplate) {
-        if (entityTemplate.identifier() != null &&
-                entityTemplateRepositoryPort.existsByIdentifier(entityTemplate.identifier())) {
-            throw new EntityTemplateAlreadyExistsException(entityTemplate.identifier());
-        }
-        if (entityTemplate.name() != null &&
-                entityTemplateRepositoryPort.existsByName(entityTemplate.name())) {
-            throw new EntityTemplateNameAlreadyExistsException(entityTemplate.name());
-        }
-        validateTemplateProperties(entityTemplate);
-        validateTemplateRelations(entityTemplate);
+        entityTemplateValidationService.validateForCreation(entityTemplate);
         return entityTemplateRepositoryPort.save(entityTemplate);
     }
 
@@ -131,20 +116,6 @@ public class EntityTemplateService {
     @Transactional
     public EntityTemplate updateEntityTemplate(String identifier, @Valid EntityTemplate entityTemplate) {
         EntityTemplate existingTemplate = getEntityTemplateByIdentifier(identifier);
-
-        if (!identifier.equals(entityTemplate.identifier()) &&
-                entityTemplateRepositoryPort.existsByIdentifier(entityTemplate.identifier())) {
-            throw new EntityTemplateAlreadyExistsException(entityTemplate.identifier());
-        }
-
-        if (entityTemplate.name() != null &&
-                !Objects.equals(existingTemplate.name(), entityTemplate.name()) &&
-                entityTemplateRepositoryPort.existsByName(entityTemplate.name())) {
-            throw new EntityTemplateNameAlreadyExistsException(entityTemplate.name());
-        }
-
-        validateTemplateChanges(existingTemplate, entityTemplate);
-
         EntityTemplate mergedTemplate = new EntityTemplate(
                 existingTemplate.id(),
                 entityTemplate.identifier(),
@@ -153,84 +124,24 @@ public class EntityTemplateService {
                 mergePropertyDefinitions(existingTemplate.propertiesDefinitions(),
                         entityTemplate.propertiesDefinitions()),
                 mergeRelationDefinitions(existingTemplate.relationsDefinitions(),
-                        entityTemplate.relationsDefinitions()));
-        validateTemplateProperties(mergedTemplate);
-        validateTemplateRelations(mergedTemplate);
-
+                        entityTemplate.relationsDefinitions())
+        );
+        entityTemplateValidationService.validateForUpdate(identifier, existingTemplate.name(), mergedTemplate);
         return entityTemplateRepositoryPort.save(mergedTemplate);
     }
 
-    /// Validates all property definitions within the template for structural and
-    /// semantic integrity.
+    /// Deletes an entity template by business identifier with existence validation.
     ///
-    /// **Contract:** Enforces all property-level business rules including:
-    /// - Property name uniqueness within the template (no duplicate property names)
-    /// - Property rules compatibility with declared property types:
-    ///   - STRING: allows format, enum_values, regex, length constraints
-    ///   - NUMBER: allows min/max value constraints
-    ///   - BOOLEAN: rejects all rules
+    /// **Contract:** Validates template existence before deletion to ensure referential
+    /// integrity. Deletion cascades through persistence layer according to configured
+    /// relationships. This operation is irreversible once committed.
     ///
-    /// @param entityTemplate the template containing properties to validate
-    /// @throws PropertyNameAlreadyExistsException if duplicate property names are
-    ///                                            found
-    /// @throws PropertyRulesConflictException     if any property rules violate
-    ///                                            type constraints
-    private void validateTemplateProperties(@Valid EntityTemplate entityTemplate) {
-        propertyDefinitionService.validateUniquePropertyNames(entityTemplate.propertiesDefinitions());
-
-        // Validate property rules and type conversions
-        if (entityTemplate.propertiesDefinitions() != null) {
-            for (PropertyDefinition property : entityTemplate.propertiesDefinitions()) {
-                PropertyRulesService.validatePropertyRules(property);
-            }
-        }
-    }
-
-    /// Validates all relation definitions within the template for structural and
-    /// referential integrity.
-    ///
-    /// **Contract:** Enforces all relation-level business rules including:
-    /// - Relation name uniqueness within the template (no duplicate relation names)
-    /// - Referential integrity: all target templates referenced by relations must
-    ///   exist in the system
-    ///
-    /// @param entityTemplate the template containing relations to validate
-    /// @throws RelationNameAlreadyExistsException if duplicate relation names are
-    ///                                            found
-    /// @throws TargetTemplateNotFoundException    if any referenced target template
-    ///                                            doesn't exist
-    private void validateTemplateRelations(@Valid EntityTemplate entityTemplate) {
-        relationDefinitionService.validateUniqueRelationNames(entityTemplate.relationsDefinitions());
-
-        // Validate that all target templates exist
-        List<RelationDefinition> relations = entityTemplate.relationsDefinitions();
-        if (relations == null || relations.isEmpty()) {
-            return;
-        }
-
-        for (RelationDefinition relation : relations) {
-            if (relation.targetTemplateIdentifier() != null &&
-                    !entityTemplateRepositoryPort.existsByIdentifier(relation.targetTemplateIdentifier())) {
-                throw new TargetTemplateNotFoundException(relation.targetTemplateIdentifier());
-            }
-        }
-    }
-
-    /// Validates changes between existing and updated templates during update operations.
-    ///
-    /// **Contract:**
-    /// - Property types cannot be changed after initial creation
-    /// - Renaming properties is permitted
-    /// - Adding or removing properties is permitted
-    ///
-    /// @param existing the currently persisted template
-    /// @param updated the incoming template with desired changes
-    /// @throws PropertyTypeConflictException if any existing property type is being changed
-    private void validateTemplateChanges(EntityTemplate existing, EntityTemplate updated) {
-        propertyDefinitionService.validateTypeChanges(
-                existing.propertiesDefinitions(),
-                updated.propertiesDefinitions(),
-                existing.id().toString());
+    /// @param identifier unique business identifier of template to delete
+    /// @throws EntityTemplateNotFoundException when template doesn't exist
+    @Transactional
+    public void deleteEntityTemplate(String identifier) {
+        entityTemplateValidationService.validateForDeletion(identifier);
+        entityTemplateRepositoryPort.deleteByIdentifier(identifier);
     }
 
     private List<PropertyDefinition> mergePropertyDefinitions(
@@ -248,16 +159,14 @@ public class EntityTemplateService {
         for (PropertyDefinition prop : updated) {
             PropertyDefinition existingProp = existingMap.get(prop.name());
             if (existingProp != null) {
-                // Records are immutable - create a new instance
-                PropertyDefinition merged = new PropertyDefinition(
+                result.add(new PropertyDefinition(
                         existingProp.id(),
                         prop.name(),
                         prop.description(),
                         prop.type(),
                         prop.required(),
                         mergePropertyRules(existingProp.rules(), prop.rules())
-                );
-                result.add(merged);
+                ));
             } else {
                 result.add(prop);
             }
@@ -274,7 +183,6 @@ public class EntityTemplateService {
             return newRules;
         }
 
-        // Records are immutable - create a new instance
         return new PropertyRules(
                 existingRules.id(),
                 newRules.format(),
@@ -302,41 +210,19 @@ public class EntityTemplateService {
         for (RelationDefinition rel : updated) {
             RelationDefinition existingRel = existingMap.get(rel.name());
             if (existingRel != null) {
-                // Records are immutable - create a new instance
-                RelationDefinition merged = new RelationDefinition(
+                result.add(new RelationDefinition(
                         existingRel.id(),
                         rel.name(),
                         rel.targetTemplateIdentifier(),
                         rel.required(),
                         rel.toMany()
-                );
-                result.add(merged);
+                ));
             } else {
                 result.add(rel);
             }
         }
 
         return result;
-    }
-
-
-    /// Deletes an entity template by business identifier with existence validation.
-    ///
-    /// **Contract:** Validates template existence before deletion to ensure referential
-    /// integrity. Deletion cascades through persistence layer according to configured
-    /// relationships. This operation is irreversible once committed.
-    ///
-    /// @param identifier unique business identifier of template to delete
-    /// @throws EntityTemplateNotFoundException when template doesn't exist
-    @Transactional
-    public void deleteEntityTemplate(String identifier) {
-        if (identifier == null) {
-            throw new IllegalArgumentException("Template identifier must not be null");
-        }
-        if (!entityTemplateRepositoryPort.existsByIdentifier(identifier)) {
-            throw new EntityTemplateNotFoundException("identifier", identifier);
-        }
-        entityTemplateRepositoryPort.deleteByIdentifier(identifier);
     }
 
 }

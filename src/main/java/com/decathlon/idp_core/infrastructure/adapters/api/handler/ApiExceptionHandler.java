@@ -5,7 +5,7 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
-import com.decathlon.idp_core.domain.exception.PropertyRulesConflictException;
+import com.decathlon.idp_core.domain.exception.entity_template.PropertyDefinitionRulesConflictException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
@@ -14,13 +14,14 @@ import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 
 import com.decathlon.idp_core.domain.exception.EntityNotFoundException;
-import com.decathlon.idp_core.domain.exception.EntityTemplateAlreadyExistsException;
-import com.decathlon.idp_core.domain.exception.EntityTemplateNameAlreadyExistsException;
-import com.decathlon.idp_core.domain.exception.EntityTemplateNotFoundException;
 import com.decathlon.idp_core.domain.exception.PropertyNameAlreadyExistsException;
 import com.decathlon.idp_core.domain.exception.RelationNameAlreadyExistsException;
 import com.decathlon.idp_core.domain.exception.TargetTemplateNotFoundException;
 import com.decathlon.idp_core.domain.exception.UnsafeTypeConversionException;
+import com.decathlon.idp_core.domain.exception.entity_template.EntityTemplateAlreadyExistsException;
+import com.decathlon.idp_core.domain.exception.entity_template.EntityTemplateIdentifierCannotChangeException;
+import com.decathlon.idp_core.domain.exception.entity_template.EntityTemplateNameAlreadyExistsException;
+import com.decathlon.idp_core.domain.exception.entity_template.EntityTemplateNotFoundException;
 
 import jakarta.validation.ConstraintViolation;
 import jakarta.validation.ConstraintViolationException;
@@ -88,13 +89,25 @@ public class ApiExceptionHandler {
         return ResponseEntity.status(HttpStatus.CONFLICT).body(errorResponse);
     }
 
+    /// Handles domain exception when attempting to change an entity template identifier.
+    ///
+    /// **HTTP mapping:** Maps domain EntityTemplateIdentifierCannotChangeException to HTTP 400
+    /// status indicating validation error for immutable identifier field.
+    @ExceptionHandler(EntityTemplateIdentifierCannotChangeException.class)
+    public ResponseEntity<ErrorResponse> handleEntityTemplateIdentifierCannotChangeException(
+            EntityTemplateIdentifierCannotChangeException ex) {
+        log.warn("Entity template identifier cannot be changed: {}", ex.getMessage());
+        ErrorResponse errorResponse = new ErrorResponse(HttpStatus.BAD_REQUEST.name(), ex.getMessage());
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(errorResponse);
+    }
+
     /// Handles domain exception for wrong entity template property rules.
     ///
-    /// **HTTP mapping:** Maps domain PropertyRulesConflictException to HTTP 400
+    /// **HTTP mapping:** Maps domain PropertyDefinitionRulesConflictException to HTTP 400
     /// status indicating validation error for wrong property rules.
-    @ExceptionHandler(PropertyRulesConflictException.class)
+    @ExceptionHandler(PropertyDefinitionRulesConflictException.class)
     public ResponseEntity<ErrorResponse> handleWrongPropertyRulesException(
-            PropertyRulesConflictException ex) {
+            PropertyDefinitionRulesConflictException ex) {
         log.warn("Wrong Entity template property rules: {}", ex.getMessage());
         ErrorResponse errorResponse = new ErrorResponse(HttpStatus.BAD_REQUEST.name(), ex.getMessage());
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(errorResponse);
@@ -221,12 +234,43 @@ public class ApiExceptionHandler {
         if (originalMessage.contains("not one of the values accepted for Enum class")) {
             return parseEnumDeserializationError(originalMessage);
         }
+        return parseTypeDeserializationError(originalMessage);
+    }
+
+    private String parseTypeDeserializationError(String originalMessage) {
+        String targetType = extractTargetType(originalMessage);
+        String invalidValue = extractInvalidValueFromString(originalMessage);
+
+        if (!targetType.isEmpty() && !invalidValue.isEmpty()) {
+            return "Invalid value '" + invalidValue + "' for property, expected " + targetType;
+        } else if (!targetType.isEmpty()) {
+            return "Invalid type: expected " + targetType;
+        }
         return "Cannot deserialize request body property";
+    }
+
+    private String extractTargetType(String message) {
+        Pattern typePattern = Pattern.compile("Cannot deserialize value of type `([^`]+)`");
+        Matcher matcher = typePattern.matcher(message);
+        if (matcher.find()) {
+            String fullType = matcher.group(1);
+            return fullType.substring(fullType.lastIndexOf('.') + 1);
+        }
+        return "";
+    }
+
+    private String extractInvalidValueFromString(String message) {
+        Pattern valuePattern = Pattern.compile("from String \"([^\"]+)\"");
+        Matcher matcher = valuePattern.matcher(message);
+        if (matcher.find()) {
+            return matcher.group(1);
+        }
+        return "";
     }
 
     private String parseEnumDeserializationError(String originalMessage) {
         String enumTypeName = getPropertyNameFromEnumType(originalMessage);
-        String invalidValue = extractInvalidValue(originalMessage);
+        String invalidValue = extractInvalidValueFromString(originalMessage);
 
         if (!enumTypeName.isEmpty() && !invalidValue.isEmpty()) {
             return "Invalid value '" + invalidValue + "' for property '" + enumTypeName + "'";
@@ -247,15 +291,6 @@ public class ApiExceptionHandler {
         if (matcher.find()) {
             String enumType = matcher.group(1);
             return ENUM_TYPE_TO_PROPERTY.getOrDefault(enumType, "");
-        }
-        return "";
-    }
-
-    private String extractInvalidValue(String message) {
-        int valueStart = message.indexOf("from String \"") + 13;
-        int valueEnd = message.indexOf("\"", valueStart);
-        if (valueStart > 12 && valueEnd > valueStart) {
-            return message.substring(valueStart, valueEnd);
         }
         return "";
     }

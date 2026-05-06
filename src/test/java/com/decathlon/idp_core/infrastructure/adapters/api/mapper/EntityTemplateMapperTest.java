@@ -319,7 +319,6 @@ class EntityTemplateMapperTest {
             assertThat(result.getType()).isEqualTo(PropertyType.STRING);
             assertThat(result.isRequired()).isTrue();
             assertThat(result.getRules()).isNotNull();
-            assertThat(result.getRules().getId()).isEqualTo(rules.id());
         }
 
         @Test
@@ -343,7 +342,7 @@ class EntityTemplateMapperTest {
             // Given
             var dto = PropertyRulesDtoIn.builder()
                     .format(PropertyFormat.URL)
-                    .enumValues(new String[]{"http", "https"})
+                    .enumValues(new String[]{"HTTP", "HTTPS"})
                     .regex("^https?://.*")
                     .maxLength(500)
                     .minLength(10)
@@ -357,12 +356,27 @@ class EntityTemplateMapperTest {
             // Then
             assertThat(result).isNotNull();
             assertThat(result.format()).isEqualTo(PropertyFormat.URL);
-            assertThat(result.enumValues()).containsExactly("http", "https");
+            assertThat(result.enumValues()).containsExactly("HTTP", "HTTPS");
             assertThat(result.regex()).isEqualTo("^https?://.*");
             assertThat(result.maxLength()).isEqualTo(500);
             assertThat(result.minLength()).isEqualTo(10);
             assertThat(result.maxValue()).isEqualTo(100);
             assertThat(result.minValue()).isEqualTo(1);
+        }
+
+        @Test
+        @DisplayName("Should normalize enum_values to uppercase")
+        void shouldNormalizeEnumValuesToUppercase() {
+            // Given
+            var dto = PropertyRulesDtoIn.builder()
+                    .enumValues(new String[]{"EMAil", "postal_code", "ACTIVE"})
+                    .build();
+
+            // When
+            PropertyRules result = mapper.toPropertyRules(dto);
+
+            // Then
+            assertThat(result.enumValues()).containsExactly("EMAIL", "POSTAL_CODE", "ACTIVE");
         }
 
         @Test
@@ -395,7 +409,6 @@ class EntityTemplateMapperTest {
 
             // Then
             assertThat(result).isNotNull();
-            assertThat(result.getId()).isEqualTo(entity.id());
             assertThat(result.getFormat()).isEqualTo(PropertyFormat.URL);
             assertThat(result.getEnumValues()).containsExactly("http", "https");
             assertThat(result.getRegex()).isEqualTo("^https?://.*");

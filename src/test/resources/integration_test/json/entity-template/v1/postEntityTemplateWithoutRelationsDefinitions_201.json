@@ -10,8 +10,8 @@
       "type": "STRING",
       "rules": {
         "format": "URL",
-        "enum_values": [],
-        "regex": "",
+        "enum_values": null,
+        "regex": null,
         "max_length": 200,
         "min_length": 1
       }

@@ -14,6 +14,9 @@ spring:
     deserialization:
       # Fails deserialization if JSON contains unknown fields not mapped to Java properties.
       fail-on-unknown-properties: true
+    mapper:
+      # Allow enum values to be read case-insensitively (e.g., "string", "STRING", "String" all map to STRING).
+      accept-case-insensitive-enums: true
 
   profiles:
     # Activates a Spring profile from the env var SPRING_PROFILE (defaults to none).
