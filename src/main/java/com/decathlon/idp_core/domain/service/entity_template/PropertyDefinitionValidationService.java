@@ -83,14 +83,14 @@ public class PropertyDefinitionValidationService {
     /// Users must delete and recreate the property if they need to change its type.
     ///
     /// @param existingProperties the existing property definitions
-    /// @param updatedProperties  the new/updated property definitions
+    /// @param incomingProperties  the new/updated property definitions
     /// @throws UnsafeTypeConversionException if any property type change is attempted
-    public void validateTypeChanges(List<PropertyDefinition> existingProperties, List<PropertyDefinition> updatedProperties) {
+    public void validateTypeChanges(List<PropertyDefinition> existingProperties, List<PropertyDefinition> incomingProperties) {
         if (existingProperties == null || existingProperties.isEmpty() ||
-                updatedProperties == null || updatedProperties.isEmpty()) {
+                incomingProperties == null || incomingProperties.isEmpty()) {
             return;
         }
-        Map<String, PropertyDefinition> updatedMap = updatedProperties.stream()
+        Map<String, PropertyDefinition> updatedMap = incomingProperties.stream()
                 .collect(Collectors.toMap(PropertyDefinition::name, p -> p));
 
         for (PropertyDefinition existing : existingProperties) {

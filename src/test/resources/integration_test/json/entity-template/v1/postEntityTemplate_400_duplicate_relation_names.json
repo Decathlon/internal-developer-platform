@@ -1,0 +1,20 @@
+{
+  "identifier": "test-duplicate-rels",
+  "name": "Test Duplicate Relations",
+  "description": "Template with duplicate relations",
+  "properties_definitions": [],
+  "relations_definitions": [
+    {
+      "name": "belongsTo",
+      "target_template_identifier": "web-service",
+      "required": true,
+      "to_many": false
+    },
+    {
+      "name": "BelongsTo",
+      "target_template_identifier": "microservice",
+      "required": false,
+      "to_many": false
+    }
+  ]
+}

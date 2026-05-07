@@ -1,0 +1,13 @@
+{
+  "name": "Batch Job",
+  "description": "This is a test template",
+  "properties_definitions": [
+    {
+      "name": "applicationName",
+      "description": "Name of web service",
+      "type": "NUMBER",
+      "required": true
+    }
+  ],
+  "relations_definitions": []
+}

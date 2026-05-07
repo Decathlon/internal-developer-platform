@@ -64,17 +64,19 @@ public class EntityTemplateValidationService {
     ///
     /// @param currentIdentifier the identifier of the template being replaced
     /// @param existingName the current name of the template being replaced
+    /// @param existingTemplate the current state of the template being replaced
     /// @param mergedTemplate the fully-merged template carrying the desired state
     /// @throws EntityTemplateAlreadyExistsException when the new identifier is already taken
     /// @throws EntityTemplateNameAlreadyExistsException when the new name is already taken
     /// @throws PropertyDefinitionRulesConflictException when rules violate business invariants
-    public void validateForUpdate(String currentIdentifier, String existingName, EntityTemplate mergedTemplate) {
+    public void validateForUpdate(String currentIdentifier, String existingName, EntityTemplate existingTemplate, EntityTemplate mergedTemplate) {
         if (!currentIdentifier.equals(mergedTemplate.identifier())) {
             throw new EntityTemplateIdentifierCannotChangeException(mergedTemplate.identifier());
         }
         if (!Objects.equals(existingName, mergedTemplate.name())) {
             validateNameUniqueness(mergedTemplate.name());
         }
+        propertyDefinitionValidationService.validateTypeChanges(existingTemplate.propertiesDefinitions(), mergedTemplate.propertiesDefinitions());
         validateTemplateProperties(mergedTemplate);
         validateTemplateRelations(mergedTemplate);
     }

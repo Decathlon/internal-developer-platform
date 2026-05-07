@@ -18,7 +18,7 @@ public class ValidationMessages {
 
     // Property Definition validation messages
     public static final String PROPERTY_NAME_MANDATORY = "Property name is mandatory and cannot be blank";
-    public static final String PROPERTY_NAME_ALREADY_EXISTS = "Property name '%s' already exists within the template. All property names must be unique.";
+    public static final String PROPERTY_NAME_ALREADY_EXISTS = "Property name '%s' already exists within the template. Property names must be unique.";
     public static final String PROPERTY_DESCRIPTION_MANDATORY = "Property description is mandatory and cannot be blank";
     public static final String PROPERTY_TYPE_MANDATORY = "Property type is mandatory";
     public static final String PROPERTY_VALUE_MANDATORY = "Property value is mandatory and cannot be blank";
