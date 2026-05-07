@@ -1,0 +1,19 @@
+{
+  "name": "Web Service",
+  "description": "This is a test template",
+  "properties_definitions": [
+    {
+      "name": "name",
+      "description": "Name of web service",
+      "type": "NUMBER",
+      "required": true
+    },
+    {
+      "name": "status",
+      "description": "status of web service",
+      "type": "BOOLEAN",
+      "required": false
+    }
+  ],
+  "relations_definitions": []
+}

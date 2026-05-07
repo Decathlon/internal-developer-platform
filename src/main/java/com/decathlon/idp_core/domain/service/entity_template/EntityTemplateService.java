@@ -126,7 +126,7 @@ public class EntityTemplateService {
                 mergeRelationDefinitions(existingTemplate.relationsDefinitions(),
                         entityTemplate.relationsDefinitions())
         );
-        entityTemplateValidationService.validateForUpdate(identifier, existingTemplate.name(), mergedTemplate);
+        entityTemplateValidationService.validateForUpdate(identifier, existingTemplate.name(), existingTemplate, mergedTemplate);
         return entityTemplateRepositoryPort.save(mergedTemplate);
     }
 

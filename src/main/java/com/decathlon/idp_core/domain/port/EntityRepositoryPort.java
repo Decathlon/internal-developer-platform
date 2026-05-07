@@ -19,6 +19,7 @@ import com.decathlon.idp_core.domain.model.entity.EntitySummary;
 /// - `findByTemplateIdentifier()` must support pagination for large entity sets
 /// - `findByIdentifierIn()` optimizes bulk entity lookups for relationship resolution
 /// - `findByRelationIdIn()` enables reverse relationship navigation
+/// - `existsByTemplateIdentifier()` determines if entities exist for a template, to support safe template modifications
 ///
 /// **Transaction behavior:** Implementations should handle transaction boundaries
 /// appropriately for the underlying persistence technology.
@@ -35,4 +36,6 @@ public interface EntityRepositoryPort {
     List<EntitySummary> findByIdentifierIn(List<String> identifiers);
 
     List<EntitySummary> findByRelationIdIn(List<UUID> relationIds);
+
+    boolean existsByTemplateIdentifier(String templateIdentifier);
 }
