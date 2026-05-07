@@ -8,6 +8,7 @@ public class ValidationMessages {
 
     // Entity Template validation messages
     public static final String TEMPLATE_ALREADY_EXISTS = "An Entity Template already exists with the same identifier";
+    public static final String TEMPLATE_IDENTIFIER_NOT_FOUND = "Target template with identifier '%s' does not exist.";
     public static final String TEMPLATE_IDENTIFIER_MANDATORY = "Entity Template identifier is mandatory and cannot be blank";
     public static final String TEMPLATE_IDENTIFIER_CANNOT_CHANGE = "Entity Template identifier cannot be changed. Current identifier: ";
     public static final String TEMPLATE_NAME_ALREADY_EXISTS = "The entity template name %s already exists";
@@ -17,14 +18,17 @@ public class ValidationMessages {
 
     // Property Definition validation messages
     public static final String PROPERTY_NAME_MANDATORY = "Property name is mandatory and cannot be blank";
+    public static final String PROPERTY_NAME_ALREADY_EXISTS = "Property name '%s' already exists within the template. All property names must be unique.";
     public static final String PROPERTY_DESCRIPTION_MANDATORY = "Property description is mandatory and cannot be blank";
     public static final String PROPERTY_TYPE_MANDATORY = "Property type is mandatory";
     public static final String PROPERTY_VALUE_MANDATORY = "Property value is mandatory and cannot be blank";
+    public static final String PROPERTY_UNSAFE_TYPE_CONVERSION = "Cannot change type of property '%s' from %s to %s. Property types cannot be modified after creation. Please delete and recreate the property instead.";
 
     // Relation Definition validation messages
     public static final String RELATION_NAME_MANDATORY = "Relation name is mandatory and cannot be blank";
     public static final String RELATION_TARGET_IDENTIFIER_MANDATORY = "Target template identifier is mandatory and cannot be blank";
     public static final String RELATION_NAME_MANDATORY_SIMPLE = "Relation name is mandatory";
+    public static final String RELATION_NAME_ALREADY_EXISTS = "Relation name '%s' already exists within the template. Relation names must be unique.";
     public static final String RELATION_TARGET_IDENTIFIER_MANDATORY_SIMPLE = "Relation target identifier is mandatory";
     public static final String RELATION_TARGET_IDENTIFIERS_NOT_NULL = "Target entity identifiers cannot be null";
 

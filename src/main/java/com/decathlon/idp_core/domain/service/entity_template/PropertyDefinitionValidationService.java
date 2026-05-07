@@ -1,11 +1,19 @@
 package com.decathlon.idp_core.domain.service.entity_template;
 
 import com.decathlon.idp_core.domain.exception.entity_template.PropertyDefinitionRulesConflictException;
+import com.decathlon.idp_core.domain.exception.entity_template.PropertyNameAlreadyExistsException;
+import com.decathlon.idp_core.domain.exception.entity_template.UnsafeTypeConversionException;
 import com.decathlon.idp_core.domain.model.entity_template.PropertyDefinition;
 import com.decathlon.idp_core.domain.model.entity_template.PropertyRules;
 import com.decathlon.idp_core.domain.model.enums.PropertyType;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 import static com.decathlon.idp_core.domain.constant.ValidationMessages.PROPERTY_RULES_BOOLEAN_NOT_ALLOWED;
 import static com.decathlon.idp_core.domain.constant.ValidationMessages.PROPERTY_RULES_MAX_LENGTH_POSITIVE;
@@ -15,7 +23,7 @@ import static com.decathlon.idp_core.domain.constant.ValidationMessages.minMaxCo
 import static com.decathlon.idp_core.domain.constant.ValidationMessages.ruleNotAllowed;
 import static com.decathlon.idp_core.domain.constant.ValidationMessages.rulesAreIncompatible;
 
-/// Domain service for validating property rule compatibility with property types.
+/// Domain service for validating property definitions and their compatibility with property types.
 ///
 /// **Business rules:**
 /// - STRING: Allows format, enum_values, regex, max_length, min_length. Rejects numeric rules.
@@ -23,6 +31,9 @@ import static com.decathlon.idp_core.domain.constant.ValidationMessages.rulesAre
 /// - BOOLEAN: Rejects all rules; rules field must be null or empty.
 ///
 /// **Key responsibilities:**
+/// - Validate property name uniqueness within an entity template
+/// - Enforce type conversion constraints considering existing entity data
+/// - Apply type conversion safety rules (safe vs. unsafe conversions)
 /// - Type-to-rule compatibility validation
 /// - Constraint ordering validation (min ≤ max)
 /// - Regex pattern validation (delegated to [PropertyRegexValidationService])
@@ -43,6 +54,57 @@ public class PropertyDefinitionValidationService {
     public static final String MIN_LENGTH = "min_length";
     public static final String MAX_VALUE = "max_value";
     public static final String MIN_VALUE = "min_value";
+
+    /// Validates that all property names are unique within a template.
+    ///
+    /// **Contract:** Enforces the invariant that property names must be unique. Used
+    /// during template creation and updates to prevent duplicate property
+    /// definitions.
+    ///
+    /// @param properties the list of property definitions to validate
+    /// @throws PropertyNameAlreadyExistsException if duplicate property names
+    ///                                            are found
+    public void validatePropertyNamesUniqueness(List<PropertyDefinition> properties) {
+        Set<String> names = new HashSet<>();
+        for (PropertyDefinition property : properties) {
+            if (property.name() != null) {
+                String normalizedName = property.name().toLowerCase();
+                if (!names.add(normalizedName)) {
+                    throw new PropertyNameAlreadyExistsException(property.name());
+                }
+            }
+        }
+    }
+
+    /// Validates that property types are not changed on existing properties.
+    ///
+    /// **Contract:** Enforces the invariant that property types cannot be modified
+    /// after initial creation. Any attempt to change a property type is forbidden.
+    /// Users must delete and recreate the property if they need to change its type.
+    ///
+    /// @param existingProperties the existing property definitions
+    /// @param updatedProperties  the new/updated property definitions
+    /// @throws UnsafeTypeConversionException if any property type change is attempted
+    public void validateTypeChanges(List<PropertyDefinition> existingProperties, List<PropertyDefinition> updatedProperties) {
+        if (existingProperties == null || existingProperties.isEmpty() ||
+                updatedProperties == null || updatedProperties.isEmpty()) {
+            return;
+        }
+        Map<String, PropertyDefinition> updatedMap = updatedProperties.stream()
+                .collect(Collectors.toMap(PropertyDefinition::name, p -> p));
+
+        for (PropertyDefinition existing : existingProperties) {
+            PropertyDefinition updated = updatedMap.get(existing.name());
+            boolean propertyTypeChanged = updated != null && !existing.type().equals(updated.type());
+
+            if (propertyTypeChanged) {
+                throw new UnsafeTypeConversionException(
+                        existing.name(),
+                        existing.type(),
+                        updated.type());
+            }
+        }
+    }
 
     /// Validates property rules are compatible with the property's data type.
     ///

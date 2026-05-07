@@ -53,4 +53,9 @@ public class PostgresEntityAdapter implements EntityRepositoryPort {
     public List<EntitySummary> findByRelationIdIn(List<UUID> relationIds) {
         return jpaEntityRepository.findByRelationIdIn(relationIds);
     }
+
+    @Override
+    public boolean existsByTemplateIdentifier(String templateIdentifier) {
+        return jpaEntityRepository.existsByTemplateIdentifier(templateIdentifier);
+    }
 }

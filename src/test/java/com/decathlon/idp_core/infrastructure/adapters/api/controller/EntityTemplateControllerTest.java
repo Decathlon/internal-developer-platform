@@ -577,7 +577,7 @@ class EntityTemplateControllerTest extends AbstractIntegrationTest {
                               "relations_definitions": [
                                 {
                                   "name": "owns",
-                                  "target_template_identifier": "child-entity",
+                                  "target_template_identifier": "microservice",
                                   "required": true,
                                   "to_many": true
                                 }
@@ -602,13 +602,13 @@ class EntityTemplateControllerTest extends AbstractIntegrationTest {
                       "relations_definitions": [
                         {
                           "name": "owns",
-                          "target_template_identifier": "child-entity-updated",
+                          "target_template_identifier": "batch-job",
                           "required": false,
                           "to_many": false
                         },
                         {
                           "name": "belongsTo",
-                          "target_template_identifier": "parent-entity",
+                          "target_template_identifier": "database-service",
                           "required": true,
                           "to_many": false
                         }
@@ -644,11 +644,11 @@ class EntityTemplateControllerTest extends AbstractIntegrationTest {
                     .stream()
                     .collect(Collectors.toMap(RelationDefinition::name, r -> r));
 
-            assertThat(relationsMap.get("owns").targetTemplateIdentifier()).isEqualTo("child-entity-updated");
+            assertThat(relationsMap.get("owns").targetTemplateIdentifier()).isEqualTo("batch-job");
             assertThat(relationsMap.get("owns").required()).isFalse();
             assertThat(relationsMap.get("owns").toMany()).isFalse();
 
-            assertThat(relationsMap.get("belongsTo").targetTemplateIdentifier()).isEqualTo("parent-entity");
+            assertThat(relationsMap.get("belongsTo").targetTemplateIdentifier()).isEqualTo("database-service");
             assertThat(relationsMap.get("belongsTo").required()).isTrue();
             assertThat(relationsMap.get("belongsTo").toMany()).isFalse();
         }
@@ -909,6 +909,25 @@ class EntityTemplateControllerTest extends AbstractIntegrationTest {
                     .content(getJsonTestFileContent(
                             PostTemplateTests.ENTITY_TEMPLATE_JSON_TEST_PATH + "putEntityTemplate_200_with_empty_properties.json")))
                     .andExpect(status().isOk());
+        }
+
+        /// Tests that the PUT /api/v1/entity-templates/{identifier} endpoint rejects
+        /// requests with an identifier field in the request body.
+        /// **This test verifies that:**
+        /// - The endpoint returns HTTP 400 Bad Request when identifier is in body
+        /// @throws Exception if the MockMvc request fails
+        @Test
+        @WithMockUser()
+        @DisplayName("Should reject PUT request with identifier in body and return 400")
+        void putTemplate_400_identifier_in_body() throws Exception {
+            String identifier = "web-service";
+            mockMvc.perform(MockMvcRequestBuilders.put("/api/v1/entity-templates/" + identifier)
+                    .contentType(APPLICATION_JSON)
+                    .accept(APPLICATION_JSON)
+                    .with(csrf())
+                    .content(getJsonTestFileContent(
+                            PostTemplateTests.ENTITY_TEMPLATE_JSON_TEST_PATH + "putEntityTemplate_400_identifier_in_body.json")))
+                    .andExpect(status().isBadRequest());
         }
 
     }
