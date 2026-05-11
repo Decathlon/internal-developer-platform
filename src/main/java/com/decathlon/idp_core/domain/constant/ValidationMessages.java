@@ -32,6 +32,7 @@ public class ValidationMessages {
     public static final String RELATION_TARGET_IDENTIFIER_MANDATORY_SIMPLE = "Relation target identifier is mandatory";
     public static final String RELATION_TARGET_IDENTIFIERS_NOT_NULL = "Target entity identifiers cannot be null";
     public static final String RELATION_TARGET_TEMPLATE_CANNOT_CHANGE = "Cannot change target template of relation '%s' from '%s' to '%s'. Target template cannot be modified after creation. Please delete and recreate the relation instead.";
+    public static final String RELATION_CANNOT_TARGET_ITSELF = "Relation '%s' cannot reference its own template '%s' as the target.";
 
     // Property Rules validation messages - templates and specific constraints
     public static final String PROPERTY_RULES_RULE_NOT_ALLOWED_FOR_TYPE = "{rule} rule is not allowed for {type} property type";

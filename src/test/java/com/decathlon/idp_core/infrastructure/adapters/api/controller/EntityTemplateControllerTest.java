@@ -533,6 +533,24 @@ class EntityTemplateControllerTest extends AbstractIntegrationTest {
                     .andExpect(jsonPath("$.error_description").value("Target template with identifier 'non-existent-template' does not exist."));
         }
 
+        /// Tests POST endpoint when a relation's targetTemplateIdentifier equals the template's own identifier.
+        /// Verifies that RelationSelfReferenceException is thrown and returns 400 Bad Request.
+        @Test
+        @WithMockUser()
+        @DisplayName("Should return 400 when a relation targets the template itself")
+        void postTemplate_400_relation_self_reference() throws Exception {
+            mockMvc.perform(MockMvcRequestBuilders.post(ENTITY_TEMPLATE_PATH)
+                            .contentType(APPLICATION_JSON)
+                            .accept(APPLICATION_JSON)
+                            .with(csrf())
+                            .content(getJsonTestFileContent(
+                                    ENTITY_TEMPLATE_JSON_TEST_PATH + "postTemplate_400_relation_target_references_itself.json")))
+                    .andExpect(status().isBadRequest())
+                    .andExpect(jsonPath("$.error").value("BAD_REQUEST"))
+                    .andExpect(jsonPath("$.error_description").value(
+                            containsString("Relation 'circular' cannot reference its own template 'self-ref-template'")));
+        }
+
     }
 
     @Nested

@@ -17,6 +17,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import com.decathlon.idp_core.domain.exception.entity_template.RelationCannotTargetItselfException;
 import com.decathlon.idp_core.domain.exception.entity_template.RelationNameAlreadyExistsException;
 import com.decathlon.idp_core.domain.exception.entity_template.RelationTargetTemplateChangeException;
 import com.decathlon.idp_core.domain.exception.entity_template.TargetTemplateNotFoundException;
@@ -296,6 +297,49 @@ class RelationDefinitionValidationServiceTest {
                     () -> relationDefinitionValidationService.validateTargetTemplateChanges(existing, incoming)
             );
             assertTrue(ex.getMessage().contains("owns") || ex.getMessage().contains("uses"));
+        }
+    }
+
+    @Nested
+    @DisplayName("validateNoSelfReference")
+    class ValidateNoSelfReferenceTests {
+
+        @Test
+        @DisplayName("Happy path: no relations — no exception")
+        void noRelations() {
+            assertDoesNotThrow(() ->
+                    relationDefinitionValidationService.validateRelationNoSelfReference("my-template", List.of()));
+        }
+
+        @Test
+        @DisplayName("Happy path: null template identifier — no exception")
+        void nullTemplateIdentifier() {
+            var rel = new RelationDefinition(UUID.randomUUID(), "owns", "other-template", true, false);
+            assertDoesNotThrow(() ->
+                    relationDefinitionValidationService.validateRelationNoSelfReference(null, List.of(rel)));
+        }
+
+        @Test
+        @DisplayName("Happy path: relations target different templates — no exception")
+        void relationsTargetOtherTemplates() {
+            var rel1 = new RelationDefinition(UUID.randomUUID(), "owns", "microservice", true, false);
+            var rel2 = new RelationDefinition(UUID.randomUUID(), "uses", "database-service", false, true);
+            assertDoesNotThrow(() ->
+                    relationDefinitionValidationService.validateRelationNoSelfReference("my-template", List.of(rel1, rel2)));
+        }
+
+        @Test
+        @DisplayName("Error: one of multiple relations targets its own template")
+        void oneOfMultipleRelationsTargetsSelf() {
+            var rel1 = new RelationDefinition(UUID.randomUUID(), "owns", "other-template", true, false);
+            var rel2 = new RelationDefinition(UUID.randomUUID(), "circular", "my-template", false, false);
+            var relations = List.of(rel1, rel2);
+
+            RelationCannotTargetItselfException ex = assertThrows(
+                    RelationCannotTargetItselfException.class,
+                    () -> relationDefinitionValidationService.validateRelationNoSelfReference("my-template", relations)
+            );
+            assertTrue(ex.getMessage().contains("circular") && ex.getMessage().contains("my-template"));
         }
     }
 }

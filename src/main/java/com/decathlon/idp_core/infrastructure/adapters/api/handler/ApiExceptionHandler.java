@@ -7,6 +7,7 @@ import java.util.stream.Collectors;
 
 import com.decathlon.idp_core.domain.exception.entity_template.PropertyDefinitionRulesConflictException;
 import com.decathlon.idp_core.domain.exception.entity_template.PropertyTypeChangeException;
+import com.decathlon.idp_core.domain.exception.entity_template.RelationCannotTargetItselfException;
 import com.decathlon.idp_core.domain.exception.entity_template.RelationTargetTemplateChangeException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -166,6 +167,17 @@ public class ApiExceptionHandler {
     public ResponseEntity<ErrorResponse> handleRelationTargetTemplateChangeException(
             RelationTargetTemplateChangeException ex) {
         log.warn("Relation target template change error: {}", ex.getMessage());
+        return createErrorResponse(HttpStatus.BAD_REQUEST, ex.getMessage());
+    }
+
+    /// Handles domain exception when a relation's target template identifier is the template itself.
+    ///
+    /// **HTTP mapping:** Maps domain RelationCannotTargetItselfException to HTTP 400
+    /// status indicating validation error for self-referential relations.
+    @ExceptionHandler(RelationCannotTargetItselfException.class)
+    public ResponseEntity<ErrorResponse> handleRelationCannotTargetItselfException(
+            RelationCannotTargetItselfException ex) {
+        log.warn("Relation self-reference error: {}", ex.getMessage());
         return createErrorResponse(HttpStatus.BAD_REQUEST, ex.getMessage());
     }
 
