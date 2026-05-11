@@ -15,7 +15,7 @@ import com.decathlon.idp_core.domain.model.entity.Entity;
 import com.decathlon.idp_core.domain.model.entity.EntitySummary;
 import com.decathlon.idp_core.domain.model.entity_template.EntityTemplate;
 import com.decathlon.idp_core.domain.port.EntityRepositoryPort;
-import com.decathlon.idp_core.domain.service.EntityTemplateService;
+import com.decathlon.idp_core.domain.service.entity_template.EntityTemplateService;
 import com.decathlon.idp_core.domain.service.entity_template.EntityTemplateValidationService;
 
 import jakarta.transaction.Transactional;
@@ -53,7 +53,7 @@ public class EntityService {
     /// @throws EntityTemplateNotFoundException when template doesn't exist
     @Transactional
     public Page<Entity> getEntitiesByTemplateIdentifier(Pageable pageable, String templateIdentifier) {
-        entityTemplateValidationService.checkTemplateExists(templateIdentifier);
+        entityTemplateValidationService.validateTemplateExists(templateIdentifier);
         return entityRepository.findByTemplateIdentifier(templateIdentifier, pageable);
 
     }
@@ -81,7 +81,7 @@ public class EntityService {
     /// @throws EntityNotFoundException         when entity doesn't exist
     @Transactional
     public Entity getEntityByTemplateIdentifierAndIdentifier(String templateIdentifier, String entityIdentifier) {
-        entityTemplateValidationService.checkTemplateExists(templateIdentifier);
+        entityTemplateValidationService.validateTemplateExists(templateIdentifier);
         return entityRepository.findByTemplateIdentifierAndIdentifier(templateIdentifier, entityIdentifier)
                 .orElseThrow(() -> new EntityNotFoundException(templateIdentifier,
                         entityIdentifier));
