@@ -152,12 +152,12 @@ public class EntityTemplateService {
         if (updated == null) return existing;
 
         Map<String, PropertyDefinition> existingMap = existing.stream()
-                .collect(Collectors.toMap(PropertyDefinition::name, Function.identity()));
+                .collect(Collectors.toMap(p -> p.name().toLowerCase(java.util.Locale.ROOT), Function.identity()));
 
         List<PropertyDefinition> result = new ArrayList<>();
 
         for (PropertyDefinition prop : updated) {
-            PropertyDefinition existingProp = existingMap.get(prop.name());
+            PropertyDefinition existingProp = existingMap.get(prop.name().toLowerCase(java.util.Locale.ROOT));
             if (existingProp != null) {
                 result.add(new PropertyDefinition(
                         existingProp.id(),
@@ -203,12 +203,12 @@ public class EntityTemplateService {
         if (updated == null) return existing;
 
         Map<String, RelationDefinition> existingMap = existing.stream()
-                .collect(Collectors.toMap(RelationDefinition::name, Function.identity()));
+                .collect(Collectors.toMap(r -> r.name().toLowerCase(java.util.Locale.ROOT), Function.identity()));
 
         List<RelationDefinition> result = new ArrayList<>();
 
         for (RelationDefinition rel : updated) {
-            RelationDefinition existingRel = existingMap.get(rel.name());
+            RelationDefinition existingRel = existingMap.get(rel.name().toLowerCase(java.util.Locale.ROOT));
             if (existingRel != null) {
                 result.add(new RelationDefinition(
                         existingRel.id(),

@@ -18,6 +18,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import com.decathlon.idp_core.domain.exception.entity_template.RelationNameAlreadyExistsException;
+import com.decathlon.idp_core.domain.exception.entity_template.RelationTargetTemplateChangeException;
 import com.decathlon.idp_core.domain.exception.entity_template.TargetTemplateNotFoundException;
 import com.decathlon.idp_core.domain.model.entity_template.RelationDefinition;
 import com.decathlon.idp_core.domain.port.EntityTemplateRepositoryPort;
@@ -206,6 +207,95 @@ class RelationDefinitionValidationServiceTest {
                     () -> relationDefinitionValidationService.validateTargetTemplatesExist(relations)
             );
             assertTrue(ex.getMessage().contains("null") || ex.getMessage().contains("target"));
+        }
+    }
+
+    @Nested
+    @DisplayName("validateTargetTemplateIdentifierChanges")
+    class ValidateTargetTemplateIdentifierChangesTests {
+
+        @Test
+        @DisplayName("Happy path: no relations change targetTemplateIdentifier")
+        void testNoTargetTemplateChange() {
+            var existing = List.of(
+                    new RelationDefinition(UUID.randomUUID(), "owns", "microservice", true, false),
+                    new RelationDefinition(UUID.randomUUID(), "belongsTo", "team", false, false)
+            );
+            var incoming = List.of(
+                    new RelationDefinition(UUID.randomUUID(), "owns", "microservice", false, true),
+                    new RelationDefinition(UUID.randomUUID(), "belongsTo", "team", true, false)
+            );
+
+            assertDoesNotThrow(() ->
+                    relationDefinitionValidationService.validateTargetTemplateChanges(existing, incoming));
+        }
+
+        @Test
+        @DisplayName("Happy path: new relation added without changing existing targets")
+        void testNewRelationAdded() {
+            var existing = List.of(
+                    new RelationDefinition(UUID.randomUUID(), "owns", "microservice", true, false)
+            );
+            var incoming = List.of(
+                    new RelationDefinition(UUID.randomUUID(), "owns", "microservice", true, false),
+                    new RelationDefinition(UUID.randomUUID(), "uses", "database-service", false, true)
+            );
+
+            assertDoesNotThrow(() ->
+                    relationDefinitionValidationService.validateTargetTemplateChanges(existing, incoming));
+        }
+
+        @Test
+        @DisplayName("Happy path: existing relation removed from incoming list")
+        void testExistingRelationRemoved() {
+            var existing = List.of(
+                    new RelationDefinition(UUID.randomUUID(), "owns", "microservice", true, false),
+                    new RelationDefinition(UUID.randomUUID(), "uses", "database-service", false, true)
+            );
+            var incoming = List.of(
+                    new RelationDefinition(UUID.randomUUID(), "owns", "microservice", true, false)
+            );
+
+            assertDoesNotThrow(() ->
+                    relationDefinitionValidationService.validateTargetTemplateChanges(existing, incoming));
+        }
+
+        @Test
+        @DisplayName("Error: changing targetTemplateIdentifier on existing relation")
+        void testTargetTemplateIdentifierChanged() {
+            var existing = List.of(
+                    new RelationDefinition(UUID.randomUUID(), "Owns", "microservice", true, false)
+            );
+            var incoming = List.of(
+                    new RelationDefinition(UUID.randomUUID(), "owns", "batch-job", true, false)
+            );
+
+            RelationTargetTemplateChangeException ex = assertThrows(
+                    RelationTargetTemplateChangeException.class,
+                    () -> relationDefinitionValidationService.validateTargetTemplateChanges(existing, incoming)
+            );
+            assertTrue(ex.getMessage().contains("Owns"));
+            assertTrue(ex.getMessage().contains("microservice"));
+            assertTrue(ex.getMessage().contains("batch-job"));
+        }
+
+        @Test
+        @DisplayName("Error: fails on first relation with changed target when multiple relations changed")
+        void testFailsOnFirstChangedTarget() {
+            var existing = List.of(
+                    new RelationDefinition(UUID.randomUUID(), "owns", "microservice", true, false),
+                    new RelationDefinition(UUID.randomUUID(), "uses", "database-service", false, true)
+            );
+            var incoming = List.of(
+                    new RelationDefinition(UUID.randomUUID(), "owns", "batch-job", true, false),
+                    new RelationDefinition(UUID.randomUUID(), "uses", "other-service", false, true)
+            );
+
+            RelationTargetTemplateChangeException ex = assertThrows(
+                    RelationTargetTemplateChangeException.class,
+                    () -> relationDefinitionValidationService.validateTargetTemplateChanges(existing, incoming)
+            );
+            assertTrue(ex.getMessage().contains("owns") || ex.getMessage().contains("uses"));
         }
     }
 }

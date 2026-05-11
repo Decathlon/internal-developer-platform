@@ -11,6 +11,7 @@ import com.decathlon.idp_core.domain.exception.entity_template.EntityTemplateNot
 import com.decathlon.idp_core.domain.exception.entity_template.PropertyDefinitionRulesConflictException;
 import com.decathlon.idp_core.domain.exception.entity_template.PropertyNameAlreadyExistsException;
 import com.decathlon.idp_core.domain.exception.entity_template.RelationNameAlreadyExistsException;
+import com.decathlon.idp_core.domain.exception.entity_template.RelationTargetTemplateChangeException;
 import com.decathlon.idp_core.domain.exception.entity_template.TargetTemplateNotFoundException;
 import com.decathlon.idp_core.domain.model.entity_template.EntityTemplate;
 import com.decathlon.idp_core.domain.model.entity_template.PropertyDefinition;
@@ -51,6 +52,7 @@ public class EntityTemplateValidationService {
         validateNameUniqueness(entityTemplate.name());
         propertyDefinitionValidationService.validatePropertyNamesUniqueness(entityTemplate.propertiesDefinitions());
         validateTemplateProperties(entityTemplate);
+        relationDefinitionValidationService.validateRelationNamesUniqueness(entityTemplate.relationsDefinitions());
         validateTemplateRelations(entityTemplate);
     }
 
@@ -62,6 +64,7 @@ public class EntityTemplateValidationService {
     /// - Property rules in the merged template must be compatible with their declared type.
     /// - Relation names must be unique within the template.
     /// - All target templates referenced by relations must exist in the system.
+    /// - Relation target template identifiers cannot be changed after creation.
     ///
     /// @param currentIdentifier the identifier of the template being replaced
     /// @param existingName the current name of the template being replaced
@@ -70,6 +73,7 @@ public class EntityTemplateValidationService {
     /// @throws EntityTemplateAlreadyExistsException when the new identifier is already taken
     /// @throws EntityTemplateNameAlreadyExistsException when the new name is already taken
     /// @throws PropertyDefinitionRulesConflictException when rules violate business invariants
+    /// @throws RelationTargetTemplateChangeException when a relation target template is changed
     public void validateForUpdate(String currentIdentifier, String existingName, EntityTemplate existingTemplate, EntityTemplate mergedTemplate) {
         if (!currentIdentifier.equals(mergedTemplate.identifier())) {
             throw new EntityTemplateIdentifierCannotChangeException(mergedTemplate.identifier());
@@ -80,6 +84,8 @@ public class EntityTemplateValidationService {
         propertyDefinitionValidationService.validatePropertyNamesUniqueness(mergedTemplate.propertiesDefinitions());
         propertyDefinitionValidationService.validateTypeChanges(existingTemplate.propertiesDefinitions(), mergedTemplate.propertiesDefinitions());
         validateTemplateProperties(mergedTemplate);
+        relationDefinitionValidationService.validateRelationNamesUniqueness(mergedTemplate.relationsDefinitions());
+        relationDefinitionValidationService.validateTargetTemplateChanges(existingTemplate.relationsDefinitions(), mergedTemplate.relationsDefinitions());
         validateTemplateRelations(mergedTemplate);
     }
 
@@ -164,7 +170,6 @@ public class EntityTemplateValidationService {
         if (entityTemplate.relationsDefinitions() == null) {
             return;
         }
-        relationDefinitionValidationService.validateRelationNamesUniqueness(entityTemplate.relationsDefinitions());
         relationDefinitionValidationService.validateTargetTemplatesExist(entityTemplate.relationsDefinitions());
     }
 

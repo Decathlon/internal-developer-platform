@@ -7,6 +7,7 @@ import java.util.stream.Collectors;
 
 import com.decathlon.idp_core.domain.exception.entity_template.PropertyDefinitionRulesConflictException;
 import com.decathlon.idp_core.domain.exception.entity_template.PropertyTypeChangeException;
+import com.decathlon.idp_core.domain.exception.entity_template.RelationTargetTemplateChangeException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
@@ -154,6 +155,17 @@ public class ApiExceptionHandler {
     public ResponseEntity<ErrorResponse> handleTypeChangeException(
             PropertyTypeChangeException ex) {
         log.warn("Type change error: {}", ex.getMessage());
+        return createErrorResponse(HttpStatus.BAD_REQUEST, ex.getMessage());
+    }
+
+    /// Handles domain exception when relation target template changes are attempted.
+    ///
+    /// **HTTP mapping:** Maps domain RelationTargetTemplateChangeException to HTTP 400
+    /// status indicating validation error for immutable target template field.
+    @ExceptionHandler(RelationTargetTemplateChangeException.class)
+    public ResponseEntity<ErrorResponse> handleRelationTargetTemplateChangeException(
+            RelationTargetTemplateChangeException ex) {
+        log.warn("Relation target template change error: {}", ex.getMessage());
         return createErrorResponse(HttpStatus.BAD_REQUEST, ex.getMessage());
     }
 

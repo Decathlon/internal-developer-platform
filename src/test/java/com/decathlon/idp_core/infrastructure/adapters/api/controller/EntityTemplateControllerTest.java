@@ -653,7 +653,7 @@ class EntityTemplateControllerTest extends AbstractIntegrationTest {
                       "relations_definitions": [
                         {
                           "name": "owns",
-                          "target_template_identifier": "batch-job",
+                          "target_template_identifier": "microservice",
                           "required": false,
                           "to_many": false
                         },
@@ -695,7 +695,7 @@ class EntityTemplateControllerTest extends AbstractIntegrationTest {
                     .stream()
                     .collect(Collectors.toMap(RelationDefinition::name, r -> r));
 
-            assertThat(relationsMap.get("owns").targetTemplateIdentifier()).isEqualTo("batch-job");
+            assertThat(relationsMap.get("owns").targetTemplateIdentifier()).isEqualTo("microservice");
             assertThat(relationsMap.get("owns").required()).isFalse();
             assertThat(relationsMap.get("owns").toMany()).isFalse();
 
@@ -1009,6 +1009,25 @@ class EntityTemplateControllerTest extends AbstractIntegrationTest {
                     .andExpect(status().isBadRequest())
                     .andExpect(jsonPath("$.error").value("BAD_REQUEST"))
                     .andExpect(jsonPath("$.error_description").value("Cannot change type of property 'name' from STRING to NUMBER. Property types cannot be modified after creation. Please delete and recreate the property instead."));
+        }
+
+        /// Tests PUT endpoint when attempting to change targetTemplateIdentifier on an existing relation.
+        /// Verifies that RelationTargetTemplateChangeException is thrown and returns 400 Bad Request.
+        @Test
+        @WithMockUser()
+        @DisplayName("Should return 400 when changing existing relation targetTemplateIdentifier")
+        void putTemplate_400_target_template_identifier_change() throws Exception {
+            String identifier = "microservice";
+            mockMvc.perform(MockMvcRequestBuilders.put(ENTITY_TEMPLATE_PATH + "/" + identifier)
+                            .contentType(APPLICATION_JSON)
+                            .accept(APPLICATION_JSON)
+                            .with(csrf())
+                            .content(getJsonTestFileContent(
+                                    PostTemplateTests.ENTITY_TEMPLATE_JSON_TEST_PATH + "putTemplate_400_target_template_identifier_change.json")))
+                    .andExpect(status().isBadRequest())
+                    .andExpect(jsonPath("$.error").value("BAD_REQUEST"))
+                    .andExpect(jsonPath("$.error_description").value(
+                            containsString("Cannot change target template of relation 'dependencies' from 'service' to 'service-modified'")));
         }
 
     }
