@@ -20,7 +20,6 @@ import com.decathlon.idp_core.domain.model.entity.EntitySummary;
 /// - `findByTemplateIdentifier()` must support pagination for large entity sets
 /// - `findByIdentifierIn()` optimizes bulk entity lookups for relationship resolution
 /// - `findByRelationIdIn()` enables reverse relationship navigation
-/// - `existsByTemplateIdentifier()` determines if entities exist for a template, to support safe template modifications
 /// - `deletePropertiesByTemplateIdentifierAndPropertyName()` must remove all property instances matching the given names for entities of the specified template
 /// - `deleteRelationsByTemplateIdentifierAndRelationName()` must remove all relation instances matching the given names for entities of the specified template
 ///
@@ -39,8 +38,6 @@ public interface EntityRepositoryPort {
     List<EntitySummary> findByIdentifierIn(List<String> identifiers);
 
     List<EntitySummary> findByRelationIdIn(List<UUID> relationIds);
-
-    boolean existsByTemplateIdentifier(String templateIdentifier);
 
     void deletePropertiesByTemplateIdentifierAndPropertyName(String templateIdentifier, Collection<String> propertyNames);
 

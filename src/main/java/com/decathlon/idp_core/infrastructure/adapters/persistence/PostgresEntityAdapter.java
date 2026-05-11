@@ -56,11 +56,6 @@ public class PostgresEntityAdapter implements EntityRepositoryPort {
     }
 
     @Override
-    public boolean existsByTemplateIdentifier(String templateIdentifier) {
-        return jpaEntityRepository.existsByTemplateIdentifier(templateIdentifier);
-    }
-
-    @Override
     public void deletePropertiesByTemplateIdentifierAndPropertyName(String templateIdentifier, Collection<String> propertyNames) {
         jpaEntityRepository.deletePropertiesByTemplateIdentifierAndPropertyName(templateIdentifier, propertyNames);
     }

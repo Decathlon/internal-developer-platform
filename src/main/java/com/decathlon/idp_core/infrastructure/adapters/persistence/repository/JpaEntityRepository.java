@@ -29,8 +29,6 @@ public interface JpaEntityRepository extends JpaRepository<EntityJpaEntity, UUID
 
     Page<EntityJpaEntity> findByTemplateIdentifier(String templateIdentifier, Pageable pageable);
 
-    boolean existsByTemplateIdentifier(String templateIdentifier);
-
     @Modifying(clearAutomatically = true, flushAutomatically = true)
     @Query("""
             DELETE FROM PropertyJpaEntity p
