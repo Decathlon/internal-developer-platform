@@ -2,6 +2,7 @@ package com.decathlon.idp_core.domain.service.entity_template;
 
 import java.util.HashSet;
 import java.util.List;
+import java.util.Locale;
 import java.util.Objects;
 import java.util.Set;
 
@@ -38,7 +39,7 @@ public class RelationDefinitionValidationService {
         relations.stream()
                 .map(RelationDefinition::name)
                 .filter(Objects::nonNull)
-                .map(String::toLowerCase)
+                .map(name -> name.toLowerCase(Locale.ROOT))
                 .filter(name -> !names.add(name))
                 .findFirst()
                 .ifPresent(name -> {
@@ -53,12 +54,12 @@ public class RelationDefinitionValidationService {
     ///
     /// @param relations the list of relation definitions to validate
     /// @throws TargetTemplateNotFoundException if any referenced target template
-    ///                                         doesn't exist
+    /// doesn't exist or is null
     public void validateTargetTemplatesExist(List<RelationDefinition> relations) {
         for (RelationDefinition relation : relations) {
-            if (relation.targetTemplateIdentifier() != null &&
-                    !entityTemplateRepositoryPort.existsByIdentifier(relation.targetTemplateIdentifier())) {
-                throw new TargetTemplateNotFoundException(relation.targetTemplateIdentifier());
+            String targetIdentifier = relation.targetTemplateIdentifier();
+            if (targetIdentifier == null || !entityTemplateRepositoryPort.existsByIdentifier(targetIdentifier)) {
+                throw new TargetTemplateNotFoundException(targetIdentifier);
             }
         }
     }

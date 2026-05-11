@@ -2,9 +2,6 @@ package com.decathlon.idp_core.domain.exception.entity_template;
 
 import static com.decathlon.idp_core.domain.constant.ValidationMessages.TEMPLATE_IDENTIFIER_NOT_FOUND;
 
-import com.decathlon.idp_core.infrastructure.adapters.api.handler.ApiExceptionHandler;
-
-
 /// Exception thrown when a relation references a non-existent target template.
 ///
 /// This exception represents a business rule violation where relations must reference

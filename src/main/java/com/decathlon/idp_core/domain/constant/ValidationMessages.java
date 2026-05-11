@@ -22,7 +22,7 @@ public class ValidationMessages {
     public static final String PROPERTY_DESCRIPTION_MANDATORY = "Property description is mandatory and cannot be blank";
     public static final String PROPERTY_TYPE_MANDATORY = "Property type is mandatory";
     public static final String PROPERTY_VALUE_MANDATORY = "Property value is mandatory and cannot be blank";
-    public static final String PROPERTY_UNSAFE_TYPE_CONVERSION = "Cannot change type of property '%s' from %s to %s. Property types cannot be modified after creation. Please delete and recreate the property instead.";
+    public static final String PROPERTY_TYPE_CANNOT_CHANGE = "Cannot change type of property '%s' from %s to %s. Property types cannot be modified after creation. Please delete and recreate the property instead.";
 
     // Relation Definition validation messages
     public static final String RELATION_NAME_MANDATORY = "Relation name is mandatory and cannot be blank";

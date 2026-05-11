@@ -10,7 +10,7 @@ import java.util.List;
 import java.util.UUID;
 
 import com.decathlon.idp_core.domain.exception.entity_template.PropertyNameAlreadyExistsException;
-import com.decathlon.idp_core.domain.exception.entity_template.UnsafeTypeConversionException;
+import com.decathlon.idp_core.domain.exception.entity_template.PropertyTypeChangeException;
 import com.decathlon.idp_core.domain.exception.entity_template.PropertyDefinitionRulesConflictException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -1079,8 +1079,8 @@ class PropertyDefinitionValidationServiceTest {
                     new PropertyDefinition(UUID.randomUUID(), "age", "Age", PropertyType.STRING, true, null)
             );
 
-            UnsafeTypeConversionException ex = assertThrows(
-                    UnsafeTypeConversionException.class,
+            PropertyTypeChangeException ex = assertThrows(
+                    PropertyTypeChangeException.class,
                     () -> propertyDefinitionValidationService.validateTypeChanges(existing, updated)
             );
             assertTrue(ex.getMessage().contains("age"));
@@ -1098,8 +1098,8 @@ class PropertyDefinitionValidationServiceTest {
                     new PropertyDefinition(UUID.randomUUID(), "active", "Active", PropertyType.STRING, true, null)
             );
 
-            UnsafeTypeConversionException ex = assertThrows(
-                    UnsafeTypeConversionException.class,
+            PropertyTypeChangeException ex = assertThrows(
+                    PropertyTypeChangeException.class,
                     () -> propertyDefinitionValidationService.validateTypeChanges(existing, updated)
             );
             assertTrue(ex.getMessage().contains("active"));
@@ -1117,8 +1117,8 @@ class PropertyDefinitionValidationServiceTest {
                     new PropertyDefinition(UUID.randomUUID(), "code", "Code", PropertyType.NUMBER, true, null)
             );
 
-            UnsafeTypeConversionException ex = assertThrows(
-                    UnsafeTypeConversionException.class,
+            PropertyTypeChangeException ex = assertThrows(
+                    PropertyTypeChangeException.class,
                     () -> propertyDefinitionValidationService.validateTypeChanges(existing, updated)
             );
             assertTrue(ex.getMessage().contains("code"));
@@ -1136,8 +1136,8 @@ class PropertyDefinitionValidationServiceTest {
                     new PropertyDefinition(UUID.randomUUID(), "count", "Count", PropertyType.BOOLEAN, true, null)
             );
 
-            UnsafeTypeConversionException ex = assertThrows(
-                    UnsafeTypeConversionException.class,
+            PropertyTypeChangeException ex = assertThrows(
+                    PropertyTypeChangeException.class,
                     () -> propertyDefinitionValidationService.validateTypeChanges(existing, updated)
             );
             assertTrue(ex.getMessage().contains("count"));
@@ -1155,8 +1155,8 @@ class PropertyDefinitionValidationServiceTest {
                     new PropertyDefinition(UUID.randomUUID(), "active", "Active", PropertyType.NUMBER, true, null)
             );
 
-            UnsafeTypeConversionException ex = assertThrows(
-                    UnsafeTypeConversionException.class,
+            PropertyTypeChangeException ex = assertThrows(
+                    PropertyTypeChangeException.class,
                     () -> propertyDefinitionValidationService.validateTypeChanges(existing, updated)
             );
             assertTrue(ex.getMessage().contains("active"));
@@ -1204,8 +1204,8 @@ class PropertyDefinitionValidationServiceTest {
                     new PropertyDefinition(UUID.randomUUID(), "field2", "Field 2", PropertyType.BOOLEAN, true, null)
             );
 
-            UnsafeTypeConversionException ex = assertThrows(
-                    UnsafeTypeConversionException.class,
+            PropertyTypeChangeException ex = assertThrows(
+                    PropertyTypeChangeException.class,
                     () -> propertyDefinitionValidationService.validateTypeChanges(existing, updated)
             );
             assertTrue(ex.getMessage().contains("field1"));

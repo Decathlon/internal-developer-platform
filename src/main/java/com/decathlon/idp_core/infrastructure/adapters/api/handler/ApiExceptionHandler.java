@@ -6,6 +6,7 @@ import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 import com.decathlon.idp_core.domain.exception.entity_template.PropertyDefinitionRulesConflictException;
+import com.decathlon.idp_core.domain.exception.entity_template.PropertyTypeChangeException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
@@ -17,7 +18,6 @@ import com.decathlon.idp_core.domain.exception.EntityNotFoundException;
 import com.decathlon.idp_core.domain.exception.entity_template.PropertyNameAlreadyExistsException;
 import com.decathlon.idp_core.domain.exception.entity_template.RelationNameAlreadyExistsException;
 import com.decathlon.idp_core.domain.exception.entity_template.TargetTemplateNotFoundException;
-import com.decathlon.idp_core.domain.exception.entity_template.UnsafeTypeConversionException;
 import com.decathlon.idp_core.domain.exception.entity_template.EntityTemplateAlreadyExistsException;
 import com.decathlon.idp_core.domain.exception.entity_template.EntityTemplateIdentifierCannotChangeException;
 import com.decathlon.idp_core.domain.exception.entity_template.EntityTemplateNameAlreadyExistsException;
@@ -115,10 +115,10 @@ public class ApiExceptionHandler {
 
     /// Handles domain exception when property names are duplicated within a template.
     ///
-    /// **HTTP mapping:** Maps domain DuplicatePropertyNameException to HTTP 400
+    /// **HTTP mapping:** Maps domain PropertyNameAlreadyExistsException to HTTP 400
     /// status indicating validation error for duplicate property names.
     @ExceptionHandler(PropertyNameAlreadyExistsException.class)
-    public ResponseEntity<ErrorResponse> handleDuplicatePropertyNameException(
+    public ResponseEntity<ErrorResponse> handlePropertyNameAlreadyExistsException(
             PropertyNameAlreadyExistsException ex) {
         log.warn("Duplicate property name: {}", ex.getMessage());
         return createErrorResponse(HttpStatus.BAD_REQUEST, ex.getMessage());
@@ -126,10 +126,10 @@ public class ApiExceptionHandler {
 
     /// Handles domain exception when relation names are duplicated within a template.
     ///
-    /// **HTTP mapping:** Maps domain DuplicateRelationNameException to HTTP 400
+    /// **HTTP mapping:** Maps domain RelationNameAlreadyExistsException to HTTP 400
     /// status indicating validation error for duplicate relation names.
     @ExceptionHandler(RelationNameAlreadyExistsException.class)
-    public ResponseEntity<ErrorResponse> handleDuplicateRelationNameException(
+    public ResponseEntity<ErrorResponse> handleRelationNameAlreadyExistsException(
             RelationNameAlreadyExistsException ex) {
         log.warn("Duplicate relation name: {}", ex.getMessage());
         return createErrorResponse(HttpStatus.BAD_REQUEST, ex.getMessage());
@@ -146,14 +146,14 @@ public class ApiExceptionHandler {
         return createErrorResponse(HttpStatus.BAD_REQUEST, ex.getMessage());
     }
 
-    /// Handles domain exception when unsafe type conversion is attempted on existing entities.
+    /// Handles domain exception when type changes are attempted.
     ///
-    /// **HTTP mapping:** Maps domain UnsafeTypeConversionException to HTTP 400
-    /// status indicating validation error for unsafe type changes.
-    @ExceptionHandler(UnsafeTypeConversionException.class)
-    public ResponseEntity<ErrorResponse> handleUnsafeTypeConversionException(
-            UnsafeTypeConversionException ex) {
-        log.warn("Unsafe type conversion: {}", ex.getMessage());
+    /// **HTTP mapping:** Maps domain PropertyTypeChangeException to HTTP 400
+    /// status indicating validation error for type changes.
+    @ExceptionHandler(PropertyTypeChangeException.class)
+    public ResponseEntity<ErrorResponse> handleTypeChangeException(
+            PropertyTypeChangeException ex) {
+        log.warn("Type change error: {}", ex.getMessage());
         return createErrorResponse(HttpStatus.BAD_REQUEST, ex.getMessage());
     }
 

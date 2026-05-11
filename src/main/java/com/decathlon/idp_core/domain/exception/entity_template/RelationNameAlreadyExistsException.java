@@ -1,9 +1,8 @@
 package com.decathlon.idp_core.domain.exception.entity_template;
 
-import static com.decathlon.idp_core.domain.constant.ValidationMessages.RELATION_NAME_ALREADY_EXISTS;
-
 import com.decathlon.idp_core.domain.model.entity_template.EntityTemplate;
-import com.decathlon.idp_core.infrastructure.adapters.api.handler.ApiExceptionHandler;
+
+import static com.decathlon.idp_core.domain.constant.ValidationMessages.RELATION_NAME_ALREADY_EXISTS;
 
 /// Exception thrown when attempting to create or update an [EntityTemplate] with duplicate relation names.
 ///

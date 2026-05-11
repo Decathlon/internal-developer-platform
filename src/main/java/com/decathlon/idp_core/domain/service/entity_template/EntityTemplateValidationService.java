@@ -2,16 +2,16 @@ package com.decathlon.idp_core.domain.service.entity_template;
 
 import java.util.Objects;
 
-import com.decathlon.idp_core.domain.exception.entity_template.EntityTemplateIdentifierCannotChangeException;
-import com.decathlon.idp_core.domain.exception.entity_template.PropertyDefinitionRulesConflictException;
 import org.springframework.stereotype.Service;
 
-import com.decathlon.idp_core.domain.exception.entity_template.RelationNameAlreadyExistsException;
-import com.decathlon.idp_core.domain.exception.entity_template.PropertyNameAlreadyExistsException;
-import com.decathlon.idp_core.domain.exception.entity_template.TargetTemplateNotFoundException;
 import com.decathlon.idp_core.domain.exception.entity_template.EntityTemplateAlreadyExistsException;
+import com.decathlon.idp_core.domain.exception.entity_template.EntityTemplateIdentifierCannotChangeException;
 import com.decathlon.idp_core.domain.exception.entity_template.EntityTemplateNameAlreadyExistsException;
 import com.decathlon.idp_core.domain.exception.entity_template.EntityTemplateNotFoundException;
+import com.decathlon.idp_core.domain.exception.entity_template.PropertyDefinitionRulesConflictException;
+import com.decathlon.idp_core.domain.exception.entity_template.PropertyNameAlreadyExistsException;
+import com.decathlon.idp_core.domain.exception.entity_template.RelationNameAlreadyExistsException;
+import com.decathlon.idp_core.domain.exception.entity_template.TargetTemplateNotFoundException;
 import com.decathlon.idp_core.domain.model.entity_template.EntityTemplate;
 import com.decathlon.idp_core.domain.model.entity_template.PropertyDefinition;
 import com.decathlon.idp_core.domain.port.EntityTemplateRepositoryPort;

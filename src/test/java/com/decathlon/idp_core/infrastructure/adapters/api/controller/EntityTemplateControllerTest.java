@@ -543,7 +543,7 @@ class EntityTemplateControllerTest extends AbstractIntegrationTest {
         @Test
         void putTemplate_without_user_token_401() throws Exception {
             String identifier = "web-service";
-            mockMvc.perform(MockMvcRequestBuilders.put(ENTITY_TEMPLATE_PATH + identifier)
+            mockMvc.perform(MockMvcRequestBuilders.put(ENTITY_TEMPLATE_PATH + "/" + identifier)
                     .contentType(APPLICATION_JSON)
                     .accept(APPLICATION_JSON)
                     .with(csrf())
@@ -708,8 +708,8 @@ class EntityTemplateControllerTest extends AbstractIntegrationTest {
         @WithMockUser()
         @DisplayName("Should update template and return 201")
         void putTemplate_200() throws Exception {
-            String identifier = "/web-service";
-            mockMvc.perform(MockMvcRequestBuilders.put(ENTITY_TEMPLATE_PATH + identifier)
+            String identifier = "web-service";
+            mockMvc.perform(MockMvcRequestBuilders.put(ENTITY_TEMPLATE_PATH + "/" + identifier)
                     .contentType(APPLICATION_JSON)
                     .accept(APPLICATION_JSON)
                     .with(csrf())
@@ -732,8 +732,8 @@ class EntityTemplateControllerTest extends AbstractIntegrationTest {
         @WithMockUser()
         @DisplayName("Should update template without properties and return 200")
         void putTemplate_200_without_properties() throws Exception {
-            String identifier = "/web-service";
-            mockMvc.perform(MockMvcRequestBuilders.put(ENTITY_TEMPLATE_PATH + identifier)
+            String identifier = "web-service";
+            mockMvc.perform(MockMvcRequestBuilders.put(ENTITY_TEMPLATE_PATH + "/" + identifier)
                             .contentType(APPLICATION_JSON)
                             .accept(APPLICATION_JSON)
                             .with(csrf())
@@ -751,8 +751,8 @@ class EntityTemplateControllerTest extends AbstractIntegrationTest {
         @WithMockUser()
         @DisplayName("Should update template with empty properties array and return 200")
         void putTemplate_200_with_empty_properties() throws Exception {
-            String identifier = "/web-service";
-            mockMvc.perform(MockMvcRequestBuilders.put(ENTITY_TEMPLATE_PATH + identifier)
+            String identifier = "web-service";
+            mockMvc.perform(MockMvcRequestBuilders.put(ENTITY_TEMPLATE_PATH + "/" + identifier)
                             .contentType(APPLICATION_JSON)
                             .accept(APPLICATION_JSON)
                             .with(csrf())
@@ -764,8 +764,8 @@ class EntityTemplateControllerTest extends AbstractIntegrationTest {
         @Test
         @WithMockUser
         void putTemplate_404_withUnknownIdentifier() throws Exception {
-            String identifier = "/unknown-identifier";
-            mockMvc.perform(MockMvcRequestBuilders.put(ENTITY_TEMPLATE_PATH + identifier)
+            String identifier = "unknown-identifier";
+            mockMvc.perform(MockMvcRequestBuilders.put(ENTITY_TEMPLATE_PATH + "/" + identifier)
                     .contentType(APPLICATION_JSON)
                     .accept(APPLICATION_JSON)
                     .with(csrf())
@@ -779,8 +779,8 @@ class EntityTemplateControllerTest extends AbstractIntegrationTest {
         @Test
         @WithMockUser()
         void putTemplate_400_propertyNameIsMissing() throws Exception {
-            String identifier = "/web-service";
-            mockMvc.perform(MockMvcRequestBuilders.put(ENTITY_TEMPLATE_PATH + identifier)
+            String identifier = "web-service";
+            mockMvc.perform(MockMvcRequestBuilders.put(ENTITY_TEMPLATE_PATH + "/" + identifier)
                     .contentType(APPLICATION_JSON)
                     .accept(APPLICATION_JSON)
                     .with(csrf())
@@ -794,8 +794,8 @@ class EntityTemplateControllerTest extends AbstractIntegrationTest {
         @Test
         @WithMockUser()
         void putTemplate_400_propertyNameIsBlank() throws Exception {
-            String identifier = "/web-service";
-            mockMvc.perform(MockMvcRequestBuilders.put(ENTITY_TEMPLATE_PATH + identifier)
+            String identifier = "web-service";
+            mockMvc.perform(MockMvcRequestBuilders.put(ENTITY_TEMPLATE_PATH + "/" + identifier)
                     .contentType(APPLICATION_JSON)
                     .accept(APPLICATION_JSON)
                     .with(csrf())
@@ -809,8 +809,8 @@ class EntityTemplateControllerTest extends AbstractIntegrationTest {
         @Test
         @WithMockUser()
         void putTemplate_400_propertyDescriptionIsBlank() throws Exception {
-            String identifier = "/web-service";
-            mockMvc.perform(MockMvcRequestBuilders.put(ENTITY_TEMPLATE_PATH + identifier)
+            String identifier = "web-service";
+            mockMvc.perform(MockMvcRequestBuilders.put(ENTITY_TEMPLATE_PATH + "/" + identifier)
                     .contentType(APPLICATION_JSON)
                     .accept(APPLICATION_JSON)
                     .with(csrf())
@@ -824,8 +824,8 @@ class EntityTemplateControllerTest extends AbstractIntegrationTest {
         @Test
         @WithMockUser()
         void putTemplate_400_propertyDescriptionIsMissing() throws Exception {
-            String identifier = "/web-service";
-            mockMvc.perform(MockMvcRequestBuilders.put(ENTITY_TEMPLATE_PATH + identifier)
+            String identifier = "web-service";
+            mockMvc.perform(MockMvcRequestBuilders.put(ENTITY_TEMPLATE_PATH + "/" + identifier)
                     .contentType(APPLICATION_JSON)
                     .accept(APPLICATION_JSON)
                     .with(csrf())
@@ -839,8 +839,8 @@ class EntityTemplateControllerTest extends AbstractIntegrationTest {
         @Test
         @WithMockUser()
         void putTemplate_400_propertyTypeIsMissing() throws Exception {
-            String identifier = "/web-service";
-            mockMvc.perform(MockMvcRequestBuilders.put(ENTITY_TEMPLATE_PATH + identifier)
+            String identifier = "web-service";
+            mockMvc.perform(MockMvcRequestBuilders.put(ENTITY_TEMPLATE_PATH + "/" + identifier)
                     .contentType(APPLICATION_JSON)
                     .accept(APPLICATION_JSON)
                     .with(csrf())
@@ -854,10 +854,10 @@ class EntityTemplateControllerTest extends AbstractIntegrationTest {
         @Test
         @WithMockUser()
         void putTemplate_409_whenIdentifierAlreadyExists() throws Exception {
-            String identifier = "/web-service";
+            String identifier = "web-service";
             Optional<EntityTemplate> entityTemplateUpdated = entityTemplateRepository.findByIdentifier("microservice");
             assertThat(entityTemplateUpdated).isPresent();
-            mockMvc.perform(MockMvcRequestBuilders.put(ENTITY_TEMPLATE_PATH + identifier)
+            mockMvc.perform(MockMvcRequestBuilders.put(ENTITY_TEMPLATE_PATH + "/" + identifier)
                     .contentType(APPLICATION_JSON)
                     .accept(APPLICATION_JSON)
                     .with(csrf())
@@ -877,7 +877,8 @@ class EntityTemplateControllerTest extends AbstractIntegrationTest {
         @WithMockUser()
         @DisplayName("Returns 400 when name is missing")
         void putTemplate_400_name_missing() throws Exception {
-            mockMvc.perform(MockMvcRequestBuilders.put("/api/v1/entity-templates/web-service")
+            String identifier = "web-service";
+            mockMvc.perform(MockMvcRequestBuilders.put(ENTITY_TEMPLATE_PATH + "/" + identifier)
                     .contentType(APPLICATION_JSON)
                     .accept(APPLICATION_JSON)
                     .with(csrf())
@@ -896,7 +897,8 @@ class EntityTemplateControllerTest extends AbstractIntegrationTest {
         @WithMockUser()
         @DisplayName("Returns 400 when name is blank")
         void putTemplate_400_name_blank() throws Exception {
-            mockMvc.perform(MockMvcRequestBuilders.put("/api/v1/entity-templates/web-service")
+            String identifier = "web-service";
+            mockMvc.perform(MockMvcRequestBuilders.put(ENTITY_TEMPLATE_PATH + "/" + identifier)
                     .contentType(APPLICATION_JSON)
                     .accept(APPLICATION_JSON)
                     .with(csrf())
@@ -915,7 +917,8 @@ class EntityTemplateControllerTest extends AbstractIntegrationTest {
         @WithMockUser()
         @DisplayName("Returns 409 when name already exists")
         void putTemplate_409_name_already_exists() throws Exception {
-            mockMvc.perform(MockMvcRequestBuilders.put("/api/v1/entity-templates/web-service")
+            String identifier = "web-service";
+            mockMvc.perform(MockMvcRequestBuilders.put(ENTITY_TEMPLATE_PATH + "/" + identifier)
                     .contentType(APPLICATION_JSON)
                     .accept(APPLICATION_JSON)
                     .with(csrf())
@@ -933,7 +936,8 @@ class EntityTemplateControllerTest extends AbstractIntegrationTest {
         @WithMockUser()
         @DisplayName("Returns 400 when name is too long")
         void putTemplate_400_name_too_long() throws Exception {
-            mockMvc.perform(MockMvcRequestBuilders.put("/api/v1/entity-templates/web-service")
+            String identifier = "web-service";
+            mockMvc.perform(MockMvcRequestBuilders.put(ENTITY_TEMPLATE_PATH + "/" + identifier)
                     .contentType(APPLICATION_JSON)
                     .accept(APPLICATION_JSON)
                     .with(csrf())
@@ -952,7 +956,8 @@ class EntityTemplateControllerTest extends AbstractIntegrationTest {
         @WithMockUser()
         @DisplayName("Returns 400 when name does not respect regex pattern")
         void putTemplate_400_name_invalid_pattern() throws Exception {
-            mockMvc.perform(MockMvcRequestBuilders.put("/api/v1/entity-templates/web-service")
+            String identifier = "web-service";
+            mockMvc.perform(MockMvcRequestBuilders.put(ENTITY_TEMPLATE_PATH + "/" + identifier)
                     .contentType(APPLICATION_JSON)
                     .accept(APPLICATION_JSON)
                     .with(csrf())
@@ -971,8 +976,8 @@ class EntityTemplateControllerTest extends AbstractIntegrationTest {
         @WithMockUser()
         @DisplayName("Should reject PUT request with identifier in body and return 400")
         void putTemplate_400_identifier_in_body() throws Exception {
-            String identifier = "/web-service";
-            mockMvc.perform(MockMvcRequestBuilders.put(ENTITY_TEMPLATE_PATH + identifier)
+            String identifier = "web-service";
+            mockMvc.perform(MockMvcRequestBuilders.put(ENTITY_TEMPLATE_PATH + "/" + identifier)
                     .contentType(APPLICATION_JSON)
                     .accept(APPLICATION_JSON)
                     .with(csrf())
@@ -982,25 +987,25 @@ class EntityTemplateControllerTest extends AbstractIntegrationTest {
         }
 
         /// Tests PUT endpoint when attempting to change property type on existing property.
-        /// Verifies that UnsafeTypeConversionException is thrown and returns 400 Bad Request.
+        /// Verifies that PropertyTypeChangeException is thrown and returns 400 Bad Request.
         @Test
         @WithMockUser()
         @DisplayName("Should return 400 when changing existing property type")
-        void putTemplate_400_unsafe_type_conversion() throws Exception {
-            String identifier = "/web-service";
-            mockMvc.perform(MockMvcRequestBuilders.put(ENTITY_TEMPLATE_PATH + identifier)
+        void putTemplate_400_type_change() throws Exception {
+            String identifier = "web-service";
+            mockMvc.perform(MockMvcRequestBuilders.put(ENTITY_TEMPLATE_PATH + "/" + identifier)
                             .contentType(APPLICATION_JSON)
                             .accept(APPLICATION_JSON)
                             .with(csrf())
                             .content(getJsonTestFileContent(
                                     PostTemplateTests.ENTITY_TEMPLATE_JSON_TEST_PATH + "putEntityTemplate_200.json")))
                     .andExpect(status().isOk());
-            mockMvc.perform(MockMvcRequestBuilders.put(ENTITY_TEMPLATE_PATH + identifier)
+            mockMvc.perform(MockMvcRequestBuilders.put(ENTITY_TEMPLATE_PATH + "/" + identifier)
                             .contentType(APPLICATION_JSON)
                             .accept(APPLICATION_JSON)
                             .with(csrf())
                             .content(getJsonTestFileContent(
-                                    PostTemplateTests.ENTITY_TEMPLATE_JSON_TEST_PATH + "putTemplate_400_unsafe_type_conversion.json")))
+                                    PostTemplateTests.ENTITY_TEMPLATE_JSON_TEST_PATH + "putTemplate_400_type_change.json")))
                     .andExpect(status().isBadRequest())
                     .andExpect(jsonPath("$.error").value("BAD_REQUEST"))
                     .andExpect(jsonPath("$.error_description").value("Cannot change type of property 'name' from STRING to NUMBER. Property types cannot be modified after creation. Please delete and recreate the property instead."));

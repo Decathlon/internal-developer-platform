@@ -3,6 +3,7 @@ package com.decathlon.idp_core.domain.service.entity_template;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.Mockito.when;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -17,6 +18,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import com.decathlon.idp_core.domain.exception.entity_template.RelationNameAlreadyExistsException;
+import com.decathlon.idp_core.domain.exception.entity_template.TargetTemplateNotFoundException;
 import com.decathlon.idp_core.domain.model.entity_template.RelationDefinition;
 import com.decathlon.idp_core.domain.port.EntityTemplateRepositoryPort;
 
@@ -128,6 +130,82 @@ class RelationDefinitionValidationServiceTest {
                     () -> relationDefinitionValidationService.validateRelationNamesUniqueness(relations)
             );
             assertTrue(ex.getMessage().contains("items"));
+        }
+    }
+
+    @Nested
+    @DisplayName("validateTargetTemplatesExist")
+    class ValidateTargetTemplatesExistTests {
+
+        @Test
+        @DisplayName("Happy path: all target templates exist")
+        void testAllTargetTemplatesExist() {
+            List<RelationDefinition> relations = List.of(
+                    new RelationDefinition(UUID.randomUUID(), "parent", "parent-template", true, false),
+                    new RelationDefinition(UUID.randomUUID(), "children", "child-template", false, true),
+                    new RelationDefinition(UUID.randomUUID(), "owner", "owner-template", true, false)
+            );
+
+            when(entityTemplateRepositoryPort.existsByIdentifier("parent-template")).thenReturn(true);
+            when(entityTemplateRepositoryPort.existsByIdentifier("child-template")).thenReturn(true);
+            when(entityTemplateRepositoryPort.existsByIdentifier("owner-template")).thenReturn(true);
+
+            assertDoesNotThrow(() -> relationDefinitionValidationService.validateTargetTemplatesExist(relations));
+        }
+
+        @Test
+        @DisplayName("Happy path: empty relation list")
+        void testEmptyRelationList() {
+            assertDoesNotThrow(() -> relationDefinitionValidationService.validateTargetTemplatesExist(new ArrayList<>()));
+        }
+
+        @Test
+        @DisplayName("Error: single relation with non-existent target")
+        void testSingleRelationWithNonExistentTarget() {
+            List<RelationDefinition> relations = List.of(
+                    new RelationDefinition(UUID.randomUUID(), "owner", "non-existent-template", true, false)
+            );
+
+            when(entityTemplateRepositoryPort.existsByIdentifier("non-existent-template")).thenReturn(false);
+
+            TargetTemplateNotFoundException ex = assertThrows(
+                    TargetTemplateNotFoundException.class,
+                    () -> relationDefinitionValidationService.validateTargetTemplatesExist(relations)
+            );
+            assertTrue(ex.getMessage().contains("non-existent-template"));
+        }
+
+        @Test
+        @DisplayName("Error: multiple relations with multiple targets missing")
+        void testMultipleTargetsNotFound() {
+            List<RelationDefinition> relations = List.of(
+                    new RelationDefinition(UUID.randomUUID(), "parent", "missing-parent-template", true, false),
+                    new RelationDefinition(UUID.randomUUID(), "children", "child-template", false, true),
+                    new RelationDefinition(UUID.randomUUID(), "owner", "missing-owner-template", true, false)
+            );
+
+            when(entityTemplateRepositoryPort.existsByIdentifier("missing-parent-template")).thenReturn(false);
+
+            TargetTemplateNotFoundException ex = assertThrows(
+                    TargetTemplateNotFoundException.class,
+                    () -> relationDefinitionValidationService.validateTargetTemplatesExist(relations)
+            );
+            // Should fail on first missing target
+            assertTrue(ex.getMessage().contains("missing-parent-template"));
+        }
+
+        @Test
+        @DisplayName("Error: relation with null target identifier")
+        void testRelationWithNullTargetIdentifier() {
+            List<RelationDefinition> relations = List.of(
+                    new RelationDefinition(UUID.randomUUID(), "optional-parent", null, false, false)
+            );
+
+            TargetTemplateNotFoundException ex = assertThrows(
+                    TargetTemplateNotFoundException.class,
+                    () -> relationDefinitionValidationService.validateTargetTemplatesExist(relations)
+            );
+            assertTrue(ex.getMessage().contains("null") || ex.getMessage().contains("target"));
         }
     }
 }
