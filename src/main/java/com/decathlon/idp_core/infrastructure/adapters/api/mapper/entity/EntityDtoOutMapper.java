@@ -9,7 +9,6 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.stereotype.Component;
 
@@ -21,11 +20,13 @@ import com.decathlon.idp_core.domain.model.entity.RelationAsTargetSummary;
 import com.decathlon.idp_core.domain.model.entity_template.EntityTemplate;
 import com.decathlon.idp_core.domain.model.entity_template.PropertyDefinition;
 import com.decathlon.idp_core.domain.model.enums.PropertyType;
-import com.decathlon.idp_core.domain.service.EntityTemplateService;
 import com.decathlon.idp_core.domain.service.RelationService;
 import com.decathlon.idp_core.domain.service.entity.EntityService;
+import com.decathlon.idp_core.domain.service.entity_template.EntityTemplateService;
 import com.decathlon.idp_core.infrastructure.adapters.api.dto.out.entity.EntityDtoOut;
 import com.decathlon.idp_core.infrastructure.adapters.api.dto.out.entity.EntitySummaryDto;
+
+import lombok.RequiredArgsConstructor;
 
 /// Adapter mapper for converting domain [Entity] objects to API DTOs.
 ///
@@ -158,6 +159,7 @@ public class EntityDtoOutMapper {
                 .collect(Collectors.toMap(PropertyDefinition::name, Function.identity()));
 
         return entity.properties().stream()
+                .filter(prop -> prop.value() != null)
                 .collect(Collectors.toMap(
                         Property::name,
                         prop -> {

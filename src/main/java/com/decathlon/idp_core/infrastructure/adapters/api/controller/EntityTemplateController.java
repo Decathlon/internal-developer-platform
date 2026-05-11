@@ -44,14 +44,14 @@ import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.decathlon.idp_core.domain.model.entity_template.EntityTemplate;
-import com.decathlon.idp_core.domain.service.EntityTemplateService;
+import com.decathlon.idp_core.domain.service.entity_template.EntityTemplateService;
 import com.decathlon.idp_core.infrastructure.adapters.api.configuration.SwaggerConfiguration.TemplatePageResponse;
 import com.decathlon.idp_core.infrastructure.adapters.api.dto.in.EntityTemplateCreateDtoIn;
 import com.decathlon.idp_core.infrastructure.adapters.api.dto.in.EntityTemplateUpdateDtoIn;
-import com.decathlon.idp_core.infrastructure.adapters.api.dto.out.entitytemplate.EntityTemplateDtoOut;
+import com.decathlon.idp_core.infrastructure.adapters.api.dto.out.entity_template.EntityTemplateDtoOut;
 import com.decathlon.idp_core.infrastructure.adapters.api.handler.ApiExceptionHandler;
 import com.decathlon.idp_core.infrastructure.adapters.api.handler.ApiExceptionHandler.ErrorResponse;
-import com.decathlon.idp_core.infrastructure.adapters.api.mapper.entitytemplate.EntityTemplateMapper;
+import com.decathlon.idp_core.infrastructure.adapters.api.mapper.entity_template.EntityTemplateMapper;
 
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -138,8 +138,8 @@ public class EntityTemplateController {
                         @Content(schema = @Schema(implementation = ApiExceptionHandler.ErrorResponse.class)) })
         @PostMapping
         @ResponseStatus(CREATED)
-        public EntityTemplateDtoOut createTemplate(@Valid @RequestBody EntityTemplateCreateDtoIn templateDto) {
-                EntityTemplate entityTemplate = entityTemplateService.createEntityTemplate(templateMapper.fromDtoToEntityTemplate(templateDto));
+        public EntityTemplateDtoOut createTemplate(@Valid @RequestBody EntityTemplateCreateDtoIn entityTemplateCreateDtoIn) {
+                EntityTemplate entityTemplate = entityTemplateService.createEntityTemplate(templateMapper.fromDtoToEntityTemplate(entityTemplateCreateDtoIn));
                 return templateMapper.fromEntityTemplatetoDto(entityTemplate);
         }
 
@@ -155,8 +155,8 @@ public class EntityTemplateController {
         @PutMapping("/{identifier}")
         public EntityTemplateDtoOut updateTemplate(
                         @PathVariable(name = "identifier") String identifier,
-                        @RequestBody @Valid EntityTemplateUpdateDtoIn updatedTemplateDto) {
-                EntityTemplate entityTemplate = entityTemplateService.putEntityTemplate(identifier, templateMapper.fromPutDtoToEntityTemplate(identifier, updatedTemplateDto));
+                        @RequestBody @Valid EntityTemplateUpdateDtoIn entityTemplateUpdateDtoIn) {
+                EntityTemplate entityTemplate = entityTemplateService.updateEntityTemplate(identifier, templateMapper.fromPutDtoToEntityTemplate(identifier, entityTemplateUpdateDtoIn));
                 return templateMapper.fromEntityTemplatetoDto(entityTemplate);
         }
 

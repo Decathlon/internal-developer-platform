@@ -8,16 +8,14 @@ import static com.decathlon.idp_core.domain.constant.ValidationMessages.minMaxCo
 import static com.decathlon.idp_core.domain.constant.ValidationMessages.ruleNotAllowed;
 import static com.decathlon.idp_core.domain.constant.ValidationMessages.rulesAreIncompatible;
 
-
-import java.util.regex.Pattern;
-import java.util.regex.PatternSyntaxException;
-
 import org.springframework.stereotype.Service;
 
-import com.decathlon.idp_core.domain.exception.property.PropertyDefinitionRulesConflictException;
+import com.decathlon.idp_core.domain.exception.entity_template.PropertyDefinitionRulesConflictException;
 import com.decathlon.idp_core.domain.model.entity_template.PropertyDefinition;
 import com.decathlon.idp_core.domain.model.entity_template.PropertyRules;
 import com.decathlon.idp_core.domain.model.enums.PropertyType;
+
+import lombok.RequiredArgsConstructor;
 
 /// Domain service for validating property rule compatibility with property types.
 ///
@@ -26,8 +24,16 @@ import com.decathlon.idp_core.domain.model.enums.PropertyType;
 /// - NUMBER: Allows max_value, min_value. Rejects string and format rules.
 /// - BOOLEAN: Rejects all rules; rules field must be null or empty.
 ///
+/// **Key responsibilities:**
+/// - Type-to-rule compatibility validation
+/// - Constraint ordering validation (min ≤ max)
+/// - Regex pattern validation (delegated to [PropertyRegexValidationService])
+///
 @Service
+@RequiredArgsConstructor
 public class PropertyDefinitionValidationService {
+
+    private final PropertyRegexValidationService propertyRegexValidationService;
 
     // Rule name constants
     public static final String REGEX = "regex";
@@ -89,7 +95,7 @@ public class PropertyDefinitionValidationService {
 
         // Validate regex pattern is valid
         if (rules.regex() != null && !rules.regex().isBlank()) {
-            validateRegexPattern(propertyName, rules.regex());
+            propertyRegexValidationService.validateRegexPattern(propertyName, rules.regex());
         }
     }
 
@@ -273,23 +279,6 @@ public class PropertyDefinitionValidationService {
                     propertyName,
                     PropertyType.BOOLEAN,
                     PROPERTY_RULES_BOOLEAN_NOT_ALLOWED
-            );
-        }
-    }
-
-    /// Validates that the provided regex pattern is syntactically valid.
-    ///
-    /// @param propertyName name of the property (for error reporting)
-    /// @param regexPattern the regex pattern to validate
-    /// @throws PropertyDefinitionRulesConflictException if the pattern is syntactically invalid
-    private void validateRegexPattern(String propertyName, String regexPattern) {
-        try {
-            Pattern.compile(regexPattern);
-        } catch (PatternSyntaxException e) {
-            throw new PropertyDefinitionRulesConflictException(
-                    propertyName,
-                    PropertyType.STRING,
-                    "Invalid regex pattern: " + e.getMessage()
             );
         }
     }

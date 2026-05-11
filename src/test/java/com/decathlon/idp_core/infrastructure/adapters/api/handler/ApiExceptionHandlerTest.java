@@ -27,11 +27,12 @@ import org.springframework.web.bind.MethodArgumentNotValidException;
 
 import com.decathlon.idp_core.domain.exception.entity.EntityAlreadyExistsException;
 import com.decathlon.idp_core.domain.exception.entity.EntityNotFoundException;
+import com.decathlon.idp_core.domain.exception.entity.EntityValidationException;
 import com.decathlon.idp_core.domain.exception.entity_template.EntityTemplateAlreadyExistsException;
 import com.decathlon.idp_core.domain.exception.entity_template.EntityTemplateNameAlreadyExistsException;
 import com.decathlon.idp_core.domain.exception.entity_template.EntityTemplateNotFoundException;
-import com.decathlon.idp_core.domain.exception.entity.EntityValidationException;
 import com.decathlon.idp_core.infrastructure.adapters.api.handler.ApiExceptionHandler.ErrorResponse;
+
 import jakarta.validation.ConstraintViolation;
 import jakarta.validation.ConstraintViolationException;
 
@@ -343,7 +344,7 @@ class ApiExceptionHandlerTest {
                     ),
                     Arguments.of(
                             "Cannot deserialize value of type `com.example.SomeType`: some other error",
-                            "Cannot deserialize request body property"
+                            "Invalid type: expected SomeType"
                     ),
                     Arguments.of(
                             "Something completely unexpected happened",
@@ -352,6 +353,10 @@ class ApiExceptionHandlerTest {
                     Arguments.of(
                             "Cannot deserialize value of type `PropertyType`: not one of the values accepted for Enum class",
                             "Invalid value for property 'type'"
+                    ),
+                    Arguments.of(
+                            "Cannot deserialize value of type `UnknownEnum` from String \"VALUE\": not one of the values accepted for Enum class",
+                            "Invalid enum value in request body"
                     )
             );
         }

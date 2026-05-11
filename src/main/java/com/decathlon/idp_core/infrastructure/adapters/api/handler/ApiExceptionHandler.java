@@ -1,5 +1,7 @@
 package com.decathlon.idp_core.infrastructure.adapters.api.handler;
 
+import static org.springframework.http.HttpStatus.NOT_FOUND;
+
 import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -11,14 +13,16 @@ import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ExceptionHandler;
-import org.springframework.web.method.annotation.HandlerMethodValidationException;
+import org.springframework.web.servlet.NoHandlerFoundException;
 
-import com.decathlon.idp_core.domain.exception.entity.EntityNotFoundException;
 import com.decathlon.idp_core.domain.exception.entity.EntityAlreadyExistsException;
+import com.decathlon.idp_core.domain.exception.entity.EntityNotFoundException;
+import com.decathlon.idp_core.domain.exception.entity.EntityValidationException;
 import com.decathlon.idp_core.domain.exception.entity_template.EntityTemplateAlreadyExistsException;
+import com.decathlon.idp_core.domain.exception.entity_template.EntityTemplateIdentifierCannotChangeException;
 import com.decathlon.idp_core.domain.exception.entity_template.EntityTemplateNameAlreadyExistsException;
 import com.decathlon.idp_core.domain.exception.entity_template.EntityTemplateNotFoundException;
-import com.decathlon.idp_core.domain.exception.entity.EntityValidationException;
+import com.decathlon.idp_core.domain.exception.entity_template.PropertyDefinitionRulesConflictException;
 
 import jakarta.validation.ConstraintViolation;
 import jakarta.validation.ConstraintViolationException;
@@ -26,8 +30,6 @@ import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-
-import static org.springframework.http.HttpStatus.NOT_FOUND;
 
 /// Global exception handler providing centralized error handling for all API endpoints.
 ///
@@ -85,38 +87,28 @@ public class ApiExceptionHandler {
         return ResponseEntity.status(HttpStatus.CONFLICT).body(errorResponse);
     }
 
-    /// Handles validation exceptions from Spring MVC handler method parameters.
+    /// Handles domain exception when attempting to change an entity template identifier.
     ///
-    /// **Error aggregation:** Combines multiple validation error messages into a single
-    /// user-friendly response with HTTP 400 status for client correction.
-    @ExceptionHandler(HandlerMethodValidationException.class)
-    public ResponseEntity<ErrorResponse> handleHandlerMethodValidationException(HandlerMethodValidationException ex) {
-        log.warn("Handler method validation error: {}", ex.getMessage());
-        String errorMessage = ex.getAllErrors().stream()
-                .map(org.springframework.context.MessageSourceResolvable::getDefaultMessage)
-                .collect(Collectors.joining(", "));
-        return createErrorResponse(HttpStatus.BAD_REQUEST, errorMessage);
+    /// **HTTP mapping:** Maps domain EntityTemplateIdentifierCannotChangeException to HTTP 400
+    /// status indicating validation error for immutable identifier field.
+    @ExceptionHandler(EntityTemplateIdentifierCannotChangeException.class)
+    public ResponseEntity<ErrorResponse> handleEntityTemplateIdentifierCannotChangeException(
+            EntityTemplateIdentifierCannotChangeException ex) {
+        log.warn("Entity template identifier cannot be changed: {}", ex.getMessage());
+        ErrorResponse errorResponse = new ErrorResponse(HttpStatus.BAD_REQUEST.name(), ex.getMessage());
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(errorResponse);
     }
 
-    /// Handles domain exception when entities already exist.
+    /// Handles domain exception for wrong entity template property rules.
     ///
-    /// **HTTP mapping:** Maps domain EntityAlreadyExistsException to HTTP 409
-    /// status indicating business rule conflict for duplicate entities.
-    @ExceptionHandler(EntityAlreadyExistsException.class)
-    public ResponseEntity<ErrorResponse> handleEntityAlreadyExistsException(EntityAlreadyExistsException ex) {
-        log.warn("Entity already exists: {}", ex.getMessage());
-        ErrorResponse errorResponse = new ErrorResponse(HttpStatus.CONFLICT.name(), ex.getMessage());
-        return ResponseEntity.status(HttpStatus.CONFLICT).body(errorResponse);
-    }
-
-    /// Handles domain exception when entity validation fails.
-    ///
-    /// **HTTP mapping:** Maps domain EntityValidationException to HTTP 400 status with aggregated
-    /// validation error messages for client correction.
-    @ExceptionHandler(EntityValidationException.class)
-    public ResponseEntity<ErrorResponse> handleEntityValidationException(EntityValidationException ex) {
-        log.warn("Entity validation failed: {}", ex.getMessage());
-        return createErrorResponse(HttpStatus.BAD_REQUEST, ex.getMessage());
+    /// **HTTP mapping:** Maps domain PropertyDefinitionRulesConflictException to HTTP 400
+    /// status indicating validation error for wrong property rules.
+    @ExceptionHandler(PropertyDefinitionRulesConflictException.class)
+    public ResponseEntity<ErrorResponse> handleWrongPropertyRulesException(
+            PropertyDefinitionRulesConflictException ex) {
+        log.warn("Wrong Entity template property rules: {}", ex.getMessage());
+        ErrorResponse errorResponse = new ErrorResponse(HttpStatus.BAD_REQUEST.name(), ex.getMessage());
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(errorResponse);
     }
 
     /// Handles Bean Validation constraint violations from domain model validation.
@@ -170,6 +162,33 @@ public class ApiExceptionHandler {
         ErrorResponse errorResponse = new ErrorResponse(NOT_FOUND.name(), ex.getMessage());
         return ResponseEntity.status(NOT_FOUND).body(errorResponse);
     }
+
+    /// Handles domain exception when entities already exist.
+    ///
+    /// **HTTP mapping:** Maps domain EntityAlreadyExistsException to HTTP 409
+    /// status indicating business rule conflict for duplicate entities.
+    @ExceptionHandler(EntityAlreadyExistsException.class)
+    public ResponseEntity<ErrorResponse> handleEntityAlreadyExistsException(EntityAlreadyExistsException ex) {
+        log.warn("Entity already exists: {}", ex.getMessage());
+        ErrorResponse errorResponse = new ErrorResponse(HttpStatus.CONFLICT.name(), ex.getMessage());
+        return ResponseEntity.status(HttpStatus.CONFLICT).body(errorResponse);
+    }
+
+    /// Handles domain exception when entity validation fails.
+    ///
+    /// **HTTP mapping:** Maps domain EntityValidationException to HTTP 400 status with aggregated
+    /// validation error messages for client correction.
+    @ExceptionHandler(EntityValidationException.class)
+    public ResponseEntity<ErrorResponse> handleEntityValidationException(EntityValidationException ex) {
+        log.warn("Entity validation failed: {}", ex.getMessage());
+        return createErrorResponse(HttpStatus.BAD_REQUEST, ex.getMessage());
+    }
+
+    @ExceptionHandler(NoHandlerFoundException.class)
+    public ResponseEntity<ErrorResponse> handleNotFound(NoHandlerFoundException e) {
+        return createErrorResponse(NOT_FOUND, "Resource not found: " + e.getRequestURL());
+    }
+
     private String parseHttpMessageNotReadableError(String originalMessage) {
         if (originalMessage == null) {
             return "Invalid request body format";
@@ -190,12 +209,43 @@ public class ApiExceptionHandler {
         if (originalMessage.contains("not one of the values accepted for Enum class")) {
             return parseEnumDeserializationError(originalMessage);
         }
+        return parseTypeDeserializationError(originalMessage);
+    }
+
+    private String parseTypeDeserializationError(String originalMessage) {
+        String targetType = extractTargetType(originalMessage);
+        String invalidValue = extractInvalidValueFromString(originalMessage);
+
+        if (!targetType.isEmpty() && !invalidValue.isEmpty()) {
+            return "Invalid value '" + invalidValue + "' for property, expected " + targetType;
+        } else if (!targetType.isEmpty()) {
+            return "Invalid type: expected " + targetType;
+        }
         return "Cannot deserialize request body property";
+    }
+
+    private String extractTargetType(String message) {
+        Pattern typePattern = Pattern.compile("Cannot deserialize value of type `([^`]+)`");
+        Matcher matcher = typePattern.matcher(message);
+        if (matcher.find()) {
+            String fullType = matcher.group(1);
+            return fullType.substring(fullType.lastIndexOf('.') + 1);
+        }
+        return "";
+    }
+
+    private String extractInvalidValueFromString(String message) {
+        Pattern valuePattern = Pattern.compile("from String \"([^\"]+)\"");
+        Matcher matcher = valuePattern.matcher(message);
+        if (matcher.find()) {
+            return matcher.group(1);
+        }
+        return "";
     }
 
     private String parseEnumDeserializationError(String originalMessage) {
         String enumTypeName = getPropertyNameFromEnumType(originalMessage);
-        String invalidValue = extractInvalidValue(originalMessage);
+        String invalidValue = extractInvalidValueFromString(originalMessage);
 
         if (!enumTypeName.isEmpty() && !invalidValue.isEmpty()) {
             return "Invalid value '" + invalidValue + "' for property '" + enumTypeName + "'";
@@ -216,15 +266,6 @@ public class ApiExceptionHandler {
         if (matcher.find()) {
             String enumType = matcher.group(1);
             return ENUM_TYPE_TO_PROPERTY.getOrDefault(enumType, "");
-        }
-        return "";
-    }
-
-    private String extractInvalidValue(String message) {
-        int valueStart = message.indexOf("from String \"") + 13;
-        int valueEnd = message.indexOf("\"", valueStart);
-        if (valueStart > 12 && valueEnd > valueStart) {
-            return message.substring(valueStart, valueEnd);
         }
         return "";
     }

@@ -5,8 +5,10 @@ import java.util.Objects;
 import org.springframework.stereotype.Service;
 
 import com.decathlon.idp_core.domain.exception.entity_template.EntityTemplateAlreadyExistsException;
+import com.decathlon.idp_core.domain.exception.entity_template.EntityTemplateIdentifierCannotChangeException;
 import com.decathlon.idp_core.domain.exception.entity_template.EntityTemplateNameAlreadyExistsException;
 import com.decathlon.idp_core.domain.exception.entity_template.EntityTemplateNotFoundException;
+import com.decathlon.idp_core.domain.exception.entity_template.PropertyDefinitionRulesConflictException;
 import com.decathlon.idp_core.domain.model.entity_template.EntityTemplate;
 import com.decathlon.idp_core.domain.model.entity_template.PropertyDefinition;
 import com.decathlon.idp_core.domain.port.EntityTemplateRepositoryPort;
@@ -36,7 +38,8 @@ public class EntityTemplateValidationService {
     /// @param entityTemplate the template candidate to validate
     /// @throws EntityTemplateAlreadyExistsException when identifier is already taken
     /// @throws EntityTemplateNameAlreadyExistsException when name is already taken
-    public void validateForCreate(EntityTemplate entityTemplate) {
+    /// @throws PropertyDefinitionRulesConflictException when rules violate business invariants
+    public void validateForCreation(EntityTemplate entityTemplate) {
         validateIdentifierUniqueness(entityTemplate.identifier());
         validateNameUniqueness(entityTemplate.name());
         validatePropertyRules(entityTemplate);
@@ -54,9 +57,10 @@ public class EntityTemplateValidationService {
     /// @param mergedTemplate the fully-merged template carrying the desired state
     /// @throws EntityTemplateAlreadyExistsException when the new identifier is already taken
     /// @throws EntityTemplateNameAlreadyExistsException when the new name is already taken
+    /// @throws PropertyDefinitionRulesConflictException when rules violate business invariants
     public void validateForUpdate(String currentIdentifier, String existingName, EntityTemplate mergedTemplate) {
         if (!currentIdentifier.equals(mergedTemplate.identifier())) {
-            validateIdentifierUniqueness(mergedTemplate.identifier());
+            throw new EntityTemplateIdentifierCannotChangeException(mergedTemplate.identifier());
         }
         if (!Objects.equals(existingName, mergedTemplate.name())) {
             validateNameUniqueness(mergedTemplate.name());
@@ -67,20 +71,20 @@ public class EntityTemplateValidationService {
     /// Validates that a template identifier is non-null and refers to an existing template.
     ///
     /// @param identifier the identifier of the template to delete
-    /// @throws IllegalArgumentException when `identifier` is null
+    /// @throws EntityTemplateNotFoundException when `identifier` is null
     /// @throws EntityTemplateNotFoundException when no template matches `identifier`
-    public void validateForDelete(String identifier) {
+    public void validateForDeletion(String identifier) {
         if (identifier == null) {
-            throw new IllegalArgumentException("Template identifier must not be null");
+            throw new EntityTemplateNotFoundException("identifier", "null");
         }
-        checkTemplateExists(identifier);
+        validateTemplateExists(identifier);
     }
 
     /// Checks that the entity template exists.
     ///
     /// @param identifier the identifier to check for existence
     /// @throws EntityTemplateNotFoundException when no template matches `identifier`
-    public void checkTemplateExists(String identifier) {
+    public void validateTemplateExists(String identifier) {
         if (!entityTemplateRepositoryPort.existsByIdentifier(identifier)) {
             throw new EntityTemplateNotFoundException("identifier", identifier);
         }
