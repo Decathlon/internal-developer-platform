@@ -1,5 +1,6 @@
 package com.decathlon.idp_core.infrastructure.adapters.persistence;
 
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -57,5 +58,15 @@ public class PostgresEntityAdapter implements EntityRepositoryPort {
     @Override
     public boolean existsByTemplateIdentifier(String templateIdentifier) {
         return jpaEntityRepository.existsByTemplateIdentifier(templateIdentifier);
+    }
+
+    @Override
+    public void deletePropertiesByTemplateIdentifierAndPropertyName(String templateIdentifier, Collection<String> propertyNames) {
+        jpaEntityRepository.deletePropertiesByTemplateIdentifierAndPropertyName(templateIdentifier, propertyNames);
+    }
+
+    @Override
+    public void deleteRelationsByTemplateIdentifierAndRelationName(String templateIdentifier, Collection<String> relationNames) {
+        jpaEntityRepository.deleteRelationsByTemplateIdentifierAndRelationName(templateIdentifier, relationNames);
     }
 }

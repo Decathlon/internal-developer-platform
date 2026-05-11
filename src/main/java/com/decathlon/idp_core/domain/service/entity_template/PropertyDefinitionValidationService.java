@@ -91,10 +91,10 @@ public class PropertyDefinitionValidationService {
             return;
         }
         Map<String, PropertyDefinition> updatedMap = incomingProperties.stream()
-                .collect(Collectors.toMap(PropertyDefinition::name, p -> p));
+                .collect(Collectors.toMap(p -> p.name().toLowerCase(Locale.ROOT), p -> p));
 
         for (PropertyDefinition existing : existingProperties) {
-            PropertyDefinition updated = updatedMap.get(existing.name());
+            PropertyDefinition updated = updatedMap.get(existing.name().toLowerCase(Locale.ROOT));
             boolean propertyTypeChanged = updated != null && !existing.type().equals(updated.type());
 
             if (propertyTypeChanged) {
