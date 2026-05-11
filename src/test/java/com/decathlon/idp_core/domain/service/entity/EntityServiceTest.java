@@ -32,7 +32,7 @@ import com.decathlon.idp_core.domain.model.entity.EntitySummary;
 import com.decathlon.idp_core.domain.model.entity_template.EntityTemplate;
 import com.decathlon.idp_core.domain.port.EntityRepositoryPort;
 import com.decathlon.idp_core.domain.port.EntityTemplateRepositoryPort;
-import com.decathlon.idp_core.domain.service.EntityTemplateService;
+import com.decathlon.idp_core.domain.service.entity_template.EntityTemplateService;
 import com.decathlon.idp_core.domain.service.entity_template.EntityTemplateValidationService;
 
 @ExtendWith(MockitoExtension.class)
@@ -106,7 +106,7 @@ class EntityServiceTest {
         var result = entityService.getEntityByTemplateIdentifierAndIdentifier("web-service", "catalog-api");
 
         assertSame(entity, result);
-        verify(entityTemplateValidationService).checkTemplateExists("web-service");
+        verify(entityTemplateValidationService).validateTemplateExists("web-service");
         verify(entityRepository).findByTemplateIdentifierAndIdentifier("web-service", "catalog-api");
     }
 
