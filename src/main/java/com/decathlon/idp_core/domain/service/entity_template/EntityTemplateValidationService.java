@@ -49,6 +49,7 @@ public class EntityTemplateValidationService {
     public void validateForCreation(EntityTemplate entityTemplate) {
         validateIdentifierUniqueness(entityTemplate.identifier());
         validateNameUniqueness(entityTemplate.name());
+        propertyDefinitionValidationService.validatePropertyNamesUniqueness(entityTemplate.propertiesDefinitions());
         validateTemplateProperties(entityTemplate);
         validateTemplateRelations(entityTemplate);
     }
@@ -76,6 +77,7 @@ public class EntityTemplateValidationService {
         if (!Objects.equals(existingName, mergedTemplate.name())) {
             validateNameUniqueness(mergedTemplate.name());
         }
+        propertyDefinitionValidationService.validatePropertyNamesUniqueness(mergedTemplate.propertiesDefinitions());
         propertyDefinitionValidationService.validateTypeChanges(existingTemplate.propertiesDefinitions(), mergedTemplate.propertiesDefinitions());
         validateTemplateProperties(mergedTemplate);
         validateTemplateRelations(mergedTemplate);
@@ -140,7 +142,6 @@ public class EntityTemplateValidationService {
         if (entityTemplate.propertiesDefinitions() == null) {
             return;
         }
-        propertyDefinitionValidationService.validatePropertyNamesUniqueness(entityTemplate.propertiesDefinitions());
         for (PropertyDefinition property : entityTemplate.propertiesDefinitions()) {
             propertyDefinitionValidationService.validatePropertyDefinitionRules(property);
         }
