@@ -5,7 +5,7 @@ description = "IDP-Core Documentation Site - A modern, open-source Internal Deve
 readme = "README.md"
 requires-python = ">=3.14"
 dependencies = [
-    "zensical>=0.0.33",
+    "zensical>=0.0.38",
     "mkdocs-swagger-ui-tag>=0.7.2",
 ]
 
