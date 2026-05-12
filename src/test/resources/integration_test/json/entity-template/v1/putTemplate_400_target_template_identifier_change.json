@@ -1,0 +1,171 @@
+{
+  "name": "Microservice",
+  "description": "Template for microservice applications",
+  "properties_definitions": [
+    {
+      "name": "applicationName",
+      "description": "Name of the application",
+      "type": "STRING",
+      "required": true,
+      "rules": {
+        "format": null,
+        "enum_values": null,
+        "regex": "^[a-zA-Z0-9-]+$",
+        "max_length": 50,
+        "min_length": 3,
+        "max_value": null,
+        "min_value": null
+      }
+    },
+    {
+      "name": "environment",
+      "description": "Target environment for deployment",
+      "type": "STRING",
+      "required": true,
+      "rules": {
+        "format": null,
+        "enum_values": [
+          "DEV",
+          "STAGING",
+          "PROD"
+        ],
+        "regex": null,
+        "max_length": null,
+        "min_length": null,
+        "max_value": null,
+        "min_value": null
+      }
+    },
+    {
+      "name": "maxInstances",
+      "description": "Maximum number of instances",
+      "type": "NUMBER",
+      "required": false,
+      "rules": {
+        "format": null,
+        "enum_values": null,
+        "regex": null,
+        "max_length": null,
+        "min_length": null,
+        "max_value": 100,
+        "min_value": 1
+      }
+    },
+    {
+      "name": "memoryLimit",
+      "description": "Memory limit in MB",
+      "type": "NUMBER",
+      "required": false,
+      "rules": {
+        "format": null,
+        "enum_values": null,
+        "regex": null,
+        "max_length": null,
+        "min_length": null,
+        "max_value": 8192,
+        "min_value": 128
+      }
+    },
+    {
+      "name": "minInstances",
+      "description": "Minimum number of instances",
+      "type": "NUMBER",
+      "required": false,
+      "rules": {
+        "format": null,
+        "enum_values": null,
+        "regex": null,
+        "max_length": null,
+        "min_length": null,
+        "max_value": 100,
+        "min_value": 1
+      }
+    },
+    {
+      "name": "ownerEmail",
+      "description": "Email address of the application owner",
+      "type": "STRING",
+      "required": true,
+      "rules": {
+        "format": "EMAIL",
+        "enum_values": null,
+        "regex": null,
+        "max_length": 100,
+        "min_length": 5,
+        "max_value": null,
+        "min_value": null
+      }
+    },
+    {
+      "name": "port",
+      "description": "Service port number",
+      "type": "NUMBER",
+      "required": true,
+      "rules": {
+        "format": null,
+        "enum_values": null,
+        "regex": null,
+        "max_length": null,
+        "min_length": null,
+        "max_value": 65535,
+        "min_value": 1024
+      }
+    },
+    {
+      "name": "programmingLanguage",
+      "description": "Programming language used",
+      "type": "STRING",
+      "required": true,
+      "rules": {
+        "format": null,
+        "enum_values": [
+          "JAVA",
+          "PYTHON",
+          "NODEJS",
+          "GOLANG",
+          "DOTNET"
+        ],
+        "regex": null,
+        "max_length": null,
+        "min_length": null,
+        "max_value": null,
+        "min_value": null
+      }
+    },
+    {
+      "name": "version",
+      "description": "Application version",
+      "type": "STRING",
+      "required": true,
+      "rules": {
+        "format": null,
+        "enum_values": null,
+        "regex": "^[0-9]+\\.[0-9]+\\.[0-9]+$",
+        "max_length": 20,
+        "min_length": 5,
+        "max_value": null,
+        "min_value": null
+      }
+    }
+  ],
+  "relations_definitions": [
+    {
+      "name": "dependencies",
+      "target_template_identifier": "service-modified",
+      "required": false,
+      "to_many": true
+    },
+    {
+      "name": "message_queue",
+      "target_template_identifier": "queue",
+      "required": false,
+      "to_many": true
+    },
+    {
+      "name": "monitoring",
+      "target_template_identifier": "monitoring",
+      "required": false,
+      "to_many": false
+    }
+  ]
+}

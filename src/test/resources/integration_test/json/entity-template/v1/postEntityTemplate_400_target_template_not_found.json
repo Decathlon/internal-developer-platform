@@ -1,0 +1,14 @@
+{
+  "identifier": "test-invalid-target",
+  "name": "Test Invalid Target",
+  "description": "Template with invalid target",
+  "properties_definitions": [],
+  "relations_definitions": [
+    {
+      "name": "references",
+      "target_template_identifier": "non-existent-template",
+      "required": true,
+      "to_many": false
+    }
+  ]
+}

@@ -1,0 +1,14 @@
+{
+  "identifier": "self-ref-template",
+  "name": "Self Ref Template",
+  "description": "A template that tries to relate to itself",
+  "properties_definitions": [],
+  "relations_definitions": [
+    {
+      "name": "circular",
+      "target_template_identifier": "self-ref-template",
+      "required": false,
+      "to_many": false
+    }
+  ]
+}

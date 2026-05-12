@@ -38,7 +38,7 @@ public class EntityJpaEntity {
 
     private String identifier;
 
-    @OneToMany(cascade = CascadeType.ALL)
+    @OneToMany(cascade = CascadeType.ALL, orphanRemoval = true)
     @JoinTable(name = "entity_properties",
         joinColumns = @JoinColumn(name = "entity_id"),
         inverseJoinColumns = @JoinColumn(name = "property_id"),
