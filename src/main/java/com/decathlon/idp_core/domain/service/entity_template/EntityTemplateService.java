@@ -120,10 +120,6 @@ public class EntityTemplateService {
     @Transactional
     public EntityTemplate updateEntityTemplate(String identifier, @Valid EntityTemplate entityTemplate) {
         EntityTemplate existingTemplate = getEntityTemplateByIdentifier(identifier);
-        List<String> removedPropertyNames = identifyDeletedPropertyNames(
-                existingTemplate.propertiesDefinitions(), entityTemplate.propertiesDefinitions());
-        List<String> removedRelationNames = identifyDeletedRelationNames(
-                existingTemplate.relationsDefinitions(), entityTemplate.relationsDefinitions());
         EntityTemplate mergedTemplate = new EntityTemplate(
                 existingTemplate.id(),
                 entityTemplate.identifier(),
@@ -135,14 +131,10 @@ public class EntityTemplateService {
                         entityTemplate.relationsDefinitions())
         );
         entityTemplateValidationService.validateForUpdate(identifier, existingTemplate.name(), existingTemplate, mergedTemplate);
-        EntityTemplate saved = entityTemplateRepositoryPort.save(mergedTemplate);
-        if (!removedPropertyNames.isEmpty()) {
-            entityRepositoryPort.deletePropertiesByTemplateIdentifierAndPropertyName(identifier, removedPropertyNames);
-        }
-        if (!removedRelationNames.isEmpty()) {
-            entityRepositoryPort.deleteRelationsByTemplateIdentifierAndRelationName(identifier, removedRelationNames);
-        }
-        return saved;
+        EntityTemplate savedTemplate = entityTemplateRepositoryPort.save(mergedTemplate);
+        purgeRemovedProperties(identifier, existingTemplate.propertiesDefinitions(), entityTemplate.propertiesDefinitions());
+        purgeRemovedRelations(identifier, existingTemplate.relationsDefinitions(), entityTemplate.relationsDefinitions());
+        return savedTemplate;
     }
 
     /// Deletes an entity template by business identifier with existence validation.
@@ -286,6 +278,30 @@ public class EntityTemplateService {
                 .filter(p -> !updatedPropertyNames.contains(p.name().toLowerCase(Locale.ROOT)))
                 .map(PropertyDefinition::name)
                 .toList();
+    }
+
+    /// Identifies and purges property values from entities whose definitions were removed during a template update.
+    ///
+    /// @param templateIdentifier the template's business identifier
+    /// @param existing           property definitions currently persisted on the template
+    /// @param updated            property definitions from the incoming PUT request
+    private void purgeRemovedProperties(String templateIdentifier, List<PropertyDefinition> existing, List<PropertyDefinition> updated) {
+        List<String> removedNames = identifyDeletedPropertyNames(existing, updated);
+        if (!removedNames.isEmpty()) {
+            entityRepositoryPort.deletePropertiesByTemplateIdentifierAndPropertyName(templateIdentifier, removedNames);
+        }
+    }
+
+    /// Identifies and purges relation values from entities whose definitions were removed during a template update.
+    ///
+    /// @param templateIdentifier the template's business identifier
+    /// @param existing           relation definitions currently persisted on the template
+    /// @param updated            relation definitions from the incoming PUT request
+    private void purgeRemovedRelations(String templateIdentifier, List<RelationDefinition> existing, List<RelationDefinition> updated) {
+        List<String> removedNames = identifyDeletedRelationNames(existing, updated);
+        if (!removedNames.isEmpty()) {
+            entityRepositoryPort.deleteRelationsByTemplateIdentifierAndRelationName(templateIdentifier, removedNames);
+        }
     }
 
 }
