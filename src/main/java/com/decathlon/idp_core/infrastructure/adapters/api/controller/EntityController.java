@@ -11,20 +11,21 @@ import static com.decathlon.idp_core.infrastructure.adapters.api.configuration.S
 import static com.decathlon.idp_core.infrastructure.adapters.api.configuration.SwaggerDescription.NOT_FOUND_CODE;
 import static com.decathlon.idp_core.infrastructure.adapters.api.configuration.SwaggerDescription.OK_CODE;
 import static com.decathlon.idp_core.infrastructure.adapters.api.configuration.SwaggerDescription.PARAM_PAGE_DESCRIPTION;
+import static com.decathlon.idp_core.infrastructure.adapters.api.configuration.SwaggerDescription.PARAM_QUERY_DESCRIPTION;
 import static com.decathlon.idp_core.infrastructure.adapters.api.configuration.SwaggerDescription.PARAM_SIZE_DESCRIPTION;
-import static com.decathlon.idp_core.infrastructure.adapters.api.configuration.SwaggerDescription.PARAM_SORT_DESCRIPTION;
 import static com.decathlon.idp_core.infrastructure.adapters.api.configuration.SwaggerDescription.RESPONSE_ENTITIES_PAGINATED_SUCCESS;
 import static com.decathlon.idp_core.infrastructure.adapters.api.configuration.SwaggerDescription.RESPONSE_ENTITY_CREATED;
 import static com.decathlon.idp_core.infrastructure.adapters.api.configuration.SwaggerDescription.RESPONSE_ENTITY_FOUND;
 import static com.decathlon.idp_core.infrastructure.adapters.api.configuration.SwaggerDescription.RESPONSE_ENTITY_NOT_FOUND_IDENTIFIER;
 import static com.decathlon.idp_core.infrastructure.adapters.api.configuration.SwaggerDescription.RESPONSE_INVALID_ENTITY_DATA;
-import static com.decathlon.idp_core.infrastructure.adapters.api.configuration.SwaggerDescription.RESPONSE_INVALID_PAGINATION;
+import static com.decathlon.idp_core.infrastructure.adapters.api.configuration.SwaggerDescription.RESPONSE_INVALID_QUERY;
 import static org.springframework.http.HttpStatus.CREATED;
 import static org.springframework.http.HttpStatus.OK;
 
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -35,6 +36,8 @@ import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.decathlon.idp_core.domain.model.entity.Entity;
+import com.decathlon.idp_core.domain.model.entity.EntityFilter;
+import com.decathlon.idp_core.domain.service.EntityQueryParserService;
 import com.decathlon.idp_core.domain.service.EntityService;
 import com.decathlon.idp_core.infrastructure.adapters.api.configuration.SwaggerConfiguration.EntityPageResponse;
 import com.decathlon.idp_core.infrastructure.adapters.api.dto.in.EntityDtoIn;
@@ -45,8 +48,6 @@ import com.decathlon.idp_core.infrastructure.adapters.api.mapper.entity.EntityDt
 import com.decathlon.idp_core.infrastructure.adapters.api.mapper.entity.EntityDtoOutMapper;
 
 import io.swagger.v3.oas.annotations.Operation;
-import io.swagger.v3.oas.annotations.Parameter;
-import io.swagger.v3.oas.annotations.enums.ParameterIn;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
@@ -65,37 +66,45 @@ import lombok.AllArgsConstructor;
 @RequestMapping("/api/v1/entities")
 @Tag(name = "Entities Management", description = "Operations related to entity management")
 @AllArgsConstructor
+@Validated
 public class EntityController {
 
     private final EntityService entityService;
     private final EntityDtoOutMapper entityDtoOutMapper;
     private final EntityDtoInMapper entityDtoInMapper;
+    private final EntityQueryParserService entityQueryParserService;
 
     /// Returns paginated entities filtered by template with HTTP pagination support.
     ///
     /// **API contract:** Provides paginated entity listings for template-specific views.
-    /// Supports standard REST pagination parameters and returns appropriate HTTP status codes.
+    /// Supports standard REST pagination parameters and an optional `q` filter query.
     /// Template validation is handled by the domain service layer.
     ///
     /// @param page zero-based page index for pagination navigation
     /// @param size number of entities per page for response size control
     /// @param templateIdentifier template filter for entity scope limitation
-    /// @return paginated entity DTOs optimized for API consumers
+    /// @param q optional filter query string (e.g. `name:API;property.language=JAVA`)
+    /// @return paginated entity DTOs matching the template and optional filter
     @Operation(summary = ENDPOINT_GET_ENTITIES_SUMMARY, description = ENDPOINT_GET_ENTITIES_PAGINATED_DESCRIPTION)
     @ApiResponse(responseCode = OK_CODE, description = RESPONSE_ENTITIES_PAGINATED_SUCCESS, content = @Content(schema = @Schema(implementation = EntityPageResponse.class)))
-    @ApiResponse(responseCode = BAD_REQUEST_CODE, description = RESPONSE_INVALID_PAGINATION, content = {
+    @ApiResponse(responseCode = BAD_REQUEST_CODE, description = RESPONSE_INVALID_QUERY, content = {
             @Content(schema = @Schema(implementation = ApiExceptionHandler.ErrorResponse.class)) })
-    @Parameter(name = "page", description = PARAM_PAGE_DESCRIPTION, in = ParameterIn.QUERY, content = @Content(schema = @Schema(type = "integer", defaultValue = "0")))
-    @Parameter(name = "size", description = PARAM_SIZE_DESCRIPTION, in = ParameterIn.QUERY, content = @Content(schema = @Schema(type = "integer", defaultValue = "20")))
-    @Parameter(name = "sort", description = PARAM_SORT_DESCRIPTION, in = ParameterIn.QUERY, content = @Content(schema = @Schema(type = "string", defaultValue = "identifier,asc")))
     @ResponseStatus(OK)
     @GetMapping("/{templateIdentifier}")
     public Page<EntityDtoOut> getEntities(
-            @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "20") int size,
-            @PathVariable String templateIdentifier) {
+            @RequestParam(defaultValue = "0")
+            @Schema(description = PARAM_PAGE_DESCRIPTION)
+            int page,
+            @RequestParam(defaultValue = "20")
+            @Schema(description = PARAM_SIZE_DESCRIPTION)
+            int size,
+            @PathVariable String templateIdentifier,
+            @RequestParam(required = false)
+            @Schema(description = PARAM_QUERY_DESCRIPTION)
+            String q) {
         Pageable pageable = PageRequest.of(page, size);
-        Page<Entity> entities = entityService.getEntitiesByTemplateIdentifier(pageable, templateIdentifier);
+        EntityFilter filter = entityQueryParserService.parse(q);
+        Page<Entity> entities = entityService.getEntitiesByTemplateIdentifierWithFilter(pageable, templateIdentifier, filter);
         return entityDtoOutMapper.fromEntitiesPageToDtoPage(entities, templateIdentifier);
     }
 

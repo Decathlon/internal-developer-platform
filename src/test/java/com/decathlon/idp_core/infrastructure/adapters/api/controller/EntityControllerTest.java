@@ -10,9 +10,14 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
+import org.skyscreamer.jsonassert.JSONAssert;
+import org.skyscreamer.jsonassert.JSONCompareMode;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders;
 
 import com.decathlon.idp_core.AbstractIntegrationTest;
@@ -110,6 +115,136 @@ public class EntityControllerTest extends AbstractIntegrationTest {
                     .andExpect(jsonPath("$.page.size").value(20))
                     .andExpect(jsonPath("$.page.number").value(0))
                     .andExpect(jsonPath("$.content[0].template_identifier").value(TEMPLATE_IDENTIFIER));
+        }
+    }
+
+    /// Tests for GET /api/v1/entities/{template-identifier}?q= endpoint
+    @Nested
+    @DisplayName("GET /api/v1/entities/{template-identifier}?q= - Filter by q parameter")
+    class GetEntitiesByTemplateIdentifierWithFilterTests {
+
+        @ParameterizedTest
+        @CsvSource({
+            "identifier=web-api-1",
+            "name:Web API 1",
+            "property.programmingLanguage=JAVA",
+            "relation=api-link",
+            "relation.api-link.name:microservice",
+            "relation=api-link;relation.api-link.name:microservice"
+        })
+        @DisplayName("Should filter entities by various criteria")
+        @WithMockUser
+        void getEntities_200_withFilter(String query) throws Exception {
+            MvcResult mvcResult = mockMvc.perform(get(ENTITIES_BY_TEMPLATE_IDENTIFIER_PATH, TEMPLATE_IDENTIFIER)
+                            .param("q", query)
+                            .accept(APPLICATION_JSON)
+                    .with(csrf()))
+                    .andExpect(status().isOk())
+                    .andReturn();
+            JSONAssert.assertEquals(
+                    getJsonTestFileContent(ENTITY_JSON_FILES_TEST_PATH + "getEntities_200_identifierEquals.json"),
+                    mvcResult.getResponse().getContentAsString(),
+                    JSONCompareMode.STRICT);
+        }
+
+        @Test
+        @DisplayName("Should return empty page when no entity matches filter")
+        @WithMockUser
+        void getEntities_200_noMatch() throws Exception {
+            mockMvc.perform(get(ENTITIES_BY_TEMPLATE_IDENTIFIER_PATH, TEMPLATE_IDENTIFIER)
+                            .param("q", "name=nonexistent-entity")
+                            .accept(APPLICATION_JSON))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.content.length()").value(0));
+        }
+
+        @Test
+        @DisplayName("Should filter microservices by relations_as_target identifier")
+        @WithMockUser
+        void getEntities_200_relationsAsTargetIdentifier() throws Exception {
+            MvcResult mvcResult = mockMvc.perform(get(ENTITIES_BY_TEMPLATE_IDENTIFIER_PATH, "microservice")
+                            .param("q", "relations_as_target.api-link.identifier=web-api-1")
+                            .accept(APPLICATION_JSON)
+                            .with(csrf()))
+                    .andExpect(status().isOk())
+                    .andReturn();
+            JSONAssert.assertEquals(
+                    getJsonTestFileContent(ENTITY_JSON_FILES_TEST_PATH + "getEntities_200_relationsAsTargetIdentifier.json"),
+                    mvcResult.getResponse().getContentAsString(),
+                    JSONCompareMode.STRICT);
+        }
+
+        @Test
+        @DisplayName("Should filter microservices by relations_as_target name contains")
+        @WithMockUser
+        void getEntities_200_relationsAsTargetNameContains() throws Exception {
+            MvcResult mvcResult = mockMvc.perform(get(ENTITIES_BY_TEMPLATE_IDENTIFIER_PATH, "microservice")
+                            .param("q", "relations_as_target.api-link.name:Web API")
+                            .accept(APPLICATION_JSON)
+                            .with(csrf()))
+                    .andExpect(status().isOk())
+                    .andReturn();
+            JSONAssert.assertEquals(
+                    getJsonTestFileContent(ENTITY_JSON_FILES_TEST_PATH + "getEntities_200_relationsAsTargetIdentifier.json"),
+                    mvcResult.getResponse().getContentAsString(),
+                    JSONCompareMode.STRICT);
+        }
+
+        @Test
+        @DisplayName("Should return 400 for malformed query without operator")
+        @WithMockUser
+        void getEntities_400_malformedQuery() throws Exception {
+            mockMvc.perform(get(ENTITIES_BY_TEMPLATE_IDENTIFIER_PATH, TEMPLATE_IDENTIFIER)
+                            .param("q", "noOperator")
+                            .accept(APPLICATION_JSON))
+                    .andExpect(status().isBadRequest())
+                    .andExpect(jsonPath("$.error_description").value("Invalid query format, expected field:operation:value"));
+        }
+
+        @Test
+        @DisplayName("Should return 400 for duplicate criterion on the same field")
+        @WithMockUser
+        void getEntities_400_duplicateCriterion() throws Exception {
+            mockMvc.perform(get(ENTITIES_BY_TEMPLATE_IDENTIFIER_PATH, TEMPLATE_IDENTIFIER)
+                            .param("q", "name=A;name=B")
+                            .accept(APPLICATION_JSON))
+                    .andExpect(status().isBadRequest())
+                    .andExpect(jsonPath("$.error_description").value("Multiple filters for the same property are not supported"));
+        }
+
+        @Test
+        @DisplayName("Should return 400 when criteria count exceeds maximum of 10")
+        @WithMockUser
+        void getEntities_400_tooManyCriteria() throws Exception {
+            var query = "property.a=1;property.b=2;property.c=3;property.d=4;property.e=5;"
+                    + "property.f=6;property.g=7;property.h=8;property.i=9;property.j=10;property.k=11";
+            mockMvc.perform(get(ENTITIES_BY_TEMPLATE_IDENTIFIER_PATH, TEMPLATE_IDENTIFIER)
+                            .param("q", query)
+                            .accept(APPLICATION_JSON))
+                    .andExpect(status().isBadRequest())
+                    .andExpect(jsonPath("$.error_description").value("Filter query exceeds maximum of 10 criteria"));
+        }
+
+        @Test
+        @DisplayName("Should return 400 for operator mismatch on criterion type")
+        @WithMockUser
+        void getEntities_400_typeMismatch() throws Exception {
+            mockMvc.perform(get(ENTITIES_BY_TEMPLATE_IDENTIFIER_PATH, TEMPLATE_IDENTIFIER)
+                            .param("q", "relation<api-link")
+                            .accept(APPLICATION_JSON))
+                    .andExpect(status().isBadRequest())
+                    .andExpect(jsonPath("$.error_description").value("Operation '<' is not applicable for field 'relation'."));
+        }
+
+        @Test
+        @DisplayName("Should return 400 for unsupported property in relations_as_target")
+        @WithMockUser
+        void getEntities_400_relationsAsTargetInvalidProperty() throws Exception {
+            mockMvc.perform(get(ENTITIES_BY_TEMPLATE_IDENTIFIER_PATH, "microservice")
+                            .param("q", "relations_as_target.api-link.language=JAVA")
+                            .accept(APPLICATION_JSON))
+                    .andExpect(status().isBadRequest())
+                    .andExpect(jsonPath("$.error_description").value("Invalid property 'language' in criterion 'relations_as_target.api-link.language=JAVA': only 'identifier' and 'name' are supported for relations_as_target"));
         }
     }
 

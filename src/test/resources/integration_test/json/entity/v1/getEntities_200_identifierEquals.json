@@ -1,0 +1,20 @@
+{
+  "content": [
+    {
+      "identifier": "web-api-1",
+      "name": "Web API 1",
+      "properties": { "environment": "PROD", "programmingLanguage": "JAVA" },
+      "relations": {
+        "database": [
+          { "identifier": "database-service-1", "name": "Database Service 1" }
+        ],
+        "api-link": [
+          { "identifier": "microservice-1", "name": "Microservice 1" }
+        ]
+      },
+      "relations_as_target": {},
+      "template_identifier": "web-service"
+    }
+  ],
+  "page": { "size": 20, "number": 0, "total_elements": 1, "total_pages": 1 }
+}

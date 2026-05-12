@@ -9,6 +9,7 @@ import org.springframework.stereotype.Service;
 import com.decathlon.idp_core.domain.exception.EntityNotFoundException;
 import com.decathlon.idp_core.domain.exception.entity_template.EntityTemplateNotFoundException;
 import com.decathlon.idp_core.domain.model.entity.Entity;
+import com.decathlon.idp_core.domain.model.entity.EntityFilter;
 import com.decathlon.idp_core.domain.model.entity.EntitySummary;
 import com.decathlon.idp_core.domain.port.EntityRepositoryPort;
 import com.decathlon.idp_core.domain.port.EntityTemplateRepositoryPort;
@@ -50,6 +51,28 @@ public class EntityService {
             throw new EntityTemplateNotFoundException("identifier", templateIdentifier);
         }
         return entityRepository.findByTemplateIdentifier(templateIdentifier, pageable);
+    }
+
+    /// Retrieves entities filtered by template and an optional query filter.
+    ///
+    /// **Contract:** Returns paginated entities conforming to the specified template that
+    /// additionally satisfy all criteria in filter. Template existence is validated
+    /// first. When filter is empty the result is equivalent to
+    /// [#getEntitiesByTemplateIdentifier].
+    ///
+    /// @param pageable pagination configuration for large entity sets
+    /// @param templateIdentifier business identifier of the entity template
+    /// @param filter the parsed query filter; use [EntityFilter#empty()] for no filtering
+    /// @return paginated entities matching the template and all filter criteria
+    /// @throws EntityTemplateNotFoundException when template doesn't exist
+    @Transactional
+    public Page<Entity> getEntitiesByTemplateIdentifierWithFilter(
+            Pageable pageable, String templateIdentifier, EntityFilter filter) {
+
+        if (!entityTemplateRepository.existsByIdentifier(templateIdentifier)) {
+            throw new EntityTemplateNotFoundException("identifier", templateIdentifier);
+        }
+        return entityRepository.findByTemplateIdentifierWithFilter(templateIdentifier, filter, pageable);
     }
 
      /// Provides lightweight entity summaries for efficient bulk operations.

@@ -14,6 +14,7 @@ import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 
 import com.decathlon.idp_core.domain.exception.EntityNotFoundException;
+import com.decathlon.idp_core.domain.exception.InvalidQueryException;
 import com.decathlon.idp_core.domain.exception.entity_template.EntityTemplateAlreadyExistsException;
 import com.decathlon.idp_core.domain.exception.entity_template.EntityTemplateIdentifierCannotChangeException;
 import com.decathlon.idp_core.domain.exception.entity_template.EntityTemplateNameAlreadyExistsException;
@@ -59,6 +60,16 @@ public class ApiExceptionHandler {
         log.warn("Template not found: {}", ex.getMessage());
         ErrorResponse errorResponse = new ErrorResponse(NOT_FOUND.name(), ex.getMessage());
         return ResponseEntity.status(NOT_FOUND).body(errorResponse);
+    }
+
+    /// Handles domain exception for malformed filter query strings.
+    ///
+    /// **HTTP mapping:** Maps domain [InvalidQueryException] to HTTP 400 Bad Request
+    /// so API consumers receive clear feedback about invalid `q` parameter syntax.
+    @ExceptionHandler(InvalidQueryException.class)
+    public ResponseEntity<ErrorResponse> handleInvalidQueryException(InvalidQueryException ex) {
+        log.warn("Invalid filter query: {}", ex.getMessage());
+        return createErrorResponse(HttpStatus.BAD_REQUEST, ex.getMessage());
     }
 
     /// Handles domain exception when entity templates already exist.
