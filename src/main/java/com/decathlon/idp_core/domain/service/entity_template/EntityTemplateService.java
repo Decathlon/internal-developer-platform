@@ -2,7 +2,9 @@ package com.decathlon.idp_core.domain.service.entity_template;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
+import java.util.Set;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
@@ -18,6 +20,7 @@ import com.decathlon.idp_core.domain.model.entity_template.EntityTemplate;
 import com.decathlon.idp_core.domain.model.entity_template.PropertyDefinition;
 import com.decathlon.idp_core.domain.model.entity_template.PropertyRules;
 import com.decathlon.idp_core.domain.model.entity_template.RelationDefinition;
+import com.decathlon.idp_core.domain.port.EntityRepositoryPort;
 import com.decathlon.idp_core.domain.port.EntityTemplateRepositoryPort;
 
 import jakarta.transaction.Transactional;
@@ -43,6 +46,7 @@ public class EntityTemplateService {
 
     private final EntityTemplateRepositoryPort entityTemplateRepositoryPort;
     private final EntityTemplateValidationService entityTemplateValidationService;
+    private final EntityRepositoryPort entityRepositoryPort;
 
     /// Retrieves paginated entity templates for management interface display.
     ///
@@ -126,8 +130,11 @@ public class EntityTemplateService {
                 mergeRelationDefinitions(existingTemplate.relationsDefinitions(),
                         entityTemplate.relationsDefinitions())
         );
-        entityTemplateValidationService.validateForUpdate(identifier, existingTemplate.name(), mergedTemplate);
-        return entityTemplateRepositoryPort.save(mergedTemplate);
+        entityTemplateValidationService.validateForUpdate(identifier, existingTemplate.name(), existingTemplate, mergedTemplate);
+        EntityTemplate savedTemplate = entityTemplateRepositoryPort.save(mergedTemplate);
+        purgeRemovedProperties(identifier, existingTemplate.propertiesDefinitions(), entityTemplate.propertiesDefinitions());
+        purgeRemovedRelations(identifier, existingTemplate.relationsDefinitions(), entityTemplate.relationsDefinitions());
+        return savedTemplate;
     }
 
     /// Deletes an entity template by business identifier with existence validation.
@@ -152,12 +159,12 @@ public class EntityTemplateService {
         if (updated == null) return existing;
 
         Map<String, PropertyDefinition> existingMap = existing.stream()
-                .collect(Collectors.toMap(PropertyDefinition::name, Function.identity()));
+                .collect(Collectors.toMap(p -> p.name().toLowerCase(java.util.Locale.ROOT), Function.identity()));
 
         List<PropertyDefinition> result = new ArrayList<>();
 
         for (PropertyDefinition prop : updated) {
-            PropertyDefinition existingProp = existingMap.get(prop.name());
+            PropertyDefinition existingProp = existingMap.get(prop.name().toLowerCase(java.util.Locale.ROOT));
             if (existingProp != null) {
                 result.add(new PropertyDefinition(
                         existingProp.id(),
@@ -203,12 +210,12 @@ public class EntityTemplateService {
         if (updated == null) return existing;
 
         Map<String, RelationDefinition> existingMap = existing.stream()
-                .collect(Collectors.toMap(RelationDefinition::name, Function.identity()));
+                .collect(Collectors.toMap(r -> r.name().toLowerCase(java.util.Locale.ROOT), Function.identity()));
 
         List<RelationDefinition> result = new ArrayList<>();
 
         for (RelationDefinition rel : updated) {
-            RelationDefinition existingRel = existingMap.get(rel.name());
+            RelationDefinition existingRel = existingMap.get(rel.name().toLowerCase(java.util.Locale.ROOT));
             if (existingRel != null) {
                 result.add(new RelationDefinition(
                         existingRel.id(),
@@ -223,6 +230,78 @@ public class EntityTemplateService {
         }
 
         return result;
+    }
+
+    /// Computes the names of relation definitions present in [existing] but absent from [updated].
+    ///
+    /// **Business purpose:** Identifies which relations were removed in the
+    /// PUT request so the linked entity relation values can be purged.
+    ///
+    /// @param existing relation definitions currently persisted on the template
+    /// @param updated  relation definitions from the incoming PUT request
+    /// @return names of relation definitions that were removed (never null, may be empty)
+    private List<String> identifyDeletedRelationNames(
+            List<RelationDefinition> existing,
+            List<RelationDefinition> updated) {
+        if (existing == null || existing.isEmpty()) {
+            return List.of();
+        }
+        Set<String> updatedRelationNames = (updated == null ? List.<RelationDefinition>of() : updated)
+                .stream()
+                .map(r -> r.name().toLowerCase(Locale.ROOT))
+                .collect(Collectors.toSet());
+        return existing.stream()
+                .filter(r -> !updatedRelationNames.contains(r.name().toLowerCase(Locale.ROOT)))
+                .map(RelationDefinition::name)
+                .toList();
+    }
+
+    /// Computes the names of property definitions present in [existing] but absent from [updated].
+    ///
+    /// **Business purpose:** Identifies which properties were removed in the
+    /// PUT request so their corresponding entity property values can be purged.
+    ///
+    /// @param existing property definitions currently persisted on the template
+    /// @param updated  property definitions from the incoming PUT request
+    /// @return names of property definitions that were removed (never null, may be empty)
+    private List<String> identifyDeletedPropertyNames(
+            List<PropertyDefinition> existing,
+            List<PropertyDefinition> updated) {
+        if (existing == null || existing.isEmpty()) {
+            return List.of();
+        }
+        Set<String> updatedPropertyNames = (updated == null ? List.<PropertyDefinition>of() : updated)
+                .stream()
+                .map(p -> p.name().toLowerCase(Locale.ROOT))
+                .collect(Collectors.toSet());
+        return existing.stream()
+                .filter(p -> !updatedPropertyNames.contains(p.name().toLowerCase(Locale.ROOT)))
+                .map(PropertyDefinition::name)
+                .toList();
+    }
+
+    /// Identifies and purges property values from entities whose definitions were removed during a template update.
+    ///
+    /// @param templateIdentifier the template's business identifier
+    /// @param existing           property definitions currently persisted on the template
+    /// @param updated            property definitions from the incoming PUT request
+    private void purgeRemovedProperties(String templateIdentifier, List<PropertyDefinition> existing, List<PropertyDefinition> updated) {
+        List<String> removedNames = identifyDeletedPropertyNames(existing, updated);
+        if (!removedNames.isEmpty()) {
+            entityRepositoryPort.deletePropertiesByTemplateIdentifierAndPropertyName(templateIdentifier, removedNames);
+        }
+    }
+
+    /// Identifies and purges relation values from entities whose definitions were removed during a template update.
+    ///
+    /// @param templateIdentifier the template's business identifier
+    /// @param existing           relation definitions currently persisted on the template
+    /// @param updated            relation definitions from the incoming PUT request
+    private void purgeRemovedRelations(String templateIdentifier, List<RelationDefinition> existing, List<RelationDefinition> updated) {
+        List<String> removedNames = identifyDeletedRelationNames(existing, updated);
+        if (!removedNames.isEmpty()) {
+            entityRepositoryPort.deleteRelationsByTemplateIdentifierAndRelationName(templateIdentifier, removedNames);
+        }
     }
 
 }

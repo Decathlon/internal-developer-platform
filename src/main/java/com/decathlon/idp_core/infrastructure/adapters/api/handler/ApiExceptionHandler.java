@@ -6,6 +6,9 @@ import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 import com.decathlon.idp_core.domain.exception.entity_template.PropertyDefinitionRulesConflictException;
+import com.decathlon.idp_core.domain.exception.entity_template.PropertyTypeChangeException;
+import com.decathlon.idp_core.domain.exception.entity_template.RelationCannotTargetItselfException;
+import com.decathlon.idp_core.domain.exception.entity_template.RelationTargetTemplateChangeException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
@@ -15,6 +18,9 @@ import org.springframework.web.bind.annotation.ExceptionHandler;
 
 import com.decathlon.idp_core.domain.exception.EntityNotFoundException;
 import com.decathlon.idp_core.domain.exception.InvalidQueryException;
+import com.decathlon.idp_core.domain.exception.entity_template.PropertyNameAlreadyExistsException;
+import com.decathlon.idp_core.domain.exception.entity_template.RelationNameAlreadyExistsException;
+import com.decathlon.idp_core.domain.exception.entity_template.TargetTemplateNotFoundException;
 import com.decathlon.idp_core.domain.exception.entity_template.EntityTemplateAlreadyExistsException;
 import com.decathlon.idp_core.domain.exception.entity_template.EntityTemplateIdentifierCannotChangeException;
 import com.decathlon.idp_core.domain.exception.entity_template.EntityTemplateNameAlreadyExistsException;
@@ -118,6 +124,72 @@ public class ApiExceptionHandler {
         log.warn("Wrong Entity template property rules: {}", ex.getMessage());
         ErrorResponse errorResponse = new ErrorResponse(HttpStatus.BAD_REQUEST.name(), ex.getMessage());
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(errorResponse);
+    }
+
+    /// Handles domain exception when property names are duplicated within a template.
+    ///
+    /// **HTTP mapping:** Maps domain PropertyNameAlreadyExistsException to HTTP 400
+    /// status indicating validation error for duplicate property names.
+    @ExceptionHandler(PropertyNameAlreadyExistsException.class)
+    public ResponseEntity<ErrorResponse> handlePropertyNameAlreadyExistsException(
+            PropertyNameAlreadyExistsException ex) {
+        log.warn("Duplicate property name: {}", ex.getMessage());
+        return createErrorResponse(HttpStatus.BAD_REQUEST, ex.getMessage());
+    }
+
+    /// Handles domain exception when relation names are duplicated within a template.
+    ///
+    /// **HTTP mapping:** Maps domain RelationNameAlreadyExistsException to HTTP 400
+    /// status indicating validation error for duplicate relation names.
+    @ExceptionHandler(RelationNameAlreadyExistsException.class)
+    public ResponseEntity<ErrorResponse> handleRelationNameAlreadyExistsException(
+            RelationNameAlreadyExistsException ex) {
+        log.warn("Duplicate relation name: {}", ex.getMessage());
+        return createErrorResponse(HttpStatus.BAD_REQUEST, ex.getMessage());
+    }
+
+    /// Handles domain exception when a relation references a non-existent target template.
+    ///
+    /// **HTTP mapping:** Maps domain TargetTemplateNotFoundException to HTTP 400
+    /// status indicating validation error for missing target template.
+    @ExceptionHandler(TargetTemplateNotFoundException.class)
+    public ResponseEntity<ErrorResponse> handleTargetTemplateNotFoundException(
+            TargetTemplateNotFoundException ex) {
+        log.warn("Target template not found: {}", ex.getMessage());
+        return createErrorResponse(HttpStatus.BAD_REQUEST, ex.getMessage());
+    }
+
+    /// Handles domain exception when type changes are attempted.
+    ///
+    /// **HTTP mapping:** Maps domain PropertyTypeChangeException to HTTP 400
+    /// status indicating validation error for type changes.
+    @ExceptionHandler(PropertyTypeChangeException.class)
+    public ResponseEntity<ErrorResponse> handleTypeChangeException(
+            PropertyTypeChangeException ex) {
+        log.warn("Type change error: {}", ex.getMessage());
+        return createErrorResponse(HttpStatus.BAD_REQUEST, ex.getMessage());
+    }
+
+    /// Handles domain exception when relation target template changes are attempted.
+    ///
+    /// **HTTP mapping:** Maps domain RelationTargetTemplateChangeException to HTTP 400
+    /// status indicating validation error for immutable target template field.
+    @ExceptionHandler(RelationTargetTemplateChangeException.class)
+    public ResponseEntity<ErrorResponse> handleRelationTargetTemplateChangeException(
+            RelationTargetTemplateChangeException ex) {
+        log.warn("Relation target template change error: {}", ex.getMessage());
+        return createErrorResponse(HttpStatus.BAD_REQUEST, ex.getMessage());
+    }
+
+    /// Handles domain exception when a relation's target template identifier is the template itself.
+    ///
+    /// **HTTP mapping:** Maps domain RelationCannotTargetItselfException to HTTP 400
+    /// status indicating validation error for self-referential relations.
+    @ExceptionHandler(RelationCannotTargetItselfException.class)
+    public ResponseEntity<ErrorResponse> handleRelationCannotTargetItselfException(
+            RelationCannotTargetItselfException ex) {
+        log.warn("Relation self-reference error: {}", ex.getMessage());
+        return createErrorResponse(HttpStatus.BAD_REQUEST, ex.getMessage());
     }
 
     /// Handles Bean Validation constraint violations from domain model validation.

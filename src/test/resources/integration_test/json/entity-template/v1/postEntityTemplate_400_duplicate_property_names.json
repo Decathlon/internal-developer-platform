@@ -1,0 +1,22 @@
+{
+  "identifier": "test-duplicate-props",
+  "name": "Test Duplicate Props",
+  "description": "Template with duplicate properties",
+  "properties_definitions": [
+    {
+      "name": "applicationName",
+      "description": "Application name",
+      "required": true,
+      "type": "STRING",
+      "rules": {}
+    },
+    {
+      "name": "applicationname",
+      "description": "Another application name",
+      "required": false,
+      "type": "STRING",
+      "rules": {}
+    }
+  ],
+  "relations_definitions": []
+}

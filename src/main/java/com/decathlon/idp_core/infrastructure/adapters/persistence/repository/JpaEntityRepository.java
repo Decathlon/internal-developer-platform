@@ -1,5 +1,6 @@
 package com.decathlon.idp_core.infrastructure.adapters.persistence.repository;
 
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -8,7 +9,9 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import com.decathlon.idp_core.domain.model.entity.EntitySummary;
@@ -26,4 +29,30 @@ public interface JpaEntityRepository extends JpaRepository<EntityJpaEntity, UUID
     Optional<EntityJpaEntity> findByTemplateIdentifierAndIdentifier(String templateIdentifier, String identifier);
 
     Page<EntityJpaEntity> findByTemplateIdentifier(String templateIdentifier, Pageable pageable);
+
+    @Modifying(clearAutomatically = true, flushAutomatically = true)
+    @Query("""
+            DELETE FROM PropertyJpaEntity p
+            WHERE p IN (
+              SELECT p2 FROM EntityJpaEntity e JOIN e.properties p2
+              WHERE e.templateIdentifier = :templateIdentifier
+              AND p2.name IN :propertyNames
+            )
+            """)
+    void deletePropertiesByTemplateIdentifierAndPropertyName(
+            @Param("templateIdentifier") String templateIdentifier,
+            @Param("propertyNames") Collection<String> propertyNames);
+
+    @Modifying(clearAutomatically = true, flushAutomatically = true)
+    @Query("""
+            DELETE FROM RelationJpaEntity r
+            WHERE r IN (
+              SELECT r2 FROM EntityJpaEntity e JOIN e.relations r2
+              WHERE e.templateIdentifier = :templateIdentifier
+              AND r2.name IN :relationNames
+            )
+            """)
+    void deleteRelationsByTemplateIdentifierAndRelationName(
+            @Param("templateIdentifier") String templateIdentifier,
+            @Param("relationNames") Collection<String> relationNames);
 }
