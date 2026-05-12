@@ -60,7 +60,6 @@ public class SecurityConfiguration {
             configuration.setAllowedOrigins(corsProperties.allowedOrigins());
         }
 
-        // Pattern-based origins (supports wildcards, e.g. https://*.decathlon.io)
         if (!corsProperties.allowedOriginPatterns().isEmpty()) {
             configuration.setAllowedOriginPatterns(corsProperties.allowedOriginPatterns());
         }
