@@ -16,6 +16,7 @@ import com.decathlon.idp_core.infrastructure.adapters.api.controller.EntityContr
 /// Integration-level specification behavior is verified through the
 /// [EntityControllerTest] integration tests.
 @DisplayName("EntitySpecification")
+@SuppressWarnings("java:S2187")
 class EntitySpecificationTest {
 
     @Nested

@@ -17,6 +17,7 @@ import com.decathlon.idp_core.domain.model.enums.FilterKeyType;
 import com.decathlon.idp_core.domain.model.enums.FilterOperator;
 
 @DisplayName("EntityQueryParserService")
+@SuppressWarnings("java:S2187")
 class EntityQueryParserServiceTest {
 
     private final EntityQueryParserService parser = new EntityQueryParserService();
