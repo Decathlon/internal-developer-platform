@@ -8,16 +8,25 @@ import static com.decathlon.idp_core.domain.constant.ValidationMessages.minMaxCo
 import static com.decathlon.idp_core.domain.constant.ValidationMessages.ruleNotAllowed;
 import static com.decathlon.idp_core.domain.constant.ValidationMessages.rulesAreIncompatible;
 
+import java.util.HashSet;
+import java.util.List;
+import java.util.Locale;
+import java.util.Map;
+import java.util.Set;
+import java.util.stream.Collectors;
+
 import org.springframework.stereotype.Service;
 
 import com.decathlon.idp_core.domain.exception.entity_template.PropertyDefinitionRulesConflictException;
+import com.decathlon.idp_core.domain.exception.entity_template.PropertyNameAlreadyExistsException;
+import com.decathlon.idp_core.domain.exception.entity_template.PropertyTypeChangeException;
 import com.decathlon.idp_core.domain.model.entity_template.PropertyDefinition;
 import com.decathlon.idp_core.domain.model.entity_template.PropertyRules;
 import com.decathlon.idp_core.domain.model.enums.PropertyType;
 
 import lombok.RequiredArgsConstructor;
 
-/// Domain service for validating property rule compatibility with property types.
+/// Domain service for validating property definitions and their compatibility with property types.
 ///
 /// **Business rules:**
 /// - STRING: Allows format, enum_values, regex, max_length, min_length. Rejects numeric rules.
@@ -25,6 +34,8 @@ import lombok.RequiredArgsConstructor;
 /// - BOOLEAN: Rejects all rules; rules field must be null or empty.
 ///
 /// **Key responsibilities:**
+/// - Validate property name uniqueness within an entity template
+/// - Enforce immutable property types by rejecting type changes
 /// - Type-to-rule compatibility validation
 /// - Constraint ordering validation (min ≤ max)
 /// - Regex pattern validation (delegated to [PropertyRegexValidationService])
@@ -45,6 +56,57 @@ public class PropertyDefinitionValidationService {
     public static final String MIN_LENGTH = "min_length";
     public static final String MAX_VALUE = "max_value";
     public static final String MIN_VALUE = "min_value";
+
+    /// Validates that all property names are unique within a template.
+    ///
+    /// **Contract:** Enforces the invariant that property names must be unique. Used
+    /// during template creation and updates to prevent duplicate property
+    /// definitions.
+    ///
+    /// @param properties the list of property definitions to validate
+    /// @throws PropertyNameAlreadyExistsException if duplicate property names
+    /// are found
+    public void validatePropertyNamesUniqueness(List<PropertyDefinition> properties) {
+        Set<String> names = new HashSet<>();
+        for (PropertyDefinition property : properties) {
+            if (property.name() != null) {
+                String normalizedName = property.name().toLowerCase(Locale.ROOT);
+                if (!names.add(normalizedName)) {
+                    throw new PropertyNameAlreadyExistsException(property.name());
+                }
+            }
+        }
+    }
+
+    /// Validates that property types are not changed on existing properties.
+    ///
+    /// **Contract:** Enforces the invariant that property types cannot be modified
+    /// after initial creation. Any attempt to change a property type is forbidden.
+    /// Users must delete and recreate the property if they need to change its type.
+    ///
+    /// @param existingProperties the existing property definitions
+    /// @param incomingProperties the new/updated property definitions
+    /// @throws PropertyTypeChangeException if any property type change is attempted
+    public void validateTypeChanges(List<PropertyDefinition> existingProperties, List<PropertyDefinition> incomingProperties) {
+        if (existingProperties == null || existingProperties.isEmpty() ||
+                incomingProperties == null || incomingProperties.isEmpty()) {
+            return;
+        }
+        Map<String, PropertyDefinition> updatedMap = incomingProperties.stream()
+                .collect(Collectors.toMap(p -> p.name().toLowerCase(Locale.ROOT), p -> p));
+
+        for (PropertyDefinition existing : existingProperties) {
+            PropertyDefinition updated = updatedMap.get(existing.name().toLowerCase(Locale.ROOT));
+            boolean propertyTypeChanged = updated != null && !existing.type().equals(updated.type());
+
+            if (propertyTypeChanged) {
+                throw new PropertyTypeChangeException(
+                        existing.name(),
+                        existing.type(),
+                        updated.type());
+            }
+        }
+    }
 
     /// Validates property rules are compatible with the property's data type.
     ///
@@ -146,7 +208,7 @@ public class PropertyDefinitionValidationService {
     /// @param propertyName name of the property (for error reporting)
     /// @param rules the property rules to validate
     /// @throws PropertyDefinitionRulesConflictException when incompatible rules are both present
-    private void validateStringIncompatibleRules(String propertyName, PropertyRules rules){
+    private void validateStringIncompatibleRules(String propertyName, PropertyRules rules) {
         // Reject numeric rules for STRING type
         if (rules.maxValue() != null || rules.minValue() != null) {
             String ruleName = rules.maxValue() != null ? MAX_VALUE : MIN_VALUE;
@@ -207,7 +269,7 @@ public class PropertyDefinitionValidationService {
     /// @param propertyName name of the property (for error reporting)
     /// @param rules the property rules to validate
     /// @throws PropertyDefinitionRulesConflictException when string rules are present
-    ///         or min/max value constraints are violated
+    /// or min/max value constraints are violated
     private void validateNumberPropertyRules(String propertyName, PropertyRules rules) {
         if (rules.format() != null) {
             throw new PropertyDefinitionRulesConflictException(

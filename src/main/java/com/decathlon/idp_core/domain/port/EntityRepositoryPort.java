@@ -1,5 +1,6 @@
 package com.decathlon.idp_core.domain.port;
 
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -19,6 +20,8 @@ import com.decathlon.idp_core.domain.model.entity.EntitySummary;
 /// - `findByTemplateIdentifier()` must support pagination for large entity sets
 /// - `findByIdentifierIn()` optimizes bulk entity lookups for relationship resolution
 /// - `findByRelationIdIn()` enables reverse relationship navigation
+/// - `deletePropertiesByTemplateIdentifierAndPropertyName()` must remove all property instances matching the given names for entities of the specified template
+/// - `deleteRelationsByTemplateIdentifierAndRelationName()` must remove all relation instances matching the given names for entities of the specified template
 ///
 /// **Transaction behavior:** Implementations should handle transaction boundaries
 /// appropriately for the underlying persistence technology.
@@ -37,4 +40,8 @@ public interface EntityRepositoryPort {
     List<EntitySummary> findByIdentifierIn(List<String> identifiers);
 
     List<EntitySummary> findByRelationIdIn(List<UUID> relationIds);
+
+    void deletePropertiesByTemplateIdentifierAndPropertyName(String templateIdentifier, Collection<String> propertyNames);
+
+    void deleteRelationsByTemplateIdentifierAndRelationName(String templateIdentifier, Collection<String> relationNames);
 }

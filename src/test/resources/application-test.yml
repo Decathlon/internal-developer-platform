@@ -10,6 +10,8 @@ spring:
   jackson:
     property-naming-strategy: SNAKE_CASE
     write_dates_as_timestamps: false
+    deserialization:
+      fail-on-unknown-properties: true
   security:
     oauth2:
       client:
