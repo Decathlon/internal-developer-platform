@@ -10,8 +10,7 @@ import com.decathlon.idp_core.domain.model.enums.FilterOperator;
 /// - [FilterKeyType#ATTRIBUTE] — direct entity attribute (`identifier`, `name`)
 /// - [FilterKeyType#PROPERTY] — entity property value identified by `key`
 /// - [FilterKeyType#RELATION_ENTITY] — target entity identifiers of the relation named `key`
-/// - [FilterKeyType#RELATION_PROPERTY] — a property of relation instances. `key` format:
-///   `relationName.propertyName` (e.g., `api-link.identifier`)
+/// - [FilterKeyType#RELATION_PROPERTY] — a property (`identifier` or `name`) of the target entity of a named relation. `key` format: `relationName.propertyName` (e.g., `api-link.identifier`)
 ///
 /// Multiple [FilterCriterion] instances combined in an [EntityFilter] are applied with implicit AND logic.
 public record FilterCriterion(

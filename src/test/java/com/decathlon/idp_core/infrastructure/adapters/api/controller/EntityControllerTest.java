@@ -198,7 +198,7 @@ public class EntityControllerTest extends AbstractIntegrationTest {
                             .param("q", "noOperator")
                             .accept(APPLICATION_JSON))
                     .andExpect(status().isBadRequest())
-                    .andExpect(jsonPath("$.error_description").value("Invalid query format, expected field:operation:value"));
+                    .andExpect(jsonPath("$.error_description").value("Invalid query format, expected field:operator:value"));
         }
 
         @Test
@@ -245,6 +245,17 @@ public class EntityControllerTest extends AbstractIntegrationTest {
                             .accept(APPLICATION_JSON))
                     .andExpect(status().isBadRequest())
                     .andExpect(jsonPath("$.error_description").value("Invalid property 'language' in criterion 'relations_as_target.api-link.language=JAVA': only 'identifier' and 'name' are supported for relations_as_target"));
+        }
+
+        @Test
+        @DisplayName("Should return 400 for unsupported property in relation")
+        @WithMockUser
+        void getEntities_400_relationInvalidProperty() throws Exception {
+            mockMvc.perform(get(ENTITIES_BY_TEMPLATE_IDENTIFIER_PATH, "microservice")
+                            .param("q", "relation.api-link.template=foo")
+                            .accept(APPLICATION_JSON))
+                    .andExpect(status().isBadRequest())
+                    .andExpect(jsonPath("$.error_description").value("Invalid property 'template' in criterion 'relation.api-link.template=foo': only 'identifier' and 'name' are supported for relation"));
         }
     }
 

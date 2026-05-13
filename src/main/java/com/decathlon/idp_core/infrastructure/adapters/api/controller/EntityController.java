@@ -13,15 +13,19 @@ import static com.decathlon.idp_core.infrastructure.adapters.api.configuration.S
 import static com.decathlon.idp_core.infrastructure.adapters.api.configuration.SwaggerDescription.PARAM_PAGE_DESCRIPTION;
 import static com.decathlon.idp_core.infrastructure.adapters.api.configuration.SwaggerDescription.PARAM_QUERY_DESCRIPTION;
 import static com.decathlon.idp_core.infrastructure.adapters.api.configuration.SwaggerDescription.PARAM_SIZE_DESCRIPTION;
+import static com.decathlon.idp_core.infrastructure.adapters.api.configuration.SwaggerDescription.PARAM_SORT_DESCRIPTION;
 import static com.decathlon.idp_core.infrastructure.adapters.api.configuration.SwaggerDescription.RESPONSE_ENTITIES_PAGINATED_SUCCESS;
 import static com.decathlon.idp_core.infrastructure.adapters.api.configuration.SwaggerDescription.RESPONSE_ENTITY_CREATED;
 import static com.decathlon.idp_core.infrastructure.adapters.api.configuration.SwaggerDescription.RESPONSE_ENTITY_FOUND;
 import static com.decathlon.idp_core.infrastructure.adapters.api.configuration.SwaggerDescription.RESPONSE_ENTITY_NOT_FOUND_IDENTIFIER;
 import static com.decathlon.idp_core.infrastructure.adapters.api.configuration.SwaggerDescription.RESPONSE_INVALID_ENTITY_DATA;
+import static com.decathlon.idp_core.infrastructure.adapters.api.configuration.SwaggerDescription.RESPONSE_INVALID_PAGINATION;
 import static com.decathlon.idp_core.infrastructure.adapters.api.configuration.SwaggerDescription.RESPONSE_INVALID_QUERY;
 import static org.springframework.http.HttpStatus.CREATED;
 import static org.springframework.http.HttpStatus.OK;
 
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.enums.ParameterIn;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -87,21 +91,21 @@ public class EntityController {
     /// @return paginated entity DTOs matching the template and optional filter
     @Operation(summary = ENDPOINT_GET_ENTITIES_SUMMARY, description = ENDPOINT_GET_ENTITIES_PAGINATED_DESCRIPTION)
     @ApiResponse(responseCode = OK_CODE, description = RESPONSE_ENTITIES_PAGINATED_SUCCESS, content = @Content(schema = @Schema(implementation = EntityPageResponse.class)))
+    @ApiResponse(responseCode = BAD_REQUEST_CODE, description = RESPONSE_INVALID_PAGINATION, content = {
+            @Content(schema = @Schema(implementation = ApiExceptionHandler.ErrorResponse.class))})
     @ApiResponse(responseCode = BAD_REQUEST_CODE, description = RESPONSE_INVALID_QUERY, content = {
-            @Content(schema = @Schema(implementation = ApiExceptionHandler.ErrorResponse.class)) })
+            @Content(schema = @Schema(implementation = ApiExceptionHandler.ErrorResponse.class))})
+    @Parameter(name = "page", description = PARAM_PAGE_DESCRIPTION, in = ParameterIn.QUERY, content = @Content(schema = @Schema(type = "integer", defaultValue = "0")))
+    @Parameter(name = "size", description = PARAM_SIZE_DESCRIPTION, in = ParameterIn.QUERY, content = @Content(schema = @Schema(type = "integer", defaultValue = "20")))
+    @Parameter(name = "sort", description = PARAM_SORT_DESCRIPTION, in = ParameterIn.QUERY, content = @Content(schema = @Schema(type = "string", defaultValue = "identifier,asc")))
+    @Parameter(name = "q", description = PARAM_QUERY_DESCRIPTION, in = ParameterIn.QUERY, content = @Content(schema = @Schema(type = "string")))
     @ResponseStatus(OK)
     @GetMapping("/{templateIdentifier}")
     public Page<EntityDtoOut> getEntities(
-            @RequestParam(defaultValue = "0")
-            @Schema(description = PARAM_PAGE_DESCRIPTION)
-            int page,
-            @RequestParam(defaultValue = "20")
-            @Schema(description = PARAM_SIZE_DESCRIPTION)
-            int size,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size,
             @PathVariable String templateIdentifier,
-            @RequestParam(required = false)
-            @Schema(description = PARAM_QUERY_DESCRIPTION)
-            String q) {
+            @RequestParam(required = false) String q) {
         Pageable pageable = PageRequest.of(page, size);
         EntityFilter filter = entityQueryParserService.parse(q);
         Page<Entity> entities = entityService.getEntitiesByTemplateIdentifierWithFilter(pageable, templateIdentifier, filter);

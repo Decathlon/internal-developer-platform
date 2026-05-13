@@ -32,8 +32,7 @@ import lombok.NoArgsConstructor;
 ///   filter on the specified property (e.g., `name`, `identifier`).
 /// - Relations as target name criteria find entities where they are targets of relations
 ///   with a specific name (requires joining relations and checking targetEntityIdentifiers).
-/// - All joins trigger to prevent duplicate rows from
-///   one-to-many joins.
+/// - Join-based criteria call `query.distinct(true)` to prevent duplicate rows from
 /// - All criteria are combined with AND logic via [Specification#allOf].
 ///
 /// **Security:** The CONTAINS operator escapes SQL LIKE wildcards (`%`, `_`) in

@@ -167,10 +167,13 @@ class EntityQueryParserServiceTest {
         }
 
         @Test
-        @DisplayName("relation property with hyphenated names")
-        void parse_relationPropertyHyphenated() {
-            var result = parser.parse("relation.my-link.custom-prop=value");
-            assertSingleCriterion(result, FilterKeyType.RELATION_PROPERTY, "my-link.custom-prop", FilterOperator.EQUALS, "value");
+        @DisplayName("throws InvalidQueryException for unsupported property in relation (custom-prop is not identifier or name)")
+        void parse_relationPropertyUnsupported_throwsException() {
+            assertThatThrownBy(() -> parser.parse("relation.my-link.custom-prop=value"))
+                    .isInstanceOf(InvalidQueryException.class)
+                    .hasMessageContaining("custom-prop")
+                    .hasMessageContaining("identifier")
+                    .hasMessageContaining("name");
         }
     }
 
@@ -429,6 +432,16 @@ class EntityQueryParserServiceTest {
             assertThatThrownBy(() -> parser.parse(query))
                     .isInstanceOf(InvalidQueryException.class)
                     .hasMessageContaining("template");
+        }
+
+        @Test
+        @DisplayName("throws InvalidQueryException for unsupported property on relation with equals operator")
+        void parse_equalsOnRelationTemplate_throwsException() {
+            assertThatThrownBy(() -> parser.parse("relation.database.template=postgresql"))
+                    .isInstanceOf(InvalidQueryException.class)
+                    .hasMessageContaining("template")
+                    .hasMessageContaining("identifier")
+                    .hasMessageContaining("name");
         }
 
         @ParameterizedTest(name = "comparison operator on: ''{0}''")

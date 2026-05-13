@@ -26,7 +26,8 @@ import com.decathlon.idp_core.domain.model.enums.FilterOperator;
 ///   - `property.<name>` - property value filter
 ///   - `relation` - filter by relation name (e.g., `relation=api-link`)
 ///   - `relation.<name>` - relation target entity identifier filter
-///   - `relation.<name>.<property>` - relation property filter (e.g., `relation.api-link.identifier`)
+///   - `relation.<name>.<identifier|name>` - relation property filter; `<property>` must be `identifier` or `name`
+///     (e.g., `relation.api-link.identifier=microservice-1`)
 ///   - `relations_as_target.<name>.<property>` - filter by a property of the source entity
 ///     in a reverse relation; `<property>` must be `identifier` or `name`
 ///     (e.g. `relations_as_target.api-link.name:microservice`)
@@ -35,7 +36,7 @@ import com.decathlon.idp_core.domain.model.enums.FilterOperator;
 /// - Maximum MAX_CRITERIA_COUNT criteria per query (DoS prevention)
 /// - Key names and values limited to MAX_KEY_VALUE_LENGTH characters
 ///
-/// **Example:** `name:API;property.language=JAVA;relation=api-link;relation.database.template=postgresql;relation.api-link.identifier=microservice-1`
+/// **Example:** `name:API;property.language=JAVA;relation=api-link;relation.database=my-db;relation.api-link.identifier=microservice-1`
 @Component
 public class EntityQueryParserService {
 
@@ -170,13 +171,17 @@ public class EntityQueryParserService {
             var relationPart = rawKey.substring(RELATION_PREFIX.length());
             validateNonBlankKeyName(relationPart, token);
 
-            // Check for relation property syntax: relation.<relationName>.<property>
+            // relation.<relationName>.<property> — property must be identifier or name
             int dotIndex = relationPart.indexOf('.');
             if (dotIndex > 0) {
                 var relationName = relationPart.substring(0, dotIndex);
                 var propertyName = relationPart.substring(dotIndex + 1);
                 validateKeyName(relationName, token);
-                validateKeyName(propertyName, token);
+                if (!VALID_ATTRIBUTE_NAMES.contains(propertyName)) {
+                    throw new InvalidQueryException(
+                            "Invalid property '%s' in criterion '%s': only 'identifier' and 'name' are supported for relation"
+                                    .formatted(propertyName, token));
+                }
                 var compositeKey = relationName + "." + propertyName;
                 return new FilterCriterion(FilterKeyType.RELATION_PROPERTY, compositeKey, operator, value);
             }
