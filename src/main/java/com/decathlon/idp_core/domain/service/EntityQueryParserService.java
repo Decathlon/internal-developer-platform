@@ -40,6 +40,8 @@ import com.decathlon.idp_core.domain.model.enums.FilterOperator;
 @Component
 public class EntityQueryParserService {
 
+    private static final String RELATION = "relation";
+    private static final String RELATIONS_AS_TARGET = "relations_as_target";
     private static final String PROPERTY_PREFIX = "property.";
     private static final String RELATION_PREFIX = "relation.";
     private static final String RELATIONS_AS_TARGET_PREFIX = "relations_as_target.";
@@ -127,12 +129,12 @@ public class EntityQueryParserService {
 
     private FilterCriterion buildCriterion(String rawKey, FilterOperator operator, String value, String token) {
         // Direct attribute filters (relation=X means filter by relation name)
-        if ("relation".equals(rawKey)) {
+        if (RELATION.equals(rawKey)) {
             validateKeyName(value, token);
             return new FilterCriterion(FilterKeyType.RELATION_NAME, "", operator, value);
         }
 
-        if ("relations_as_target".equals(rawKey)) {
+        if (RELATIONS_AS_TARGET.equals(rawKey)) {
             validateKeyName(value, token);
             return new FilterCriterion(FilterKeyType.RELATIONS_AS_TARGET_NAME, "", operator, value);
         }
@@ -146,49 +148,13 @@ public class EntityQueryParserService {
         if (rawKey.startsWith(RELATIONS_AS_TARGET_PREFIX)) {
             var relationPart = rawKey.substring(RELATIONS_AS_TARGET_PREFIX.length());
             validateNonBlankKeyName(relationPart, token);
-
-            // relations_as_target.<relationName>.<property> — property must be identifier or name
-            int dotIndex = relationPart.indexOf('.');
-            if (dotIndex > 0) {
-                var relationName = relationPart.substring(0, dotIndex);
-                var propertyName = relationPart.substring(dotIndex + 1);
-                validateKeyName(relationName, token);
-                if (!VALID_ATTRIBUTE_NAMES.contains(propertyName)) {
-                    throw new InvalidQueryException(
-                            "Invalid property '%s' in criterion '%s': only 'identifier' and 'name' are supported for relations_as_target"
-                                    .formatted(propertyName, token));
-                }
-                var compositeKey = relationName + "." + propertyName;
-                return new FilterCriterion(FilterKeyType.RELATIONS_AS_TARGET_PROPERTY, compositeKey, operator, value);
-            }
-
-            throw new InvalidQueryException(
-                    "Invalid filter criterion '%s': relations_as_target requires the form 'relations_as_target.<relationName>.<identifier|name>'"
-                            .formatted(token));
+            return buildRelationsAsTargetCriterion(relationPart, operator, value, token);
         }
 
         if (rawKey.startsWith(RELATION_PREFIX)) {
             var relationPart = rawKey.substring(RELATION_PREFIX.length());
             validateNonBlankKeyName(relationPart, token);
-
-            // relation.<relationName>.<property> — property must be identifier or name
-            int dotIndex = relationPart.indexOf('.');
-            if (dotIndex > 0) {
-                var relationName = relationPart.substring(0, dotIndex);
-                var propertyName = relationPart.substring(dotIndex + 1);
-                validateKeyName(relationName, token);
-                if (!VALID_ATTRIBUTE_NAMES.contains(propertyName)) {
-                    throw new InvalidQueryException(
-                            "Invalid property '%s' in criterion '%s': only 'identifier' and 'name' are supported for relation"
-                                    .formatted(propertyName, token));
-                }
-                var compositeKey = relationName + "." + propertyName;
-                return new FilterCriterion(FilterKeyType.RELATION_PROPERTY, compositeKey, operator, value);
-            }
-
-            // Default: relation entity filter
-            validateKeyName(relationPart, token);
-            return new FilterCriterion(FilterKeyType.RELATION_ENTITY, relationPart, operator, value);
+            return buildRelationCriterion(relationPart, operator, value, token);
         }
 
         if (!VALID_ATTRIBUTE_NAMES.contains(rawKey)) {
@@ -197,6 +163,46 @@ public class EntityQueryParserService {
                             .formatted(rawKey, token, VALID_ATTRIBUTE_NAMES));
         }
         return new FilterCriterion(FilterKeyType.ATTRIBUTE, rawKey, operator, value);
+    }
+
+    private FilterCriterion buildRelationsAsTargetCriterion(String relationPart, FilterOperator operator, String value, String token) {
+        int dotIndex = relationPart.indexOf('.');
+        if (dotIndex <= 0) {
+            throw new InvalidQueryException(
+                    "Invalid filter criterion '%s': relations_as_target requires the form 'relations_as_target.<relationName>.<identifier|name>'"
+                            .formatted(token));
+        }
+
+        var relationName = relationPart.substring(0, dotIndex);
+        var propertyName = relationPart.substring(dotIndex + 1);
+        validateKeyName(relationName, token);
+        if (!VALID_ATTRIBUTE_NAMES.contains(propertyName)) {
+            throw new InvalidQueryException(
+                    "Invalid property '%s' in criterion '%s': only 'identifier' and 'name' are supported for relations_as_target"
+                            .formatted(propertyName, token));
+        }
+        var compositeKey = relationName + "." + propertyName;
+        return new FilterCriterion(FilterKeyType.RELATIONS_AS_TARGET_PROPERTY, compositeKey, operator, value);
+    }
+
+    private FilterCriterion buildRelationCriterion(String relationPart, FilterOperator operator, String value, String token) {
+        int dotIndex = relationPart.indexOf('.');
+        if (dotIndex > 0) {
+            var relationName = relationPart.substring(0, dotIndex);
+            var propertyName = relationPart.substring(dotIndex + 1);
+            validateKeyName(relationName, token);
+            if (!VALID_ATTRIBUTE_NAMES.contains(propertyName)) {
+                throw new InvalidQueryException(
+                        "Invalid property '%s' in criterion '%s': only 'identifier' and 'name' are supported for relation"
+                                .formatted(propertyName, token));
+            }
+            var compositeKey = relationName + "." + propertyName;
+            return new FilterCriterion(FilterKeyType.RELATION_PROPERTY, compositeKey, operator, value);
+        }
+
+        // Default: relation entity filter
+        validateKeyName(relationPart, token);
+        return new FilterCriterion(FilterKeyType.RELATION_ENTITY, relationPart, operator, value);
     }
 
     private void validateNoDuplicates(List<FilterCriterion> criteria) {
