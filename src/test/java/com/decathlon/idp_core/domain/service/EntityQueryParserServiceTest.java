@@ -359,7 +359,7 @@ class EntityQueryParserServiceTest {
                 "property.lang/age=JAVA",
                 "relation.database=my-db",
                 "relation.db$name=my-db",
-                "relation.my-cache.template=redis"
+                "relation.my-cache.identifier=redis-1"
         })
         @DisplayName("accepts valid key name characters")
         void parse_validKeyNameChars_succeeds(String query) {
@@ -424,11 +424,11 @@ class EntityQueryParserServiceTest {
 
         @ParameterizedTest(name = "comparison operator on: ''{0}''")
         @ValueSource(strings = {"relation.database.template<postgresql", "relation.database.template>postgresql"})
-        @DisplayName("throws InvalidQueryException for less/greater than on relation template")
+        @DisplayName("throws InvalidQueryException for unsupported property on relation (template is not a valid relation property)")
         void parse_comparisonOnRelationTemplate_throwsException(String query) {
             assertThatThrownBy(() -> parser.parse(query))
                     .isInstanceOf(InvalidQueryException.class)
-                    .hasMessageContaining("is not applicable for field");
+                    .hasMessageContaining("template");
         }
 
         @ParameterizedTest(name = "comparison operator on: ''{0}''")

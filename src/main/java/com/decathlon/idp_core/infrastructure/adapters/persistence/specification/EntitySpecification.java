@@ -42,6 +42,7 @@ import lombok.NoArgsConstructor;
 public final class EntitySpecification {
 
     private static final char LIKE_ESCAPE_CHAR = '\\';
+    private static final String NAME = "name";
     private static final String IDENTIFIER = "identifier";
     private static final String RELATIONS = "relations";
     private static final String TARGET_ENTITY_IDENTIFIERS = "targetEntityIdentifiers";
@@ -88,7 +89,7 @@ public final class EntitySpecification {
             query.distinct(true);
             Join<EntityJpaEntity, PropertyJpaEntity> propJoin = root.join("properties");
             return cb.and(
-                    cb.equal(propJoin.get("name"), criterion.key()),
+                    cb.equal(propJoin.get(NAME), criterion.key()),
                     buildPredicate(cb, propJoin.get("value"), criterion.operator(), criterion.value())
             );
         };
@@ -100,7 +101,7 @@ public final class EntitySpecification {
             Join<EntityJpaEntity, RelationJpaEntity> relJoin = root.join(RELATIONS);
             Join<RelationJpaEntity, String> targetJoin = relJoin.join(TARGET_ENTITY_IDENTIFIERS);
             return cb.and(
-                    cb.equal(relJoin.get("name"), criterion.key()),
+                    cb.equal(relJoin.get(NAME), criterion.key()),
                     buildPredicate(cb, targetJoin, criterion.operator(), criterion.value())
             );
         };
@@ -113,11 +114,14 @@ public final class EntitySpecification {
 
             String compositeKey = criterion.key();
             int dotIndex = compositeKey.indexOf('.');
+            if (dotIndex < 0) {
+                throw new IllegalArgumentException("Invalid composite key format: " + compositeKey);
+            }
             String relationName = compositeKey.substring(0, dotIndex);
             String propertyName = compositeKey.substring(dotIndex + 1);
 
             // Check if the property is a target entity property (identifier, name)
-            if (IDENTIFIER.equals(propertyName) || "name".equals(propertyName)) {
+            if (IDENTIFIER.equals(propertyName) || NAME.equals(propertyName)) {
                 // Join to target entity identifiers first
                 Join<RelationJpaEntity, String> targetIdJoin = relJoin.join(TARGET_ENTITY_IDENTIFIERS);
                 // Create a subquery to find the actual target entities and filter by their properties
@@ -127,13 +131,13 @@ public final class EntitySpecification {
                         .where(buildPredicate(cb, subRoot.get(propertyName), criterion.operator(), criterion.value()));
 
                 return cb.and(
-                        cb.equal(relJoin.get("name"), relationName),
+                        cb.equal(relJoin.get(NAME), relationName),
                         cb.in(targetIdJoin).value(subquery)
                 );
             } else {
                 // Direct relation property (shouldn't happen normally as RelationJpaEntity has limited properties)
                 return cb.and(
-                        cb.equal(relJoin.get("name"), relationName),
+                        cb.equal(relJoin.get(NAME), relationName),
                         buildPredicate(cb, relJoin.get(propertyName), criterion.operator(), criterion.value())
                 );
             }
@@ -149,7 +153,7 @@ public final class EntitySpecification {
         return switch (operator) {
             case EQUALS -> cb.equal(cb.lower(stringField), value.toLowerCase());
             case CONTAINS -> {
-                var escaped = escapeLikeWildcards(value.toLowerCase());
+                String escaped = escapeLikeWildcards(value.toLowerCase());
                 yield cb.like(cb.lower(stringField), "%" + escaped + "%", LIKE_ESCAPE_CHAR);
             }
             case LESS_THAN -> cb.lessThan(stringField, value);
@@ -161,7 +165,7 @@ public final class EntitySpecification {
         return (root, query, cb) -> {
             query.distinct(true);
             Join<EntityJpaEntity, RelationJpaEntity> relJoin = root.join(RELATIONS);
-            return buildPredicate(cb, relJoin.get("name"), criterion.operator(), criterion.value());
+            return buildPredicate(cb, relJoin.get(NAME), criterion.operator(), criterion.value());
         };
     }
 
@@ -173,7 +177,7 @@ public final class EntitySpecification {
             Root<RelationJpaEntity> relRoot = subquery.from(RelationJpaEntity.class);
             Join<RelationJpaEntity, String> targetJoin = relRoot.join(TARGET_ENTITY_IDENTIFIERS);
             subquery.select(targetJoin)
-                    .where(buildPredicate(cb, relRoot.get("name"), criterion.operator(), criterion.value()));
+                    .where(buildPredicate(cb, relRoot.get(NAME), criterion.operator(), criterion.value()));
             return cb.in(root.get(IDENTIFIER)).value(subquery);
         };
     }
@@ -188,6 +192,9 @@ public final class EntitySpecification {
         return (root, query, cb) -> {
             String compositeKey = criterion.key();
             int dotIndex = compositeKey.indexOf('.');
+            if (dotIndex < 0) {
+                throw new IllegalArgumentException("Invalid composite key format: " + compositeKey);
+            }
             String relationName = compositeKey.substring(0, dotIndex);
             String propertyName = compositeKey.substring(dotIndex + 1); // "identifier" or "name"
 
@@ -199,7 +206,7 @@ public final class EntitySpecification {
             Join<RelationJpaEntity, String> targetJoin = relJoin.join(TARGET_ENTITY_IDENTIFIERS);
             subquery.select(targetJoin)
                     .where(
-                            cb.equal(relJoin.get("name"), relationName),
+                            cb.equal(relJoin.get(NAME), relationName),
                             buildPredicate(cb, sourceRoot.get(propertyName), criterion.operator(), criterion.value())
                     );
             return cb.in(root.get(IDENTIFIER)).value(subquery);

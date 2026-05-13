@@ -26,7 +26,6 @@ import com.decathlon.idp_core.domain.model.enums.FilterOperator;
 ///   - `property.<name>` - property value filter
 ///   - `relation` - filter by relation name (e.g., `relation=api-link`)
 ///   - `relation.<name>` - relation target entity identifier filter
-///   - `relation.<name>.template` - relation target template identifier filter
 ///   - `relation.<name>.<property>` - relation property filter (e.g., `relation.api-link.identifier`)
 ///   - `relations_as_target.<name>.<property>` - filter by a property of the source entity
 ///     in a reverse relation; `<property>` must be `identifier` or `name`
