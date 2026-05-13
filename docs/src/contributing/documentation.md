@@ -356,5 +356,5 @@ Ensure images are in `docs/static/images/` and paths are correct.
 
 ## Next Steps
 
-- **[Code Conventions](code-conventions.md)** - Code documentation standards
+- **[Code Conventions](code/code-conventions.md)** - Code documentation standards
 - **[Pull Requests](pull-requests.md)** - Submit your changes

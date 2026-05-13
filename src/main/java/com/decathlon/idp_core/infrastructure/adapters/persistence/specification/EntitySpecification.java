@@ -28,9 +28,8 @@ import lombok.NoArgsConstructor;
 /// - Relation name criteria filter entities that have a relation with a specific name.
 /// - Relation entity criteria use an INNER JOIN on the `relations` collection and
 ///   then on the `targetEntityIdentifiers` element collection.
-/// - Relation template criteria use an INNER JOIN on the `relations` collection.
 /// - Relation property criteria use an INNER JOIN on the `relations` collection and
-///   filter on the specified property (e.g., `name`, `targetTemplateIdentifier`).
+///   filter on the specified property (e.g., `name`, `identifier`).
 /// - Relations as target name criteria find entities where they are targets of relations
 ///   with a specific name (requires joining relations and checking targetEntityIdentifiers).
 /// - All joins trigger to prevent duplicate rows from
@@ -73,7 +72,6 @@ public final class EntitySpecification {
             case PROPERTY -> propertySpec(criterion);
             case RELATION_NAME -> relationNameSpec(criterion);
             case RELATION_ENTITY -> relationEntitySpec(criterion);
-            case RELATION_TEMPLATE -> relationTemplateSpec(criterion);
             case RELATION_PROPERTY -> relationPropertySpec(criterion);
             case RELATIONS_AS_TARGET_NAME -> relationsAsTargetNameSpec(criterion);
             case RELATIONS_AS_TARGET_PROPERTY -> relationsAsTargetPropertySpec(criterion);
@@ -104,17 +102,6 @@ public final class EntitySpecification {
             return cb.and(
                     cb.equal(relJoin.get("name"), criterion.key()),
                     buildPredicate(cb, targetJoin, criterion.operator(), criterion.value())
-            );
-        };
-    }
-
-    private static Specification<EntityJpaEntity> relationTemplateSpec(FilterCriterion criterion) {
-        return (root, query, cb) -> {
-            query.distinct(true);
-            Join<EntityJpaEntity, RelationJpaEntity> relJoin = root.join(RELATIONS);
-            return cb.and(
-                    cb.equal(relJoin.get("name"), criterion.key()),
-                    buildPredicate(cb, relJoin.get("targetTemplateIdentifier"), criterion.operator(), criterion.value())
             );
         };
     }

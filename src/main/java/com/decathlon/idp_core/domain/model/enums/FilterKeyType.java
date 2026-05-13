@@ -8,8 +8,6 @@ package com.decathlon.idp_core.domain.model.enums;
 /// - [RELATION_NAME] filters by the relation type name (e.g. `relation=api-link`)
 /// - [RELATION_ENTITY] targets the target entity identifiers of a named relation
 ///   (e.g. `relation.database=my-db`)
-/// - [RELATION_TEMPLATE] targets the target template identifier of a named relation
-///   (e.g. `relation.database.template=api-service`)
 /// - [RELATION_PROPERTY] targets a property (`identifier` or `name`) of the target entity
 ///   in a relation. Key format: `relationName.propertyName`
 ///   (e.g. `relation.api-link.identifier=microservice-1`)
@@ -23,7 +21,6 @@ public enum FilterKeyType {
     PROPERTY,
     RELATION_NAME,
     RELATION_ENTITY,
-    RELATION_TEMPLATE,
     RELATION_PROPERTY,
     RELATIONS_AS_TARGET_NAME,
     RELATIONS_AS_TARGET_PROPERTY

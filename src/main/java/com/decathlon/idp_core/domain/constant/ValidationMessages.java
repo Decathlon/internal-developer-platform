@@ -68,9 +68,7 @@ public class ValidationMessages {
     public static final String FILTER_TOO_MANY_CRITERIA = "Filter query exceeds maximum of %d criteria";
     public static final String FILTER_VALUE_TOO_LONG = "Filter value must not exceed %d characters in criterion '%s'";
     public static final String FILTER_KEY_TOO_LONG = "Filter key must not exceed %d characters in criterion '%s'";
-    public static final String FILTER_INVALID_KEY_NAME = "Invalid key name '%s' in criterion '%s': must match pattern %s";
     public static final String FILTER_INVALID_FORMAT = "Invalid query format, expected field:operation:value";
     public static final String FILTER_DUPLICATE_CRITERION = "Multiple filters for the same property are not supported";
     public static final String FILTER_TYPE_MISMATCH = "Operation '%s' is not applicable for field '%s'.";
-    public static final String FILTER_PAGE_SIZE_TOO_LARGE = "Page size must not exceed 100";
 }

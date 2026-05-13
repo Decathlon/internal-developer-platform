@@ -4,13 +4,11 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.OptionalInt;
 import java.util.Set;
-import java.util.regex.Pattern;
 import java.util.stream.Stream;
 
 import org.springframework.stereotype.Component;
 
 import com.decathlon.idp_core.domain.constant.ValidationMessages;
-import com.decathlon.idp_core.domain.constant.ValidationRegex;
 import com.decathlon.idp_core.domain.exception.InvalidQueryException;
 import com.decathlon.idp_core.domain.model.entity.EntityFilter;
 import com.decathlon.idp_core.domain.model.entity.FilterCriterion;
@@ -37,7 +35,6 @@ import com.decathlon.idp_core.domain.model.enums.FilterOperator;
 /// **Security constraints:**
 /// - Maximum MAX_CRITERIA_COUNT criteria per query (DoS prevention)
 /// - Key names and values limited to MAX_KEY_VALUE_LENGTH characters
-/// - Key names validated against ValidationRegex.FILTER_KEY_REGEX
 ///
 /// **Example:** `name:API;property.language=JAVA;relation=api-link;relation.database.template=postgresql;relation.api-link.identifier=microservice-1`
 @Component
@@ -46,15 +43,14 @@ public class EntityQueryParserService {
     private static final String PROPERTY_PREFIX = "property.";
     private static final String RELATION_PREFIX = "relation.";
     private static final String RELATIONS_AS_TARGET_PREFIX = "relations_as_target.";
-    private static final String TEMPLATE_SUFFIX = ".template";
     private static final Set<String> VALID_ATTRIBUTE_NAMES = Set.of("identifier", "name");
-    private static final Pattern KEY_NAME_PATTERN = Pattern.compile(ValidationRegex.FILTER_KEY_REGEX);
 
     private static final Set<FilterKeyType> COMPARISON_INCOMPATIBLE_TYPES = Set.of(
             FilterKeyType.RELATION_NAME,
             FilterKeyType.RELATION_ENTITY,
-            FilterKeyType.RELATION_TEMPLATE,
-            FilterKeyType.RELATIONS_AS_TARGET_NAME);
+            FilterKeyType.RELATION_PROPERTY,
+            FilterKeyType.RELATIONS_AS_TARGET_NAME,
+            FilterKeyType.RELATIONS_AS_TARGET_PROPERTY);
 
     static final int MAX_CRITERIA_COUNT = 10;
     static final int MAX_KEY_VALUE_LENGTH = 255;
@@ -175,13 +171,6 @@ public class EntityQueryParserService {
             var relationPart = rawKey.substring(RELATION_PREFIX.length());
             validateNonBlankKeyName(relationPart, token);
 
-            // Check for .template suffix first
-            if (relationPart.endsWith(TEMPLATE_SUFFIX)) {
-                var keyName = relationPart.substring(0, relationPart.length() - TEMPLATE_SUFFIX.length());
-                validateKeyName(keyName, token);
-                return new FilterCriterion(FilterKeyType.RELATION_TEMPLATE, keyName, operator, value);
-            }
-
             // Check for relation property syntax: relation.<relationName>.<property>
             int dotIndex = relationPart.indexOf('.');
             if (dotIndex > 0) {
@@ -233,11 +222,6 @@ public class EntityQueryParserService {
 
     private void validateKeyName(String keyName, String token) {
         validateNonBlankKeyName(keyName, token);
-        if (!KEY_NAME_PATTERN.matcher(keyName).matches()) {
-            throw new InvalidQueryException(
-                    ValidationMessages.FILTER_INVALID_KEY_NAME.formatted(
-                            keyName, token, ValidationRegex.FILTER_KEY_REGEX));
-        }
     }
 
     private void validateLength(String rawKey, String value, String token) {

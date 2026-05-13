@@ -148,25 +148,6 @@ class EntityQueryParserServiceTest {
     }
 
     @Nested
-    @DisplayName("Relation template filters")
-    class RelationTemplateFilterTests {
-
-        @Test
-        @DisplayName("relation template equals")
-        void parse_relationTemplateEquals() {
-            var result = parser.parse("relation.database.template=postgresql");
-            assertSingleCriterion(result, FilterKeyType.RELATION_TEMPLATE, "database", FilterOperator.EQUALS, "postgresql");
-        }
-
-        @Test
-        @DisplayName("relation template contains")
-        void parse_relationTemplateContains() {
-            var result = parser.parse("relation.database.template:post");
-            assertSingleCriterion(result, FilterKeyType.RELATION_TEMPLATE, "database", FilterOperator.CONTAINS, "post");
-        }
-    }
-
-    @Nested
     @DisplayName("Relation property filters")
     class RelationPropertyFilterTests {
 
@@ -257,24 +238,24 @@ class EntityQueryParserServiceTest {
         @Test
         @DisplayName("four criteria of different key types")
         void parse_fourCriteria() {
-            var result = parser.parse("name:API;property.language=JAVA;relation.database=my-db;relation.cache.template=redis");
+            var result = parser.parse("name:API;property.language=JAVA;relation.database=my-db;relation.api-link.identifier=service-1");
             assertThat(result.criteria()).hasSize(4);
             assertCriterion(result.criteria().get(0), FilterKeyType.ATTRIBUTE, "name", FilterOperator.CONTAINS, "API");
             assertCriterion(result.criteria().get(1), FilterKeyType.PROPERTY, "language", FilterOperator.EQUALS, "JAVA");
             assertCriterion(result.criteria().get(2), FilterKeyType.RELATION_ENTITY, "database", FilterOperator.EQUALS, "my-db");
-            assertCriterion(result.criteria().get(3), FilterKeyType.RELATION_TEMPLATE, "cache", FilterOperator.EQUALS, "redis");
+            assertCriterion(result.criteria().get(3), FilterKeyType.RELATION_PROPERTY, "api-link.identifier", FilterOperator.EQUALS, "service-1");
         }
 
         @Test
-        @DisplayName("five criteria including relation property")
+        @DisplayName("five criteria including relation property and reverse relation")
         void parse_fiveCriteriaWithRelationProperty() {
-            var result = parser.parse("name:API;property.language=JAVA;relation.database=my-db;relation.cache.template=redis;relation.api-link.identifier=service-1");
+            var result = parser.parse("name:API;property.language=JAVA;relation.database=my-db;relation.api-link.identifier=service-1;relations_as_target.owned_by.name:platform");
             assertThat(result.criteria()).hasSize(5);
             assertCriterion(result.criteria().get(0), FilterKeyType.ATTRIBUTE, "name", FilterOperator.CONTAINS, "API");
             assertCriterion(result.criteria().get(1), FilterKeyType.PROPERTY, "language", FilterOperator.EQUALS, "JAVA");
             assertCriterion(result.criteria().get(2), FilterKeyType.RELATION_ENTITY, "database", FilterOperator.EQUALS, "my-db");
-            assertCriterion(result.criteria().get(3), FilterKeyType.RELATION_TEMPLATE, "cache", FilterOperator.EQUALS, "redis");
-            assertCriterion(result.criteria().get(4), FilterKeyType.RELATION_PROPERTY, "api-link.identifier", FilterOperator.EQUALS, "service-1");
+            assertCriterion(result.criteria().get(3), FilterKeyType.RELATION_PROPERTY, "api-link.identifier", FilterOperator.EQUALS, "service-1");
+            assertCriterion(result.criteria().get(4), FilterKeyType.RELATIONS_AS_TARGET_PROPERTY, "owned_by.name", FilterOperator.CONTAINS, "platform");
         }
     }
 
@@ -366,27 +347,17 @@ class EntityQueryParserServiceTest {
                     .hasMessageContaining("must not exceed %d".formatted(EntityQueryParserService.MAX_KEY_VALUE_LENGTH));
         }
 
-        @ParameterizedTest(name = "invalid key name: ''{0}''")
-        @ValueSource(strings = {
-                "property.lang@ge=JAVA",
-                "property.my key=JAVA",
-                "property.lang/age=JAVA",
-                "relation.db$name=my-db"
-        })
-        @DisplayName("throws InvalidQueryException for invalid key name characters")
-        void parse_invalidKeyNameChars_throwsException(String query) {
-            assertThatThrownBy(() -> parser.parse(query))
-                    .isInstanceOf(InvalidQueryException.class)
-                    .hasMessageContaining("Invalid key name");
-        }
-
         @ParameterizedTest(name = "valid key name: ''{0}''")
         @ValueSource(strings = {
                 "property.language=JAVA",
                 "property.my-key=value",
                 "property.my_key=value",
                 "property.key123=value",
+                "property.lang@ge=JAVA",
+                "property.my key=JAVA",
+                "property.lang/age=JAVA",
                 "relation.database=my-db",
+                "relation.db$name=my-db",
                 "relation.my-cache.template=redis"
         })
         @DisplayName("accepts valid key name characters")
@@ -459,7 +430,25 @@ class EntityQueryParserServiceTest {
                     .hasMessageContaining("is not applicable for field");
         }
 
-        @ParameterizedTest(name = "allowed comparison on: ''{0}''")
+        @ParameterizedTest(name = "comparison operator on: ''{0}''")
+        @ValueSource(strings = {"relation.api-link.identifier<microservice-1", "relation.api-link.identifier>microservice-1"})
+        @DisplayName("throws InvalidQueryException for less/greater than on relation property")
+        void parse_comparisonOnRelationProperty_throwsException(String query) {
+            assertThatThrownBy(() -> parser.parse(query))
+                    .isInstanceOf(InvalidQueryException.class)
+                    .hasMessageContaining("is not applicable for field");
+        }
+
+        @ParameterizedTest(name = "comparison operator on: ''{0}''")
+        @ValueSource(strings = {"relations_as_target.api-link.name<microservice", "relations_as_target.api-link.name>microservice"})
+        @DisplayName("throws InvalidQueryException for less/greater than on relations_as_target property")
+        void parse_comparisonOnRelationsAsTargetProperty_throwsException(String query) {
+            assertThatThrownBy(() -> parser.parse(query))
+                    .isInstanceOf(InvalidQueryException.class)
+                    .hasMessageContaining("is not applicable for field");
+        }
+
+        @ParameterizedTest(name = "comparison operator on: ''{0}''")
         @ValueSource(strings = {"name<Z", "name>A", "identifier<z", "property.port<9000", "property.port>1000"})
         @DisplayName("accepts less/greater than on attributes and properties")
         void parse_comparisonOnAttributeOrProperty_succeeds(String query) {

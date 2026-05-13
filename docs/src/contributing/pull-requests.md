@@ -50,7 +50,7 @@ git checkout -b feature/my-feature
 ### 2. Make Changes
 
 - Write clean, well-documented code
-- Follow [code conventions](code-conventions.md)
+- Follow [code conventions](code/code-conventions.md)
 - Add/update tests
 - Update documentation if needed following [documentation guidelines](documentation.md)
 

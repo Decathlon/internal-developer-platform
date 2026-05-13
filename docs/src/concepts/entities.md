@@ -168,4 +168,4 @@ Because templates are configured at runtime, the entity structure is **dynamic**
 
 - **[Properties](properties.md)** - Property types and validation rules
 - **[Relations](relations.md)** - How entities connect
-- **[Calculated Properties](calculated-properties.md)** - Automatic computations
+- **[Filtering Entities](entity-filtering.md)** - Query entities with the filter DSL

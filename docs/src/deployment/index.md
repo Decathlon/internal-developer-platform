@@ -11,7 +11,6 @@ This section covers deploying the Internal Developer Platform to various environ
 | --------------------------- | ------------------------ | ---------- |
 | [Docker Compose](docker.md) | Development, small teams | Low        |
 | [Kubernetes](kubernetes.md) | Production, scale        | Medium     |
-| [Cloud Managed](cloud.md)   | Minimal ops overhead     | Low        |
 
 ## Deployment philosophy
 
