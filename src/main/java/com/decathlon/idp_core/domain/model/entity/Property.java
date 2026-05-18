@@ -29,6 +29,6 @@ public record Property(
     @NotBlank(message = PROPERTY_NAME_MANDATORY)
     String name,
 
-    Object value
+    String value
 ) {
 }

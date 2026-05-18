@@ -40,7 +40,7 @@ public class EntityDtoInMapper {
 
         List<Property> properties = entityDtoIn.getProperties() == null ? Collections.emptyList()
                 : entityDtoIn.getProperties().entrySet().stream()
-                .map((Map.Entry<String, Object> entry) -> new Property(
+                .map((Map.Entry<String, String> entry) -> new Property(
                         null,
                         entry.getKey(),
                         entry.getValue()

@@ -31,7 +31,6 @@ import com.decathlon.idp_core.domain.model.entity.Entity;
 import com.decathlon.idp_core.domain.model.entity.EntitySummary;
 import com.decathlon.idp_core.domain.model.entity_template.EntityTemplate;
 import com.decathlon.idp_core.domain.port.EntityRepositoryPort;
-import com.decathlon.idp_core.domain.port.EntityTemplateRepositoryPort;
 import com.decathlon.idp_core.domain.service.entity_template.EntityTemplateService;
 import com.decathlon.idp_core.domain.service.entity_template.EntityTemplateValidationService;
 
@@ -42,8 +41,6 @@ class EntityServiceTest {
     @Mock
     private EntityRepositoryPort entityRepository;
 
-    @Mock
-    private EntityTemplateRepositoryPort entityTemplateRepository;
 
     @Mock
     private EntityValidationService entityValidationService;
@@ -71,18 +68,6 @@ class EntityServiceTest {
         assertSame(page, result);
         verify(entityRepository).findByTemplateIdentifier("template-a", pageable);
     }
-
-    // @Test
-    // @DisplayName("Should throw when template has no entities page")
-    // void shouldThrowWhenTemplatePageNotFound() {
-    // var pageable = Pageable.ofSize(10);
-    // when(entityRepository.findByTemplateIdentifier("missing-template",
-    // pageable)).thenReturn(Optional.empty());
-
-    // assertThrows(EntityTemplateNotFoundException.class,
-    // () -> entityService.getEntitiesByTemplateIdentifier(pageable,
-    // "missing-template"));
-    // }
 
     @Test
     @DisplayName("Should return entity summaries by identifiers")
@@ -135,8 +120,7 @@ class EntityServiceTest {
 
         InOrder inOrder = inOrder(entityTemplateService, entityValidationService, entityRepository);
         inOrder.verify(entityTemplateService).getEntityTemplateByIdentifier("web-service");
-        inOrder.verify(entityValidationService).validateUniqueness(entity);
-        inOrder.verify(entityValidationService).validateEntity(entity, template);
+        inOrder.verify(entityValidationService).validateForCreation(entity, template);
         inOrder.verify(entityRepository).save(entity);
         verifyNoInteractions(entityTemplateValidationService);
     }
@@ -150,12 +134,12 @@ class EntityServiceTest {
         var alreadyExists = new EntityAlreadyExistsException("web-service", "catalog-api");
 
         when(entityTemplateService.getEntityTemplateByIdentifier("web-service")).thenReturn(template);
-        doThrow(alreadyExists).when(entityValidationService).validateUniqueness(entity);
+        doThrow(alreadyExists).when(entityValidationService).validateForCreation(entity, template);
 
         assertThrows(EntityAlreadyExistsException.class, () -> entityService.createEntity(entity));
 
         verify(entityTemplateService).getEntityTemplateByIdentifier("web-service");
-        verify(entityValidationService).validateUniqueness(entity);
+        verify(entityValidationService).validateForCreation(entity, template);
         verifyNoMoreInteractions(entityRepository);
     }
 

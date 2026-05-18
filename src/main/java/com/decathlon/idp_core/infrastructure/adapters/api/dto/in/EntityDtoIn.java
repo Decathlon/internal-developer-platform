@@ -50,7 +50,7 @@ public class EntityDtoIn {
     private String identifier;
 
     @Schema(description = FIELD_ENTITY_PROPERTIES, example = "{\"port\": \"8080\", \"environment\": \"dev\"}")
-    private Map<String, Object> properties;
+    private Map<String, String> properties;
 
     @Valid
     @Schema(description = FIELD_ENTITY_RELATIONS)
