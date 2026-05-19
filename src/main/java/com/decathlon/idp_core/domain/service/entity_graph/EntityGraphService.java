@@ -77,11 +77,11 @@ public class EntityGraphService {
                                            int remainingDepth) {
         Entity entity = entityMap.get(key);
         if (entity == null) {
-            return new EntityGraphNode(key.identifier(), key.identifier(), List.of(), List.of());
+            return new EntityGraphNode(key.templateIdentifier(), key.identifier(), key.identifier(), List.of(), List.of());
         }
 
         if (remainingDepth <= 0) {
-            return new EntityGraphNode(entity.identifier(), entity.name(), List.of(), List.of());
+            return new EntityGraphNode(entity.templateIdentifier(), entity.identifier(), entity.name(), List.of(), List.of());
         }
 
         // Resolve outbound relations from pre-loaded entities
@@ -102,7 +102,7 @@ public class EntityGraphService {
         List<EntityGraphRelation> inboundRelations = buildRelationsAsTargetFromMap(
                 entity.identifier(), entityMap, remainingDepth - 1);
 
-        return new EntityGraphNode(entity.identifier(), entity.name(), outboundRelations, inboundRelations);
+        return new EntityGraphNode(entity.templateIdentifier(), entity.identifier(), entity.name(), outboundRelations, inboundRelations);
     }
 
     /// Looks up a composite key from the map by identifier alone.

@@ -65,8 +65,6 @@ class EntityGraphServiceTest {
         return new EntityCompositeKey(templateIdentifier, identifier);
     }
 
-    // --- Tests ---
-
     @Nested
     @DisplayName("getEntityGraph — root entity not found")
     class RootEntityNotFound {

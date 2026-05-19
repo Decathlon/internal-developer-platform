@@ -29,7 +29,7 @@ public final class EntityGraphDtoOutMapper {
             return null;
         }
         return new EntityGraphNodeDtoOut(
-                node.identifier(), node.name(),
+                node.templateIdentifier(), node.identifier(), node.name(),
                 mapRelations(node.relations()),
                 mapRelations(node.relationsAsTarget()));
     }

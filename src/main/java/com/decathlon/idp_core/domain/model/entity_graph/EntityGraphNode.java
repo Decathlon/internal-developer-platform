@@ -10,10 +10,12 @@ import java.util.List;
 /// - Understanding relationship chains between entities
 /// - Providing a hierarchical view of entity connections
 ///
+/// @param templateIdentifier the template identifier this entity belongs to
 /// @param summary the lightweight entity identification data
 /// @param relations the resolved outbound relations with their target graph nodes
 /// @param relationsAsTarget incoming relations where this entity is the target
 public record EntityGraphNode(
+        String templateIdentifier,
         String identifier,
         String name,
         List<EntityGraphRelation> relations,

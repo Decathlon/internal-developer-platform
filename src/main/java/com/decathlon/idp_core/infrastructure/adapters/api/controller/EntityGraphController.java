@@ -1,10 +1,13 @@
 package com.decathlon.idp_core.infrastructure.adapters.api.controller;
 
 import static com.decathlon.idp_core.infrastructure.adapters.api.configuration.SwaggerDescription.ENDPOINT_GET_ENTITY_GRAPH_DESCRIPTION;
+import static com.decathlon.idp_core.infrastructure.adapters.api.configuration.SwaggerDescription.ENDPOINT_GET_ENTITY_GRAPH_FLAT_DESCRIPTION;
+import static com.decathlon.idp_core.infrastructure.adapters.api.configuration.SwaggerDescription.ENDPOINT_GET_ENTITY_GRAPH_FLAT_SUMMARY;
 import static com.decathlon.idp_core.infrastructure.adapters.api.configuration.SwaggerDescription.ENDPOINT_GET_ENTITY_GRAPH_SUMMARY;
 import static com.decathlon.idp_core.infrastructure.adapters.api.configuration.SwaggerDescription.NOT_FOUND_CODE;
 import static com.decathlon.idp_core.infrastructure.adapters.api.configuration.SwaggerDescription.OK_CODE;
 import static com.decathlon.idp_core.infrastructure.adapters.api.configuration.SwaggerDescription.PARAM_DEPTH_DESCRIPTION;
+import static com.decathlon.idp_core.infrastructure.adapters.api.configuration.SwaggerDescription.RESPONSE_ENTITY_GRAPH_FLAT_SUCCESS;
 import static com.decathlon.idp_core.infrastructure.adapters.api.configuration.SwaggerDescription.RESPONSE_ENTITY_GRAPH_SUCCESS;
 import static com.decathlon.idp_core.infrastructure.adapters.api.configuration.SwaggerDescription.RESPONSE_ENTITY_NOT_FOUND_IDENTIFIER;
 import static org.springframework.http.HttpStatus.OK;
@@ -18,9 +21,11 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.decathlon.idp_core.domain.model.entity_graph.EntityGraphNode;
 import com.decathlon.idp_core.domain.service.entity_graph.EntityGraphService;
+import com.decathlon.idp_core.infrastructure.adapters.api.dto.out.entity.EntityGraphFlatDtoOut;
 import com.decathlon.idp_core.infrastructure.adapters.api.dto.out.entity.EntityGraphNodeDtoOut;
 import com.decathlon.idp_core.infrastructure.adapters.api.handler.ApiExceptionHandler.ErrorResponse;
 import com.decathlon.idp_core.infrastructure.adapters.api.mapper.entity.EntityGraphDtoOutMapper;
+import com.decathlon.idp_core.infrastructure.adapters.api.mapper.entity.EntityGraphFlatDtoOutMapper;
 
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -74,5 +79,39 @@ public class EntityGraphController {
                 templateIdentifier, entityIdentifier, depth);
 
         return EntityGraphDtoOutMapper.toDto(graphNode);
+    }
+
+    /// Retrieves the entity relationship graph as a flat nodes-and-edges structure.
+    ///
+    /// Returns all entities as nodes and all directed relations as edges, following
+    /// the de-facto standard for frontend visualization tools such as React Flow,
+    /// Vis.js, and Cytoscape. Nodes are deduplicated; edges encode directionality.
+    ///
+    /// @param templateIdentifier the template identifier of the root entity
+    /// @param entityIdentifier the business identifier of the root entity
+    /// @param depth the maximum traversal depth (default 1, clamped between 1 and 10)
+    /// @return flat DTO containing nodes and edges arrays
+    @GetMapping("/{templateIdentifier}/{entityIdentifier}/graph/flat")
+    @ResponseStatus(OK)
+    @Operation(
+            summary = ENDPOINT_GET_ENTITY_GRAPH_FLAT_SUMMARY,
+            description = ENDPOINT_GET_ENTITY_GRAPH_FLAT_DESCRIPTION,
+            responses = {
+                    @ApiResponse(responseCode = OK_CODE, description = RESPONSE_ENTITY_GRAPH_FLAT_SUCCESS,
+                            content = @Content(schema = @Schema(implementation = EntityGraphFlatDtoOut.class))),
+                    @ApiResponse(responseCode = NOT_FOUND_CODE, description = RESPONSE_ENTITY_NOT_FOUND_IDENTIFIER,
+                            content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
+            }
+    )
+    public EntityGraphFlatDtoOut getEntityGraphFlat(
+            @PathVariable @NotBlank String templateIdentifier,
+            @PathVariable @NotBlank String entityIdentifier,
+            @Parameter(description = PARAM_DEPTH_DESCRIPTION)
+            @RequestParam(defaultValue = "1") int depth) {
+
+        EntityGraphNode graphNode = entityGraphService.getEntityGraph(
+                templateIdentifier, entityIdentifier, depth);
+
+        return EntityGraphFlatDtoOutMapper.toFlatDto(graphNode);
     }
 }

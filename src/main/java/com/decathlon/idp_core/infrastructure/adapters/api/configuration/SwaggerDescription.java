@@ -161,4 +161,19 @@ public class SwaggerDescription {
     public static final String ENTITY_GRAPH_RELATION_TARGET_TEMPLATE_DESCRIPTION = "The template identifier of target entities";
     public static final String ENTITY_GRAPH_RELATION_TARGETS_DESCRIPTION = "Resolved target entity graph nodes";
     public static final String ENTITY_GRAPH_RELATIONS_AS_TARGET_DESCRIPTION = "Incoming relations where this entity is the target";
+
+    // --- Entity Graph flat (nodes & edges) descriptions ---
+    public static final String ENDPOINT_GET_ENTITY_GRAPH_FLAT_SUMMARY = "Get entity relationship graph as flat nodes and edges";
+    public static final String ENDPOINT_GET_ENTITY_GRAPH_FLAT_DESCRIPTION = "Retrieves the entity relationship graph as a flat nodes-and-edges structure, suitable for frontend visualization tools such as React Flow, Vis.js, and Cytoscape.";
+    public static final String RESPONSE_ENTITY_GRAPH_FLAT_SUCCESS = "Flat entity graph successfully retrieved";
+    public static final String ENTITY_GRAPH_FLAT_NODES_DESCRIPTION = "All entity nodes in the graph";
+    public static final String ENTITY_GRAPH_FLAT_EDGES_DESCRIPTION = "All directed relation edges in the graph";
+    public static final String ENTITY_GRAPH_FLAT_NODE_ID_DESCRIPTION = "Unique node identifier composed of templateIdentifier:identifier";
+    public static final String ENTITY_GRAPH_FLAT_NODE_LABEL_DESCRIPTION = "Human-readable entity name";
+    public static final String ENTITY_GRAPH_FLAT_NODE_TEMPLATE_DESCRIPTION = "Template identifier this entity belongs to";
+    public static final String ENTITY_GRAPH_FLAT_NODE_IDENTIFIER_DESCRIPTION = "Business identifier of the entity within its template";
+    public static final String ENTITY_GRAPH_FLAT_EDGE_ID_DESCRIPTION = "Unique edge identifier";
+    public static final String ENTITY_GRAPH_FLAT_EDGE_SOURCE_DESCRIPTION = "Node id of the source entity";
+    public static final String ENTITY_GRAPH_FLAT_EDGE_TARGET_DESCRIPTION = "Node id of the target entity";
+    public static final String ENTITY_GRAPH_FLAT_EDGE_TYPE_DESCRIPTION = "Relation name as defined in the entity template";
 }
