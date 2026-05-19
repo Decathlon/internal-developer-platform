@@ -26,4 +26,10 @@ public record EntityGraphNodeDtoOut(
 
         @Schema(description = ENTITY_GRAPH_RELATIONS_AS_TARGET_DESCRIPTION)
         Map<String, List<EntityGraphNodeDtoOut>> relationsAsTarget
-) {}
+) {
+    /// Defensive copies prevent external mutation of the mutable Map collections
+    public EntityGraphNodeDtoOut {
+        relations = relations != null ? Map.copyOf(relations) : Map.of();
+        relationsAsTarget = relationsAsTarget != null ? Map.copyOf(relationsAsTarget) : Map.of();
+    }
+}
