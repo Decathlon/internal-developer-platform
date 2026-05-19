@@ -7,8 +7,6 @@ import static com.decathlon.idp_core.domain.constant.ValidationMessages.TEMPLATE
 import java.util.List;
 import java.util.UUID;
 
-import org.springframework.validation.annotation.Validated;
-
 import com.decathlon.idp_core.domain.model.entity_template.EntityTemplate;
 
 import jakarta.validation.constraints.NotBlank;
