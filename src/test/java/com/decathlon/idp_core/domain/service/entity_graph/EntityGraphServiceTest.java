@@ -94,7 +94,7 @@ class EntityGraphServiceTest {
 
             when(entityRepositoryPort.findByTemplateIdentifierAndIdentifier(TEMPLATE, "api"))
                     .thenReturn(Optional.of(root));
-            when(entityGraphRepositoryPort.findEntityGraph(TEMPLATE, "api", DEFAULT_DEPTH))
+            when(entityGraphRepositoryPort.findEntityGraph(TEMPLATE, "api", DEFAULT_DEPTH, false))
                     .thenReturn(Map.of(key(TEMPLATE, "api"), root));
 
             EntityGraphNode result = entityGraphService.getEntityGraph(TEMPLATE, "api", DEFAULT_DEPTH, false);
@@ -119,7 +119,7 @@ class EntityGraphServiceTest {
 
             when(entityRepositoryPort.findByTemplateIdentifierAndIdentifier(TEMPLATE, "api"))
                     .thenReturn(Optional.of(api));
-            when(entityGraphRepositoryPort.findEntityGraph(TEMPLATE, "api", DEFAULT_DEPTH))
+            when(entityGraphRepositoryPort.findEntityGraph(TEMPLATE, "api", DEFAULT_DEPTH, false))
                     .thenReturn(Map.of(
                             key(TEMPLATE, "api"), api,
                             key(DB_TEMPLATE, "postgres"), db
@@ -142,7 +142,7 @@ class EntityGraphServiceTest {
 
             when(entityRepositoryPort.findByTemplateIdentifierAndIdentifier(TEMPLATE, "api"))
                     .thenReturn(Optional.of(api));
-            when(entityGraphRepositoryPort.findEntityGraph(TEMPLATE, "api", DEFAULT_DEPTH))
+            when(entityGraphRepositoryPort.findEntityGraph(TEMPLATE, "api", DEFAULT_DEPTH, false))
                     .thenReturn(Map.of(key(TEMPLATE, "api"), api));
 
             EntityGraphNode result = entityGraphService.getEntityGraph(TEMPLATE, "api", DEFAULT_DEPTH, false);
@@ -166,7 +166,7 @@ class EntityGraphServiceTest {
 
             when(entityRepositoryPort.findByTemplateIdentifierAndIdentifier(DB_TEMPLATE, "postgres"))
                     .thenReturn(Optional.of(db));
-            when(entityGraphRepositoryPort.findEntityGraph(DB_TEMPLATE, "postgres", DEFAULT_DEPTH))
+            when(entityGraphRepositoryPort.findEntityGraph(DB_TEMPLATE, "postgres", DEFAULT_DEPTH, false))
                     .thenReturn(Map.of(
                             key(TEMPLATE, "api"), api,
                             key(DB_TEMPLATE, "postgres"), db
@@ -192,12 +192,12 @@ class EntityGraphServiceTest {
 
             when(entityRepositoryPort.findByTemplateIdentifierAndIdentifier(TEMPLATE, "api"))
                     .thenReturn(Optional.of(root));
-            when(entityGraphRepositoryPort.findEntityGraph(TEMPLATE, "api", 1))
+            when(entityGraphRepositoryPort.findEntityGraph(TEMPLATE, "api", 1, false))
                     .thenReturn(Map.of(key(TEMPLATE, "api"), root));
 
             entityGraphService.getEntityGraph(TEMPLATE, "api", 0, false);
 
-            verify(entityGraphRepositoryPort).findEntityGraph(TEMPLATE, "api", 1);
+            verify(entityGraphRepositoryPort).findEntityGraph(TEMPLATE, "api", 1, false);
         }
 
         @Test
@@ -207,12 +207,12 @@ class EntityGraphServiceTest {
 
             when(entityRepositoryPort.findByTemplateIdentifierAndIdentifier(TEMPLATE, "api"))
                     .thenReturn(Optional.of(root));
-            when(entityGraphRepositoryPort.findEntityGraph(TEMPLATE, "api", 10))
+            when(entityGraphRepositoryPort.findEntityGraph(TEMPLATE, "api", 10, false))
                     .thenReturn(Map.of(key(TEMPLATE, "api"), root));
 
             entityGraphService.getEntityGraph(TEMPLATE, "api", 99, false);
 
-            verify(entityGraphRepositoryPort).findEntityGraph(TEMPLATE, "api", 10);
+            verify(entityGraphRepositoryPort).findEntityGraph(TEMPLATE, "api", 10, false);
         }
     }
 
@@ -233,7 +233,7 @@ class EntityGraphServiceTest {
 
             when(entityRepositoryPort.findByTemplateIdentifierAndIdentifier(TEMPLATE, "api"))
                     .thenReturn(Optional.of(api));
-            when(entityGraphRepositoryPort.findEntityGraph(TEMPLATE, "api", 1))
+            when(entityGraphRepositoryPort.findEntityGraph(TEMPLATE, "api", 1, false))
                     .thenReturn(Map.of(
                             key(TEMPLATE, "api"), api,
                             key(DB_TEMPLATE, "postgres"), db,
@@ -265,7 +265,7 @@ class EntityGraphServiceTest {
 
             when(entityRepositoryPort.findByTemplateIdentifierAndIdentifier(TEMPLATE, "api"))
                     .thenReturn(Optional.of(api));
-            when(entityGraphRepositoryPort.findEntityGraph(TEMPLATE, "api", DEFAULT_DEPTH))
+            when(entityGraphRepositoryPort.findEntityGraph(TEMPLATE, "api", DEFAULT_DEPTH, false))
                     .thenReturn(Map.of(
                             key(TEMPLATE, "api"), api,
                             key(DB_TEMPLATE, "postgres"), db,

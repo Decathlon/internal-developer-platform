@@ -37,7 +37,8 @@ public class PostgresEntityGraphAdapter implements EntityGraphRepositoryPort {
     public Map<EntityCompositeKey, Entity> findEntityGraph(
             String templateIdentifier,
             String entityIdentifier,
-            int depth) {
+            int depth,
+            boolean includeProperties) {
         // Step 1: collect all (identifier, template_identifier) pairs via recursive CTE
         List<Object[]> graphPairs = jpaEntityRepository.findEntityGraphIdentifiers(
                 templateIdentifier, entityIdentifier, depth);
@@ -52,11 +53,14 @@ public class PostgresEntityGraphAdapter implements EntityGraphRepositoryPort {
                 .distinct()
                 .toList();
 
-        // Step 3: batch-load entities with relations, then properties in separate queries
-        // to avoid Hibernate's MultipleBagFetchException
+        // Step 3: batch-load entities with relations, then optionally properties in a separate
+        // query. Properties are skipped when not requested to avoid the extra round-trip and
+        // keep payloads lean. The two-query split also avoids Hibernate's MultipleBagFetchException.
         List<EntityJpaEntity> jpaEntities =
                 jpaEntityRepository.findAllByIdentifierInWithRelations(identifiers);
-        jpaEntityRepository.findAllByIdentifierInWithProperties(identifiers);
+        if (includeProperties) {
+            jpaEntityRepository.findAllByIdentifierInWithProperties(identifiers);
+        }
 
         // Step 4: map to domain and key by composite key for O(1) lookup
         return jpaEntities.stream()

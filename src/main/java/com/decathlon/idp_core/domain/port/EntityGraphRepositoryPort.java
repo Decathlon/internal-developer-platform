@@ -29,9 +29,12 @@ public interface EntityGraphRepositoryPort {
     /// @param templateIdentifier the template identifier of the root entity
     /// @param entityIdentifier   the business identifier of the root entity within its template
     /// @param depth              the maximum traversal depth (1-10)
+    /// @param includeProperties  when true, entity properties are loaded along with relations;
+    ///                           when false, only relations are fetched for a leaner query
     /// @return map of [EntityCompositeKey] to [Entity] for O(1) lookup; empty if root not found
     Map<EntityCompositeKey, Entity> findEntityGraph(
             String templateIdentifier,
             String entityIdentifier,
-            int depth);
+            int depth,
+            boolean includeProperties);
 }

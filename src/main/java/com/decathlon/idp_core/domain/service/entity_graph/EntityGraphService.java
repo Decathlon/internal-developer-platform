@@ -64,9 +64,10 @@ public class EntityGraphService {
                 .findByTemplateIdentifierAndIdentifier(templateIdentifier, entityIdentifier)
                 .orElseThrow(() -> new EntityNotFoundException(templateIdentifier, entityIdentifier));
 
-        // Optimized batch fetch: load all entities in the graph keyed by composite key
+        // Optimized batch fetch: load all entities in the graph keyed by composite key.
+        // Properties are fetched only when explicitly requested to avoid unnecessary I/O.
         Map<EntityCompositeKey, Entity> entityMap = entityGraphRepositoryPort
-                .findEntityGraph(templateIdentifier, entityIdentifier, effectiveDepth);
+                .findEntityGraph(templateIdentifier, entityIdentifier, effectiveDepth, includeProperties);
 
         EntityCompositeKey rootKey = new EntityCompositeKey(rootEntity.templateIdentifier(), rootEntity.identifier());
 
@@ -111,10 +112,8 @@ public class EntityGraphService {
 
         // Include properties only when explicitly requested to keep responses lean
         List<Property> properties = includeProperties ? entity.properties() : List.of();
-
         return new EntityGraphNode(entity.templateIdentifier(), entity.identifier(), entity.name(),
-                properties, outboundRelations, inboundRelations);
-    }
+                properties, outboundRelations, inboundRelations);    }
 
     /// Looks up a composite key from the map by identifier alone.
     /// Falls back to a synthetic key if no match is found (entity not in graph).
