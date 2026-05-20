@@ -313,7 +313,7 @@ components:
           description: Unique Entity Template name
           example: Service
           maxLength: 255
-          minLength: 1
+          minLength: 0
           pattern: ^[a-zA-Z0-9 _-]+$
         description:
           type: string
