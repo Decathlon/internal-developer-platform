@@ -8,7 +8,7 @@
 --   - pg_trgm GIN indexes                  → ILIKE CONTAINS / ENDS_WITH / STARTS_WITH
 
 -- Enable pg_trgm for GIN trigram indexes used by ILIKE operators
-CREATE EXTENSION IF NOT EXISTS pg_trgm SCHEMA public;
+CREATE EXTENSION IF NOT EXISTS pg_trgm;
 
 -- ── Relation indexes ────────────────────────────────────────────────────────
 
