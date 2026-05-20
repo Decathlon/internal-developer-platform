@@ -9,7 +9,6 @@ import org.springframework.data.jpa.domain.Specification;
 import com.decathlon.idp_core.domain.model.entity.SearchFilterNode;
 import com.decathlon.idp_core.domain.model.enums.SearchOperator;
 import com.decathlon.idp_core.infrastructure.adapters.persistence.model.entity.EntityJpaEntity;
-import com.decathlon.idp_core.infrastructure.adapters.persistence.model.entity.PropertyJpaEntity;
 import com.decathlon.idp_core.infrastructure.adapters.persistence.model.entity.RelationJpaEntity;
 
 import jakarta.persistence.criteria.CriteriaBuilder;
@@ -29,15 +28,21 @@ import lombok.NoArgsConstructor;
 /// - [SearchFilterNode.Criterion] nodes are translated based on the field prefix:
 ///   - `template` → direct predicate on templateIdentifier
 ///   - `identifier` / `name` → direct predicates on the entity root
-///   - `property.{name}` → INNER JOIN on the `properties` collection
-///   - `relation.{name}` / `relation.{name}.identifier|name` → JOIN on
-///     `relations` with optional sub-query for target entity properties
-///   - `relations_as_target.{name}.identifier|name` → correlated sub-query
+///   - `property.{name}` → correlated EXISTS subquery on the `properties` collection
+///   - `relation.{name}` / `relation.{name}.identifier|name` → correlated EXISTS subquery
+///     on `relations` with optional nested IN subquery for target entity properties
+///   - `relations_as_target.{name}.identifier|name` → correlated IN subquery
 ///     that finds entities targeted by qualifying reverse relations
 ///
+/// **Performance:** All collection-based filters use EXISTS subqueries instead of JOINs.
+/// This eliminates row multiplication (an entity with N properties and M relations would
+/// otherwise produce N×M rows requiring DISTINCT), making pagination and count queries
+/// significantly cheaper.
+///
 /// **Security:** LIKE-based operators ([SearchOperator#CONTAINS], [SearchOperator#NOT_CONTAINS],
-/// [SearchOperator#STARTS_WITH], [SearchOperator#ENDS_WITH]) escape SQL wildcards (`%` and
-/// `_`) in user-supplied values to prevent unintended pattern matching.
+/// [SearchOperator#STARTS_WITH], [SearchOperator#ENDS_WITH]) use PostgreSQL `ILIKE` for
+/// case-insensitive matching. SQL wildcards (`%` and `_`) in user-supplied values are escaped
+/// to prevent unintended pattern matching. EQ and NEQ use `LOWER()` with functional btree indexes.
 @NoArgsConstructor(access = AccessLevel.PRIVATE)
 public final class EntitySearchSpecification {
 
@@ -65,21 +70,23 @@ public final class EntitySearchSpecification {
     ///
     /// The four conditions are combined with OR so that a match on any field is sufficient.
     /// The "any property" branch uses a correlated EXISTS subquery to avoid row multiplication.
+    /// All comparisons use `ILIKE` so that `pg_trgm` GIN indexes can be leveraged.
     ///
     /// @param query the search string; must be non-null and non-blank
     /// @return a [Specification] implementing the global text search
     public static Specification<EntityJpaEntity> globalTextSearch(String query) {
-        String escaped = escapeLikeWildcards(query.toLowerCase());
+        // No toLowerCase() needed — ILIKE is inherently case-insensitive.
+        String escaped = escapeLikeWildcards(query);
         String pattern = "%" + escaped + "%";
 
         Specification<EntityJpaEntity> byIdentifier =
-                (root, q, cb) -> cb.like(cb.lower(root.get(IDENTIFIER)), pattern, LIKE_ESCAPE_CHAR);
+                (root, q, cb) -> ((HibernateCriteriaBuilder) cb).ilike(root.get(IDENTIFIER), pattern, LIKE_ESCAPE_CHAR);
 
         Specification<EntityJpaEntity> byName =
-                (root, q, cb) -> cb.like(cb.lower(root.get(NAME)), pattern, LIKE_ESCAPE_CHAR);
+                (root, q, cb) -> ((HibernateCriteriaBuilder) cb).ilike(root.get(NAME), pattern, LIKE_ESCAPE_CHAR);
 
         Specification<EntityJpaEntity> byTemplate =
-                (root, q, cb) -> cb.like(cb.lower(root.get(TEMPLATE_IDENTIFIER)), pattern, LIKE_ESCAPE_CHAR);
+                (root, q, cb) -> ((HibernateCriteriaBuilder) cb).ilike(root.get(TEMPLATE_IDENTIFIER), pattern, LIKE_ESCAPE_CHAR);
 
         Specification<EntityJpaEntity> byAnyProperty = (root, queryCtx, cb) -> {
             // Correlated EXISTS: does this entity have at least one property whose value matches?
@@ -89,7 +96,7 @@ public final class EntitySearchSpecification {
             sub.select(cb.literal(1))
                     .where(
                             cb.equal(subRoot.get("id"), root.get("id")),
-                            cb.like(cb.lower(propJoin.get("value").as(String.class)), pattern, LIKE_ESCAPE_CHAR)
+                            ((HibernateCriteriaBuilder) cb).ilike(propJoin.get("value").as(String.class), pattern, LIKE_ESCAPE_CHAR)
                     );
             return cb.exists(sub);
         };
@@ -150,12 +157,18 @@ public final class EntitySearchSpecification {
 
     private static Specification<EntityJpaEntity> propertySpec(SearchFilterNode.Criterion c, String propertyName) {
         return (root, query, cb) -> {
-            query.distinct(true);
-            Join<EntityJpaEntity, PropertyJpaEntity> propJoin = root.join("properties");
-            return cb.and(
-                    cb.equal(propJoin.get(NAME), propertyName),
-                    buildPredicate(cb, propJoin.get("value"), c.operation(), c.value())
-            );
+            // Correlated EXISTS: does this entity have a property with the given name and value?
+            // Using EXISTS instead of JOIN avoids row multiplication and removes the need for DISTINCT.
+            var sub = query.subquery(Integer.class);
+            var subRoot = sub.from(EntityJpaEntity.class);
+            var propJoin = subRoot.join("properties");
+            sub.select(cb.literal(1))
+                    .where(
+                            cb.equal(subRoot.get("id"), root.get("id")),
+                            cb.equal(propJoin.get(NAME), propertyName),
+                            buildPredicate(cb, propJoin.get("value"), c.operation(), c.value())
+                    );
+            return cb.exists(sub);
         };
     }
 
@@ -163,9 +176,16 @@ public final class EntitySearchSpecification {
 
     private static Specification<EntityJpaEntity> relationNameSpec(SearchFilterNode.Criterion c) {
         return (root, query, cb) -> {
-            query.distinct(true);
-            Join<EntityJpaEntity, RelationJpaEntity> relJoin = root.join(RELATIONS);
-            return buildPredicate(cb, relJoin.get(NAME), c.operation(), c.value());
+            // Correlated EXISTS: does this entity have at least one relation whose name matches?
+            var sub = query.subquery(Integer.class);
+            var subRoot = sub.from(EntityJpaEntity.class);
+            var relJoin = subRoot.join(RELATIONS);
+            sub.select(cb.literal(1))
+                    .where(
+                            cb.equal(subRoot.get("id"), root.get("id")),
+                            buildPredicate(cb, relJoin.get(NAME), c.operation(), c.value())
+                    );
+            return cb.exists(sub);
         };
     }
 
@@ -183,33 +203,46 @@ public final class EntitySearchSpecification {
 
     private static Specification<EntityJpaEntity> relationEntitySpec(SearchFilterNode.Criterion c, String relationName) {
         return (root, query, cb) -> {
-            query.distinct(true);
-            Join<EntityJpaEntity, RelationJpaEntity> relJoin = root.join(RELATIONS);
-            Join<RelationJpaEntity, String> targetJoin = relJoin.join(TARGET_ENTITY_IDENTIFIERS);
-            return cb.and(
-                    cb.equal(relJoin.get(NAME), relationName),
-                    buildPredicate(cb, targetJoin, c.operation(), c.value())
-            );
+            // Correlated EXISTS: does this entity have a relation named <relationName>
+            // whose target entity identifier matches the criterion?
+            var sub = query.subquery(Integer.class);
+            var subRoot = sub.from(EntityJpaEntity.class);
+            var relJoin = subRoot.join(RELATIONS);
+            var targetJoin = relJoin.join(TARGET_ENTITY_IDENTIFIERS);
+            sub.select(cb.literal(1))
+                    .where(
+                            cb.equal(subRoot.get("id"), root.get("id")),
+                            cb.equal(relJoin.get(NAME), relationName),
+                            buildPredicate(cb, targetJoin, c.operation(), c.value())
+                    );
+            return cb.exists(sub);
         };
     }
 
     private static Specification<EntityJpaEntity> relationPropertySpec(
             SearchFilterNode.Criterion c, String relationName, String property) {
         return (root, query, cb) -> {
-            query.distinct(true);
-            Join<EntityJpaEntity, RelationJpaEntity> relJoin = root.join(RELATIONS);
-            Join<RelationJpaEntity, String> targetIdJoin = relJoin.join(TARGET_ENTITY_IDENTIFIERS);
+            // Correlated EXISTS: does this entity have a relation named <relationName>
+            // whose target identifier appears in the set of entity identifiers
+            // whose <property> matches the criterion?
+            var sub = query.subquery(Integer.class);
+            var subRoot = sub.from(EntityJpaEntity.class);
+            var relJoin = subRoot.join(RELATIONS);
+            var targetIdJoin = relJoin.join(TARGET_ENTITY_IDENTIFIERS);
 
-            // Subquery: find target entity identifiers whose identifier/name matches
-            var subquery = query.subquery(String.class);
-            var subRoot = subquery.from(EntityJpaEntity.class);
-            subquery.select(subRoot.get(IDENTIFIER))
-                    .where(buildPredicate(cb, subRoot.get(property), c.operation(), c.value()));
+            // Inner scalar subquery: entity identifiers whose identifier/name satisfies the criterion.
+            var innerSubquery = query.subquery(String.class);
+            var innerRoot = innerSubquery.from(EntityJpaEntity.class);
+            innerSubquery.select(innerRoot.get(IDENTIFIER))
+                    .where(buildPredicate(cb, innerRoot.get(property), c.operation(), c.value()));
 
-            return cb.and(
-                    cb.equal(relJoin.get(NAME), relationName),
-                    cb.in(targetIdJoin).value(subquery)
-            );
+            sub.select(cb.literal(1))
+                    .where(
+                            cb.equal(subRoot.get("id"), root.get("id")),
+                            cb.equal(relJoin.get(NAME), relationName),
+                            cb.in(targetIdJoin).value(innerSubquery)
+                    );
+            return cb.exists(sub);
         };
     }
 
@@ -252,25 +285,29 @@ public final class EntitySearchSpecification {
         if (isNumericOperator(operator)) {
             return buildNumericPredicate(cb, field, operator, new BigDecimal(value));
         }
+        HibernateCriteriaBuilder hcb = (HibernateCriteriaBuilder) cb;
         Expression<String> stringField = field.as(String.class);
         return switch (operator) {
+            // EQ / NEQ use lower() + functional btree index (V3_4) for optimal equality matching.
             case EQ -> cb.equal(cb.lower(stringField), value.toLowerCase());
             case NEQ -> cb.notEqual(cb.lower(stringField), value.toLowerCase());
+            // LIKE operators use ILIKE so that pg_trgm GIN indexes (V3_5) can be leveraged.
+            // No pre-lowercasing of the value — ILIKE is inherently case-insensitive.
             case CONTAINS -> {
-                String escaped = escapeLikeWildcards(value.toLowerCase());
-                yield cb.like(cb.lower(stringField), "%" + escaped + "%", LIKE_ESCAPE_CHAR);
+                String escaped = escapeLikeWildcards(value);
+                yield hcb.ilike(stringField, "%" + escaped + "%", LIKE_ESCAPE_CHAR);
             }
             case NOT_CONTAINS -> {
-                String escaped = escapeLikeWildcards(value.toLowerCase());
-                yield cb.notLike(cb.lower(stringField), "%" + escaped + "%", LIKE_ESCAPE_CHAR);
+                String escaped = escapeLikeWildcards(value);
+                yield hcb.notIlike(stringField, "%" + escaped + "%", LIKE_ESCAPE_CHAR);
             }
             case STARTS_WITH -> {
-                String escaped = escapeLikeWildcards(value.toLowerCase());
-                yield cb.like(cb.lower(stringField), escaped + "%", LIKE_ESCAPE_CHAR);
+                String escaped = escapeLikeWildcards(value);
+                yield hcb.ilike(stringField, escaped + "%", LIKE_ESCAPE_CHAR);
             }
             case ENDS_WITH -> {
-                String escaped = escapeLikeWildcards(value.toLowerCase());
-                yield cb.like(cb.lower(stringField), "%" + escaped, LIKE_ESCAPE_CHAR);
+                String escaped = escapeLikeWildcards(value);
+                yield hcb.ilike(stringField, "%" + escaped, LIKE_ESCAPE_CHAR);
             }
             default -> throw new IllegalStateException("Unhandled operator: " + operator);
         };
@@ -305,6 +342,8 @@ public final class EntitySearchSpecification {
 
     /// Escapes SQL LIKE wildcards (`%` and `_`) in the given value so they are
     /// treated as literal characters rather than pattern metacharacters.
+    /// Used by both `ILIKE`-based operators and `LOWER() LIKE`-based comparisons.
+    /// The value does **not** need to be pre-lowercased for `ILIKE` operators.
     static String escapeLikeWildcards(String value) {
         return value
                 .replace(String.valueOf(LIKE_ESCAPE_CHAR), LIKE_ESCAPE_CHAR + String.valueOf(LIKE_ESCAPE_CHAR))
