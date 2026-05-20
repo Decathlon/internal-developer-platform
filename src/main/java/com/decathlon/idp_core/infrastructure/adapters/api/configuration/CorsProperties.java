@@ -11,11 +11,7 @@ public record CorsProperties(
         List<String> allowedOriginPatterns
 ) {
     public CorsProperties {
-        if (allowedOriginPatterns == null) {
-            allowedOriginPatterns = List.of();
-        }
-        if (allowedOrigins == null) {
-            allowedOrigins = List.of();
-        }
+        allowedOrigins = allowedOrigins != null ? List.copyOf(allowedOrigins) : List.of();
+        allowedOriginPatterns = allowedOriginPatterns != null ? List.copyOf(allowedOriginPatterns) : List.of();
     }
 }

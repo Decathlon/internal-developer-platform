@@ -38,4 +38,9 @@ public record Entity(
 
         List<Relation> relations
 ) {
+    /// Compact constructor defensively copies mutable collections to keep the record immutable.
+    public Entity {
+        properties = properties != null ? List.copyOf(properties) : List.of();
+        relations = relations != null ? List.copyOf(relations) : List.of();
+    }
 }
