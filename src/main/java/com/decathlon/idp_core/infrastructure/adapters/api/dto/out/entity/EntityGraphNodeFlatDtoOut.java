@@ -40,4 +40,10 @@ public record EntityGraphNodeFlatDtoOut(
         @JsonInclude(Include.NON_EMPTY)
         @Schema(description = ENTITY_GRAPH_FLAT_NODE_DATA_DESCRIPTION)
         Map<String, Object> data
-) {}
+) {
+    /// Compact constructor: defensively copies the data map to prevent external mutation
+    /// of the DTO after construction (EI_EXPOSE_REP2 / EI_EXPOSE_REP).
+    public EntityGraphNodeFlatDtoOut {
+        data = data == null ? Map.of() : Map.copyOf(data);
+    }
+}

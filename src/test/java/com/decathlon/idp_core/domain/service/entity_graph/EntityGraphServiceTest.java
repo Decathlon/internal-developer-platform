@@ -2,8 +2,11 @@ package com.decathlon.idp_core.domain.service.entity_graph;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.anyBoolean;
+import static org.mockito.ArgumentMatchers.anyInt;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 import java.util.List;
@@ -24,18 +27,13 @@ import com.decathlon.idp_core.domain.model.entity.Entity;
 import com.decathlon.idp_core.domain.model.entity.EntityCompositeKey;
 import com.decathlon.idp_core.domain.model.entity.Relation;
 import com.decathlon.idp_core.domain.model.entity_graph.EntityGraphNode;
+import com.decathlon.idp_core.domain.model.entity_graph.EntityGraphRelation;
 import com.decathlon.idp_core.domain.port.EntityGraphRepositoryPort;
 import com.decathlon.idp_core.domain.port.EntityRepositoryPort;
 
 @ExtendWith(MockitoExtension.class)
 @DisplayName("EntityGraphService Tests")
 class EntityGraphServiceTest {
-
-    private static final String TEMPLATE = "web-service";
-    private static final String DB_TEMPLATE = "database";
-    private static final String CACHE_TEMPLATE = "cache";
-    private static final String INFRA_TEMPLATE = "infrastructure";
-    private static final int DEFAULT_DEPTH = 3;
 
     @Mock
     private EntityRepositoryPort entityRepositoryPort;
@@ -57,16 +55,26 @@ class EntityGraphServiceTest {
         return new Entity(UUID.randomUUID(), templateIdentifier, name, identifier, List.of(), relations);
     }
 
-    private Relation relation(String name, String targetTemplateIdentifier, List<String> targetIdentifiers) {
-        return new Relation(UUID.randomUUID(), name, targetTemplateIdentifier, targetIdentifiers);
+    private Relation relation(String name, String targetTemplateIdentifier, String... targetIds) {
+        return new Relation(UUID.randomUUID(), name, targetTemplateIdentifier, List.of(targetIds));
     }
 
     private EntityCompositeKey key(String templateIdentifier, String identifier) {
         return new EntityCompositeKey(templateIdentifier, identifier);
     }
 
+    private static final String TEMPLATE = "web-service";
+
+    // --- Helper to stub both ports ---
+
+    private void stubGraph(Map<EntityCompositeKey, Entity> entityMap) {
+        when(entityGraphRepositoryPort.findEntityGraph(anyString(), anyString(), anyInt(), anyBoolean()))
+                .thenReturn(entityMap);
+    }
+
+    // ========================
     @Nested
-    @DisplayName("getEntityGraph — root entity not found")
+    @DisplayName("Root Entity Not Found")
     class RootEntityNotFound {
 
         @Test
@@ -75,29 +83,28 @@ class EntityGraphServiceTest {
             when(entityRepositoryPort.findByTemplateIdentifierAndIdentifier(TEMPLATE, "missing"))
                     .thenReturn(Optional.empty());
 
-            assertThatThrownBy(() -> entityGraphService.getEntityGraph(TEMPLATE, "missing", DEFAULT_DEPTH, false))
+            assertThatThrownBy(() -> entityGraphService.getEntityGraph(TEMPLATE, "missing", 1, false))
                     .isInstanceOf(EntityNotFoundException.class);
 
-            verify(entityRepositoryPort).findByTemplateIdentifierAndIdentifier(TEMPLATE, "missing");
-            verifyNoInteractions(entityGraphRepositoryPort);
+            verify(entityGraphRepositoryPort, never())
+                    .findEntityGraph(anyString(), anyString(), anyInt(), anyBoolean());
         }
     }
 
+    // ========================
     @Nested
-    @DisplayName("getEntityGraph — single root, no relations")
+    @DisplayName("Single Root — No Relations")
     class SingleRootNoRelations {
 
         @Test
-        @DisplayName("Should return a leaf node when entity has no relations")
+        @DisplayName("Should return leaf node when entity has no relations")
         void shouldReturnLeafNodeWhenNoRelations() {
-            var root = entity(TEMPLATE, "api", "API Service");
-
+            Entity api = entity(TEMPLATE, "api", "API Service");
             when(entityRepositoryPort.findByTemplateIdentifierAndIdentifier(TEMPLATE, "api"))
-                    .thenReturn(Optional.of(root));
-            when(entityGraphRepositoryPort.findEntityGraph(TEMPLATE, "api", DEFAULT_DEPTH, false))
-                    .thenReturn(Map.of(key(TEMPLATE, "api"), root));
+                    .thenReturn(Optional.of(api));
+            stubGraph(Map.of(key(TEMPLATE, "api"), api));
 
-            EntityGraphNode result = entityGraphService.getEntityGraph(TEMPLATE, "api", DEFAULT_DEPTH, false);
+            EntityGraphNode result = entityGraphService.getEntityGraph(TEMPLATE, "api", 1, false);
 
             assertThat(result.identifier()).isEqualTo("api");
             assertThat(result.name()).isEqualTo("API Service");
@@ -106,94 +113,88 @@ class EntityGraphServiceTest {
         }
     }
 
+    // ========================
     @Nested
-    @DisplayName("getEntityGraph — outbound relations")
+    @DisplayName("Outbound Relations")
     class OutboundRelations {
 
         @Test
-        @DisplayName("Should resolve outbound relations to graph nodes")
+        @DisplayName("Should resolve outbound relation targets at depth 1")
         void shouldResolveOutboundRelations() {
-            var db = entity(DB_TEMPLATE, "postgres", "Postgres DB");
-            var api = entityWithRelations(TEMPLATE, "api", "API Service",
-                    List.of(relation("uses", DB_TEMPLATE, List.of("postgres"))));
+            Entity api = entityWithRelations(TEMPLATE, "api", "API Service",
+                    List.of(relation("uses-db", "database", "postgres")));
+            Entity postgres = entity("database", "postgres", "Postgres DB");
 
             when(entityRepositoryPort.findByTemplateIdentifierAndIdentifier(TEMPLATE, "api"))
                     .thenReturn(Optional.of(api));
-            when(entityGraphRepositoryPort.findEntityGraph(TEMPLATE, "api", DEFAULT_DEPTH, false))
-                    .thenReturn(Map.of(
-                            key(TEMPLATE, "api"), api,
-                            key(DB_TEMPLATE, "postgres"), db
-                    ));
+            stubGraph(Map.of(
+                    key(TEMPLATE, "api"), api,
+                    key("database", "postgres"), postgres));
 
-            EntityGraphNode result = entityGraphService.getEntityGraph(TEMPLATE, "api", DEFAULT_DEPTH, false);
+            EntityGraphNode result = entityGraphService.getEntityGraph(TEMPLATE, "api", 1, false);
 
             assertThat(result.relations()).hasSize(1);
-            assertThat(result.relations().getFirst().name()).isEqualTo("uses");
-            assertThat(result.relations().getFirst().targets()).hasSize(1);
-            assertThat(result.relations().getFirst().targets().getFirst().identifier()).isEqualTo("postgres");
+            assertThat(result.relations().get(0).name()).isEqualTo("uses-db");
+            assertThat(result.relations().get(0).targets()).hasSize(1);
+            assertThat(result.relations().get(0).targets().get(0).identifier()).isEqualTo("postgres");
         }
 
         @Test
-        @DisplayName("Should create a fallback node when relation target is not in the graph map")
+        @DisplayName("Should return fallback node when target is not in the pre-loaded entity map")
         void shouldReturnFallbackNodeWhenTargetNotInMap() {
-            // Simulates a target entity outside the loaded depth — still produces a placeholder node
-            var api = entityWithRelations(TEMPLATE, "api", "API Service",
-                    List.of(relation("uses", DB_TEMPLATE, List.of("unknown-db"))));
+            Entity api = entityWithRelations(TEMPLATE, "api", "API Service",
+                    List.of(relation("uses-db", "database", "missing-db")));
 
             when(entityRepositoryPort.findByTemplateIdentifierAndIdentifier(TEMPLATE, "api"))
                     .thenReturn(Optional.of(api));
-            when(entityGraphRepositoryPort.findEntityGraph(TEMPLATE, "api", DEFAULT_DEPTH, false))
-                    .thenReturn(Map.of(key(TEMPLATE, "api"), api));
+            stubGraph(Map.of(key(TEMPLATE, "api"), api));
 
-            EntityGraphNode result = entityGraphService.getEntityGraph(TEMPLATE, "api", DEFAULT_DEPTH, false);
+            EntityGraphNode result = entityGraphService.getEntityGraph(TEMPLATE, "api", 1, false);
 
             assertThat(result.relations()).hasSize(1);
-            // Fallback node uses identifier as both id and name when entity is not in map
-            assertThat(result.relations().getFirst().targets().getFirst().identifier()).isEqualTo("unknown-db");
+            EntityGraphNode fallback = result.relations().get(0).targets().get(0);
+            assertThat(fallback.identifier()).isEqualTo("missing-db");
         }
     }
 
+    // ========================
     @Nested
-    @DisplayName("getEntityGraph — inbound relations")
+    @DisplayName("Inbound Relations (relationsAsTarget)")
     class InboundRelations {
 
         @Test
-        @DisplayName("Should resolve inbound relations for entities that are targeted by others")
+        @DisplayName("Should resolve inbound relations when another entity points to root")
         void shouldResolveInboundRelations() {
-            var db = entity(DB_TEMPLATE, "postgres", "Postgres DB");
-            var api = entityWithRelations(TEMPLATE, "api", "API Service",
-                    List.of(relation("uses", DB_TEMPLATE, List.of("postgres"))));
+            Entity api = entity(TEMPLATE, "api", "API Service");
+            Entity consumer = entityWithRelations(TEMPLATE, "consumer", "Consumer",
+                    List.of(relation("depends-on", TEMPLATE, "api")));
 
-            when(entityRepositoryPort.findByTemplateIdentifierAndIdentifier(DB_TEMPLATE, "postgres"))
-                    .thenReturn(Optional.of(db));
-            when(entityGraphRepositoryPort.findEntityGraph(DB_TEMPLATE, "postgres", DEFAULT_DEPTH, false))
-                    .thenReturn(Map.of(
-                            key(TEMPLATE, "api"), api,
-                            key(DB_TEMPLATE, "postgres"), db
-                    ));
+            when(entityRepositoryPort.findByTemplateIdentifierAndIdentifier(TEMPLATE, "api"))
+                    .thenReturn(Optional.of(api));
+            stubGraph(Map.of(
+                    key(TEMPLATE, "api"), api,
+                    key(TEMPLATE, "consumer"), consumer));
 
-            EntityGraphNode result = entityGraphService.getEntityGraph(DB_TEMPLATE, "postgres", DEFAULT_DEPTH, false);
+            EntityGraphNode result = entityGraphService.getEntityGraph(TEMPLATE, "api", 1, false);
 
-            // postgres is targeted by api via "uses"
             assertThat(result.relationsAsTarget()).hasSize(1);
-            assertThat(result.relationsAsTarget().getFirst().name()).isEqualTo("uses");
-            assertThat(result.relationsAsTarget().getFirst().targets().getFirst().identifier()).isEqualTo("api");
+            assertThat(result.relationsAsTarget().get(0).name()).isEqualTo("depends-on");
+            assertThat(result.relationsAsTarget().get(0).targets().get(0).identifier()).isEqualTo("consumer");
         }
     }
 
+    // ========================
     @Nested
-    @DisplayName("getEntityGraph — depth clamping")
+    @DisplayName("Depth Clamping")
     class DepthClamping {
 
         @Test
         @DisplayName("Should clamp depth below 1 to 1")
         void shouldClampDepthBelowOne() {
-            var root = entity(TEMPLATE, "api", "API Service");
-
+            Entity api = entity(TEMPLATE, "api", "API Service");
             when(entityRepositoryPort.findByTemplateIdentifierAndIdentifier(TEMPLATE, "api"))
-                    .thenReturn(Optional.of(root));
-            when(entityGraphRepositoryPort.findEntityGraph(TEMPLATE, "api", 1, false))
-                    .thenReturn(Map.of(key(TEMPLATE, "api"), root));
+                    .thenReturn(Optional.of(api));
+            stubGraph(Map.of(key(TEMPLATE, "api"), api));
 
             entityGraphService.getEntityGraph(TEMPLATE, "api", 0, false);
 
@@ -201,14 +202,12 @@ class EntityGraphServiceTest {
         }
 
         @Test
-        @DisplayName("Should clamp depth above 10 to 10")
+        @DisplayName("Should clamp depth above MAX_DEPTH to MAX_DEPTH")
         void shouldClampDepthAboveTen() {
-            var root = entity(TEMPLATE, "api", "API Service");
-
+            Entity api = entity(TEMPLATE, "api", "API Service");
             when(entityRepositoryPort.findByTemplateIdentifierAndIdentifier(TEMPLATE, "api"))
-                    .thenReturn(Optional.of(root));
-            when(entityGraphRepositoryPort.findEntityGraph(TEMPLATE, "api", 10, false))
-                    .thenReturn(Map.of(key(TEMPLATE, "api"), root));
+                    .thenReturn(Optional.of(api));
+            stubGraph(Map.of(key(TEMPLATE, "api"), api));
 
             entityGraphService.getEntityGraph(TEMPLATE, "api", 99, false);
 
@@ -216,67 +215,164 @@ class EntityGraphServiceTest {
         }
     }
 
+    // ========================
     @Nested
-    @DisplayName("getEntityGraph — depth limit stops recursion")
+    @DisplayName("Depth Limit — Leaf Nodes at Boundary")
     class DepthLimit {
 
         @Test
-        @DisplayName("Should return a leaf node for targets at the depth boundary")
+        @DisplayName("Should return target as leaf node when depth limit is reached")
         void shouldReturnLeafNodeAtDepthBoundary() {
-            // api --uses--> postgres --runs-on--> server-1
-            // At depth=1: postgres node is resolved but its own relations are NOT expanded
-            var server = entity(INFRA_TEMPLATE, "server-1", "Server 1");
-            var db = entityWithRelations(DB_TEMPLATE, "postgres", "Postgres DB",
-                    List.of(relation("runs-on", INFRA_TEMPLATE, List.of("server-1"))));
-            var api = entityWithRelations(TEMPLATE, "api", "API Service",
-                    List.of(relation("uses", DB_TEMPLATE, List.of("postgres"))));
+            Entity api = entityWithRelations(TEMPLATE, "api", "API Service",
+                    List.of(relation("uses-db", "database", "postgres")));
+            Entity postgres = entityWithRelations("database", "postgres", "Postgres DB",
+                    List.of(relation("runs-on", "infra", "server-1")));
+            Entity server = entity("infra", "server-1", "Server 1");
 
             when(entityRepositoryPort.findByTemplateIdentifierAndIdentifier(TEMPLATE, "api"))
                     .thenReturn(Optional.of(api));
-            when(entityGraphRepositoryPort.findEntityGraph(TEMPLATE, "api", 1, false))
-                    .thenReturn(Map.of(
-                            key(TEMPLATE, "api"), api,
-                            key(DB_TEMPLATE, "postgres"), db,
-                            key(INFRA_TEMPLATE, "server-1"), server
-                    ));
+            stubGraph(Map.of(
+                    key(TEMPLATE, "api"), api,
+                    key("database", "postgres"), postgres,
+                    key("infra", "server-1"), server));
 
             EntityGraphNode result = entityGraphService.getEntityGraph(TEMPLATE, "api", 1, false);
 
-            // postgres node is included but its child relations are empty (remaining depth = 0)
-            var dbNode = result.relations().getFirst().targets().getFirst();
-            assertThat(dbNode.identifier()).isEqualTo("postgres");
-            assertThat(dbNode.relations()).isEmpty();
+            EntityGraphNode postgresNode = result.relations().get(0).targets().get(0);
+            assertThat(postgresNode.identifier()).isEqualTo("postgres");
+            // At depth=1, postgres is a leaf — no further relations resolved
+            assertThat(postgresNode.relations()).isEmpty();
+            assertThat(postgresNode.relationsAsTarget()).isEmpty();
         }
     }
 
+    // ========================
     @Nested
-    @DisplayName("getEntityGraph — multiple outbound relations")
+    @DisplayName("Multiple Named Relations")
     class MultipleRelations {
 
         @Test
-        @DisplayName("Should resolve multiple named relation types correctly")
+        @DisplayName("Should resolve multiple distinct relation types")
         void shouldResolveMultipleNamedRelations() {
-            var db = entity(DB_TEMPLATE, "postgres", "Postgres DB");
-            var cache = entity(CACHE_TEMPLATE, "redis", "Redis Cache");
-            var api = entityWithRelations(TEMPLATE, "api", "API Service", List.of(
-                    relation("uses-db", DB_TEMPLATE, List.of("postgres")),
-                    relation("uses-cache", CACHE_TEMPLATE, List.of("redis"))
-            ));
+            Entity api = entityWithRelations(TEMPLATE, "api", "API Service", List.of(
+                    relation("uses-db", "database", "postgres"),
+                    relation("depends-on", TEMPLATE, "auth")));
+            Entity postgres = entity("database", "postgres", "Postgres DB");
+            Entity auth = entity(TEMPLATE, "auth", "Auth Service");
 
             when(entityRepositoryPort.findByTemplateIdentifierAndIdentifier(TEMPLATE, "api"))
                     .thenReturn(Optional.of(api));
-            when(entityGraphRepositoryPort.findEntityGraph(TEMPLATE, "api", DEFAULT_DEPTH, false))
-                    .thenReturn(Map.of(
-                            key(TEMPLATE, "api"), api,
-                            key(DB_TEMPLATE, "postgres"), db,
-                            key(CACHE_TEMPLATE, "redis"), cache
-                    ));
+            stubGraph(Map.of(
+                    key(TEMPLATE, "api"), api,
+                    key("database", "postgres"), postgres,
+                    key(TEMPLATE, "auth"), auth));
 
-            EntityGraphNode result = entityGraphService.getEntityGraph(TEMPLATE, "api", DEFAULT_DEPTH, false);
+            EntityGraphNode result = entityGraphService.getEntityGraph(TEMPLATE, "api", 1, false);
 
             assertThat(result.relations()).hasSize(2);
-            var relationNames = result.relations().stream().map(r -> r.name()).toList();
-            assertThat(relationNames).containsExactlyInAnyOrder("uses-db", "uses-cache");
+            assertThat(result.relations().stream().map(EntityGraphRelation::name))
+                    .containsExactlyInAnyOrder("uses-db", "depends-on");
+        }
+    }
+
+    // ========================
+    @Nested
+    @DisplayName("Full Graph Returned — Filtering Is a Mapper Concern")
+    class FullGraphReturned {
+
+        @Test
+        @DisplayName("Should return all edges regardless of relation type (no filtering in service)")
+        void shouldReturnAllEdgesWithoutFiltering() {
+            // A --(depends-on)--> B --(owns)--> C
+            // The service must return both edges — the mapper will filter them.
+            Entity a = entityWithRelations(TEMPLATE, "a", "A",
+                    List.of(relation("depends-on", TEMPLATE, "b")));
+            Entity b = entityWithRelations(TEMPLATE, "b", "B",
+                    List.of(relation("owns", TEMPLATE, "c")));
+            Entity c = entity(TEMPLATE, "c", "C");
+
+            when(entityRepositoryPort.findByTemplateIdentifierAndIdentifier(TEMPLATE, "a"))
+                    .thenReturn(Optional.of(a));
+            stubGraph(Map.of(
+                    key(TEMPLATE, "a"), a,
+                    key(TEMPLATE, "b"), b,
+                    key(TEMPLATE, "c"), c));
+
+            EntityGraphNode result = entityGraphService.getEntityGraph(TEMPLATE, "a", 2, false);
+
+            // Root A has one outbound "depends-on" edge → B
+            assertThat(result.relations()).hasSize(1);
+            assertThat(result.relations().get(0).name()).isEqualTo("depends-on");
+
+            // B (at depth 1) has one outbound "owns" edge → C
+            EntityGraphNode nodeB = result.relations().get(0).targets().get(0);
+            assertThat(nodeB.identifier()).isEqualTo("b");
+            assertThat(nodeB.relations()).hasSize(1);
+            assertThat(nodeB.relations().get(0).name()).isEqualTo("owns");
+            assertThat(nodeB.relations().get(0).targets().get(0).identifier()).isEqualTo("c");
+
+            verify(entityGraphRepositoryPort).findEntityGraph(TEMPLATE, "a", 2, false);
+        }
+    }
+
+    // ========================
+    @Nested
+    @DisplayName("Visited Node Guard — OOM Prevention")
+    class VisitedNodeGuard {
+
+        @Test
+        @DisplayName("Should complete at depth=10 without exponential recursion for a small graph")
+        void shouldNotExplodeAtMaxDepthWithSmallGraph() {
+            // A --(uses)--> B --(uses)--> C; B also has inbound from A and C has inbound from B.
+            // Without the visited-node guard this produces O(2^depth) calls at depth=10.
+            Entity a = entityWithRelations(TEMPLATE, "a", "A",
+                    List.of(relation("uses", TEMPLATE, "b")));
+            Entity b = entityWithRelations(TEMPLATE, "b", "B",
+                    List.of(relation("uses", TEMPLATE, "c")));
+            Entity c = entity(TEMPLATE, "c", "C");
+
+            when(entityRepositoryPort.findByTemplateIdentifierAndIdentifier(TEMPLATE, "a"))
+                    .thenReturn(Optional.of(a));
+            stubGraph(Map.of(
+                    key(TEMPLATE, "a"), a,
+                    key(TEMPLATE, "b"), b,
+                    key(TEMPLATE, "c"), c));
+
+            // Must complete instantly — any OOM or StackOverflow here means the guard is missing.
+            EntityGraphNode result = entityGraphService.getEntityGraph(TEMPLATE, "a", 10, false);
+
+            assertThat(result.identifier()).isEqualTo("a");
+            assertThat(result.relations()).hasSize(1);
+        }
+
+        @Test
+        @DisplayName("Should return stub leaf for already-visited node instead of re-expanding it")
+        void shouldReturnStubLeafForRevisitedNode() {
+            // A --(uses)--> B; B also points back to A (cycle: A→B→A)
+            Entity a = entityWithRelations(TEMPLATE, "a", "A",
+                    List.of(relation("uses", TEMPLATE, "b")));
+            Entity b = entityWithRelations(TEMPLATE, "b", "B",
+                    List.of(relation("uses", TEMPLATE, "a")));
+
+            when(entityRepositoryPort.findByTemplateIdentifierAndIdentifier(TEMPLATE, "a"))
+                    .thenReturn(Optional.of(a));
+            stubGraph(Map.of(
+                    key(TEMPLATE, "a"), a,
+                    key(TEMPLATE, "b"), b));
+
+            EntityGraphNode result = entityGraphService.getEntityGraph(TEMPLATE, "a", 5, false);
+
+            // A → B is resolved
+            assertThat(result.relations()).hasSize(1);
+            EntityGraphNode nodeB = result.relations().get(0).targets().get(0);
+            assertThat(nodeB.identifier()).isEqualTo("b");
+
+            // B → A is a revisit: A was already marked visited, so it returns a stub leaf
+            // with no further outbound or inbound relations (no infinite loop).
+            EntityGraphNode stubA = nodeB.relations().get(0).targets().get(0);
+            assertThat(stubA.identifier()).isEqualTo("a");
+            assertThat(stubA.relations()).isEmpty();
+            assertThat(stubA.relationsAsTarget()).isEmpty();
         }
     }
 }

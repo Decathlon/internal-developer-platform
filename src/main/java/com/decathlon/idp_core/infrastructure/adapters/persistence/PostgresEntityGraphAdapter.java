@@ -6,6 +6,7 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 
 import org.springframework.stereotype.Component;
+import org.springframework.transaction.annotation.Transactional;
 
 import com.decathlon.idp_core.domain.model.entity.Entity;
 import com.decathlon.idp_core.domain.model.entity.EntityCompositeKey;
@@ -34,12 +35,17 @@ public class PostgresEntityGraphAdapter implements EntityGraphRepositoryPort {
     private final EntityPersistenceMapper mapper;
 
     @Override
+    @Transactional(readOnly = true)
     public Map<EntityCompositeKey, Entity> findEntityGraph(
             String templateIdentifier,
             String entityIdentifier,
             int depth,
             boolean includeProperties) {
-        // Step 1: collect all (identifier, template_identifier) pairs via recursive CTE
+        // Step 1: collect all (identifier, template_identifier) pairs via recursive CTE.
+        // The CTE always traverses ALL relation types to discover all reachable nodes.
+        // Relation name filtering is applied at the service level when building edges,
+        // so nodes reachable via any path are included even if the filter only matches
+        // edges at deeper levels (e.g. filtering "owns" still returns B→C when A→B→C).
         List<Object[]> graphPairs = jpaEntityRepository.findEntityGraphIdentifiers(
                 templateIdentifier, entityIdentifier, depth);
 

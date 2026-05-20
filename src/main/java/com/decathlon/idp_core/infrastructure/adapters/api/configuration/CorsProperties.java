@@ -9,9 +9,9 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 public record CorsProperties(
         List<String> allowedOrigins
 ) {
+    /// Compact constructor: normalises null to empty and defensively copies to prevent
+    /// external mutation of the configuration list (EI_EXPOSE_REP2 / EI_EXPOSE_REP).
     public CorsProperties {
-        if (allowedOrigins == null) {
-            allowedOrigins = List.of();
-        }
+        allowedOrigins = allowedOrigins == null ? List.of() : List.copyOf(allowedOrigins);
     }
 }

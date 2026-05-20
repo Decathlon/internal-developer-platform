@@ -36,4 +36,10 @@ public record Entity(
 
         List<Relation> relations
 ) {
+    /// Compact constructor: defensively copies mutable lists to prevent external mutation
+    /// and guarantee immutability of the domain model (EI_EXPOSE_REP2 / EI_EXPOSE_REP).
+    public Entity {
+        properties = properties == null ? List.of() : List.copyOf(properties);
+        relations = relations == null ? List.of() : List.copyOf(relations);
+    }
 }

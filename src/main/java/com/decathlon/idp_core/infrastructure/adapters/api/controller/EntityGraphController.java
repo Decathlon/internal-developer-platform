@@ -6,9 +6,13 @@ import static com.decathlon.idp_core.infrastructure.adapters.api.configuration.S
 import static com.decathlon.idp_core.infrastructure.adapters.api.configuration.SwaggerDescription.OK_CODE;
 import static com.decathlon.idp_core.infrastructure.adapters.api.configuration.SwaggerDescription.PARAM_DEPTH_DESCRIPTION;
 import static com.decathlon.idp_core.infrastructure.adapters.api.configuration.SwaggerDescription.PARAM_INCLUDE_DATA_DESCRIPTION;
+import static com.decathlon.idp_core.infrastructure.adapters.api.configuration.SwaggerDescription.PARAM_RELATIONS_DESCRIPTION;
 import static com.decathlon.idp_core.infrastructure.adapters.api.configuration.SwaggerDescription.RESPONSE_ENTITY_GRAPH_FLAT_SUCCESS;
 import static com.decathlon.idp_core.infrastructure.adapters.api.configuration.SwaggerDescription.RESPONSE_ENTITY_NOT_FOUND_IDENTIFIER;
 import static org.springframework.http.HttpStatus.OK;
+
+import java.util.List;
+import java.util.Set;
 
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -52,9 +56,10 @@ public class EntityGraphController {
     /// Cytoscape, and similar frontend graph visualization libraries.
     ///
     /// @param templateIdentifier the template identifier of the root entity
-    /// @param entityIdentifier the business identifier of the root entity
-    /// @param depth the maximum traversal depth (default 1, clamped between 1 and 10)
-    /// @param includeData when true, each node includes a data object with entity property values
+    /// @param entityIdentifier   the business identifier of the root entity
+    /// @param depth              the maximum traversal depth (default 1, clamped between 1 and 10)
+    /// @param includeData        when true, each node includes a data object with entity property values
+    /// @param relations          when provided, only relations with matching names are included
     /// @return flat DTO containing nodes and edges arrays
     @GetMapping("/{templateIdentifier}/{entityIdentifier}/graph")
     @ResponseStatus(OK)
@@ -74,11 +79,16 @@ public class EntityGraphController {
             @Parameter(description = PARAM_DEPTH_DESCRIPTION)
             @RequestParam(defaultValue = "1") int depth,
             @Parameter(description = PARAM_INCLUDE_DATA_DESCRIPTION)
-            @RequestParam(defaultValue = "false") boolean includeData) {
+            @RequestParam(defaultValue = "false") boolean includeData,
+            @Parameter(description = PARAM_RELATIONS_DESCRIPTION)
+            @RequestParam(required = false) List<String> relations) {
+
+        // Convert the nullable list to a Set for O(1) lookup; empty set means no filter
+        Set<String> relationFilter = relations != null ? Set.copyOf(relations) : Set.of();
 
         EntityGraphNode graphNode = entityGraphService.getEntityGraph(
                 templateIdentifier, entityIdentifier, depth, includeData);
 
-        return EntityGraphFlatDtoOutMapper.toFlatDto(graphNode);
+        return EntityGraphFlatDtoOutMapper.toFlatDto(graphNode, relationFilter);
     }
 }

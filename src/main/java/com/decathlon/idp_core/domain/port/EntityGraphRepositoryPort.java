@@ -31,7 +31,13 @@ public interface EntityGraphRepositoryPort {
     /// @param depth              the maximum traversal depth (1-10)
     /// @param includeProperties  when true, entity properties are loaded along with relations;
     ///                           when false, only relations are fetched for a leaner query
+    /// @param relationNames      when non-empty, only edges whose relation name is in this set are
+    ///                           traversed; when empty, all relation types are followed
     /// @return map of [EntityCompositeKey] to [Entity] for O(1) lookup; empty if root not found
+    /// Relation name filtering is intentionally NOT pushed into this port.
+    /// The CTE always traverses all relation types so that nodes reachable via
+    /// any path are loaded. Edge filtering is applied in the service layer so
+    /// that "filter owns" still returns B and C when A→(depends-on)→B→(owns)→C.
     Map<EntityCompositeKey, Entity> findEntityGraph(
             String templateIdentifier,
             String entityIdentifier,

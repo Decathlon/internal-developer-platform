@@ -166,4 +166,5 @@ public class SwaggerDescription {
     public static final String ENTITY_GRAPH_FLAT_EDGE_TYPE_DESCRIPTION = "Relation name as defined in the entity template";
     public static final String ENTITY_GRAPH_FLAT_NODE_DATA_DESCRIPTION = "Entity property values keyed by property name; present only when include_data=true is requested";
     public static final String PARAM_INCLUDE_DATA_DESCRIPTION = "When true, each graph node includes a data object containing the entity's property values. Defaults to false.";
+    public static final String PARAM_RELATIONS_DESCRIPTION = "When provided, only relations whose name matches one of the listed values are traversed and included. Omit to include all relations.";
 }

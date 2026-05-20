@@ -38,9 +38,14 @@ public final class EntityGraphFlatDtoOutMapper {
 
     /// Maps a domain graph node tree to a flat [EntityGraphFlatDtoOut].
     ///
-    /// @param root the root [EntityGraphNode] returned by the domain service
+    /// @param root           the root [EntityGraphNode] returned by the domain service
+    /// @param relationFilter when non-empty, only edges whose type is in this set are emitted,
+    ///                       and nodes not referenced by any remaining edge are pruned from the
+    ///                       result (except the root, which is always included);
+    ///                       an empty set means no filter — all edge types and nodes are emitted
     /// @return flat DTO with deduplicated nodes and directed edges
-    public static EntityGraphFlatDtoOut toFlatDto(EntityGraphNode root) {        if (root == null) {
+    public static EntityGraphFlatDtoOut toFlatDto(EntityGraphNode root, Set<String> relationFilter) {
+        if (root == null) {
             return new EntityGraphFlatDtoOut(List.of(), List.of());
         }
 
@@ -54,9 +59,30 @@ public final class EntityGraphFlatDtoOutMapper {
         Set<String> emittedEdgeSignatures = new HashSet<>();
         var edgeCounter = new AtomicInteger(0);
 
-        traverse(root, nodes, edges, visitedNodeIds, emittedEdgeSignatures, edgeCounter);
+        traverse(root, nodes, edges, visitedNodeIds, emittedEdgeSignatures, edgeCounter, relationFilter);
 
-        return new EntityGraphFlatDtoOut(List.copyOf(nodes), List.copyOf(edges));
+        // When a relation filter is active, prune nodes that are not connected to any
+        // remaining edge. The root is always kept. Without this step, nodes reachable via
+        // non-filtered edges (e.g. C via "depends-on" when filtering "monitors") would
+        // appear in the node list despite having no visible edges.
+        List<EntityGraphNodeFlatDtoOut> finalNodes;
+        if (relationFilter.isEmpty()) {
+            finalNodes = List.copyOf(nodes);
+        } else {
+            // Collect all node IDs referenced by the filtered edges only.
+            // The root receives no special treatment: if it has no matching edges
+            // it is pruned just like any other disconnected node.
+            Set<String> referencedNodeIds = new HashSet<>();
+            for (var edge : edges) {
+                referencedNodeIds.add(edge.source());
+                referencedNodeIds.add(edge.target());
+            }
+            finalNodes = nodes.stream()
+                    .filter(n -> referencedNodeIds.contains(n.id()))
+                    .toList();
+        }
+
+        return new EntityGraphFlatDtoOut(finalNodes, List.copyOf(edges));
     }
 
     private static void traverse(
@@ -65,7 +91,8 @@ public final class EntityGraphFlatDtoOutMapper {
             List<EntityGraphEdgeDtoOut> edges,
             Set<String> visitedNodeIds,
             Set<String> emittedEdgeSignatures,
-            AtomicInteger edgeCounter) {
+            AtomicInteger edgeCounter,
+            Set<String> relationFilter) {
 
         var nodeId = nodeId(node.templateIdentifier(), node.identifier());
 
@@ -78,12 +105,16 @@ public final class EntityGraphFlatDtoOutMapper {
                 nodeId, node.name(), node.templateIdentifier(), node.identifier(),
                 toDataMap(node)));
 
-        // Traverse outbound relations: emit edge from currentNode → target
+        // Traverse outbound relations: emit edge from currentNode → target only when the
+        // relation type matches the filter (or no filter is active). Nodes are always
+        // traversed so that deeper nodes remain reachable regardless of edge visibility.
         for (EntityGraphRelation relation : node.relations()) {
             for (EntityGraphNode target : relation.targets()) {
                 var targetId = nodeId(target.templateIdentifier(), target.identifier());
-                addEdge(edges, emittedEdgeSignatures, edgeCounter, nodeId, targetId, relation.name());
-                traverse(target, nodes, edges, visitedNodeIds, emittedEdgeSignatures, edgeCounter);
+                if (relationFilter.isEmpty() || relationFilter.contains(relation.name())) {
+                    addEdge(edges, emittedEdgeSignatures, edgeCounter, nodeId, targetId, relation.name());
+                }
+                traverse(target, nodes, edges, visitedNodeIds, emittedEdgeSignatures, edgeCounter, relationFilter);
             }
         }
 
@@ -93,8 +124,10 @@ public final class EntityGraphFlatDtoOutMapper {
         for (EntityGraphRelation relation : node.relationsAsTarget()) {
             for (EntityGraphNode source : relation.targets()) {
                 var sourceId = nodeId(source.templateIdentifier(), source.identifier());
-                addEdge(edges, emittedEdgeSignatures, edgeCounter, sourceId, nodeId, relation.name());
-                traverse(source, nodes, edges, visitedNodeIds, emittedEdgeSignatures, edgeCounter);
+                if (relationFilter.isEmpty() || relationFilter.contains(relation.name())) {
+                    addEdge(edges, emittedEdgeSignatures, edgeCounter, sourceId, nodeId, relation.name());
+                }
+                traverse(source, nodes, edges, visitedNodeIds, emittedEdgeSignatures, edgeCounter, relationFilter);
             }
         }
     }

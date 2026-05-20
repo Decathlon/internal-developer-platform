@@ -1,7 +1,11 @@
 package com.decathlon.idp_core.domain.service.entity_graph;
 
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -32,7 +36,11 @@ import lombok.RequiredArgsConstructor;
 /// **Design decisions:**
 /// - Uses depth-limited traversal to prevent unbounded recursion
 /// - Optimized with recursive CTE and batch loading to minimize database queries
-/// - Does not detect cycles — relies on depth limit to terminate
+/// - A per-request `visitedNodeIds` set prevents exponential recursion: without it,
+///   inbound relation scanning would re-expand already-visited nodes at every depth
+///   level, producing O(2^depth) calls even for small graphs (OOM at depth ≥ 10).
+/// - The service always returns the full unfiltered graph tree. Relation name filtering
+///   is a presentation concern applied by the mapper layer.
 @Service
 @RequiredArgsConstructor
 public class EntityGraphService {
@@ -44,46 +52,55 @@ public class EntityGraphService {
 
     /// Builds the relationship graph for an entity starting from its composite key.
     ///
-    /// **Optimization:** Uses a recursive CTE to fetch all entities in the graph in 2 queries
-    /// (1 for composite key pairs, 1 for batch loading), regardless of depth.
-    ///
     /// @param templateIdentifier the template identifier of the root entity
-    /// @param entityIdentifier the business identifier of the root entity
-    /// @param depth the maximum traversal depth (clamped to [1, MAX_DEPTH])
-    /// @param includeProperties when true, each graph node carries the entity's full property list;
-    ///                          when false, properties are omitted to reduce response size
-    /// @return the root graph node with resolved relations
+    /// @param entityIdentifier   the business identifier of the root entity
+    /// @param depth              the maximum traversal depth (clamped to [1, MAX_DEPTH])
+    /// @param includeProperties  when true, each graph node carries the entity's full property list
+    /// @return the root graph node with all resolved relations
     /// @throws EntityNotFoundException when no entity matches the given identifiers
     @Transactional(readOnly = true)
     public EntityGraphNode getEntityGraph(String templateIdentifier, String entityIdentifier, int depth,
             boolean includeProperties) {
         int effectiveDepth = Math.clamp(depth, 1, MAX_DEPTH);
 
-        // Verify root entity exists before fetching the graph
         Entity rootEntity = entityRepositoryPort
                 .findByTemplateIdentifierAndIdentifier(templateIdentifier, entityIdentifier)
                 .orElseThrow(() -> new EntityNotFoundException(templateIdentifier, entityIdentifier));
 
-        // Optimized batch fetch: load all entities in the graph keyed by composite key.
-        // Properties are fetched only when explicitly requested to avoid unnecessary I/O.
         Map<EntityCompositeKey, Entity> entityMap = entityGraphRepositoryPort
                 .findEntityGraph(templateIdentifier, entityIdentifier, effectiveDepth, includeProperties);
 
         EntityCompositeKey rootKey = new EntityCompositeKey(rootEntity.templateIdentifier(), rootEntity.identifier());
 
-        // Build the graph from pre-loaded entities (no more database calls)
-        return buildGraphNode(rootKey, entityMap, effectiveDepth, includeProperties);
+        // One shared visited set per request — each node is fully expanded at most once,
+        // preventing O(2^depth) recursion from mutual outbound/inbound re-expansion.
+        Set<String> visitedNodeIds = new HashSet<>();
+
+        return buildGraphNode(rootKey, entityMap, effectiveDepth, includeProperties, visitedNodeIds);
     }
 
     /// Builds a graph node from a pre-loaded entity map (no database calls).
-    /// Recursively resolves both outbound and inbound relations from the cached entities.
+    ///
+    /// [visitedNodeIds] tracks nodes that have already been fully built in this traversal.
+    /// When a node is encountered again (cycle or shared reference), a stub leaf is returned
+    /// immediately to cut the recursion — preventing the exponential blowup that arises from
+    /// inbound scanning re-expanding the same nodes at every depth level.
     private EntityGraphNode buildGraphNode(EntityCompositeKey key,
                                            Map<EntityCompositeKey, Entity> entityMap,
                                            int remainingDepth,
-                                           boolean includeProperties) {
+                                           boolean includeProperties,
+                                           Set<String> visitedNodeIds) {
         Entity entity = entityMap.get(key);
         if (entity == null) {
             return new EntityGraphNode(key.templateIdentifier(), key.identifier(), key.identifier(),
+                    List.of(), List.of(), List.of());
+        }
+
+        // Guard: return a stub leaf if this node was already fully built in another branch.
+        // This breaks both directed cycles (A→B→A) and shared references (A→B, C→B).
+        var nodeId = entity.templateIdentifier() + ":" + entity.identifier();
+        if (!visitedNodeIds.add(nodeId)) {
+            return new EntityGraphNode(entity.templateIdentifier(), entity.identifier(), entity.name(),
                     List.of(), List.of(), List.of());
         }
 
@@ -92,28 +109,24 @@ public class EntityGraphService {
                     List.of(), List.of(), List.of());
         }
 
-        // Resolve outbound relations from pre-loaded entities
         List<EntityGraphRelation> outboundRelations = entity.relations().stream()
                 .map(relation -> new EntityGraphRelation(
                         relation.name(),
                         relation.targetEntityIdentifiers().stream()
-                                .map(targetId -> {
-                                    // Relations only store identifier; look up by identifier across all entries
-                                    EntityCompositeKey targetKey = findKeyByIdentifier(targetId, entityMap);
-                                    return buildGraphNode(targetKey, entityMap, remainingDepth - 1, includeProperties);
-                                })
+                                .map(targetId -> buildGraphNode(
+                                        findKeyByIdentifier(targetId, entityMap),
+                                        entityMap, remainingDepth - 1, includeProperties, visitedNodeIds))
                                 .toList()
                 ))
                 .toList();
 
-        // Resolve inbound relations from pre-loaded entities
         List<EntityGraphRelation> inboundRelations = buildRelationsAsTargetFromMap(
-                entity.identifier(), entityMap, remainingDepth - 1, includeProperties);
+                entity.identifier(), entityMap, remainingDepth - 1, includeProperties, visitedNodeIds);
 
-        // Include properties only when explicitly requested to keep responses lean
         List<Property> properties = includeProperties ? entity.properties() : List.of();
         return new EntityGraphNode(entity.templateIdentifier(), entity.identifier(), entity.name(),
-                properties, outboundRelations, inboundRelations);    }
+                properties, outboundRelations, inboundRelations);
+    }
 
     /// Looks up a composite key from the map by identifier alone.
     /// Falls back to a synthetic key if no match is found (entity not in graph).
@@ -125,19 +138,21 @@ public class EntityGraphService {
     }
 
     /// Builds incoming relations (where this entity is the target) from the pre-loaded entity map.
-    /// Scans all entities to find relations pointing to this entity.
+    /// Passes [visitedNodeIds] through so that source nodes already expanded elsewhere are not
+    /// re-expanded here, preventing the mutual recursion that causes OOM at high depths.
     private List<EntityGraphRelation> buildRelationsAsTargetFromMap(String targetIdentifier,
                                                                      Map<EntityCompositeKey, Entity> entityMap,
                                                                      int remainingDepth,
-                                                                     boolean includeProperties) {
-        Map<String, List<EntityCompositeKey>> sourcesByRelationName = new java.util.HashMap<>();
+                                                                     boolean includeProperties,
+                                                                     Set<String> visitedNodeIds) {
+        Map<String, List<EntityCompositeKey>> sourcesByRelationName = new HashMap<>();
 
         for (Map.Entry<EntityCompositeKey, Entity> entry : entityMap.entrySet()) {
             Entity sourceEntity = entry.getValue();
             for (Relation relation : sourceEntity.relations()) {
                 if (relation.targetEntityIdentifiers().contains(targetIdentifier)) {
                     sourcesByRelationName
-                            .computeIfAbsent(relation.name(), k -> new java.util.ArrayList<>())
+                            .computeIfAbsent(relation.name(), k -> new ArrayList<>())
                             .add(entry.getKey());
                 }
             }
@@ -147,7 +162,8 @@ public class EntityGraphService {
                 .map(e -> new EntityGraphRelation(
                         e.getKey(),
                         e.getValue().stream()
-                                .map(sourceKey -> buildGraphNode(sourceKey, entityMap, remainingDepth, includeProperties))
+                                .map(sourceKey -> buildGraphNode(sourceKey, entityMap, remainingDepth,
+                                        includeProperties, visitedNodeIds))
                                 .toList()
                 ))
                 .toList();
