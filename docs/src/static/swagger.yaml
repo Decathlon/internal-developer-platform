@@ -44,7 +44,8 @@ paths:
       tags:
         - Entities Templates Management
       summary: Update an existing template by template identifier
-      description: Update the details of an existing template identified by its unique string identifier
+      description: Update the details of an existing template identified by its unique
+        string identifier
       operationId: updateTemplate
       parameters:
         - name: identifier
@@ -118,7 +119,8 @@ paths:
                 default: '20'
         - name: sort
           in: query
-          description: Sorting criteria in the format: property(,asc|desc). Defaults to identifier,asc.
+          description: 'Sorting criteria in the format: property(,asc|desc). Defaults to
+            identifier,asc.'
           content:
             '*/*':
               schema:
@@ -195,7 +197,8 @@ paths:
             type: string
         - name: sort
           in: query
-          description: Sorting criteria in the format: property(,asc|desc). Defaults to identifier,asc.
+          description: 'Sorting criteria in the format: property(,asc|desc). Defaults to
+            identifier,asc.'
           content:
             '*/*':
               schema:
@@ -245,12 +248,35 @@ paths:
             '*/*':
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Unauthorized - Missing or invalid token
+        '403':
+          description: Insufficient rights
+        '404':
+          description: Template not found with the provided identifier
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '409':
+          description: Entity already exists in this template
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Unexpected server-side failure
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
   /api/v1/entities/{templateIdentifier}/identifier/{entityIdentifier}:
     get:
       tags:
         - Entities Management
       summary: Get entity by entity template and identifier
-      description: Retrieve a specific entity using its string identifier and its template identifier
+      description: Retrieve a specific entity using its string identifier and its
+        template identifier
       operationId: getEntity
       parameters:
         - name: templateIdentifier
@@ -278,39 +304,6 @@ paths:
                 $ref: '#/components/schemas/ErrorResponse'
 components:
   schemas:
-    EntityTemplateCreateDtoIn:
-      type: object
-      description: Input DTO for creating an entity template
-      properties:
-        identifier:
-          type: string
-          description: Unique Entity Template identifier
-          example: service
-          minLength: 1
-        name:
-          type: string
-          description: Unique Entity Template name
-          example: Service
-          maxLength: 255
-          minLength: 1
-          pattern: ^[a-zA-Z0-9 _-]+$
-        description:
-          type: string
-          description: Entity Template description
-          example: A comprehensive service template
-        properties_definitions:
-          type: array
-          description: List of property definitions for this template
-          items:
-            $ref: '#/components/schemas/PropertyDefinitionDtoIn'
-        relations_definitions:
-          type: array
-          description: List of relation definitions for this template
-          items:
-            $ref: '#/components/schemas/RelationDefinitionDtoIn'
-      required:
-        - identifier
-        - name
     EntityTemplateUpdateDtoIn:
       type: object
       description: Input DTO for updating an entity template
@@ -366,8 +359,7 @@ components:
           example: true
           default: false
         rules:
-          allOf:
-            - $ref: '#/components/schemas/PropertyRulesDtoIn'
+          $ref: '#/components/schemas/PropertyRulesDtoIn'
           description: Property validation rules
       required:
         - description
@@ -494,8 +486,7 @@ components:
           description: Whether this property is required
           example: true
         rules:
-          allOf:
-            - $ref: '#/components/schemas/PropertyRulesDtoOut'
+          $ref: '#/components/schemas/PropertyRulesDtoOut'
           description: Property validation rules
           example: Property validation rules
     PropertyRulesDtoOut:
@@ -561,29 +552,96 @@ components:
           type: boolean
           description: Whether this relation can have multiple targets
           example: true
-    EntityDtoIn:
+    ErrorResponse:
       type: object
       properties:
-        name:
+        error:
           type: string
+        errorDescription:
+          type: string
+    EntityTemplateCreateDtoIn:
+      type: object
+      description: Input DTO for creating an entity template
+      properties:
         identifier:
           type: string
-        properties:
-          type: object
-          additionalProperties: true
-        relations:
+          description: Unique Entity Template identifier
+          example: service
+          minLength: 1
+        name:
+          type: string
+          description: Unique Entity Template name
+          example: Service
+          maxLength: 255
+          minLength: 0
+          pattern: ^[a-zA-Z0-9 _-]+$
+        description:
+          type: string
+          description: Entity Template description
+          example: A comprehensive service template
+        properties_definitions:
           type: array
+          description: List of property definitions for this template
           items:
-            $ref: '#/components/schemas/RelationDtoIn'
-    RelationDtoIn:
+            $ref: '#/components/schemas/PropertyDefinitionDtoIn'
+        relations_definitions:
+          type: array
+          description: List of relation definitions for this template
+          items:
+            $ref: '#/components/schemas/RelationDefinitionDtoIn'
+      required:
+        - identifier
+        - name
+    EntityDtoIn:
       type: object
+      description: Input DTO for creating or updating an entity
       properties:
         name:
           type: string
+          description: Name of the entity
+          example: my-web-service
+          minLength: 1
+        identifier:
+          type: string
+          description: Unique identifier of the entity within the template scope
+          example: my-web-service
+          minLength: 1
+        properties:
+          type: object
+          additionalProperties:
+            type: string
+          description: Map of property name to value for this entity
+          example:
+            port: '8080'
+            environment: dev
+        relations:
+          type: array
+          description: List of relations for this entity
+          items:
+            $ref: '#/components/schemas/RelationDtoIn'
+      required:
+        - identifier
+        - name
+    RelationDtoIn:
+      type: object
+      description: Input DTO for an entity relation instance
+      properties:
+        name:
+          type: string
+          description: Name of the relation (must match a template relation definition)
+          example: depends-on
+          minLength: 1
         target_entity_identifiers:
           type: array
+          description: List of target entity identifiers for this relation
+          example:
+            - web-api-1
+            - web-api-2
           items:
             type: string
+      required:
+        - name
+        - target_entity_identifiers
     EntityDtoOut:
       type: object
       properties:
@@ -595,7 +653,7 @@ components:
           type: string
         properties:
           type: object
-          additionalProperties: true
+          additionalProperties: {}
         relations:
           type: object
           additionalProperties:
@@ -614,13 +672,6 @@ components:
         identifier:
           type: string
         name:
-          type: string
-    ErrorResponse:
-      type: object
-      properties:
-        error:
-          type: string
-        errorDescription:
           type: string
     PageableObject:
       type: object
