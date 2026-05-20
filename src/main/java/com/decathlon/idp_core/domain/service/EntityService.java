@@ -10,6 +10,7 @@ import com.decathlon.idp_core.domain.exception.EntityNotFoundException;
 import com.decathlon.idp_core.domain.exception.entity_template.EntityTemplateNotFoundException;
 import com.decathlon.idp_core.domain.model.entity.Entity;
 import com.decathlon.idp_core.domain.model.entity.EntitySummary;
+import com.decathlon.idp_core.domain.model.entity.SearchFilterNode;
 import com.decathlon.idp_core.domain.port.EntityRepositoryPort;
 import com.decathlon.idp_core.domain.port.EntityTemplateRepositoryPort;
 
@@ -33,6 +34,7 @@ import lombok.AllArgsConstructor;
 public class EntityService {
     private final EntityRepositoryPort entityRepository;
     private final EntityTemplateRepositoryPort entityTemplateRepository;
+    private final EntitySearchService entitySearchService;
 
     /// Retrieves entities filtered by template with existence validation.
     ///
@@ -93,5 +95,22 @@ public class EntityService {
     public Entity createEntity(@Valid Entity entity) {
         // Add validations
         return entityRepository.save(entity);
+    }
+
+    /// Searches for entities across all templates using a nested filter tree and optional free-text query.
+    ///
+    /// **Contract:** Executes a global entity search using the provided filter tree and optional text query.
+    /// Not scoped to a single template; include a template criterion in the filter
+    /// to scope the result to a specific template.
+    ///
+    /// @param filter   root node of the search filter tree; an empty group returns all entities
+    /// @param query    optional free-text string searched across identifier, name, templateIdentifier,
+    ///                 and all property values; null means no text restriction
+    /// @param pageable pagination configuration
+    /// @return paginated entities matching the filter and query
+    @Transactional
+    public Page<Entity> searchEntities(SearchFilterNode filter, String query, Pageable pageable) {
+        entitySearchService.validate(filter);
+        return entityRepository.search(filter, query, pageable);
     }
 }

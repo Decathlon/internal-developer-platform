@@ -1,0 +1,25 @@
+{
+  "content": [
+    {
+      "identifier": "microservice-1",
+      "name": "Microservice 1",
+      "properties": {},
+      "relations": {},
+      "relations_as_target": {
+        "api-link": [
+          {
+            "identifier": "web-api-1",
+            "name": "Web API 1"
+          }
+        ]
+      },
+      "template_identifier": "microservice"
+    }
+  ],
+  "page": {
+    "size": 20,
+    "number": 0,
+    "total_elements": 1,
+    "total_pages": 1
+  }
+}

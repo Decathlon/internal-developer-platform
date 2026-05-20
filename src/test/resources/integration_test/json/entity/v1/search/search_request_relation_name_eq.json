@@ -1,0 +1,9 @@
+{
+  "filter": {
+    "field": "relation",
+    "operation": "EQ",
+    "value": "api-link"
+  },
+  "page": 0,
+  "size": 20
+}

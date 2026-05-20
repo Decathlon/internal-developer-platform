@@ -5,15 +5,19 @@ import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
+import com.decathlon.idp_core.infrastructure.adapters.persistence.model.entity.EntityJpaEntity;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Component;
 
 import com.decathlon.idp_core.domain.model.entity.Entity;
 import com.decathlon.idp_core.domain.model.entity.EntitySummary;
+import com.decathlon.idp_core.domain.model.entity.SearchFilterNode;
 import com.decathlon.idp_core.domain.port.EntityRepositoryPort;
 import com.decathlon.idp_core.infrastructure.adapters.persistence.mapper.EntityPersistenceMapper;
 import com.decathlon.idp_core.infrastructure.adapters.persistence.repository.JpaEntityRepository;
+import com.decathlon.idp_core.infrastructure.adapters.persistence.specification.EntitySearchSpecification;
 
 import lombok.RequiredArgsConstructor;
 
@@ -63,5 +67,14 @@ public class PostgresEntityAdapter implements EntityRepositoryPort {
     @Override
     public void deleteRelationsByTemplateIdentifierAndRelationName(String templateIdentifier, Collection<String> relationNames) {
         jpaEntityRepository.deleteRelationsByTemplateIdentifierAndRelationName(templateIdentifier, relationNames);
+    }
+
+    @Override
+    public Page<Entity> search(SearchFilterNode filter, String query, Pageable pageable) {
+        Specification<EntityJpaEntity> spec = EntitySearchSpecification.of(filter);
+        if (query != null && !query.isBlank()) {
+            spec = spec.and(EntitySearchSpecification.globalTextSearch(query));
+        }
+        return jpaEntityRepository.findAll(spec, pageable).map(mapper::toDomain);
     }
 }
