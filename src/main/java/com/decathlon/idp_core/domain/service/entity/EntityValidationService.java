@@ -44,22 +44,17 @@ public class EntityValidationService {
     /// @param template the already-resolved template the entity must conform to
     /// @throws EntityValidationException       when one or more validation rules are violated
     /// @throws EntityAlreadyExistsException    if an entity with the same identifier exists for the template
-    void validateEntity(Entity entity, EntityTemplate template) {
-        Violations violations = new Violations();
-        validateAgainstTemplate(template, entity.properties(), violations);
-
-        if (!violations.isEmpty()) {
-            throw new EntityValidationException(violations.asList());
-        }
+    void validateForCreation(Entity entity, EntityTemplate template) {
+        validateUniqueness(entity);
+        validateAgainstTemplate(template, entity.properties());
     }
 
     /// Validates entity properties against the template's property definitions, enforcing required fields and value rules.
     /// @param template the entity template whose property definitions are used for validation
     /// @param properties the list of properties from the entity to validate
-    /// @param violations the accumulator for validation v  iolation messages
     private void validateAgainstTemplate(EntityTemplate template,
-                                         List<Property> properties,
-                                         Violations violations) {
+                                         List<Property> properties) {
+        Violations violations = new Violations();
         List<PropertyDefinition> definitions = Optional.ofNullable(template.propertiesDefinitions()).orElse(List.of());
         Map<String, Property> propertiesByName = Optional.ofNullable(properties).orElse(List.of()).stream()
                 .filter(p -> p.name() != null)
@@ -69,7 +64,7 @@ public class EntityValidationService {
             Property property = propertiesByName.get(definition.name());
             boolean missing = property == null
                     || property.value() == null
-                    || (property.value() instanceof String s && s.isBlank());
+                    || (property.value().isBlank());
 
             if (missing) {
                 if (definition.required()) {
@@ -82,12 +77,15 @@ public class EntityValidationService {
                     .validatePropertyValue(definition, property.value())
                     .forEach(violations::add);
         }
+        if (!violations.isEmpty()) {
+            throw new EntityValidationException(violations.asList());
+        }
     }
 
     /// Checks for existing entity with same template and identifier to prevent duplicates.
     /// @param entity the entity to check for existence
     /// @throws EntityAlreadyExistsException if an entity with the same template and identifier already exists
-    void validateUniqueness(final Entity entity) {
+   private void validateUniqueness(final Entity entity) {
         if (entity.identifier() != null
                 && entityRepository
                         .findByTemplateIdentifierAndIdentifier(entity.templateIdentifier(), entity.identifier())

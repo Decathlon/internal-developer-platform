@@ -9,6 +9,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
+import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -49,19 +50,34 @@ class EntityValidationServiceTest {
     @Test
     @DisplayName("Should throw when entity with same identifier already exists")
     void shouldThrowWhenEntityAlreadyExists() {
+        var template = new EntityTemplate(
+                UUID.randomUUID(),
+                "web-service",
+                "Web Service",
+                "desc",
+                Collections.emptyList(),
+                List.of());
         var entity = entity("web-service", "catalog-api", "Catalog API", List.of(), List.of());
         when(entityRepository.findByTemplateIdentifierAndIdentifier("web-service", "catalog-api"))
                 .thenReturn(Optional.of(entity));
 
-        assertThrows(EntityAlreadyExistsException.class, () -> entityValidationService.validateUniqueness(entity));
+        assertThrows(EntityAlreadyExistsException.class, () -> entityValidationService.validateForCreation(entity, template));
     }
 
     @Test
     @DisplayName("Should not query repository when identifier is null")
     void shouldNotQueryRepositoryWhenIdentifierIsNull() {
+        var template = new EntityTemplate(
+                UUID.randomUUID(),
+                "web-service",
+                "Web Service",
+                "desc",
+                Collections.emptyList(),
+                List.of());
+
         var entity = entity("web-service", null, "Catalog API", List.of(), List.of());
 
-        assertDoesNotThrow(() -> entityValidationService.validateUniqueness(entity));
+        assertDoesNotThrow(() -> entityValidationService.validateForCreation(entity, template));
 
         verify(entityRepository, never()).findByTemplateIdentifierAndIdentifier(org.mockito.ArgumentMatchers.any(), org.mockito.ArgumentMatchers.any());
     }
@@ -69,7 +85,7 @@ class EntityValidationServiceTest {
 
     @Test
     @DisplayName("Should aggregate property requirements and rule violations")
-    void shouldAggregateAllViolationsDuringValidateEntity() {
+    void shouldAggregateAllViolationsDuringValidateForCreation() {
         var portDefinition = new PropertyDefinition(
                 UUID.randomUUID(),
                 "port",
@@ -104,7 +120,7 @@ class EntityValidationServiceTest {
         when(propertyValidationService.validatePropertyValue(portDefinition, "80"))
                 .thenReturn(List.of("Property 'port' value must be greater than or equal to 1024"));
 
-        var exception = assertThrows(EntityValidationException.class, () -> entityValidationService.validateEntity(entity, template));
+        var exception = assertThrows(EntityValidationException.class, () -> entityValidationService.validateForCreation(entity, template));
 
         // Expecting exactly 2 errors: the missing required property, and the invalid port value.
         assertEquals(2, exception.getViolations().size());
@@ -116,7 +132,7 @@ class EntityValidationServiceTest {
 
     @Test
     @DisplayName("Should validate entity successfully when no violations")
-    void shouldValidateEntitySuccessfullyWhenNoViolations() {
+    void shouldValidateForCreationSuccessfullyWhenNoViolations() {
         var versionDefinition = new PropertyDefinition(
                 UUID.randomUUID(),
                 "version",
@@ -143,7 +159,7 @@ class EntityValidationServiceTest {
 
         when(propertyValidationService.validatePropertyValue(versionDefinition, "1.0.0")).thenReturn(List.of());
 
-        assertDoesNotThrow(() -> entityValidationService.validateEntity(entity, template));
+        assertDoesNotThrow(() -> entityValidationService.validateForCreation(entity, template));
         verify(propertyValidationService).validatePropertyValue(versionDefinition, "1.0.0");
     }
 
@@ -168,7 +184,7 @@ class EntityValidationServiceTest {
 
         var entity = entity("web-service", "catalog-api", "Catalog API", List.of(), List.of());
 
-        assertDoesNotThrow(() -> entityValidationService.validateEntity(entity, template));
+        assertDoesNotThrow(() -> entityValidationService.validateForCreation(entity, template));
         verifyNoInteractions(propertyValidationService);
     }
 
@@ -200,7 +216,7 @@ class EntityValidationServiceTest {
                 null);
         when(propertyValidationService.validatePropertyValue(stringDefinition, "1234")).thenReturn(List.of());
 
-        assertDoesNotThrow(() -> entityValidationService.validateEntity(entity, template));
+        assertDoesNotThrow(() -> entityValidationService.validateForCreation(entity, template));
         verify(propertyValidationService).validatePropertyValue(stringDefinition, "1234");
     }
 

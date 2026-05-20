@@ -102,8 +102,7 @@ public class EntityService {
     @Transactional
     public Entity createEntity(@Valid Entity entity) {
         EntityTemplate template = entityTemplateService.getEntityTemplateByIdentifier(entity.templateIdentifier());
-        entityValidationService.validateUniqueness(entity);
-        entityValidationService.validateEntity(entity, template);
+        entityValidationService.validateForCreation(entity, template);
         return entityRepository.save(entity);
     }
 
