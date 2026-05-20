@@ -15,7 +15,6 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
-
 import static com.decathlon.idp_core.domain.constant.ValidationMessages.PROPERTY_RULES_BOOLEAN_NOT_ALLOWED;
 import static com.decathlon.idp_core.domain.constant.ValidationMessages.PROPERTY_RULES_MAX_LENGTH_POSITIVE;
 import static com.decathlon.idp_core.domain.constant.ValidationMessages.PROPERTY_RULES_MIN_LENGTH_NON_NEGATIVE;

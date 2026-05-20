@@ -1,9 +1,15 @@
 {
-  "name": "microservice-2",
-  "identifier": "microservice-2",
+  "name": "web-service-valid-1",
+  "identifier": "web-service-valid-1",
   "properties": {
+    "applicationName": "catalog-api",
+    "ownerEmail": "owner@example.com",
     "port": "8080",
-    "environment": "dev"
-  },
-  "relations": []
+    "environment": "DEV",
+    "version": "1.2.3",
+    "teamName": "platform-team",
+    "baseUrl": "https://catalog.example.com",
+    "protocol": "HTTP",
+    "programmingLanguage": "JAVA"
+  }
 }
