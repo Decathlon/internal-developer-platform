@@ -343,7 +343,7 @@ class ApiExceptionHandlerTest {
                     ),
                     Arguments.of(
                             "Cannot deserialize value of type `com.example.SomeType`: some other error",
-                            "Cannot deserialize request body property"
+                            "Invalid type: expected SomeType"
                     ),
                     Arguments.of(
                             "Something completely unexpected happened",
