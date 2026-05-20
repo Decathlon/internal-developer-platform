@@ -75,7 +75,7 @@ class EntityGraphServiceTest {
             when(entityRepositoryPort.findByTemplateIdentifierAndIdentifier(TEMPLATE, "missing"))
                     .thenReturn(Optional.empty());
 
-            assertThatThrownBy(() -> entityGraphService.getEntityGraph(TEMPLATE, "missing", DEFAULT_DEPTH))
+            assertThatThrownBy(() -> entityGraphService.getEntityGraph(TEMPLATE, "missing", DEFAULT_DEPTH, false))
                     .isInstanceOf(EntityNotFoundException.class);
 
             verify(entityRepositoryPort).findByTemplateIdentifierAndIdentifier(TEMPLATE, "missing");
@@ -97,7 +97,7 @@ class EntityGraphServiceTest {
             when(entityGraphRepositoryPort.findEntityGraph(TEMPLATE, "api", DEFAULT_DEPTH))
                     .thenReturn(Map.of(key(TEMPLATE, "api"), root));
 
-            EntityGraphNode result = entityGraphService.getEntityGraph(TEMPLATE, "api", DEFAULT_DEPTH);
+            EntityGraphNode result = entityGraphService.getEntityGraph(TEMPLATE, "api", DEFAULT_DEPTH, false);
 
             assertThat(result.identifier()).isEqualTo("api");
             assertThat(result.name()).isEqualTo("API Service");
@@ -125,7 +125,7 @@ class EntityGraphServiceTest {
                             key(DB_TEMPLATE, "postgres"), db
                     ));
 
-            EntityGraphNode result = entityGraphService.getEntityGraph(TEMPLATE, "api", DEFAULT_DEPTH);
+            EntityGraphNode result = entityGraphService.getEntityGraph(TEMPLATE, "api", DEFAULT_DEPTH, false);
 
             assertThat(result.relations()).hasSize(1);
             assertThat(result.relations().getFirst().name()).isEqualTo("uses");
@@ -145,7 +145,7 @@ class EntityGraphServiceTest {
             when(entityGraphRepositoryPort.findEntityGraph(TEMPLATE, "api", DEFAULT_DEPTH))
                     .thenReturn(Map.of(key(TEMPLATE, "api"), api));
 
-            EntityGraphNode result = entityGraphService.getEntityGraph(TEMPLATE, "api", DEFAULT_DEPTH);
+            EntityGraphNode result = entityGraphService.getEntityGraph(TEMPLATE, "api", DEFAULT_DEPTH, false);
 
             assertThat(result.relations()).hasSize(1);
             // Fallback node uses identifier as both id and name when entity is not in map
@@ -172,7 +172,7 @@ class EntityGraphServiceTest {
                             key(DB_TEMPLATE, "postgres"), db
                     ));
 
-            EntityGraphNode result = entityGraphService.getEntityGraph(DB_TEMPLATE, "postgres", DEFAULT_DEPTH);
+            EntityGraphNode result = entityGraphService.getEntityGraph(DB_TEMPLATE, "postgres", DEFAULT_DEPTH, false);
 
             // postgres is targeted by api via "uses"
             assertThat(result.relationsAsTarget()).hasSize(1);
@@ -195,7 +195,7 @@ class EntityGraphServiceTest {
             when(entityGraphRepositoryPort.findEntityGraph(TEMPLATE, "api", 1))
                     .thenReturn(Map.of(key(TEMPLATE, "api"), root));
 
-            entityGraphService.getEntityGraph(TEMPLATE, "api", 0);
+            entityGraphService.getEntityGraph(TEMPLATE, "api", 0, false);
 
             verify(entityGraphRepositoryPort).findEntityGraph(TEMPLATE, "api", 1);
         }
@@ -210,7 +210,7 @@ class EntityGraphServiceTest {
             when(entityGraphRepositoryPort.findEntityGraph(TEMPLATE, "api", 10))
                     .thenReturn(Map.of(key(TEMPLATE, "api"), root));
 
-            entityGraphService.getEntityGraph(TEMPLATE, "api", 99);
+            entityGraphService.getEntityGraph(TEMPLATE, "api", 99, false);
 
             verify(entityGraphRepositoryPort).findEntityGraph(TEMPLATE, "api", 10);
         }
@@ -240,7 +240,7 @@ class EntityGraphServiceTest {
                             key(INFRA_TEMPLATE, "server-1"), server
                     ));
 
-            EntityGraphNode result = entityGraphService.getEntityGraph(TEMPLATE, "api", 1);
+            EntityGraphNode result = entityGraphService.getEntityGraph(TEMPLATE, "api", 1, false);
 
             // postgres node is included but its child relations are empty (remaining depth = 0)
             var dbNode = result.relations().getFirst().targets().getFirst();
@@ -272,7 +272,7 @@ class EntityGraphServiceTest {
                             key(CACHE_TEMPLATE, "redis"), cache
                     ));
 
-            EntityGraphNode result = entityGraphService.getEntityGraph(TEMPLATE, "api", DEFAULT_DEPTH);
+            EntityGraphNode result = entityGraphService.getEntityGraph(TEMPLATE, "api", DEFAULT_DEPTH, false);
 
             assertThat(result.relations()).hasSize(2);
             var relationNames = result.relations().stream().map(r -> r.name()).toList();

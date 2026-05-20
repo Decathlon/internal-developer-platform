@@ -5,6 +5,7 @@ import static com.decathlon.idp_core.infrastructure.adapters.api.configuration.S
 import static com.decathlon.idp_core.infrastructure.adapters.api.configuration.SwaggerDescription.NOT_FOUND_CODE;
 import static com.decathlon.idp_core.infrastructure.adapters.api.configuration.SwaggerDescription.OK_CODE;
 import static com.decathlon.idp_core.infrastructure.adapters.api.configuration.SwaggerDescription.PARAM_DEPTH_DESCRIPTION;
+import static com.decathlon.idp_core.infrastructure.adapters.api.configuration.SwaggerDescription.PARAM_INCLUDE_DATA_DESCRIPTION;
 import static com.decathlon.idp_core.infrastructure.adapters.api.configuration.SwaggerDescription.RESPONSE_ENTITY_GRAPH_FLAT_SUCCESS;
 import static com.decathlon.idp_core.infrastructure.adapters.api.configuration.SwaggerDescription.RESPONSE_ENTITY_NOT_FOUND_IDENTIFIER;
 import static org.springframework.http.HttpStatus.OK;
@@ -53,6 +54,7 @@ public class EntityGraphController {
     /// @param templateIdentifier the template identifier of the root entity
     /// @param entityIdentifier the business identifier of the root entity
     /// @param depth the maximum traversal depth (default 1, clamped between 1 and 10)
+    /// @param includeData when true, each node includes a data object with entity property values
     /// @return flat DTO containing nodes and edges arrays
     @GetMapping("/{templateIdentifier}/{entityIdentifier}/graph")
     @ResponseStatus(OK)
@@ -70,10 +72,12 @@ public class EntityGraphController {
             @PathVariable @NotBlank String templateIdentifier,
             @PathVariable @NotBlank String entityIdentifier,
             @Parameter(description = PARAM_DEPTH_DESCRIPTION)
-            @RequestParam(defaultValue = "1") int depth) {
+            @RequestParam(defaultValue = "1") int depth,
+            @Parameter(description = PARAM_INCLUDE_DATA_DESCRIPTION)
+            @RequestParam(defaultValue = "false") boolean includeData) {
 
         EntityGraphNode graphNode = entityGraphService.getEntityGraph(
-                templateIdentifier, entityIdentifier, depth);
+                templateIdentifier, entityIdentifier, depth, includeData);
 
         return EntityGraphFlatDtoOutMapper.toFlatDto(graphNode);
     }

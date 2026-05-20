@@ -4,9 +4,11 @@ import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.SequencedSet;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.stream.Collectors;
 
 import com.decathlon.idp_core.domain.model.entity_graph.EntityGraphNode;
 import com.decathlon.idp_core.domain.model.entity_graph.EntityGraphRelation;
@@ -38,8 +40,7 @@ public final class EntityGraphFlatDtoOutMapper {
     ///
     /// @param root the root [EntityGraphNode] returned by the domain service
     /// @return flat DTO with deduplicated nodes and directed edges
-    public static EntityGraphFlatDtoOut toFlatDto(EntityGraphNode root) {
-        if (root == null) {
+    public static EntityGraphFlatDtoOut toFlatDto(EntityGraphNode root) {        if (root == null) {
             return new EntityGraphFlatDtoOut(List.of(), List.of());
         }
 
@@ -74,7 +75,8 @@ public final class EntityGraphFlatDtoOutMapper {
         }
 
         nodes.add(new EntityGraphNodeFlatDtoOut(
-                nodeId, node.name(), node.templateIdentifier(), node.identifier()));
+                nodeId, node.name(), node.templateIdentifier(), node.identifier(),
+                toDataMap(node)));
 
         // Traverse outbound relations: emit edge from currentNode → target
         for (EntityGraphRelation relation : node.relations()) {
@@ -119,5 +121,13 @@ public final class EntityGraphFlatDtoOutMapper {
     /// Format: "templateIdentifier:identifier" — mirrors EntityCompositeKey.toString().
     private static String nodeId(String templateIdentifier, String identifier) {
         return templateIdentifier + ":" + identifier;
+    }
+
+    /// Converts a node's property list to a name→value map for the `data` field.
+    /// Returns an empty map when there are no properties; the DTO's @JsonInclude(NON_EMPTY)
+    /// annotation ensures an empty map is omitted from the JSON output.
+    private static Map<String, Object> toDataMap(EntityGraphNode node) {
+        return node.properties().stream()
+                .collect(Collectors.toMap(p -> p.name(), p -> p.value()));
     }
 }

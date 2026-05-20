@@ -9,6 +9,7 @@ import org.springframework.transaction.annotation.Transactional;
 import com.decathlon.idp_core.domain.exception.entity.EntityNotFoundException;
 import com.decathlon.idp_core.domain.model.entity.Entity;
 import com.decathlon.idp_core.domain.model.entity.EntityCompositeKey;
+import com.decathlon.idp_core.domain.model.entity.Property;
 import com.decathlon.idp_core.domain.model.entity.Relation;
 import com.decathlon.idp_core.domain.model.entity_graph.EntityGraphNode;
 import com.decathlon.idp_core.domain.model.entity_graph.EntityGraphRelation;
@@ -49,10 +50,13 @@ public class EntityGraphService {
     /// @param templateIdentifier the template identifier of the root entity
     /// @param entityIdentifier the business identifier of the root entity
     /// @param depth the maximum traversal depth (clamped to [1, MAX_DEPTH])
+    /// @param includeProperties when true, each graph node carries the entity's full property list;
+    ///                          when false, properties are omitted to reduce response size
     /// @return the root graph node with resolved relations
     /// @throws EntityNotFoundException when no entity matches the given identifiers
     @Transactional(readOnly = true)
-    public EntityGraphNode getEntityGraph(String templateIdentifier, String entityIdentifier, int depth) {
+    public EntityGraphNode getEntityGraph(String templateIdentifier, String entityIdentifier, int depth,
+            boolean includeProperties) {
         int effectiveDepth = Math.clamp(depth, 1, MAX_DEPTH);
 
         // Verify root entity exists before fetching the graph
@@ -67,21 +71,24 @@ public class EntityGraphService {
         EntityCompositeKey rootKey = new EntityCompositeKey(rootEntity.templateIdentifier(), rootEntity.identifier());
 
         // Build the graph from pre-loaded entities (no more database calls)
-        return buildGraphNode(rootKey, entityMap, effectiveDepth);
+        return buildGraphNode(rootKey, entityMap, effectiveDepth, includeProperties);
     }
 
     /// Builds a graph node from a pre-loaded entity map (no database calls).
     /// Recursively resolves both outbound and inbound relations from the cached entities.
     private EntityGraphNode buildGraphNode(EntityCompositeKey key,
                                            Map<EntityCompositeKey, Entity> entityMap,
-                                           int remainingDepth) {
+                                           int remainingDepth,
+                                           boolean includeProperties) {
         Entity entity = entityMap.get(key);
         if (entity == null) {
-            return new EntityGraphNode(key.templateIdentifier(), key.identifier(), key.identifier(), List.of(), List.of());
+            return new EntityGraphNode(key.templateIdentifier(), key.identifier(), key.identifier(),
+                    List.of(), List.of(), List.of());
         }
 
         if (remainingDepth <= 0) {
-            return new EntityGraphNode(entity.templateIdentifier(), entity.identifier(), entity.name(), List.of(), List.of());
+            return new EntityGraphNode(entity.templateIdentifier(), entity.identifier(), entity.name(),
+                    List.of(), List.of(), List.of());
         }
 
         // Resolve outbound relations from pre-loaded entities
@@ -92,7 +99,7 @@ public class EntityGraphService {
                                 .map(targetId -> {
                                     // Relations only store identifier; look up by identifier across all entries
                                     EntityCompositeKey targetKey = findKeyByIdentifier(targetId, entityMap);
-                                    return buildGraphNode(targetKey, entityMap, remainingDepth - 1);
+                                    return buildGraphNode(targetKey, entityMap, remainingDepth - 1, includeProperties);
                                 })
                                 .toList()
                 ))
@@ -100,9 +107,13 @@ public class EntityGraphService {
 
         // Resolve inbound relations from pre-loaded entities
         List<EntityGraphRelation> inboundRelations = buildRelationsAsTargetFromMap(
-                entity.identifier(), entityMap, remainingDepth - 1);
+                entity.identifier(), entityMap, remainingDepth - 1, includeProperties);
 
-        return new EntityGraphNode(entity.templateIdentifier(), entity.identifier(), entity.name(), outboundRelations, inboundRelations);
+        // Include properties only when explicitly requested to keep responses lean
+        List<Property> properties = includeProperties ? entity.properties() : List.of();
+
+        return new EntityGraphNode(entity.templateIdentifier(), entity.identifier(), entity.name(),
+                properties, outboundRelations, inboundRelations);
     }
 
     /// Looks up a composite key from the map by identifier alone.
@@ -118,7 +129,8 @@ public class EntityGraphService {
     /// Scans all entities to find relations pointing to this entity.
     private List<EntityGraphRelation> buildRelationsAsTargetFromMap(String targetIdentifier,
                                                                      Map<EntityCompositeKey, Entity> entityMap,
-                                                                     int remainingDepth) {
+                                                                     int remainingDepth,
+                                                                     boolean includeProperties) {
         Map<String, List<EntityCompositeKey>> sourcesByRelationName = new java.util.HashMap<>();
 
         for (Map.Entry<EntityCompositeKey, Entity> entry : entityMap.entrySet()) {
@@ -136,7 +148,7 @@ public class EntityGraphService {
                 .map(e -> new EntityGraphRelation(
                         e.getKey(),
                         e.getValue().stream()
-                                .map(sourceKey -> buildGraphNode(sourceKey, entityMap, remainingDepth))
+                                .map(sourceKey -> buildGraphNode(sourceKey, entityMap, remainingDepth, includeProperties))
                                 .toList()
                 ))
                 .toList();
