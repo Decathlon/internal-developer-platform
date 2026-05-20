@@ -149,20 +149,8 @@ public class SwaggerDescription {
     public static final String PARAM_SIZE_DESCRIPTION = "Number of items per page. Defaults to 20.";
     public static final String PARAM_SORT_DESCRIPTION = "Sorting criteria in the format: property(,asc|desc). Defaults to identifier,asc.";
 
-    // --- Entity Graph descriptions ---
-    public static final String ENDPOINT_GET_ENTITY_GRAPH_SUMMARY = "Get entity relationship graph";
-    public static final String ENDPOINT_GET_ENTITY_GRAPH_DESCRIPTION = "Retrieves the entity relationship graph starting from the specified entity, resolving outbound relations recursively up to the requested depth.";
-    public static final String RESPONSE_ENTITY_GRAPH_SUCCESS = "Entity graph successfully retrieved";
+    // --- Entity Graph (flat nodes & edges) descriptions ---
     public static final String PARAM_DEPTH_DESCRIPTION = "Maximum traversal depth for relationship resolution. Clamped between 1 and 10.";
-    public static final String ENTITY_GRAPH_NODE_DESCRIPTION = "A node in the entity relationship graph";
-    public static final String ENTITY_GRAPH_SUMMARY_DESCRIPTION = "Summary information identifying the entity";
-    public static final String ENTITY_GRAPH_RELATIONS_DESCRIPTION = "Resolved outbound relations with target entity nodes";
-    public static final String ENTITY_GRAPH_RELATION_NAME_DESCRIPTION = "The relation name as defined in the entity template";
-    public static final String ENTITY_GRAPH_RELATION_TARGET_TEMPLATE_DESCRIPTION = "The template identifier of target entities";
-    public static final String ENTITY_GRAPH_RELATION_TARGETS_DESCRIPTION = "Resolved target entity graph nodes";
-    public static final String ENTITY_GRAPH_RELATIONS_AS_TARGET_DESCRIPTION = "Incoming relations where this entity is the target";
-
-    // --- Entity Graph flat (nodes & edges) descriptions ---
     public static final String ENDPOINT_GET_ENTITY_GRAPH_FLAT_SUMMARY = "Get entity relationship graph as flat nodes and edges";
     public static final String ENDPOINT_GET_ENTITY_GRAPH_FLAT_DESCRIPTION = "Retrieves the entity relationship graph as a flat nodes-and-edges structure, suitable for frontend visualization tools such as React Flow, Vis.js, and Cytoscape.";
     public static final String RESPONSE_ENTITY_GRAPH_FLAT_SUCCESS = "Flat entity graph successfully retrieved";
