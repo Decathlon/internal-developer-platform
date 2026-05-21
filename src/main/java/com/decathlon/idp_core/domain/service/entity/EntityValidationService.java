@@ -1,7 +1,5 @@
 package com.decathlon.idp_core.domain.service.entity;
 
-import static com.decathlon.idp_core.domain.constant.ValidationMessages.PROPERTY_REQUIRED_MISSING;
-
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -17,6 +15,7 @@ import com.decathlon.idp_core.domain.model.entity_template.EntityTemplate;
 import com.decathlon.idp_core.domain.model.entity_template.PropertyDefinition;
 import com.decathlon.idp_core.domain.port.EntityRepositoryPort;
 import com.decathlon.idp_core.domain.service.property.PropertyValidationService;
+import com.decathlon.idp_core.domain.service.relation.RelationValidationService;
 
 import lombok.AllArgsConstructor;
 
@@ -32,6 +31,7 @@ public class EntityValidationService {
 
     private final EntityRepositoryPort entityRepository;
     private final PropertyValidationService propertyValidationService;
+    private final RelationValidationService relationValidationService;
 
      /// Validates intrinsic entity data integrity and template-driven rules.
     ///
@@ -46,7 +46,7 @@ public class EntityValidationService {
     /// @throws EntityAlreadyExistsException    if an entity with the same identifier exists for the template
     void validateForCreation(Entity entity, EntityTemplate template) {
         validateUniqueness(entity);
-        validateAgainstTemplate(template, entity.properties());
+        validateAgainstTemplate(template, entity);
     }
 
     /// Validates entity data for update operations.
@@ -64,36 +64,27 @@ public class EntityValidationService {
 
     /// Validates entity properties against the template's property definitions, enforcing required fields and value rules.
     /// @param template the entity template whose property definitions are used for validation
-    /// @param properties the list of properties from the entity to validate
+    /// @param entity the entity being validated, containing the actual property values to check
+    /// @throws EntityValidationException if any property validation rules are violated, including missing required properties
     private void validateAgainstTemplate(EntityTemplate template,
-                                         List<Property> properties) {
+                                         Entity entity) {
         Violations violations = new Violations();
+
         List<PropertyDefinition> definitions = Optional.ofNullable(template.propertiesDefinitions()).orElse(List.of());
-        Map<String, Property> propertiesByName = Optional.ofNullable(properties).orElse(List.of()).stream()
+
+        Map<String, Property> propertiesByName = Optional.ofNullable(entity.properties()).orElse(List.of()).stream()
                 .filter(p -> p.name() != null)
                 .collect(Collectors.toMap(Property::name, p -> p, (left, _) -> left));
 
-        for (PropertyDefinition definition : definitions) {
-            Property property = propertiesByName.get(definition.name());
-            boolean missing = property == null
-                    || property.value() == null
-                    || (property.value().isBlank());
+        propertyValidationService.validatePropertiesAgainstTemplate(template, definitions, propertiesByName, violations);
 
-            if (missing) {
-                if (definition.required()) {
-                    violations.add(PROPERTY_REQUIRED_MISSING, definition.name(), template.identifier());
-                }
-                continue;
-            }
+        relationValidationService.validateRelationsAgainstTemplate(template, entity.relations(), violations);
 
-            propertyValidationService
-                    .validatePropertyValue(definition, property.value())
-                    .forEach(violations::add);
-        }
         if (!violations.isEmpty()) {
             throw new EntityValidationException(violations.asList());
         }
     }
+
 
     /// Checks for existing entity with same template and identifier to prevent duplicates.
     /// @param entity the entity to check for existence

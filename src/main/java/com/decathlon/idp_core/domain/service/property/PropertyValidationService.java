@@ -7,6 +7,7 @@ import static com.decathlon.idp_core.domain.constant.ValidationMessages.PROPERTY
 import static com.decathlon.idp_core.domain.constant.ValidationMessages.PROPERTY_MIN_LENGTH_VIOLATION;
 import static com.decathlon.idp_core.domain.constant.ValidationMessages.PROPERTY_MIN_VALUE_VIOLATION;
 import static com.decathlon.idp_core.domain.constant.ValidationMessages.PROPERTY_REGEX_VIOLATION;
+import static com.decathlon.idp_core.domain.constant.ValidationMessages.PROPERTY_REQUIRED_MISSING;
 import static com.decathlon.idp_core.domain.constant.ValidationMessages.PROPERTY_TYPE_MISMATCH;
 
 import java.math.BigDecimal;
@@ -18,10 +19,14 @@ import java.util.regex.Pattern;
 
 import org.springframework.stereotype.Service;
 
+import com.decathlon.idp_core.domain.exception.entity.EntityValidationException;
+import com.decathlon.idp_core.domain.model.entity.Property;
+import com.decathlon.idp_core.domain.model.entity_template.EntityTemplate;
 import com.decathlon.idp_core.domain.model.entity_template.PropertyDefinition;
 import com.decathlon.idp_core.domain.model.entity_template.PropertyRules;
 import com.decathlon.idp_core.domain.model.enums.PropertyFormat;
 import com.decathlon.idp_core.domain.model.enums.PropertyType;
+import com.decathlon.idp_core.domain.service.entity.Violations;
 
 /**
  * Domain service validating entity property values against template definitions.
@@ -53,6 +58,33 @@ public class PropertyValidationService {
             case NUMBER -> validateNumberPropertyValue(propertyDefinition.name(), rawValue, propertyDefinition.rules());
             case BOOLEAN -> validateBooleanPropertyValue(propertyDefinition.name(), rawValue);
         };
+    }
+
+    /// Validates that all required properties defined in the template are present and conform to their definitions.
+    /// For each property definition, checks if the corresponding property is provided and non-blank. If a required property is missing, adds a violation. If the property is present, validates its value against the definition's rules and accumulates any violations found.
+    /// @param template the entity template whose property definitions are used for validation
+    /// @param definitions the list of property definitions from the template
+    /// @param propertiesByName a map of provided properties keyed by their name for quick lookup
+    /// @param violations the accumulator for any validation violations found during the process
+    /// @throws EntityValidationException if any required property is missing or if any property value violates its definition rules
+    /// @implNote This method focuses on validating the presence and correctness of properties as defined by the template. It iterates through each property definition, checks for the corresponding provided property, and applies the appropriate validation logic based on the property's type and rules.
+    public void validatePropertiesAgainstTemplate(final EntityTemplate template, final List<PropertyDefinition> definitions, final Map<String, Property> propertiesByName, final Violations violations) {
+        for (PropertyDefinition definition : definitions) {
+            Property property = propertiesByName.get(definition.name());
+            boolean missing = property == null
+                    || property.value() == null
+                    || (property.value().isBlank());
+
+            if (missing) {
+                if (definition.required()) {
+                    violations.add(PROPERTY_REQUIRED_MISSING, definition.name(), template.identifier());
+                }
+                continue;
+            }
+
+            validatePropertyValue(definition, property.value())
+                    .forEach(violations::add);
+        }
     }
 
 

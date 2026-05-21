@@ -126,7 +126,7 @@ public class EntityController {
             @Content(schema = @Schema(implementation = EntityDtoOut.class))})
     @ApiResponse(responseCode = NOT_FOUND_CODE, description = RESPONSE_ENTITY_NOT_FOUND_IDENTIFIER, content = {
             @Content(schema = @Schema(implementation = ApiExceptionHandler.ErrorResponse.class))})
-    @GetMapping("/{templateIdentifier}/identifier/{entityIdentifier}")
+    @GetMapping("/{templateIdentifier}/{entityIdentifier}")
     @ResponseStatus(OK)
     public EntityDtoOut getEntity(
             @PathVariable String templateIdentifier,

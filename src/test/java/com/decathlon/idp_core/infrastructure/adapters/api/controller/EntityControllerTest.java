@@ -26,7 +26,7 @@ public class EntityControllerTest extends AbstractIntegrationTest {
 
     private static final String TEMPLATE_IDENTIFIER = "web-service";
     private static final String ENTITY_IDENTIFIER = "web-api-2";
-    private static final String ENTITIES_BY_IDENTIFIER_PATH = "/api/v1/entities/{template-identifier}/identifier/{identifier}";
+    private static final String ENTITIES_BY_IDENTIFIER_PATH = "/api/v1/entities/{template-identifier}/{identifier}";
     private static final String ENTITIES_BY_TEMPLATE_IDENTIFIER_PATH = "/api/v1/entities/{template-identifier}";
     private static final String ENTITY_JSON_FILES_TEST_PATH = "integration_test/json/entity/v1/";
     @Autowired
@@ -112,10 +112,10 @@ public class EntityControllerTest extends AbstractIntegrationTest {
         }
     }
 
-    /// Tests for GET /api/v1/entities/{template-identifier}/identifier/{identifier}
+    /// Tests for GET /api/v1/entities/{template-identifier}/{identifier}
     /// endpoint (lookup by template and identifier).
     @Nested
-    @DisplayName("GET /api/v1/entities/{template-identifier}/identifier/{identifier} - Get Entities by template identifier and entity identifier")
+    @DisplayName("GET /api/v1/entities/{template-identifier}/{identifier} - Get Entities by template identifier and entity identifier")
     class GetEntitiesByTemplateAndEntityIdentifierTests {
 
         @Test

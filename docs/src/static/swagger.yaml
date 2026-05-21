@@ -293,7 +293,7 @@ paths:
               schema:
                 "$ref": "#/components/schemas/ErrorResponse"
           description: Unexpected server-side failure
-  /api/v1/entities/{templateIdentifier}/identifier/{entityIdentifier}:
+  /api/v1/entities/{templateIdentifier}/{entityIdentifier}:
     get:
       tags:
         - Entities Management
