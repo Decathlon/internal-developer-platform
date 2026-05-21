@@ -1,0 +1,29 @@
+{
+  "identifier": "invalid-jslt-connector",
+  "title": "Invalid JSLT Connector",
+  "description": "Should fail due to invalid JSLT filter",
+  "enabled": true,
+  "mappings": [
+    {
+      "template": "microservice",
+      "filter": "@@@ INVALID JSLT @@@",
+      "entity": {
+        "identifier": ".id",
+        "title": ".name",
+        "properties": {
+          "applicationName": ".repository.name",
+          "ownerEmail": ".sender.login + \"@example.com\"",
+          "environment": ".deployment.environment",
+          "version": ".deployment.sha",
+          "port": "8080",
+          "programmingLanguage": "\"Java\""
+        },
+        "relations": {}
+      }
+    }
+  ],
+  "security": {
+    "type": "NONE",
+    "config": {}
+  }
+}

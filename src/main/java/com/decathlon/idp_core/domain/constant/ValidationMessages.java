@@ -44,6 +44,12 @@ public class ValidationMessages {
 
     public static final String PROPERTY_RULES_MUTUALLY_EXCLUSIVE = "{rule1} and {rule2} are mutually exclusive for STRING properties";
 
+
+    //Webhook connector validation messages
+    public static final String WEBHOOK_CONNECTOR_ALREADY_EXIST="Webhook Connector already exists with the same identifier";
+    public static final String WEBHOOK_CONNECTOR_IDENTIFIER_MANDATORY = "Webhook Connector identifier is mandatory and cannot be blank";
+    public static final String WEBHOOK_CONNECTOR_TITLE_ALREADY_EXIST ="Webhook Connector already exist with the same name";
+    public static final String WEBHOOK_CONNECTOR_MAPPINGS_MANDATORY = "Webhook mappings section is mandatory";
     // Helper method to construct rules incompatibility message
     public static String rulesAreIncompatible(String rule1, String rule2) {
         return PROPERTY_RULES_MUTUALLY_EXCLUSIVE

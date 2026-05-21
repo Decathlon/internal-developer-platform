@@ -43,9 +43,12 @@ public class SecurityConfiguration {
         http.authorizeHttpRequests(authorize -> authorize
                         .requestMatchers("/actuator/**").permitAll()
                         .requestMatchers("/", "/swagger-ui/**", "/swagger-ui.html", "/v3/api-docs/**").permitAll()
+                        .requestMatchers("/webhooks/**").permitAll()
                         .requestMatchers("/api/v1/**").fullyAuthenticated()
                         .anyRequest().authenticated()
                 )
+                // CSRF disabled for /webhooks/** — external systems cannot obtain a CSRF token.
+                .csrf(csrf -> csrf.ignoringRequestMatchers("/webhooks/**"))
                 .cors(withDefaults())
                 .oauth2ResourceServer(oauth2 -> oauth2.jwt(Customizer.withDefaults()));
         return http.build();

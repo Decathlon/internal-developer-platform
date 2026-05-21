@@ -1,0 +1,22 @@
+{
+  "identifier": "  ",
+  "title": "Blank Identifier",
+  "description": "Should fail",
+  "enabled": true,
+  "mappings": [
+    {
+      "template": "microservice",
+      "filter": "true",
+      "entity": {
+        "identifier": ".id",
+        "title": ".name",
+        "properties": {},
+        "relations": {}
+      }
+    }
+  ],
+  "security": {
+    "type": "NONE",
+    "config": {}
+  }
+}

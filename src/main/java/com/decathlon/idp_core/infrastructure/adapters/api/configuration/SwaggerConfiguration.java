@@ -5,6 +5,7 @@ import static io.swagger.v3.oas.models.security.SecurityScheme.Type.OAUTH2;
 
 import java.util.List;
 
+import com.decathlon.idp_core.infrastructure.adapters.api.dto.out.webhook.InboundWebhookDtoOut;
 import org.springdoc.core.models.GroupedOpenApi;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
@@ -103,5 +104,11 @@ public class SwaggerConfiguration {
         }
     }
 
+    @Schema(description = "Paginated response containing Inbound Webhook Connector objects")
+    public static class WebhookConnectorPageResponse extends PageImpl<InboundWebhookDtoOut> {
+        public WebhookConnectorPageResponse(List<InboundWebhookDtoOut> content, Pageable pageable, long total) {
+            super(content, pageable, total);
+        }
+    }
 
 }
