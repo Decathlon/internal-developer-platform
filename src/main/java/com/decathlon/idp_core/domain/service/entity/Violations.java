@@ -1,4 +1,5 @@
 package com.decathlon.idp_core.domain.service.entity;
+
 import java.util.ArrayList;
 import java.util.List;
 
@@ -9,12 +10,15 @@ import java.util.List;
 /// concatenation. Not thread-safe; intended for short-lived per-request use.
 public final class Violations {
     private final List<String> messages = new ArrayList<>();
+
     void add(String message) {
         messages.add(message);
     }
+
     public void add(String template, Object... args) {
         messages.add(template.formatted(args));
     }
+
     void addIfBlank(String value, String message) {
         if (value == null || value.isBlank()) {
             messages.add(message);
@@ -26,9 +30,11 @@ public final class Violations {
     public void addIndexed(String collection, int index, String message) {
         messages.add("%s[%d]: %s".formatted(collection, index, message));
     }
+
     boolean isEmpty() {
         return messages.isEmpty();
     }
+
     List<String> asList() {
         return List.copyOf(messages);
     }
