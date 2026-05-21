@@ -1,6 +1,9 @@
 package com.decathlon.idp_core.domain.service.entity;
 
 import static com.decathlon.idp_core.domain.constant.ValidationMessages.PROPERTY_REQUIRED_MISSING;
+import static com.decathlon.idp_core.domain.constant.ValidationMessages.RELATION_NOT_DEFINED_IN_TEMPLATE;
+import static com.decathlon.idp_core.domain.constant.ValidationMessages.RELATION_REQUIRED_MISSING;
+import static com.decathlon.idp_core.domain.constant.ValidationMessages.RELATION_TOO_MANY_TARGETS;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -29,6 +32,7 @@ import com.decathlon.idp_core.domain.model.entity.Relation;
 import com.decathlon.idp_core.domain.model.entity_template.EntityTemplate;
 import com.decathlon.idp_core.domain.model.entity_template.PropertyDefinition;
 import com.decathlon.idp_core.domain.model.entity_template.PropertyRules;
+import com.decathlon.idp_core.domain.model.entity_template.RelationDefinition;
 import com.decathlon.idp_core.domain.model.enums.PropertyType;
 import com.decathlon.idp_core.domain.port.EntityRepositoryPort;
 import com.decathlon.idp_core.domain.service.property.PropertyValidationService;
@@ -218,6 +222,75 @@ class EntityValidationServiceTest {
 
         assertDoesNotThrow(() -> entityValidationService.validateForCreation(entity, template));
         verify(propertyValidationService).validatePropertyValue(stringDefinition, "1234");
+    }
+
+    @Test
+    @DisplayName("Should fail when required relation is missing")
+    void shouldFailWhenRequiredRelationIsMissing() {
+        var dependsOn = new RelationDefinition(UUID.randomUUID(), "depends-on", "service", true, true);
+        var template = new EntityTemplate(
+                UUID.randomUUID(),
+                "web-service",
+                "Web Service",
+                "desc",
+                List.of(),
+                List.of(dependsOn));
+
+        var entity = entity("web-service", "catalog-api", "Catalog API", List.of(), List.of());
+
+        var exception = assertThrows(EntityValidationException.class,
+                () -> entityValidationService.validateForCreation(entity, template));
+
+        assertEquals(List.of(RELATION_REQUIRED_MISSING.formatted("depends-on", "web-service")), exception.getViolations());
+    }
+
+    @Test
+    @DisplayName("Should fail when relation is not defined by template")
+    void shouldFailWhenRelationIsNotDefinedByTemplate() {
+        var template = new EntityTemplate(
+                UUID.randomUUID(),
+                "web-service",
+                "Web Service",
+                "desc",
+                List.of(),
+                List.of());
+
+        var entity = entity(
+                "web-service",
+                "catalog-api",
+                "Catalog API",
+                List.of(),
+                List.of(new Relation(UUID.randomUUID(), "unsupported", "service", List.of("target-1"))));
+
+        var exception = assertThrows(EntityValidationException.class,
+                () -> entityValidationService.validateForCreation(entity, template));
+
+        assertEquals(List.of(RELATION_NOT_DEFINED_IN_TEMPLATE.formatted("unsupported", "web-service")), exception.getViolations());
+    }
+
+    @Test
+    @DisplayName("Should fail when non-toMany relation has multiple targets")
+    void shouldFailWhenNonToManyRelationHasMultipleTargets() {
+        var ownedBy = new RelationDefinition(UUID.randomUUID(), "owned-by", "team", false, false);
+        var template = new EntityTemplate(
+                UUID.randomUUID(),
+                "web-service",
+                "Web Service",
+                "desc",
+                List.of(),
+                List.of(ownedBy));
+
+        var entity = entity(
+                "web-service",
+                "catalog-api",
+                "Catalog API",
+                List.of(),
+                List.of(new Relation(UUID.randomUUID(), "owned-by", "team", List.of("team-a", "team-b"))));
+
+        var exception = assertThrows(EntityValidationException.class,
+                () -> entityValidationService.validateForCreation(entity, template));
+
+        assertEquals(List.of(RELATION_TOO_MANY_TARGETS.formatted("owned-by", "web-service")), exception.getViolations());
     }
 
     private Entity entity(

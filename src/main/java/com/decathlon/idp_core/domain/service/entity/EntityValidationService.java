@@ -1,6 +1,9 @@
 package com.decathlon.idp_core.domain.service.entity;
 
 import static com.decathlon.idp_core.domain.constant.ValidationMessages.PROPERTY_REQUIRED_MISSING;
+import static com.decathlon.idp_core.domain.constant.ValidationMessages.RELATION_NOT_DEFINED_IN_TEMPLATE;
+import static com.decathlon.idp_core.domain.constant.ValidationMessages.RELATION_REQUIRED_MISSING;
+import static com.decathlon.idp_core.domain.constant.ValidationMessages.RELATION_TOO_MANY_TARGETS;
 
 import java.util.List;
 import java.util.Map;
@@ -13,8 +16,10 @@ import com.decathlon.idp_core.domain.exception.entity.EntityAlreadyExistsExcepti
 import com.decathlon.idp_core.domain.exception.entity.EntityValidationException;
 import com.decathlon.idp_core.domain.model.entity.Entity;
 import com.decathlon.idp_core.domain.model.entity.Property;
+import com.decathlon.idp_core.domain.model.entity.Relation;
 import com.decathlon.idp_core.domain.model.entity_template.EntityTemplate;
 import com.decathlon.idp_core.domain.model.entity_template.PropertyDefinition;
+import com.decathlon.idp_core.domain.model.entity_template.RelationDefinition;
 import com.decathlon.idp_core.domain.port.EntityRepositoryPort;
 import com.decathlon.idp_core.domain.service.property.PropertyValidationService;
 
@@ -46,17 +51,18 @@ public class EntityValidationService {
     /// @throws EntityAlreadyExistsException    if an entity with the same identifier exists for the template
     void validateForCreation(Entity entity, EntityTemplate template) {
         validateUniqueness(entity);
-        validateAgainstTemplate(template, entity.properties());
+        validateAgainstTemplate(template, entity);
     }
 
     /// Validates entity properties against the template's property definitions, enforcing required fields and value rules.
     /// @param template the entity template whose property definitions are used for validation
-    /// @param properties the list of properties from the entity to validate
+    /// @param entity the entity being validated, containing the actual property values to check
+    /// @throws EntityValidationException if any property validation rules are violated, including missing required properties
     private void validateAgainstTemplate(EntityTemplate template,
-                                         List<Property> properties) {
+                                         Entity entity) {
         Violations violations = new Violations();
         List<PropertyDefinition> definitions = Optional.ofNullable(template.propertiesDefinitions()).orElse(List.of());
-        Map<String, Property> propertiesByName = Optional.ofNullable(properties).orElse(List.of()).stream()
+        Map<String, Property> propertiesByName = Optional.ofNullable(entity.properties()).orElse(List.of()).stream()
                 .filter(p -> p.name() != null)
                 .collect(Collectors.toMap(Property::name, p -> p, (left, _) -> left));
 
@@ -77,9 +83,62 @@ public class EntityValidationService {
                     .validatePropertyValue(definition, property.value())
                     .forEach(violations::add);
         }
+
+        validateRelationsAgainstTemplate(template, entity.relations(), violations);
+
         if (!violations.isEmpty()) {
             throw new EntityValidationException(violations.asList());
         }
+    }
+
+    /// Validates entity relations against the template's relation definitions, enforcing required relations and cardinality constraints.
+    /// @param template the entity template whose relation definitions are used for validation
+    /// @param providedRelations the actual relations provided in the entity to validate
+    /// @param violations the accumulator for any validation violations found during the process
+    private void validateRelationsAgainstTemplate(EntityTemplate template,
+                                                  List<Relation> providedRelations,
+                                                  Violations violations) {
+
+        List<RelationDefinition> definitions = template.relationsDefinitions() != null ? template.relationsDefinitions() : List.of();
+        List<Relation> relations = providedRelations != null ? providedRelations : List.of();
+
+        Map<String, RelationDefinition> definitionsByName = definitions.stream()
+                .filter(def -> def.name() != null)
+                .collect(Collectors.toMap(RelationDefinition::name, def -> def,
+                        (existing, replacement) -> existing));
+
+        Map<String, Relation> relationsByName = relations.stream()
+                .filter(rel -> rel.name() != null)
+                .collect(Collectors.toMap(Relation::name, rel -> rel,
+                        (existing, replacement) -> existing));
+
+        for (Relation relation : relations) {
+            if (relation.name() != null && !definitionsByName.containsKey(relation.name())) {
+                violations.add(RELATION_NOT_DEFINED_IN_TEMPLATE, relation.name(), template.identifier());
+            }
+        }
+
+        for (RelationDefinition definition : definitions) {
+            Relation relation = relationsByName.get(definition.name());
+            List<String> validTargets = extractValidTargetIdentifiers(relation);
+
+            if (definition.required() && validTargets.isEmpty()) {
+                violations.add(RELATION_REQUIRED_MISSING, definition.name(), template.identifier());
+            }
+
+            if (relation != null && !definition.toMany() && validTargets.size() > 1) {
+                violations.add(RELATION_TOO_MANY_TARGETS, definition.name(), template.identifier());
+            }
+        }
+    }
+
+    private List<String> extractValidTargetIdentifiers(Relation relation) {
+        if (relation == null || relation.targetEntityIdentifiers() == null) {
+            return List.of();
+        }
+        return relation.targetEntityIdentifiers().stream()
+                .filter(id -> id != null && !id.isBlank())
+                .toList();
     }
 
     /// Checks for existing entity with same template and identifier to prevent duplicates.

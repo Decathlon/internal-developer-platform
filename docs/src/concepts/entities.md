@@ -133,6 +133,8 @@ After syntactic checks pass, the domain service validates the entity against its
 - **Property value types** - Values must conform to the property definition type (STRING, NUMBER, BOOLEAN).
 - **Property rules** - Values must satisfy the template's property rules (min/max length, format, regex, enum).
 - **Required properties** - All properties marked as required in the template must be present.
+- **Relation names** - Each provided relation must exist in the template relation definitions.
+- **Relation constraints** - Required relations must be present, and non-`to_many` relations can target only one entity.
 - **Duplicate check** - An entity with the same identifier must not already exist for the template. Returns
   `409 Conflict` if it does.
 
@@ -302,7 +304,7 @@ GET /api/v1/entities/{templateIdentifier}?page=0&size=20&sort=identifier,asc
 Retrieve a specific entity using its template and entity identifiers:
 
 ```text
-GET /api/v1/entities/{templateIdentifier}/identifier/{entityIdentifier}
+GET /api/v1/entities/{templateIdentifier}/{entityIdentifier}
 ```
 
 ---
