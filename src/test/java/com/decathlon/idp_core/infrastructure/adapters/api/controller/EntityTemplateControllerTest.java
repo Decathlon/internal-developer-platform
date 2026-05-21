@@ -568,6 +568,19 @@ class EntityTemplateControllerTest extends AbstractIntegrationTest {
 
         @Test
         @WithMockUser
+        @DisplayName("Should return 403 when updating template without CSRF token")
+        void putTemplate_without_csrf_403() throws Exception {
+            String identifier = "web-service";
+            mockMvc.perform(MockMvcRequestBuilders.put(ENTITY_TEMPLATE_PATH + "/" + identifier)
+                            .contentType(APPLICATION_JSON)
+                            .accept(APPLICATION_JSON)
+                            .content(getJsonTestFileContent(
+                                    "integration_test/json/entity-template/v1/putEntityTemplate_200.json")))
+                    .andExpect(status().isForbidden());
+        }
+
+        @Test
+        @WithMockUser
         @DisplayName("Should update existing property rules using PUT")
         void putTemplate_shouldMergePropertyRules() throws Exception {
 

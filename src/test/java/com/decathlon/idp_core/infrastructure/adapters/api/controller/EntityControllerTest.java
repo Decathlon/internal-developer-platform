@@ -3,6 +3,7 @@ package com.decathlon.idp_core.infrastructure.adapters.api.controller;
 import static org.springframework.http.MediaType.APPLICATION_JSON;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -259,6 +260,132 @@ public class EntityControllerTest extends AbstractIntegrationTest {
                     )));
         }
 
+    }
+
+    @Nested
+    @DisplayName("PUT /api/v1/entities/{template-identifier}/identifier/{identifier} - Update entity")
+    class PutEntitiesTests {
+
+        @Test
+        @WithMockUser
+        @DisplayName("Should update entity and return 200")
+        void putEntity_200() throws Exception {
+            var payload = """
+                    {
+                      "name": "Web API 2 Updated",
+                      "identifier": "web-api-2",
+                      "properties": {
+                        "applicationName": "catalog-api",
+                        "ownerEmail": "owner@example.com",
+                        "port": "8080",
+                        "environment": "DEV",
+                        "version": "1.2.3",
+                        "teamName": "platform-team",
+                        "baseUrl": "https://catalog.example.com",
+                        "protocol": "HTTP",
+                        "programmingLanguage": "JAVA"
+                      }
+                    }
+                    """;
+
+            mockMvc.perform(put(ENTITIES_BY_IDENTIFIER_PATH, TEMPLATE_IDENTIFIER, ENTITY_IDENTIFIER)
+                            .contentType(APPLICATION_JSON)
+                            .accept(APPLICATION_JSON)
+                            .with(csrf())
+                            .content(payload))
+                    .andExpect(status().isOk())
+                    .andExpect(content().contentType(APPLICATION_JSON))
+                    .andExpect(jsonPath("$.identifier").value(ENTITY_IDENTIFIER))
+                    .andExpect(jsonPath("$.template_identifier").value(TEMPLATE_IDENTIFIER))
+                    .andExpect(jsonPath("$.name").value("Web API 2 Updated"));
+        }
+
+        @Test
+        @WithMockUser
+        @DisplayName("Should return 404 when updating non-existent entity")
+        void putEntity_404_non_existent_entity() throws Exception {
+            var payload = """
+                    {
+                      "name": "Unknown",
+                      "identifier": "unknown-entity"
+                    }
+                    """;
+
+            mockMvc.perform(put(ENTITIES_BY_IDENTIFIER_PATH, TEMPLATE_IDENTIFIER, "unknown-entity")
+                            .contentType(APPLICATION_JSON)
+                            .accept(APPLICATION_JSON)
+                            .with(csrf())
+                            .content(payload))
+                    .andExpect(status().isNotFound());
+        }
+
+        @Test
+        @WithMockUser
+        @DisplayName("Should return 400 when path identifier and body identifier do not match")
+        void putEntity_400_identifier_mismatch() throws Exception {
+            var payload = """
+                    {
+                      "name": "Web API 2 Updated",
+                      "identifier": "different-id",
+                      "properties": {
+                        "applicationName": "catalog-api",
+                        "ownerEmail": "owner@example.com",
+                        "port": "8080",
+                        "environment": "DEV",
+                        "version": "1.2.3",
+                        "teamName": "platform-team",
+                        "baseUrl": "https://catalog.example.com",
+                        "protocol": "HTTP",
+                        "programmingLanguage": "JAVA"
+                      }
+                    }
+                    """;
+
+            mockMvc.perform(put(ENTITIES_BY_IDENTIFIER_PATH, TEMPLATE_IDENTIFIER, ENTITY_IDENTIFIER)
+                            .contentType(APPLICATION_JSON)
+                            .accept(APPLICATION_JSON)
+                            .with(csrf())
+                            .content(payload))
+                    .andExpect(status().isBadRequest())
+                    .andExpect(jsonPath("$.error").value("BAD_REQUEST"))
+                    .andExpect(jsonPath("$.error_description").value(org.hamcrest.Matchers.containsString("Entity identifier in body must match path identifier")));
+        }
+
+        @Test
+        @DisplayName("Should return 401 when updating without authentication")
+        void putEntity_401_without_user_token() throws Exception {
+            var payload = """
+                    {
+                      "name": "Web API 2 Updated",
+                      "identifier": "web-api-2"
+                    }
+                    """;
+
+            mockMvc.perform(put(ENTITIES_BY_IDENTIFIER_PATH, TEMPLATE_IDENTIFIER, ENTITY_IDENTIFIER)
+                            .contentType(APPLICATION_JSON)
+                            .accept(APPLICATION_JSON)
+                            .with(csrf())
+                            .content(payload))
+                    .andExpect(status().isUnauthorized());
+        }
+
+        @Test
+        @WithMockUser
+        @DisplayName("Should return 403 when updating without CSRF token")
+        void putEntity_403_without_csrf() throws Exception {
+            var payload = """
+                    {
+                      "name": "Web API 2 Updated",
+                      "identifier": "web-api-2"
+                    }
+                    """;
+
+            mockMvc.perform(put(ENTITIES_BY_IDENTIFIER_PATH, TEMPLATE_IDENTIFIER, ENTITY_IDENTIFIER)
+                            .contentType(APPLICATION_JSON)
+                            .accept(APPLICATION_JSON)
+                            .content(payload))
+                    .andExpect(status().isForbidden());
+        }
     }
 
 }

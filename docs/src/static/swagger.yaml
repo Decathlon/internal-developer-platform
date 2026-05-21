@@ -66,8 +66,30 @@ paths:
             '*/*':
               schema:
                 $ref: '#/components/schemas/EntityTemplateDtoOut'
+        '400':
+          description: Invalid template data provided
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Unauthorized - Missing or invalid token
+        '403':
+          description: Insufficient rights
         '404':
           description: Template not found with the provided identifier
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '409':
+          description: Template with this identifier already exists
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Unexpected server-side failure
           content:
             '*/*':
               schema:
@@ -299,6 +321,93 @@ paths:
                 $ref: '#/components/schemas/EntityDtoOut'
         '404':
           description: Entity not found with the provided identifier
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+    put:
+      tags:
+        - Entities Management
+      summary: Update an existing entity
+      description: Update an existing entity in the system with the provided information
+      operationId: updateEntity
+      parameters:
+        - name: templateIdentifier
+          in: path
+          required: true
+          schema:
+            minLength: 1
+            type: string
+        - name: entityIdentifier
+          in: path
+          required: true
+          schema:
+            minLength: 1
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EntityDtoIn'
+            example:
+              name: my-web-service-updated
+              identifier: my-web-service
+              properties:
+                applicationName: catalog-api
+                ownerEmail: owner@example.com
+                port: '8080'
+                environment: DEV
+                version: 1.2.3
+                teamName: platform-team
+                baseUrl: https://catalog.example.com
+                protocol: HTTP
+                programmingLanguage: JAVA
+              relations:
+                - name: depends-on
+                  target_entity_identifiers:
+                    - web-api-1
+      responses:
+        '200':
+          description: Entity updated successfully
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/EntityDtoOut'
+              example:
+                identifier: my-web-service
+                name: my-web-service-updated
+                template_identifier: web-service
+                properties:
+                  applicationName: catalog-api
+                  ownerEmail: owner@example.com
+                  port: '8080'
+                  environment: DEV
+                  version: 1.2.3
+                  teamName: platform-team
+                  baseUrl: https://catalog.example.com
+                  protocol: HTTP
+                  programmingLanguage: JAVA
+                relations: {}
+                relations_as_target: {}
+        '400':
+          description: Invalid entity data provided
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Unauthorized - Missing or invalid token
+        '403':
+          description: Insufficient rights
+        '404':
+          description: Entity not found with the provided identifier
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Unexpected server-side failure
           content:
             '*/*':
               schema:

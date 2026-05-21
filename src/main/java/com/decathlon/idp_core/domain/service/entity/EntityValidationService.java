@@ -49,6 +49,19 @@ public class EntityValidationService {
         validateAgainstTemplate(template, entity.properties());
     }
 
+    /// Validates entity data for update operations.
+    ///
+    /// **Contract:** update keeps the existing aggregate identity and applies the
+    /// same template conformance rules as creation. Uniqueness check is not needed
+    /// when updating an already identified entity.
+    ///
+    /// @param entity the entity payload to validate
+    /// @param template the already-resolved template the entity must conform to
+    /// @throws EntityValidationException when one or more validation rules are violated
+    void validateForUpdate(Entity entity, EntityTemplate template) {
+        validateAgainstTemplate(template, entity.properties());
+    }
+
     /// Validates entity properties against the template's property definitions, enforcing required fields and value rules.
     /// @param template the entity template whose property definitions are used for validation
     /// @param properties the list of properties from the entity to validate

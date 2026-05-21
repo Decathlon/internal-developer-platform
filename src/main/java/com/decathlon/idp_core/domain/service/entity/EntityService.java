@@ -1,5 +1,7 @@
 package com.decathlon.idp_core.domain.service.entity;
 
+import static com.decathlon.idp_core.domain.constant.ValidationMessages.ENTITY_IDENTIFIER_MUST_MATCH_PATH;
+
 import java.util.List;
 
 import org.springframework.data.domain.Page;
@@ -104,6 +106,41 @@ public class EntityService {
         EntityTemplate template = entityTemplateService.getEntityTemplateByIdentifier(entity.templateIdentifier());
         entityValidationService.validateForCreation(entity, template);
         return entityRepository.save(entity);
+    }
+
+    /// Updates an existing entity identified by template and entity identifiers.
+    ///
+    /// **Contract:** validates that the path identifier and payload identifier are
+    /// aligned, then applies the same template-based semantic checks as creation
+    /// before persisting the updated aggregate.
+    ///
+    /// @param templateIdentifier template identifier from the request path
+    /// @param entityIdentifier entity identifier from the request path
+    /// @param entity validated entity payload
+    /// @return persisted updated entity
+    /// @throws EntityTemplateNotFoundException when template doesn't exist
+    /// @throws EntityNotFoundException when target entity doesn't exist
+    /// @throws EntityValidationException when payload violates template constraints
+    @Transactional
+    public Entity updateEntity(String templateIdentifier, String entityIdentifier, @Valid Entity entity) {
+        EntityTemplate template = entityTemplateService.getEntityTemplateByIdentifier(templateIdentifier);
+        Entity existingEntity = entityRepository.findByTemplateIdentifierAndIdentifier(templateIdentifier, entityIdentifier)
+                .orElseThrow(() -> new EntityNotFoundException(templateIdentifier, entityIdentifier));
+
+        if (!entityIdentifier.equals(entity.identifier())) {
+            throw new EntityValidationException(List.of(ENTITY_IDENTIFIER_MUST_MATCH_PATH));
+        }
+
+        Entity entityToSave = new Entity(
+                existingEntity.id(),
+                templateIdentifier,
+                entity.name(),
+                entity.identifier(),
+                entity.properties(),
+                entity.relations());
+
+        entityValidationService.validateForUpdate(entityToSave, template);
+        return entityRepository.save(entityToSave);
     }
 
 
