@@ -7,13 +7,16 @@ import static org.mockito.Mockito.verifyNoInteractions;
 
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Stream;
 import java.util.UUID;
 
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
 import org.junit.jupiter.params.provider.ValueSource;
+
 
 import com.decathlon.idp_core.domain.constant.ValidationMessages;
 import com.decathlon.idp_core.domain.model.entity.Property;
@@ -396,16 +399,6 @@ class PropertyValidationServiceTest {
     class BooleanValidationTests {
 
         @Test
-        @DisplayName("Should report type mismatch when BOOLEAN value is null")
-        void shouldReportTypeMismatchWhenBooleanValueIsNull() {
-            var definition = propertyDefinition("flag", PropertyType.BOOLEAN, null);
-
-            var violations = service.validatePropertyValue(definition, null);
-
-            assertEquals(List.of(ValidationMessages.PROPERTY_TYPE_MISMATCH.formatted("flag", PropertyType.BOOLEAN)), violations);
-        }
-
-        @Test
         @DisplayName("Should accept raw Boolean objects")
         void shouldAcceptRawBooleanObjects() {
             var definition = propertyDefinition("flag", PropertyType.BOOLEAN, null);
@@ -427,24 +420,18 @@ class PropertyValidationServiceTest {
             assertEquals(List.of(), violations);
         }
 
-        @Test
-        @DisplayName("Should report type mismatch for invalid boolean value")
-        void shouldReportTypeMismatchForInvalidBoolean() {
+        @ParameterizedTest(name = "Should report type mismatch for invalid BOOLEAN input: {0}")
+        @MethodSource("invalidBooleanValues")
+        void shouldReportTypeMismatchForInvalidBooleanInputs(Object value) {
             var definition = propertyDefinition("flag", PropertyType.BOOLEAN, null);
 
-            var violations = service.validatePropertyValue(definition, "yes");
+            var violations = service.validatePropertyValue(definition, value);
 
             assertEquals(List.of(ValidationMessages.PROPERTY_TYPE_MISMATCH.formatted("flag", PropertyType.BOOLEAN)), violations);
         }
 
-        @Test
-        @DisplayName("Should report type mismatch when a number is sent for a BOOLEAN property")
-        void shouldReportTypeMismatchWhenNumberSentForBoolean() {
-            var definition = propertyDefinition("flag", PropertyType.BOOLEAN, null);
-
-            var violations = service.validatePropertyValue(definition, "42");
-
-            assertEquals(List.of(ValidationMessages.PROPERTY_TYPE_MISMATCH.formatted("flag", PropertyType.BOOLEAN)), violations);
+        private static Stream<Object> invalidBooleanValues() {
+            return Stream.of(null, "yes", "42");
         }
     }
 
