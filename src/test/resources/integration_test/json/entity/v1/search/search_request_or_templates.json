@@ -1,0 +1,11 @@
+{
+  "filter": {
+    "connector": "OR",
+    "criteria": [
+      { "field": "template", "operation": "EQ", "value": "microservice" },
+      { "field": "template", "operation": "EQ", "value": "batch-job" }
+    ]
+  },
+  "page": 0,
+  "size": 20
+}

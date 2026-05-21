@@ -26,9 +26,12 @@ public class SwaggerDescription {
     public static final String NO_CONTENT_CODE = "204";
     public static final String PARTIAL_CONTENT_CODE = "206";
     public static final String BAD_REQUEST_CODE = "400";
+    public static final String UNAUTHORIZED_CODE = "401";
+    public static final String FORBIDDEN_CODE = "403";
     public static final String NOT_FOUND_CODE = "404";
     public static final String CONFLICT_CODE = "409";
     public static final String SERVICE_UNAVAILABLE_CODE = "503";
+    public static final String INTERNAL_SERVER_ERROR_CODE = "500";
 
     /// Entity Template API endpoint constants
     public static final String ENDPOINT_GET_TEMPLATES_SUMMARY = "Get all templates";
@@ -63,6 +66,8 @@ public class SwaggerDescription {
 
     public static final String ENDPOINT_POST_ENTITY_SUMMARY = "Create a new entity";
     public static final String ENDPOINT_POST_ENTITY_DESCRIPTION = "Create a new entity in the system with the provided information";
+    public static final String ENDPOINT_PUT_ENTITY_SUMMARY = "Update an existing entity";
+    public static final String ENDPOINT_PUT_ENTITY_DESCRIPTION = "Update an existing entity in the system with the provided information";
 
 
     /// API response description constants
@@ -78,11 +83,16 @@ public class SwaggerDescription {
     public static final String RESPONSE_INVALID_TEMPLATE_DATA = "Invalid template data provided";
     public static final String RESPONSE_INVALID_PAGINATION = "Invalid pagination parameters";
     public static final String RESPONSE_TEMPLATE_CONFLICT = "Template with this identifier already exists";
+    public static final String RESPONSE_ENTITY_CONFLICT = "Entity already exists in this template";
     public static final String RESPONSE_ENTITIES_PAGINATED_SUCCESS = "Paginated entities retrieved successfully";
     public static final String RESPONSE_ENTITY_FOUND = "Entity found";
     public static final String RESPONSE_ENTITY_NOT_FOUND_IDENTIFIER = "Entity not found with the provided identifier";
     public static final String RESPONSE_ENTITY_CREATED = "Entity created successfully";
+    public static final String RESPONSE_ENTITY_UPDATED = "Entity updated successfully";
     public static final String RESPONSE_INVALID_ENTITY_DATA = "Invalid entity data provided";
+    public static final String RESPONSE_UNEXPECTED_SERVER_ERROR = "Unexpected server-side failure";
+    public static final String RESPONSE_INSUFFICIENT_RIGHTS = "Insufficient rights";
+    public static final String RESPONSE_UNAUTHORIZED = "Unauthorized - Missing or invalid token";
 
 
     // --- Schema (class) descriptions ---
@@ -95,6 +105,8 @@ public class SwaggerDescription {
     public static final String SCHEMA_PROPERTY_DEFINITION_OUT = "Output DTO for property definition";
     public static final String SCHEMA_RELATION_DEFINITION_OUT = "Output DTO for relation definition";
     public static final String SCHEMA_PROPERTY_RULES_OUT = "Output DTO for property validation rules";
+    public static final String SCHEMA_ENTITY_IN = "Input DTO for creating or updating an entity";
+    public static final String SCHEMA_ENTITY_RELATION_IN = "Input DTO for an entity relation instance";
 
     // --- Field descriptions (shared) ---
     public static final String FIELD_TEMPLATE_ID = "Unique generated identifier of the entity template";
@@ -103,6 +115,13 @@ public class SwaggerDescription {
     public static final String FIELD_TEMPLATE_DESCRIPTION = "Entity Template description";
     public static final String FIELD_TEMPLATE_PROPERTIES = "List of property definitions for this template";
     public static final String FIELD_TEMPLATE_RELATIONS = "List of relation definitions for this template";
+
+    public static final String FIELD_ENTITY_NAME = "Name of the entity";
+    public static final String FIELD_ENTITY_IDENTIFIER = "Unique identifier of the entity within the template scope";
+    public static final String FIELD_ENTITY_PROPERTIES = "Map of property name to value for this entity";
+    public static final String FIELD_ENTITY_RELATIONS = "List of relations for this entity";
+    public static final String FIELD_ENTITY_RELATION_NAME = "Name of the relation (must match a template relation definition)";
+    public static final String FIELD_ENTITY_RELATION_TARGETS = "List of target entity identifiers for this relation";
 
     public static final String FIELD_PROPERTY_ID = "Unique identifier of the property definition";
     public static final String FIELD_PROPERTY_NAME = "Property name";
@@ -132,4 +151,32 @@ public class SwaggerDescription {
     public static final String PARAM_PAGE_DESCRIPTION = "Page number for pagination. Defaults to 0.";
     public static final String PARAM_SIZE_DESCRIPTION = "Number of items per page. Defaults to 20.";
     public static final String PARAM_SORT_DESCRIPTION = "Sorting criteria in the format: property(,asc|desc). Defaults to identifier,asc.";
+
+    /// Search API endpoint constants
+    public static final String ENDPOINT_POST_SEARCH_SUMMARY = "Search entities";
+    public static final String ENDPOINT_POST_SEARCH_DESCRIPTION = """
+            Search for entities across all templates using a nested filter query. \
+            Supports complex logical compositions (AND / OR / IN) of filter criteria on \
+            template, identifier, name, properties, relations, and reverse relations.""";
+    public static final String RESPONSE_SEARCH_SUCCESS = "Entities retrieved successfully";
+    public static final String RESPONSE_INVALID_SEARCH_QUERY = "Invalid search filter";
+
+    // --- Entity Graph (flat nodes & edges) descriptions ---
+    public static final String PARAM_DEPTH_DESCRIPTION = "Maximum traversal depth for relationship resolution. Clamped between 1 and 10.";
+    public static final String ENDPOINT_GET_ENTITY_GRAPH_FLAT_SUMMARY = "Get entity relationship graph as flat nodes and edges";
+    public static final String ENDPOINT_GET_ENTITY_GRAPH_FLAT_DESCRIPTION = "Retrieves the entity relationship graph as a flat nodes-and-edges structure, suitable for frontend visualization tools such as React Flow, Vis.js, and Cytoscape.";
+    public static final String RESPONSE_ENTITY_GRAPH_FLAT_SUCCESS = "Flat entity graph successfully retrieved";
+    public static final String ENTITY_GRAPH_FLAT_NODES_DESCRIPTION = "All entity nodes in the graph";
+    public static final String ENTITY_GRAPH_FLAT_EDGES_DESCRIPTION = "All directed relation edges in the graph";
+    public static final String ENTITY_GRAPH_FLAT_NODE_ID_DESCRIPTION = "Unique node identifier composed of templateIdentifier:identifier";
+    public static final String ENTITY_GRAPH_FLAT_NODE_LABEL_DESCRIPTION = "Human-readable entity name";
+    public static final String ENTITY_GRAPH_FLAT_NODE_TEMPLATE_DESCRIPTION = "Template identifier this entity belongs to";
+    public static final String ENTITY_GRAPH_FLAT_NODE_IDENTIFIER_DESCRIPTION = "Business identifier of the entity within its template";
+    public static final String ENTITY_GRAPH_FLAT_EDGE_ID_DESCRIPTION = "Unique edge identifier";
+    public static final String ENTITY_GRAPH_FLAT_EDGE_SOURCE_DESCRIPTION = "Node id of the source entity";
+    public static final String ENTITY_GRAPH_FLAT_EDGE_TARGET_DESCRIPTION = "Node id of the target entity";
+    public static final String ENTITY_GRAPH_FLAT_EDGE_TYPE_DESCRIPTION = "Relation name as defined in the entity template";
+    public static final String ENTITY_GRAPH_FLAT_NODE_DATA_DESCRIPTION = "Entity property values keyed by property name; present only when include_data=true is requested";
+    public static final String PARAM_INCLUDE_DATA_DESCRIPTION = "When true, each graph node includes a data object containing the entity's property values. Defaults to false.";
+    public static final String PARAM_RELATIONS_DESCRIPTION = "When provided, only relations whose name matches one of the listed values are traversed and included. Omit to include all relations.";
 }

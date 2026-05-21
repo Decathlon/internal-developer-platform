@@ -1,0 +1,9 @@
+{
+  "filter": {
+    "field": "relation",
+    "operation": "CONTAINS",
+    "value": "database"
+  },
+  "page": 0,
+  "size": 20
+}

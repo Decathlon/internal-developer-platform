@@ -1,29 +1,35 @@
 package com.decathlon.idp_core.infrastructure.adapters.api.handler;
 
+import static org.springframework.http.HttpStatus.NOT_FOUND;
+
 import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
-import com.decathlon.idp_core.domain.exception.entity_template.PropertyDefinitionRulesConflictException;
-import com.decathlon.idp_core.domain.exception.entity_template.PropertyTypeChangeException;
-import com.decathlon.idp_core.domain.exception.entity_template.RelationCannotTargetItselfException;
-import com.decathlon.idp_core.domain.exception.entity_template.RelationTargetTemplateChangeException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ExceptionHandler;
+import org.springframework.web.method.annotation.HandlerMethodValidationException;
 
-import com.decathlon.idp_core.domain.exception.EntityNotFoundException;
+import com.decathlon.idp_core.domain.exception.InvalidQueryException;
 import com.decathlon.idp_core.domain.exception.entity_template.PropertyNameAlreadyExistsException;
 import com.decathlon.idp_core.domain.exception.entity_template.RelationNameAlreadyExistsException;
 import com.decathlon.idp_core.domain.exception.entity_template.TargetTemplateNotFoundException;
+import com.decathlon.idp_core.domain.exception.entity.EntityAlreadyExistsException;
+import com.decathlon.idp_core.domain.exception.entity.EntityNotFoundException;
+import com.decathlon.idp_core.domain.exception.entity.EntityValidationException;
 import com.decathlon.idp_core.domain.exception.entity_template.EntityTemplateAlreadyExistsException;
 import com.decathlon.idp_core.domain.exception.entity_template.EntityTemplateIdentifierCannotChangeException;
 import com.decathlon.idp_core.domain.exception.entity_template.EntityTemplateNameAlreadyExistsException;
 import com.decathlon.idp_core.domain.exception.entity_template.EntityTemplateNotFoundException;
+import com.decathlon.idp_core.domain.exception.entity_template.PropertyDefinitionRulesConflictException;
+import com.decathlon.idp_core.domain.exception.entity_template.PropertyTypeChangeException;
+import com.decathlon.idp_core.domain.exception.entity_template.RelationCannotTargetItselfException;
+import com.decathlon.idp_core.domain.exception.entity_template.RelationTargetTemplateChangeException;
 
 import jakarta.validation.ConstraintViolation;
 import jakarta.validation.ConstraintViolationException;
@@ -31,9 +37,6 @@ import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.web.servlet.NoHandlerFoundException;
-
-import static org.springframework.http.HttpStatus.NOT_FOUND;
 
 /// Global exception handler providing centralized error handling for all API endpoints.
 ///
@@ -65,6 +68,16 @@ public class ApiExceptionHandler {
         log.warn("Template not found: {}", ex.getMessage());
         ErrorResponse errorResponse = new ErrorResponse(NOT_FOUND.name(), ex.getMessage());
         return ResponseEntity.status(NOT_FOUND).body(errorResponse);
+    }
+
+    /// Handles domain exception for malformed search filter or query strings.
+    ///
+    /// **HTTP mapping:** Maps domain [InvalidQueryException] to HTTP 400 Bad Request
+    /// so API consumers receive clear feedback about invalid search request syntax.
+    @ExceptionHandler(InvalidQueryException.class)
+    public ResponseEntity<ErrorResponse> handleInvalidQueryException(InvalidQueryException ex) {
+        log.warn("Invalid filter query: {}", ex.getMessage());
+        return createErrorResponse(HttpStatus.BAD_REQUEST, ex.getMessage());
     }
 
     /// Handles domain exception when entity templates already exist.
@@ -181,6 +194,40 @@ public class ApiExceptionHandler {
         return createErrorResponse(HttpStatus.BAD_REQUEST, ex.getMessage());
     }
 
+    /// Handles validation exceptions from Spring MVC handler method parameters.
+    ///
+    /// **Error aggregation:** Combines multiple validation error messages into a single
+    /// user-friendly response with HTTP 400 status for client correction.
+    @ExceptionHandler(HandlerMethodValidationException.class)
+    public ResponseEntity<ErrorResponse> handleHandlerMethodValidationException(HandlerMethodValidationException ex) {
+        log.warn("Handler method validation error: {}", ex.getMessage());
+        String errorMessage = ex.getAllErrors().stream()
+                .map(org.springframework.context.MessageSourceResolvable::getDefaultMessage)
+                .collect(Collectors.joining(", "));
+        return createErrorResponse(HttpStatus.BAD_REQUEST, errorMessage);
+    }
+
+    /// Handles domain exception when entities already exist.
+    ///
+    /// **HTTP mapping:** Maps domain EntityAlreadyExistsException to HTTP 409
+    /// status indicating business rule conflict for duplicate entities.
+    @ExceptionHandler(EntityAlreadyExistsException.class)
+    public ResponseEntity<ErrorResponse> handleEntityAlreadyExistsException(EntityAlreadyExistsException ex) {
+        log.warn("Entity already exists: {}", ex.getMessage());
+        ErrorResponse errorResponse = new ErrorResponse(HttpStatus.CONFLICT.name(), ex.getMessage());
+        return ResponseEntity.status(HttpStatus.CONFLICT).body(errorResponse);
+    }
+
+    /// Handles domain exception when entity validation fails.
+    ///
+    /// **HTTP mapping:** Maps domain EntityValidationException to HTTP 400 status with aggregated
+    /// validation error messages for client correction.
+    @ExceptionHandler(EntityValidationException.class)
+    public ResponseEntity<ErrorResponse> handleEntityValidationException(EntityValidationException ex) {
+        log.warn("Entity validation failed: {}", ex.getMessage());
+        return createErrorResponse(HttpStatus.BAD_REQUEST, ex.getMessage());
+    }
+
     /// Handles Bean Validation constraint violations from domain model validation.
     ///
     /// **Error aggregation:** Combines multiple constraint violation messages into
@@ -232,12 +279,6 @@ public class ApiExceptionHandler {
         ErrorResponse errorResponse = new ErrorResponse(NOT_FOUND.name(), ex.getMessage());
         return ResponseEntity.status(NOT_FOUND).body(errorResponse);
     }
-
-    @ExceptionHandler(NoHandlerFoundException.class)
-    public ResponseEntity<ErrorResponse> handleNotFound(NoHandlerFoundException e) {
-        return createErrorResponse(NOT_FOUND, "Resource not found: " + e.getRequestURL());
-    }
-
     private String parseHttpMessageNotReadableError(String originalMessage) {
         if (originalMessage == null) {
             return "Invalid request body format";

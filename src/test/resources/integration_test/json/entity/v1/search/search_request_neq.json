@@ -1,0 +1,12 @@
+{
+  "filter": {
+    "connector": "AND",
+    "criteria": [
+      { "field": "template", "operation": "EQ", "value": "web-service" },
+      { "field": "identifier", "operation": "STARTS_WITH", "value": "web-api" },
+      { "field": "identifier", "operation": "NEQ", "value": "web-api-1" }
+    ]
+  },
+  "page": 0,
+  "size": 20
+}
