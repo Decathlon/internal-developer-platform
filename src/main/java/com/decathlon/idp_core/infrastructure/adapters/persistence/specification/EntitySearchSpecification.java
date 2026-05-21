@@ -40,10 +40,10 @@ import lombok.NoArgsConstructor;
 /// significantly cheaper.
 ///
 /// **Security:** LIKE-based operators ([SearchOperator#CONTAINS], [SearchOperator#NOT_CONTAINS],
-/// [SearchOperator#STARTS_WITH], [SearchOperator#ENDS_WITH]) use `LOWER() LIKE lower_value`
-/// for case-insensitive matching. SQL wildcards (`%` and `_`) in user-supplied values are
-/// escaped to prevent unintended pattern matching. EQ and NEQ also use `LOWER()` with
-/// functional btree indexes. STARTS_WITH benefits from btree index prefix scans.
+/// [SearchOperator#STARTS_WITH], [SearchOperator#ENDS_WITH]) use PostgreSQL `ILIKE` for
+/// case-insensitive matching, allowing GIN trigram indexes (V3_5) to be leveraged.
+/// SQL wildcards (`%` and `_`) in user-supplied values are escaped to prevent unintended
+/// pattern matching. EQ and NEQ use `LOWER()` with functional btree indexes (V3_4).
 @NoArgsConstructor(access = AccessLevel.PRIVATE)
 public final class EntitySearchSpecification {
 
@@ -71,22 +71,23 @@ public final class EntitySearchSpecification {
     ///
     /// The four conditions are combined with OR so that a match on any field is sufficient.
     /// The "any property" branch uses a correlated EXISTS subquery to avoid row multiplication.
-    /// All comparisons use `LOWER() LIKE lower_pattern` for case-insensitive substring matching.
+    /// All comparisons use `ILIKE` so that GIN trigram indexes (V3_5) can be leveraged.
     ///
     /// @param query the search string; must be non-null and non-blank
     /// @return a [Specification] implementing the global text search
     public static Specification<EntityJpaEntity> globalTextSearch(String query) {
-        String escaped = escapeLikeWildcards(query.toLowerCase());
+        // No toLowerCase() needed — ILIKE is inherently case-insensitive.
+        String escaped = escapeLikeWildcards(query);
         String pattern = "%" + escaped + "%";
 
         Specification<EntityJpaEntity> byIdentifier =
-                (root, q, cb) -> cb.like(cb.lower(root.get(IDENTIFIER)), pattern, LIKE_ESCAPE_CHAR);
+                (root, q, cb) -> ((HibernateCriteriaBuilder) cb).ilike(root.get(IDENTIFIER), pattern, LIKE_ESCAPE_CHAR);
 
         Specification<EntityJpaEntity> byName =
-                (root, q, cb) -> cb.like(cb.lower(root.get(NAME)), pattern, LIKE_ESCAPE_CHAR);
+                (root, q, cb) -> ((HibernateCriteriaBuilder) cb).ilike(root.get(NAME), pattern, LIKE_ESCAPE_CHAR);
 
         Specification<EntityJpaEntity> byTemplate =
-                (root, q, cb) -> cb.like(cb.lower(root.get(TEMPLATE_IDENTIFIER)), pattern, LIKE_ESCAPE_CHAR);
+                (root, q, cb) -> ((HibernateCriteriaBuilder) cb).ilike(root.get(TEMPLATE_IDENTIFIER), pattern, LIKE_ESCAPE_CHAR);
 
         Specification<EntityJpaEntity> byAnyProperty = (root, queryCtx, cb) -> {
             // Correlated EXISTS: does this entity have at least one property whose value matches?
@@ -96,7 +97,7 @@ public final class EntitySearchSpecification {
             sub.select(cb.literal(1))
                     .where(
                             cb.equal(subRoot.get("id"), root.get("id")),
-                            cb.like(cb.lower(propJoin.get("value").as(String.class)), pattern, LIKE_ESCAPE_CHAR)
+                            ((HibernateCriteriaBuilder) cb).ilike(propJoin.get("value").as(String.class), pattern, LIKE_ESCAPE_CHAR)
                     );
             return cb.exists(sub);
         };
@@ -285,29 +286,29 @@ public final class EntitySearchSpecification {
         if (isNumericOperator(operator)) {
             return buildNumericPredicate(cb, field, operator, new BigDecimal(value));
         }
-        Expression<String> lowerField = cb.lower(field.as(String.class));
+        HibernateCriteriaBuilder hcb = (HibernateCriteriaBuilder) cb;
+        Expression<String> stringField = field.as(String.class);
         return switch (operator) {
-            // EQ / NEQ use lower() + functional btree index for optimal equality matching.
-            case EQ -> cb.equal(lowerField, value.toLowerCase());
-            case NEQ -> cb.notEqual(lowerField, value.toLowerCase());
-            // LIKE operators apply LOWER() on the column and lowercase the value.
-            // STARTS_WITH can leverage the functional btree lower() index (prefix scan).
-            // CONTAINS and ENDS_WITH use sequential scans as no extension-free index supports leading wildcards.
+            // EQ / NEQ use lower() + functional btree index (V3_4) for optimal equality matching.
+            case EQ -> cb.equal(cb.lower(stringField), value.toLowerCase());
+            case NEQ -> cb.notEqual(cb.lower(stringField), value.toLowerCase());
+            // LIKE operators use ILIKE so that GIN trigram indexes (V3_5) can be leveraged.
+            // No pre-lowercasing of the value — ILIKE is inherently case-insensitive.
             case CONTAINS -> {
-                String escaped = escapeLikeWildcards(value.toLowerCase());
-                yield cb.like(lowerField, "%" + escaped + "%", LIKE_ESCAPE_CHAR);
+                String escaped = escapeLikeWildcards(value);
+                yield hcb.ilike(stringField, "%" + escaped + "%", LIKE_ESCAPE_CHAR);
             }
             case NOT_CONTAINS -> {
-                String escaped = escapeLikeWildcards(value.toLowerCase());
-                yield cb.notLike(lowerField, "%" + escaped + "%", LIKE_ESCAPE_CHAR);
+                String escaped = escapeLikeWildcards(value);
+                yield hcb.notIlike(stringField, "%" + escaped + "%", LIKE_ESCAPE_CHAR);
             }
             case STARTS_WITH -> {
-                String escaped = escapeLikeWildcards(value.toLowerCase());
-                yield cb.like(lowerField, escaped + "%", LIKE_ESCAPE_CHAR);
+                String escaped = escapeLikeWildcards(value);
+                yield hcb.ilike(stringField, escaped + "%", LIKE_ESCAPE_CHAR);
             }
             case ENDS_WITH -> {
-                String escaped = escapeLikeWildcards(value.toLowerCase());
-                yield cb.like(lowerField, "%" + escaped, LIKE_ESCAPE_CHAR);
+                String escaped = escapeLikeWildcards(value);
+                yield hcb.ilike(stringField, "%" + escaped, LIKE_ESCAPE_CHAR);
             }
             default -> throw new IllegalStateException("Unhandled operator: " + operator);
         };
@@ -342,7 +343,8 @@ public final class EntitySearchSpecification {
 
     /// Escapes SQL LIKE wildcards (`%` and `_`) in the given value so they are
     /// treated as literal characters rather than pattern metacharacters.
-    /// The value should be pre-lowercased before passing to LIKE-based operators.
+    /// Used by ILIKE-based operators. The value does not need to be pre-lowercased
+    /// as ILIKE handles case-insensitivity natively.
     static String escapeLikeWildcards(String value) {
         return value
                 .replace(String.valueOf(LIKE_ESCAPE_CHAR), LIKE_ESCAPE_CHAR + String.valueOf(LIKE_ESCAPE_CHAR))
