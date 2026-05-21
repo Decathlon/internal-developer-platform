@@ -171,7 +171,7 @@ public class EntityController {
     @ApiResponse(responseCode = FORBIDDEN_CODE, description = RESPONSE_INSUFFICIENT_RIGHTS, content = @Content)
     @ApiResponse(responseCode = NOT_FOUND_CODE, description = RESPONSE_ENTITY_NOT_FOUND_IDENTIFIER, content = {@Content(schema = @Schema(implementation = ErrorResponse.class))})
     @ApiResponse(responseCode = INTERNAL_SERVER_ERROR_CODE, description = RESPONSE_UNEXPECTED_SERVER_ERROR, content = {@Content(schema = @Schema(implementation = ErrorResponse.class))})
-    @PutMapping("/{templateIdentifier}/identifier/{entityIdentifier}")
+    @PutMapping("/{templateIdentifier}/{entityIdentifier}")
     @ResponseStatus(OK)
     public EntityDtoOut updateEntity(
             @NotBlank @PathVariable String templateIdentifier,

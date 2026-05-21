@@ -59,7 +59,7 @@ public class EntityValidationService {
     /// @param template the already-resolved template the entity must conform to
     /// @throws EntityValidationException when one or more validation rules are violated
     void validateForUpdate(Entity entity, EntityTemplate template) {
-        validateAgainstTemplate(template, entity.properties());
+        validateAgainstTemplate(template, entity);
     }
 
     /// Validates entity properties against the template's property definitions, enforcing required fields and value rules.
