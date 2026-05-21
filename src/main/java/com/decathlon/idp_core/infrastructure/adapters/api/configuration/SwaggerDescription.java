@@ -160,4 +160,23 @@ public class SwaggerDescription {
             template, identifier, name, properties, relations, and reverse relations.""";
     public static final String RESPONSE_SEARCH_SUCCESS = "Entities retrieved successfully";
     public static final String RESPONSE_INVALID_SEARCH_QUERY = "Invalid search filter";
+
+    // --- Entity Graph (flat nodes & edges) descriptions ---
+    public static final String PARAM_DEPTH_DESCRIPTION = "Maximum traversal depth for relationship resolution. Clamped between 1 and 10.";
+    public static final String ENDPOINT_GET_ENTITY_GRAPH_FLAT_SUMMARY = "Get entity relationship graph as flat nodes and edges";
+    public static final String ENDPOINT_GET_ENTITY_GRAPH_FLAT_DESCRIPTION = "Retrieves the entity relationship graph as a flat nodes-and-edges structure, suitable for frontend visualization tools such as React Flow, Vis.js, and Cytoscape.";
+    public static final String RESPONSE_ENTITY_GRAPH_FLAT_SUCCESS = "Flat entity graph successfully retrieved";
+    public static final String ENTITY_GRAPH_FLAT_NODES_DESCRIPTION = "All entity nodes in the graph";
+    public static final String ENTITY_GRAPH_FLAT_EDGES_DESCRIPTION = "All directed relation edges in the graph";
+    public static final String ENTITY_GRAPH_FLAT_NODE_ID_DESCRIPTION = "Unique node identifier composed of templateIdentifier:identifier";
+    public static final String ENTITY_GRAPH_FLAT_NODE_LABEL_DESCRIPTION = "Human-readable entity name";
+    public static final String ENTITY_GRAPH_FLAT_NODE_TEMPLATE_DESCRIPTION = "Template identifier this entity belongs to";
+    public static final String ENTITY_GRAPH_FLAT_NODE_IDENTIFIER_DESCRIPTION = "Business identifier of the entity within its template";
+    public static final String ENTITY_GRAPH_FLAT_EDGE_ID_DESCRIPTION = "Unique edge identifier";
+    public static final String ENTITY_GRAPH_FLAT_EDGE_SOURCE_DESCRIPTION = "Node id of the source entity";
+    public static final String ENTITY_GRAPH_FLAT_EDGE_TARGET_DESCRIPTION = "Node id of the target entity";
+    public static final String ENTITY_GRAPH_FLAT_EDGE_TYPE_DESCRIPTION = "Relation name as defined in the entity template";
+    public static final String ENTITY_GRAPH_FLAT_NODE_DATA_DESCRIPTION = "Entity property values keyed by property name; present only when include_data=true is requested";
+    public static final String PARAM_INCLUDE_DATA_DESCRIPTION = "When true, each graph node includes a data object containing the entity's property values. Defaults to false.";
+    public static final String PARAM_RELATIONS_DESCRIPTION = "When provided, only relations whose name matches one of the listed values are traversed and included. Omit to include all relations.";
 }

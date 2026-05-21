@@ -1,14 +1,12 @@
 package com.decathlon.idp_core.infrastructure.adapters.api.handler;
 
+import static org.springframework.http.HttpStatus.NOT_FOUND;
+
 import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
-import com.decathlon.idp_core.domain.exception.entity_template.PropertyDefinitionRulesConflictException;
-import com.decathlon.idp_core.domain.exception.entity_template.PropertyTypeChangeException;
-import com.decathlon.idp_core.domain.exception.entity_template.RelationCannotTargetItselfException;
-import com.decathlon.idp_core.domain.exception.entity_template.RelationTargetTemplateChangeException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
@@ -28,6 +26,10 @@ import com.decathlon.idp_core.domain.exception.entity_template.EntityTemplateAlr
 import com.decathlon.idp_core.domain.exception.entity_template.EntityTemplateIdentifierCannotChangeException;
 import com.decathlon.idp_core.domain.exception.entity_template.EntityTemplateNameAlreadyExistsException;
 import com.decathlon.idp_core.domain.exception.entity_template.EntityTemplateNotFoundException;
+import com.decathlon.idp_core.domain.exception.entity_template.PropertyDefinitionRulesConflictException;
+import com.decathlon.idp_core.domain.exception.entity_template.PropertyTypeChangeException;
+import com.decathlon.idp_core.domain.exception.entity_template.RelationCannotTargetItselfException;
+import com.decathlon.idp_core.domain.exception.entity_template.RelationTargetTemplateChangeException;
 
 import jakarta.validation.ConstraintViolation;
 import jakarta.validation.ConstraintViolationException;
@@ -35,8 +37,6 @@ import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-
-import static org.springframework.http.HttpStatus.NOT_FOUND;
 
 /// Global exception handler providing centralized error handling for all API endpoints.
 ///

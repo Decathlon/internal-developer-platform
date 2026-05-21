@@ -7,8 +7,6 @@ import static com.decathlon.idp_core.domain.constant.ValidationMessages.TEMPLATE
 import java.util.List;
 import java.util.UUID;
 
-import org.springframework.validation.annotation.Validated;
-
 import com.decathlon.idp_core.domain.model.entity_template.EntityTemplate;
 
 import jakarta.validation.constraints.NotBlank;
@@ -38,9 +36,10 @@ public record Entity(
 
         List<Relation> relations
 ) {
-    /// Compact constructor defensively copies mutable collections to keep the record immutable.
+    /// Compact constructor: defensively copies mutable lists to prevent external mutation
+    /// and guarantee immutability of the domain model (EI_EXPOSE_REP2 / EI_EXPOSE_REP).
     public Entity {
-        properties = properties != null ? List.copyOf(properties) : List.of();
-        relations = relations != null ? List.copyOf(relations) : List.of();
+        properties = properties == null ? List.of() : List.copyOf(properties);
+        relations = relations == null ? List.of() : List.copyOf(relations);
     }
 }

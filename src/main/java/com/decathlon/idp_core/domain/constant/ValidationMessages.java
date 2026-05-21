@@ -22,7 +22,6 @@ public class ValidationMessages {
     public static final String PROPERTY_DESCRIPTION_MANDATORY = "Property description is mandatory and cannot be blank";
     public static final String PROPERTY_TYPE_MANDATORY = "Property type is mandatory";
     public static final String PROPERTY_VALUE_MANDATORY = "Property value is mandatory and cannot be blank";
-    public static final String PROPERTY_TYPE_CANNOT_CHANGE = "Cannot change type of property '%s' from %s to %s. Property types cannot be modified after creation. Please delete and recreate the property instead.";
     public static final String PROPERTY_REQUIRED_MISSING = "Property '%s' is required by template '%s'";
     public static final String PROPERTY_TYPE_MISMATCH = "Property '%s' must be of type %s";
     public static final String PROPERTY_MIN_LENGTH_VIOLATION = "Property '%s' length must be greater than or equal to %d";
@@ -32,6 +31,7 @@ public class ValidationMessages {
     public static final String PROPERTY_REGEX_VIOLATION = "Property '%s' does not match expected format";
     public static final String PROPERTY_ENUM_VIOLATION = "Property '%s' must be one of %s";
     public static final String PROPERTY_FORMAT_VIOLATION = "Property '%s' does not match required format %s";
+    public static final String PROPERTY_TYPE_CANNOT_CHANGE = "Cannot change type of property '%s' from %s to %s. Property types cannot be modified after creation. Please delete and recreate the property instead.";
 
     // Property Rules validation messages - templates and specific constraints
     public static final String PROPERTY_RULES_RULE_NOT_ALLOWED_FOR_TYPE = "{rule} rule is not allowed for {type} property type";

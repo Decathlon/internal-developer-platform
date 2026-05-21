@@ -10,6 +10,8 @@ public record CorsProperties(
         List<String> allowedOrigins,
         List<String> allowedOriginPatterns
 ) {
+    /// Compact constructor: normalises null to empty and defensively copies to prevent
+    /// external mutation of the configuration list (EI_EXPOSE_REP2 / EI_EXPOSE_REP).
     public CorsProperties {
         allowedOrigins = allowedOrigins != null ? List.copyOf(allowedOrigins) : List.of();
         allowedOriginPatterns = allowedOriginPatterns != null ? List.copyOf(allowedOriginPatterns) : List.of();

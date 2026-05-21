@@ -85,7 +85,6 @@ public class EntityValidationService {
         }
     }
 
-
     /// Checks for existing entity with same template and identifier to prevent duplicates.
     /// @param entity the entity to check for existence
     /// @throws EntityAlreadyExistsException if an entity with the same template and identifier already exists

@@ -209,30 +209,25 @@ public class EntityDtoOutMapper {
                 .filter(prop -> prop.value() != null)
                 .collect(Collectors.toMap(
                         Property::name,
-                        prop -> convertPropertyValue(prop, propertiesDefinitions.get(prop.name()))));
-    }
-
-    /// Converts a property value to its typed representation based on the property definition.
-    ///
-    /// @param property   the property to convert
-    /// @param definition the property definition for type information, may be null
-    /// @return the typed value, falling back to the raw string value
-    private Object convertPropertyValue(Property property, PropertyDefinition definition) {
-        String value = property.value();
-        if (definition == null) {
-            return value;
-        }
-        PropertyType type = definition.type();
-        if (PropertyType.NUMBER.equals(type)) {
-            try {
-                return Double.valueOf(value);
-            } catch (NumberFormatException _) {
-                return value;
-            }
-        } else if (PropertyType.BOOLEAN.equals(type)) {
-            return Boolean.valueOf(value);
-        }
-        return value;
+                        prop -> {
+                            PropertyDefinition def = propertiesDefinitions.get(prop.name());
+                            Object rawValue = prop.value();
+                            if (def == null || rawValue == null) {
+                                return rawValue;
+                            }
+                            String stringValue = String.valueOf(rawValue);
+                            PropertyType type = def.type();
+                            if (PropertyType.NUMBER.equals(type)) {
+                                try {
+                                    return Double.valueOf(stringValue);
+                                } catch (NumberFormatException _) {
+                                    return null;
+                                }
+                            } else if (PropertyType.BOOLEAN.equals(type)) {
+                                return Boolean.valueOf(stringValue);
+                            }
+                            return stringValue;
+                        }));
     }
 
     /// Maps the relations of an entity to a map of relation names to lists of target
