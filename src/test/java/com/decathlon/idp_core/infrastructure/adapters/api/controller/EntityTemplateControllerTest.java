@@ -311,10 +311,6 @@ class EntityTemplateControllerTest extends AbstractIntegrationTest {
         /// This test verifies that:
         /// - Validation error message indicates property definitions are
         /// @throws Exception if the MockMvc request fails
-        /// Tests the POST /api/v1/entity-templates endpoint when property name field is
-        /// missing.
-        /// This test verifies that:
-        /// @throws Exception if the MockMvc request fails
         @Test
         @WithMockUser()
         @DisplayName("Returns 400 when property name is missing")
@@ -568,6 +564,19 @@ class EntityTemplateControllerTest extends AbstractIntegrationTest {
                     .content(getJsonTestFileContent(
                             "integration_test/json/entity-template/v1/putEntityTemplate_200.json")))
                     .andExpect(status().isUnauthorized());
+        }
+
+        @Test
+        @WithMockUser
+        @DisplayName("Should return 403 when updating template without CSRF token")
+        void putTemplate_without_csrf_403() throws Exception {
+            String identifier = "web-service";
+            mockMvc.perform(MockMvcRequestBuilders.put(ENTITY_TEMPLATE_PATH + "/" + identifier)
+                            .contentType(APPLICATION_JSON)
+                            .accept(APPLICATION_JSON)
+                            .content(getJsonTestFileContent(
+                                    "integration_test/json/entity-template/v1/putEntityTemplate_200.json")))
+                    .andExpect(status().isForbidden());
         }
 
         @Test

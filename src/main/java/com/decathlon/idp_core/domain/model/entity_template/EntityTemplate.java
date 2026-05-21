@@ -43,4 +43,9 @@ public record EntityTemplate(
 
         List<RelationDefinition> relationsDefinitions
 ) {
+    /// Compact constructor defensively copies mutable collections to preserve immutability.
+    public EntityTemplate {
+        propertiesDefinitions = propertiesDefinitions != null ? List.copyOf(propertiesDefinitions) : List.of();
+        relationsDefinitions = relationsDefinitions != null ? List.copyOf(relationsDefinitions) : List.of();
+    }
 }

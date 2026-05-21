@@ -3,6 +3,7 @@ package com.decathlon.idp_core.infrastructure.adapters.api.controller;
 import static org.springframework.http.MediaType.APPLICATION_JSON;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -21,21 +22,19 @@ import org.springframework.test.web.servlet.request.MockMvcRequestBuilders;
 import com.decathlon.idp_core.AbstractIntegrationTest;
 import com.decathlon.idp_core.infrastructure.adapters.api.mapper.entity.EntitySearchDomainMapper;
 
-    /// Integration tests for the EntityController REST API endpoints.
-    /// These tests verify the behavior of entity retrieval endpoints, including
-    /// pagination, authentication, and lookup by template identifier and entity
-    /// identifier.
+/// Integration tests for the EntityController REST API endpoints.
+/// These tests verify the behavior of entity retrieval endpoints, including
+/// pagination, authentication, and lookup by template identifier and entity
+/// identifier.
 public class EntityControllerTest extends AbstractIntegrationTest {
-
-    @Autowired
-    private MockMvc mockMvc;
 
     private static final String TEMPLATE_IDENTIFIER = "web-service";
     private static final String ENTITY_IDENTIFIER = "web-api-2";
-    private static final String ENTITIES_BY_IDENTIFIER_PATH = "/api/v1/entities/{template-identifier}/identifier/{identifier}";
+    private static final String ENTITIES_BY_IDENTIFIER_PATH = "/api/v1/entities/{template-identifier}/{identifier}";
     private static final String ENTITIES_BY_TEMPLATE_IDENTIFIER_PATH = "/api/v1/entities/{template-identifier}";
     private static final String ENTITY_JSON_FILES_TEST_PATH = "integration_test/json/entity/v1/";
-
+    @Autowired
+    private MockMvc mockMvc;
 
     /// Tests for GET /api/v1/entities/{template-identifier} endpoint (paginated
     /// retrieval).
@@ -48,9 +47,9 @@ public class EntityControllerTest extends AbstractIntegrationTest {
         @WithMockUser
         void getEntities_paginated_200() throws Exception {
             mockMvc.perform(get(ENTITIES_BY_TEMPLATE_IDENTIFIER_PATH, TEMPLATE_IDENTIFIER)
-                    .param("page", "0")
-                    .param("size", "15")
-                    .accept(APPLICATION_JSON))
+                            .param("page", "0")
+                            .param("size", "15")
+                            .accept(APPLICATION_JSON))
                     .andExpect(status().isOk())
                     .andExpect(content().contentType(APPLICATION_JSON))
                     .andExpect(jsonPath("$.content").isArray())
@@ -67,7 +66,7 @@ public class EntityControllerTest extends AbstractIntegrationTest {
         @WithMockUser
         void getEntities_paginated_404_when_non_existent_template() throws Exception {
             mockMvc.perform(get(ENTITIES_BY_TEMPLATE_IDENTIFIER_PATH, "non-existent-template-identifier")
-                    .accept(APPLICATION_JSON))
+                            .accept(APPLICATION_JSON))
                     .andExpect(status().isNotFound());
         }
 
@@ -75,7 +74,7 @@ public class EntityControllerTest extends AbstractIntegrationTest {
         @DisplayName("Should return 401 without authentication")
         void getTemplates_paginated_401_without_user_token() throws Exception {
             mockMvc.perform(get(ENTITIES_BY_TEMPLATE_IDENTIFIER_PATH, TEMPLATE_IDENTIFIER)
-                    .accept(APPLICATION_JSON))
+                            .accept(APPLICATION_JSON))
                     .andExpect(status().isUnauthorized());
         }
 
@@ -85,10 +84,10 @@ public class EntityControllerTest extends AbstractIntegrationTest {
         void getEntities_paginated_200_custom() throws Exception {
 
             mockMvc.perform(get(ENTITIES_BY_TEMPLATE_IDENTIFIER_PATH, "monitoring-service")
-                    .param("page", "1")
-                    .param("size", "5")
-                    .param("sort", "template_identifier,asc")
-                    .accept(APPLICATION_JSON))
+                            .param("page", "1")
+                            .param("size", "5")
+                            .param("sort", "template_identifier,asc")
+                            .accept(APPLICATION_JSON))
                     .andExpect(status().isOk())
                     .andExpect(content().contentType(APPLICATION_JSON))
                     .andExpect(jsonPath("$.content.length()").value(1))
@@ -104,7 +103,7 @@ public class EntityControllerTest extends AbstractIntegrationTest {
         @WithMockUser
         void getEntities_invalid_pagination_200() throws Exception {
             mockMvc.perform(get(ENTITIES_BY_TEMPLATE_IDENTIFIER_PATH, TEMPLATE_IDENTIFIER)
-                    .accept(APPLICATION_JSON))
+                            .accept(APPLICATION_JSON))
                     .andExpect(status().isOk())
                     .andExpect(content().contentType(APPLICATION_JSON))
                     .andExpect(jsonPath("$.content").isArray())
@@ -117,10 +116,10 @@ public class EntityControllerTest extends AbstractIntegrationTest {
         }
     }
 
-    /// Tests for GET /api/v1/entities/{template-identifier}/identifier/{identifier}
+    /// Tests for GET /api/v1/entities/{template-identifier}/{identifier}
     /// endpoint (lookup by template and identifier).
     @Nested
-    @DisplayName("GET /api/v1/entities/{template-identifier}/identifier/{identifier} - Get Entities by template identifier and entity identifier")
+    @DisplayName("GET /api/v1/entities/{template-identifier}/{identifier} - Get Entities by template identifier and entity identifier")
     class GetEntitiesByTemplateAndEntityIdentifierTests {
 
         @Test
@@ -128,7 +127,7 @@ public class EntityControllerTest extends AbstractIntegrationTest {
         @WithMockUser
         void getEntityByTemplateAndIdentifier_200() throws Exception {
             mockMvc.perform(get(ENTITIES_BY_IDENTIFIER_PATH, TEMPLATE_IDENTIFIER, ENTITY_IDENTIFIER)
-                    .accept(APPLICATION_JSON))
+                            .accept(APPLICATION_JSON))
                     .andExpect(status().isOk())
                     .andExpect(content().contentType(APPLICATION_JSON))
                     .andExpect(jsonPath("$.identifier").value(ENTITY_IDENTIFIER))
@@ -140,7 +139,7 @@ public class EntityControllerTest extends AbstractIntegrationTest {
         @WithMockUser
         void getEntityByTemplateAndIdentifier_404_non_existent_entity() throws Exception {
             mockMvc.perform(get(ENTITIES_BY_IDENTIFIER_PATH, TEMPLATE_IDENTIFIER, "non-existent-identifier")
-                    .accept(APPLICATION_JSON))
+                            .accept(APPLICATION_JSON))
                     .andExpect(status().isNotFound());
         }
 
@@ -149,7 +148,7 @@ public class EntityControllerTest extends AbstractIntegrationTest {
         @WithMockUser
         void getEntityByTemplateAndIdentifier_404_non_existent_template() throws Exception {
             mockMvc.perform(get(ENTITIES_BY_IDENTIFIER_PATH, "non-existent-template", "non-existent-identifier")
-                    .accept(APPLICATION_JSON))
+                            .accept(APPLICATION_JSON))
                     .andExpect(status().isNotFound());
         }
     }
@@ -163,14 +162,240 @@ public class EntityControllerTest extends AbstractIntegrationTest {
         @DisplayName("Should create entity and return 201")
         void postEntity_201() throws Exception {
             mockMvc.perform(MockMvcRequestBuilders.post(ENTITIES_BY_TEMPLATE_IDENTIFIER_PATH, TEMPLATE_IDENTIFIER)
-                    .contentType(APPLICATION_JSON)
-                    .accept(APPLICATION_JSON)
-                    .with(csrf())
-                    .content(getJsonTestFileContent(ENTITY_JSON_FILES_TEST_PATH + "postEntity_201.json")))
+                            .contentType(APPLICATION_JSON)
+                            .accept(APPLICATION_JSON)
+                            .with(csrf())
+                            .content(getJsonTestFileContent(ENTITY_JSON_FILES_TEST_PATH + "postEntity_201.json")))
                     .andExpect(status().isCreated())
                     .andReturn();
         }
 
+        @Test
+        @WithMockUser()
+        @DisplayName("Should return 400 when required template properties are missing")
+        void postEntity_400_when_required_properties_missing() throws Exception {
+            var payload = """
+                    {
+                      "name": "web-service-missing-required",
+                      "identifier": "web-service-missing-required",
+                      "properties": {
+                        "port": "8080"
+                      }
+                    }
+                    """;
+
+            mockMvc.perform(MockMvcRequestBuilders.post(ENTITIES_BY_TEMPLATE_IDENTIFIER_PATH, TEMPLATE_IDENTIFIER)
+                            .contentType(APPLICATION_JSON)
+                            .accept(APPLICATION_JSON)
+                            .with(csrf())
+                            .content(payload))
+                    .andExpect(status().isBadRequest())
+                    .andExpect(jsonPath("$.error").value("BAD_REQUEST"))
+                    .andExpect(jsonPath("$.error_description").value(org.hamcrest.Matchers.containsString("Property 'applicationName' is required")));
+        }
+
+        @Test
+        @WithMockUser()
+        @DisplayName("Should return 400 when property type does not match template")
+        void postEntity_400_when_property_type_mismatch() throws Exception {
+            var payload = """
+                    {
+                      "name": "web-service-invalid-type",
+                      "identifier": "web-service-invalid-type",
+                      "properties": {
+                        "applicationName": "catalog-api",
+                        "ownerEmail": "owner@example.com",
+                        "port": "not-a-number",
+                        "environment": "DEV",
+                        "version": "1.2.3",
+                        "teamName": "platform-team",
+                        "baseUrl": "https://catalog.example.com",
+                        "protocol": "HTTP",
+                        "programmingLanguage": "JAVA"
+                      }
+                    }
+                    """;
+
+            mockMvc.perform(MockMvcRequestBuilders.post(ENTITIES_BY_TEMPLATE_IDENTIFIER_PATH, TEMPLATE_IDENTIFIER)
+                            .contentType(APPLICATION_JSON)
+                            .accept(APPLICATION_JSON)
+                            .with(csrf())
+                            .content(payload))
+                    .andExpect(status().isBadRequest())
+                    .andExpect(jsonPath("$.error").value("BAD_REQUEST"))
+                    .andExpect(jsonPath("$.error_description").value(org.hamcrest.Matchers.containsString("Property 'port' must be of type NUMBER")));
+        }
+
+        @Test
+        @WithMockUser()
+        @DisplayName("Should return 400 when property rules are not respected")
+        void postEntity_400_when_property_rules_not_respected() throws Exception {
+            var payload = """
+                    {
+                      "name": "web-service-invalid-rules",
+                      "identifier": "web-service-invalid-rules",
+                      "properties": {
+                        "applicationName": "catalog-api",
+                        "ownerEmail": "invalid-email",
+                        "port": "80",
+                        "environment": "DEV",
+                        "version": "1.2.3",
+                        "teamName": "platform-team",
+                        "baseUrl": "invalid-url",
+                        "protocol": "HTTP",
+                        "programmingLanguage": "JAVA"
+                      }
+                    }
+                    """;
+
+            mockMvc.perform(MockMvcRequestBuilders.post(ENTITIES_BY_TEMPLATE_IDENTIFIER_PATH, TEMPLATE_IDENTIFIER)
+                            .contentType(APPLICATION_JSON)
+                            .accept(APPLICATION_JSON)
+                            .with(csrf())
+                            .content(payload))
+                    .andExpect(status().isBadRequest())
+                    .andExpect(jsonPath("$.error").value("BAD_REQUEST"))
+                    .andExpect(jsonPath("$.error_description").value(org.hamcrest.Matchers.allOf(
+                            org.hamcrest.Matchers.containsString("Property 'ownerEmail' does not match expected format"),
+                            org.hamcrest.Matchers.containsString("Property 'ownerEmail' does not match required format EMAIL"),
+                            org.hamcrest.Matchers.containsString("Property 'baseUrl' does not match expected format"),
+                            org.hamcrest.Matchers.containsString("Property 'baseUrl' does not match required format URL"),
+                            org.hamcrest.Matchers.containsString("Property 'port' value must be greater than or equal to 1024")
+                    )));
+        }
+
+    }
+
+    @Nested
+    @DisplayName("PUT /api/v1/entities/{template-identifier}/identifier/{identifier} - Update entity")
+    class PutEntitiesTests {
+
+        @Test
+        @WithMockUser
+        @DisplayName("Should update entity and return 200")
+        void putEntity_200() throws Exception {
+            var payload = """
+                    {
+                      "name": "Web API 2 Updated",
+                      "identifier": "web-api-2",
+                      "properties": {
+                        "applicationName": "catalog-api",
+                        "ownerEmail": "owner@example.com",
+                        "port": "9090",
+                        "environment": "DEV",
+                        "version": "1.2.3",
+                        "teamName": "platform-team",
+                        "baseUrl": "https://catalog.example.com",
+                        "protocol": "HTTP",
+                        "programmingLanguage": "PYTHON"
+                      },
+                      "relations": [
+                        {
+                          "name": "database",
+                          "target_entity_identifiers": ["cache-service-1"]
+                        }
+                      ]
+                    }
+                    """;
+
+            mockMvc.perform(put(ENTITIES_BY_IDENTIFIER_PATH, TEMPLATE_IDENTIFIER, ENTITY_IDENTIFIER)
+                            .contentType(APPLICATION_JSON)
+                            .accept(APPLICATION_JSON)
+                            .with(csrf())
+                            .content(payload))
+                    .andExpect(status().isOk())
+                    .andExpect(content().contentType(APPLICATION_JSON))
+                    .andExpect(jsonPath("$.identifier").value(ENTITY_IDENTIFIER))
+                    .andExpect(jsonPath("$.template_identifier").value(TEMPLATE_IDENTIFIER))
+                    .andExpect(jsonPath("$.name").value("Web API 2 Updated"));
+        }
+
+        @Test
+        @WithMockUser
+        @DisplayName("Should return 404 when updating non-existent entity")
+        void putEntity_404_non_existent_entity() throws Exception {
+            var payload = """
+                    {
+                      "name": "Unknown",
+                      "identifier": "unknown-entity"
+                    }
+                    """;
+
+            mockMvc.perform(put(ENTITIES_BY_IDENTIFIER_PATH, TEMPLATE_IDENTIFIER, "unknown-entity")
+                            .contentType(APPLICATION_JSON)
+                            .accept(APPLICATION_JSON)
+                            .with(csrf())
+                            .content(payload))
+                    .andExpect(status().isNotFound());
+        }
+
+        @Test
+        @WithMockUser
+        @DisplayName("Should return 400 when path identifier and body identifier do not match")
+        void putEntity_400_identifier_mismatch() throws Exception {
+            var payload = """
+                    {
+                      "name": "Web API 2 Updated",
+                      "identifier": "different-id",
+                      "properties": {
+                        "applicationName": "catalog-api",
+                        "ownerEmail": "owner@example.com",
+                        "port": "8080",
+                        "environment": "DEV",
+                        "version": "1.2.3",
+                        "teamName": "platform-team",
+                        "baseUrl": "https://catalog.example.com",
+                        "protocol": "HTTP",
+                        "programmingLanguage": "JAVA"
+                      }
+                    }
+                    """;
+
+            mockMvc.perform(put(ENTITIES_BY_IDENTIFIER_PATH, TEMPLATE_IDENTIFIER, ENTITY_IDENTIFIER)
+                            .contentType(APPLICATION_JSON)
+                            .accept(APPLICATION_JSON)
+                            .with(csrf())
+                            .content(payload))
+                    .andExpect(status().isBadRequest())
+                    .andExpect(jsonPath("$.error").value("BAD_REQUEST"))
+                    .andExpect(jsonPath("$.error_description").value(org.hamcrest.Matchers.containsString("Entity identifier in body must match path identifier")));
+        }
+
+        @Test
+        @DisplayName("Should return 401 when updating without authentication")
+        void putEntity_401_without_user_token() throws Exception {
+            var payload = """
+                    {
+                      "name": "Web API 2 Updated",
+                      "identifier": "web-api-2"
+                    }
+                    """;
+
+            mockMvc.perform(put(ENTITIES_BY_IDENTIFIER_PATH, TEMPLATE_IDENTIFIER, ENTITY_IDENTIFIER)
+                            .contentType(APPLICATION_JSON)
+                            .accept(APPLICATION_JSON)
+                            .with(csrf())
+                            .content(payload))
+                    .andExpect(status().isUnauthorized());
+        }
+
+        @Test
+        @WithMockUser
+        @DisplayName("Should return 403 when updating without CSRF token")
+        void putEntity_403_without_csrf() throws Exception {
+            var payload = """
+                    {
+                      "name": "Web API 2 Updated",
+                      "identifier": "web-api-2"
+                    }
+                    """;
+
+            mockMvc.perform(put(ENTITIES_BY_IDENTIFIER_PATH, TEMPLATE_IDENTIFIER, ENTITY_IDENTIFIER)
+                            .contentType(APPLICATION_JSON)
+                            .accept(APPLICATION_JSON)
+                            .content(payload))
+                    .andExpect(status().isForbidden());
+        }
     }
 
     @Nested

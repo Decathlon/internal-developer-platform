@@ -21,7 +21,9 @@ import lombok.NoArgsConstructor;
 
 @jakarta.persistence.Entity
 @Data
-@Table(name = "entity")
+@Table(name = "entity", uniqueConstraints = {
+    @UniqueConstraint(columnNames = {"identifier", "template_identifier"})
+})
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
