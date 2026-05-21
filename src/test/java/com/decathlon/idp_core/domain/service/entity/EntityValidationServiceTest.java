@@ -134,7 +134,7 @@ class EntityValidationServiceTest {
 
         var entity = entity("web-service", "catalog-api", "Catalog API", List.of(), List.of());
 
-        try (MockedConstruction<Violations> mockedViolations = mockConstruction(Violations.class,
+        try (var _ = mockConstruction(Violations.class,
                 (mock, context) -> {
                     when(mock.isEmpty()).thenReturn(false);
                     when(mock.asList()).thenReturn(List.of("Delegated property error", "Delegated relation error"));
