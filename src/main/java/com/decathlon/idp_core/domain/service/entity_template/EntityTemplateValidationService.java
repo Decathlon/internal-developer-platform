@@ -1,24 +1,15 @@
 package com.decathlon.idp_core.domain.service.entity_template;
 
-import java.util.Objects;
-
-import org.springframework.stereotype.Service;
-
-import com.decathlon.idp_core.domain.exception.entity_template.EntityTemplateAlreadyExistsException;
-import com.decathlon.idp_core.domain.exception.entity_template.EntityTemplateIdentifierCannotChangeException;
-import com.decathlon.idp_core.domain.exception.entity_template.EntityTemplateNameAlreadyExistsException;
-import com.decathlon.idp_core.domain.exception.entity_template.EntityTemplateNotFoundException;
-import com.decathlon.idp_core.domain.exception.entity_template.PropertyDefinitionRulesConflictException;
-import com.decathlon.idp_core.domain.exception.entity_template.PropertyNameAlreadyExistsException;
-import com.decathlon.idp_core.domain.exception.entity_template.RelationCannotTargetItselfException;
-import com.decathlon.idp_core.domain.exception.entity_template.RelationNameAlreadyExistsException;
-import com.decathlon.idp_core.domain.exception.entity_template.RelationTargetTemplateChangeException;
-import com.decathlon.idp_core.domain.exception.entity_template.TargetTemplateNotFoundException;
+import com.decathlon.idp_core.domain.exception.entity_template.*;
 import com.decathlon.idp_core.domain.model.entity_template.EntityTemplate;
 import com.decathlon.idp_core.domain.model.entity_template.PropertyDefinition;
+import com.decathlon.idp_core.domain.model.entity_template.RelationDefinition;
 import com.decathlon.idp_core.domain.port.EntityTemplateRepositoryPort;
-
 import lombok.RequiredArgsConstructor;
+import org.springframework.stereotype.Service;
+
+import java.util.List;
+import java.util.Objects;
 
 /// Domain service to centralize all functional validation rules for [EntityTemplate] operations.
 ///
@@ -46,12 +37,12 @@ public class EntityTemplateValidationService {
     /// - All target templates referenced by relations must exist in the system.
     ///
     /// @param entityTemplate the template candidate to validate
-    /// @throws EntityTemplateAlreadyExistsException when identifier is already taken
+    /// @throws EntityTemplateAlreadyExistsException     when identifier is already taken
     /// @throws EntityTemplateNameAlreadyExistsException when name is already taken
     /// @throws PropertyDefinitionRulesConflictException when rules violate business invariants
-    /// @throws PropertyNameAlreadyExistsException if duplicate property names are found
-    /// @throws RelationNameAlreadyExistsException if duplicate relation names are found
-    /// @throws RelationCannotTargetItselfException when a relation targets the template itself
+    /// @throws PropertyNameAlreadyExistsException       if duplicate property names are found
+    /// @throws RelationNameAlreadyExistsException       if duplicate relation names are found
+    /// @throws RelationCannotTargetItselfException      when a relation targets the template itself
     public void validateForCreation(EntityTemplate entityTemplate) {
         validateIdentifierUniqueness(entityTemplate.identifier());
         validateNameUniqueness(entityTemplate.name());
@@ -77,16 +68,16 @@ public class EntityTemplateValidationService {
     /// - Relation target template identifiers cannot be changed after creation.
     ///
     /// @param currentIdentifier the identifier of the template being replaced
-    /// @param existingName the current name of the template being replaced
-    /// @param existingTemplate the current state of the template being replaced
-    /// @param mergedTemplate the fully-merged template carrying the desired state
-    /// @throws EntityTemplateAlreadyExistsException when the new identifier is already taken
+    /// @param existingName      the current name of the template being replaced
+    /// @param existingTemplate  the current state of the template being replaced
+    /// @param mergedTemplate    the fully-merged template carrying the desired state
+    /// @throws EntityTemplateAlreadyExistsException     when the new identifier is already taken
     /// @throws EntityTemplateNameAlreadyExistsException when the new name is already taken
     /// @throws PropertyDefinitionRulesConflictException when rules violate business invariants
-    /// @throws PropertyNameAlreadyExistsException if duplicate property names are found
-    /// @throws RelationNameAlreadyExistsException if duplicate relation names are found
-    /// @throws RelationTargetTemplateChangeException when a relation target template is changed
-    /// @throws RelationCannotTargetItselfException when a relation targets the template itself
+    /// @throws PropertyNameAlreadyExistsException       if duplicate property names are found
+    /// @throws RelationNameAlreadyExistsException       if duplicate relation names are found
+    /// @throws RelationTargetTemplateChangeException    when a relation target template is changed
+    /// @throws RelationCannotTargetItselfException      when a relation targets the template itself
     public void validateForUpdate(String currentIdentifier, String existingName, EntityTemplate existingTemplate, EntityTemplate mergedTemplate) {
         if (!currentIdentifier.equals(mergedTemplate.identifier())) {
             throw new EntityTemplateIdentifierCannotChangeException(mergedTemplate.identifier());
@@ -177,12 +168,32 @@ public class EntityTemplateValidationService {
     /// **Precondition:** relationsDefinitions must not be null
     ///
     /// @param entityTemplate the template containing relations to validate
-    /// @throws TargetTemplateNotFoundException    if any referenced target template
+    /// @throws TargetTemplateNotFoundException     if any referenced target template
     /// @throws RelationCannotTargetItselfException if a relation targets the template itself
     ///                                            doesn't exist
     private void validateTemplateRelations(EntityTemplate entityTemplate) {
         relationDefinitionValidationService.validateRelationNoSelfReference(entityTemplate.identifier(), entityTemplate.relationsDefinitions());
         relationDefinitionValidationService.validateTargetTemplatesExist(entityTemplate.relationsDefinitions());
+    }
+
+    public void validatePropertyNameAlreadyExistInTemplate(List<PropertyDefinition> properties, String propertyName) {
+        if (!isPropertyNameIsOwnedByEntityTemplate(properties, propertyName)) {
+            throw new PropertyNameNotFoundEntityTemplatePropertiesException(String.format("Property name %s not found in entity template properties", propertyName));
+        }
+    }
+
+    public void validateRelationNameAlreadyExistInTemplate(List<RelationDefinition> relations, String relationName) {
+        if (!isRelationIsOwnedByEntityTemplate(relations, relationName)) {
+            throw new RelationNameNotFoundEntityTemplateRelationsException(String.format("Relation name %s not found in entity template relations", relationName));
+        }
+    }
+
+    private boolean isPropertyNameIsOwnedByEntityTemplate(List<PropertyDefinition> properties, String propertyName) {
+        return properties != null && properties.stream().anyMatch(entityTemplateProperty -> entityTemplateProperty.name().equals(propertyName));
+    }
+
+    private boolean isRelationIsOwnedByEntityTemplate(List<RelationDefinition> relations, String relationName) {
+        return relations != null && relations.stream().anyMatch(entityTemplateRelation -> entityTemplateRelation.name().equals(relationName));
     }
 
 }

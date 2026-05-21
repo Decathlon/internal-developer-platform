@@ -27,7 +27,12 @@ import org.springframework.web.bind.MethodArgumentNotValidException;
 
 import com.decathlon.idp_core.domain.exception.entity_template.EntityTemplateAlreadyExistsException;
 import com.decathlon.idp_core.domain.exception.entity_template.EntityTemplateNotFoundException;
+import com.decathlon.idp_core.domain.exception.entity_mapping.EntityDynamicMappingConfigurationException;
+import com.decathlon.idp_core.domain.exception.entity_template.PropertyNameNotFoundEntityTemplatePropertiesException;
+import com.decathlon.idp_core.domain.exception.entity_template.RelationNameNotFoundEntityTemplateRelationsException;
+import com.decathlon.idp_core.domain.exception.webhook.WebhookSecurityConfigurationException;
 import com.decathlon.idp_core.infrastructure.adapters.api.handler.ApiExceptionHandler.ErrorResponse;
+import com.decathlon.idp_core.domain.exception.webhook.WebhookTemplateHasNoPropertiesException;
 
 import jakarta.validation.ConstraintViolation;
 import jakarta.validation.ConstraintViolationException;
@@ -110,6 +115,90 @@ class ApiExceptionHandlerTest {
     @Nested
     @DisplayName("Validation Exception Handling")
     class ValidationExceptionTests {
+
+        @Test
+        @DisplayName("Should handle EntityDynamicMappingConfigurationException with 400 status")
+        void shouldHandleEntityDynamicMappingConfigurationException() {
+            String details = "Syntax Error in 'properties.deployment_id': Parse error";
+            EntityDynamicMappingConfigurationException exception = new EntityDynamicMappingConfigurationException(details);
+
+            ResponseEntity<ErrorResponse> response = exceptionHandler.handleEntityDynamicMappingConfigurationException(exception);
+
+            assertNotNull(response);
+            assertEquals(HttpStatus.BAD_REQUEST, response.getStatusCode());
+            ErrorResponse body = response.getBody();
+            assertNotNull(body);
+            assertEquals(HttpStatus.BAD_REQUEST.name(), body.getError());
+            assertEquals("Invalid webhook mapping configuration: " + details, body.getErrorDescription());
+        }
+
+        @Test
+        @DisplayName("Should handle PropertyNameNotFoundEntityTemplatePropertiesException with 400 status")
+        void shouldHandlePropertyNameNotFoundEntityTemplatePropertiesException() {
+            String details = "Property name additionalProp3 not found in entity template properties";
+            PropertyNameNotFoundEntityTemplatePropertiesException exception = new PropertyNameNotFoundEntityTemplatePropertiesException(details);
+
+
+            ResponseEntity<ErrorResponse> response = exceptionHandler.handlePropertyNameNotFoundEntityTemplatePropertiesException(exception);
+
+            assertNotNull(response);
+            assertEquals(HttpStatus.BAD_REQUEST, response.getStatusCode());
+            ErrorResponse body = response.getBody();
+            assertNotNull(body);
+            assertEquals(HttpStatus.BAD_REQUEST.name(), body.getError());
+            assertEquals(details, body.getErrorDescription());
+        }
+
+        @Test
+        @DisplayName("Should handle RelationNameNotFoundEntityTemplateRelationsException with 400 status")
+        void shouldHandleRelationNameNotFoundEntityTemplateRelationsException() {
+            // Given
+            String details = "Relation name github_repository not found in entity template relations";
+            RelationNameNotFoundEntityTemplateRelationsException exception = new RelationNameNotFoundEntityTemplateRelationsException(details);
+
+            // When
+            ResponseEntity<ErrorResponse> response = exceptionHandler.handleRelationNameNotFoundEntityTemplateRelationsException(exception);
+
+            // Then
+            assertNotNull(response);
+            assertEquals(HttpStatus.BAD_REQUEST, response.getStatusCode());
+            ErrorResponse body = response.getBody();
+            assertNotNull(body);
+            assertEquals(HttpStatus.BAD_REQUEST.name(), body.getError());
+            assertEquals(details, body.getErrorDescription());
+        }
+
+        @Test
+        @DisplayName("Should handle WebhookTemplateHasNoPropertiesException with 400 status")
+        void shouldHandleWebhookTemplateHasNoPropertiesException() {
+            String details = "The mapping defines properties but the target template has no property definitions";
+            WebhookTemplateHasNoPropertiesException exception = new WebhookTemplateHasNoPropertiesException(details);
+
+            ResponseEntity<ErrorResponse> response = exceptionHandler.handleWebhookTemplateHasNoPropertiesException(exception);
+
+            assertNotNull(response);
+            assertEquals(HttpStatus.BAD_REQUEST, response.getStatusCode());
+            ErrorResponse body = response.getBody();
+            assertNotNull(body);
+            assertEquals(HttpStatus.BAD_REQUEST.name(), body.getError());
+            assertEquals(details, body.getErrorDescription());
+        }
+
+        @Test
+        @DisplayName("Should handle WebhookSecurityConfigurationException with 400 status")
+        void shouldHandleWebhookSecurityConfigurationException() {
+            String details = "Webhook security type is mandatory";
+            WebhookSecurityConfigurationException exception = new WebhookSecurityConfigurationException(details);
+
+            ResponseEntity<ErrorResponse> response = exceptionHandler.handleWebhookSecurityConfigurationException(exception);
+
+            assertNotNull(response);
+            assertEquals(HttpStatus.BAD_REQUEST, response.getStatusCode());
+            ErrorResponse body = response.getBody();
+            assertNotNull(body);
+            assertEquals(HttpStatus.BAD_REQUEST.name(), body.getError());
+            assertEquals(details, body.getErrorDescription());
+        }
 
         /// Tests the handling of [ConstraintViolationException] with a single validation violation.
         ///

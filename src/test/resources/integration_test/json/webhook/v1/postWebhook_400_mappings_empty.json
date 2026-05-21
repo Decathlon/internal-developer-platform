@@ -1,0 +1,11 @@
+{
+  "identifier": "no-mappings-connector",
+  "title": "No Mappings",
+  "description": "Should fail",
+  "enabled": true,
+  "mappings": [],
+  "security": {
+    "type": "NONE",
+    "config": {}
+  }
+}

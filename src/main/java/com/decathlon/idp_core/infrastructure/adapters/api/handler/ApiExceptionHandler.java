@@ -6,9 +6,18 @@ import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 import com.decathlon.idp_core.domain.exception.entity_template.PropertyDefinitionRulesConflictException;
+import com.decathlon.idp_core.domain.exception.entity_template.PropertyNameNotFoundEntityTemplatePropertiesException;
 import com.decathlon.idp_core.domain.exception.entity_template.PropertyTypeChangeException;
 import com.decathlon.idp_core.domain.exception.entity_template.RelationCannotTargetItselfException;
+import com.decathlon.idp_core.domain.exception.entity_template.RelationNameNotFoundEntityTemplateRelationsException;
 import com.decathlon.idp_core.domain.exception.entity_template.RelationTargetTemplateChangeException;
+import com.decathlon.idp_core.domain.exception.entity_mapping.EntityDynamicMappingConfigurationException;
+import com.decathlon.idp_core.domain.exception.webhook.WebhookAuthenticationException;
+import com.decathlon.idp_core.domain.exception.webhook.WebhookConnectorAlreadyExistException;
+import com.decathlon.idp_core.domain.exception.webhook.WebhookConnectorNotFoundException;
+import com.decathlon.idp_core.domain.exception.webhook.WebhookSecurityConfigurationException;
+import com.decathlon.idp_core.domain.exception.webhook.WebhookConnectorTitleAlreadyExistsException;
+import com.decathlon.idp_core.domain.exception.webhook.WebhookTemplateHasNoPropertiesException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
@@ -54,6 +63,42 @@ import static org.springframework.http.HttpStatus.NOT_FOUND;
 public class ApiExceptionHandler {
 
     private ApiExceptionHandler() {
+    }
+
+    /// Handles webhook signature and credential validation failures.
+    ///
+    /// HTTP mapping: Maps WebhookAuthenticationException to HTTP 401 Unauthorized.
+    @ExceptionHandler(WebhookAuthenticationException.class)
+    public ResponseEntity<ErrorResponse> handleWebhookAuthenticationException(WebhookAuthenticationException ex) {
+        log.warn("Webhook authentication failed: {}", ex.getMessage());
+        ErrorResponse errorResponse = new ErrorResponse(HttpStatus.UNAUTHORIZED.name(), ex.getMessage());
+        return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(errorResponse);
+    }
+
+    /// Handles missing webhook connector configuration.
+    ///
+    /// HTTP mapping: Maps WebhookConnectorNotFoundException to HTTP 404 Not Found.
+    @ExceptionHandler(WebhookConnectorNotFoundException.class)
+    public ResponseEntity<ErrorResponse> handleWebhookConnectorNotFoundException(WebhookConnectorNotFoundException ex) {
+        log.warn("Webhook connector not found: {}", ex.getMessage());
+        ErrorResponse errorResponse = new ErrorResponse(NOT_FOUND.name(), ex.getMessage());
+        return ResponseEntity.status(NOT_FOUND).body(errorResponse);
+    }
+
+    /// Handles webhook connector identifier duplication conflicts.
+    @ExceptionHandler(WebhookConnectorAlreadyExistException.class)
+    public ResponseEntity<ErrorResponse> handleWebhookConnectorAlreadyExistException(WebhookConnectorAlreadyExistException ex) {
+        log.warn("Webhook connector identifier conflict: {}", ex.getMessage());
+        ErrorResponse errorResponse = new ErrorResponse(HttpStatus.CONFLICT.name(), ex.getMessage());
+        return ResponseEntity.status(HttpStatus.CONFLICT).body(errorResponse);
+    }
+
+    /// Handles webhook connector title duplication conflicts.
+    @ExceptionHandler(WebhookConnectorTitleAlreadyExistsException.class)
+    public ResponseEntity<ErrorResponse> handleWebhookConnectorTitleAlreadyExistsException(WebhookConnectorTitleAlreadyExistsException ex) {
+        log.warn("Webhook connector title conflict: {}", ex.getMessage());
+        ErrorResponse errorResponse = new ErrorResponse(HttpStatus.CONFLICT.name(), ex.getMessage());
+        return ResponseEntity.status(HttpStatus.CONFLICT).body(errorResponse);
     }
 
     /// Handles domain exception when entity templates are not found.
@@ -220,6 +265,41 @@ public class ApiExceptionHandler {
 
         String errorMessage = parseHttpMessageNotReadableError(ex.getMessage());
         return createErrorResponse(HttpStatus.BAD_REQUEST, errorMessage);
+    }
+
+    /// Handles invalid dynamic mapping expressions (JSLT) provided in webhook configuration.
+    ///
+    /// **HTTP mapping:** Maps domain mapping configuration failures to HTTP 400,
+    /// because clients can fix these expressions and retry.
+    @ExceptionHandler(EntityDynamicMappingConfigurationException.class)
+    public ResponseEntity<ErrorResponse> handleEntityDynamicMappingConfigurationException(EntityDynamicMappingConfigurationException ex) {
+        log.warn("Invalid entity dynamic mapping configuration: {}", ex.getMessage());
+        String errorMessage = "Invalid webhook mapping configuration: " + ex.getMessage();
+        return createErrorResponse(HttpStatus.BAD_REQUEST, errorMessage);
+    }
+
+    @ExceptionHandler(PropertyNameNotFoundEntityTemplatePropertiesException.class)
+    public ResponseEntity<ErrorResponse> handlePropertyNameNotFoundEntityTemplatePropertiesException(PropertyNameNotFoundEntityTemplatePropertiesException ex) {
+        log.warn("Webhook mapping references unknown property: {}", ex.getMessage());
+        return createErrorResponse(HttpStatus.BAD_REQUEST, ex.getMessage());
+    }
+
+    @ExceptionHandler(RelationNameNotFoundEntityTemplateRelationsException.class)
+    public ResponseEntity<ErrorResponse> handleRelationNameNotFoundEntityTemplateRelationsException(RelationNameNotFoundEntityTemplateRelationsException ex) {
+        log.warn("Webhook mapping references unknown relation: {}", ex.getMessage());
+        return createErrorResponse(HttpStatus.BAD_REQUEST, ex.getMessage());
+    }
+
+    @ExceptionHandler(WebhookTemplateHasNoPropertiesException.class)
+    public ResponseEntity<ErrorResponse> handleWebhookTemplateHasNoPropertiesException(WebhookTemplateHasNoPropertiesException ex) {
+        log.warn("Webhook mapping invalid for template without properties: {}", ex.getMessage());
+        return createErrorResponse(HttpStatus.BAD_REQUEST, ex.getMessage());
+    }
+
+    @ExceptionHandler(WebhookSecurityConfigurationException.class)
+    public ResponseEntity<ErrorResponse> handleWebhookSecurityConfigurationException(WebhookSecurityConfigurationException ex) {
+        log.warn("Invalid webhook security configuration: {}", ex.getMessage());
+        return createErrorResponse(HttpStatus.BAD_REQUEST, ex.getMessage());
     }
 
 

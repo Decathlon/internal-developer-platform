@@ -1,0 +1,32 @@
+{
+  "identifier": "connector-to-update",
+  "title": "Updated Title",
+  "description": "Updated description",
+  "enabled": false,
+  "mappings": [
+    {
+      "template": "microservice",
+      "filter": "true",
+      "entity": {
+        "identifier": ".id",
+        "title": ".name",
+        "properties": {
+          "applicationName": ".repository.name",
+          "ownerEmail": ".sender.login + \"@example.com\"",
+          "environment": ".deployment.environment",
+          "version": ".deployment.sha",
+          "port": "8080",
+          "programmingLanguage": "\"Java\""
+        },
+        "relations": {}
+      }
+    }
+  ],
+  "security": {
+    "type": "STATIC_TOKEN",
+    "config": {
+      "header_name": "X-Token",
+      "secret_alias": "MY_TOKEN"
+    }
+  }
+}
