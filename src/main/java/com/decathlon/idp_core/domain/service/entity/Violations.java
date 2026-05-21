@@ -7,12 +7,12 @@ import java.util.List;
 /// Centralises message formatting and indexed-prefix handling so domain
 /// validators stay focused on the rule they enforce rather than on string
 /// concatenation. Not thread-safe; intended for short-lived per-request use.
-final class Violations {
+public final class Violations {
     private final List<String> messages = new ArrayList<>();
     void add(String message) {
         messages.add(message);
     }
-    void add(String template, Object... args) {
+    public void add(String template, Object... args) {
         messages.add(template.formatted(args));
     }
     void addIfBlank(String value, String message) {
@@ -23,7 +23,7 @@ final class Violations {
 
     /// Adds a violation prefixed with the indexed collection name, e.g.
     /// `Property[2]: Property name is mandatory`.
-    void addIndexed(String collection, int index, String message) {
+    public void addIndexed(String collection, int index, String message) {
         messages.add("%s[%d]: %s".formatted(collection, index, message));
     }
     boolean isEmpty() {
