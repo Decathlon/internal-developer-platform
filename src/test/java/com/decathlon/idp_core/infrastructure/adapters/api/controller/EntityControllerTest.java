@@ -2,6 +2,7 @@ package com.decathlon.idp_core.infrastructure.adapters.api.controller;
 
 import static org.springframework.http.MediaType.APPLICATION_JSON;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
@@ -84,41 +85,43 @@ public class EntityControllerTest extends AbstractIntegrationTest {
           .andExpect(status().isUnauthorized());
     }
 
-    @Test
-    @DisplayName("Should return paginated entities with custom pagination")
-    @WithMockUser
-    void getEntities_paginated_200_custom() throws Exception {
+        @Test
+        @DisplayName("Should return paginated entities with custom pagination")
+        @WithMockUser
+        void getEntities_paginated_200_custom() throws Exception {
 
-      mockMvc
-          .perform(get(ENTITIES_BY_TEMPLATE_IDENTIFIER_PATH, "monitoring-service")
-              .param("page", "1").param("size", "5").param("sort", "template_identifier,asc")
-              .accept(APPLICATION_JSON))
-          .andExpect(status().isOk()).andExpect(content().contentType(APPLICATION_JSON))
-          .andExpect(jsonPath("$.content.length()").value(1))
-          .andExpect(jsonPath("$.content[0].name").value("Monitoring Service 6"))
-          .andExpect(jsonPath("$.page.total_elements").value(6))
-          .andExpect(jsonPath("$.page.total_pages").value(2))
-          .andExpect(jsonPath("$.page.size").value(5))
-          .andExpect(jsonPath("$.page.number").value(1));
-    }
+            mockMvc.perform(get(ENTITIES_BY_TEMPLATE_IDENTIFIER_PATH, "monitoring-service")
+                            .param("page", "1")
+                            .param("size", "5")
+                            .param("sort", "template_identifier,asc")
+                            .accept(APPLICATION_JSON))
+                    .andExpect(status().isOk())
+                    .andExpect(content().contentType(APPLICATION_JSON))
+                    .andExpect(jsonPath("$.content.length()").value(1))
+                    .andExpect(jsonPath("$.content[0].name").value("Monitoring Service 6"))
+                    .andExpect(jsonPath("$.page.total_elements").value(6))
+                    .andExpect(jsonPath("$.page.total_pages").value(2))
+                    .andExpect(jsonPath("$.page.size").value(5))
+                    .andExpect(jsonPath("$.page.number").value(1));
+        }
 
-    @Test
-    @DisplayName("Should return paginated entities with default pagination")
-    @WithMockUser
-    void getEntities_invalid_pagination_200() throws Exception {
-      mockMvc
-          .perform(get(ENTITIES_BY_TEMPLATE_IDENTIFIER_PATH, TEMPLATE_IDENTIFIER)
-              .accept(APPLICATION_JSON))
-          .andExpect(status().isOk()).andExpect(content().contentType(APPLICATION_JSON))
-          .andExpect(jsonPath("$.content").isArray())
-          .andExpect(jsonPath("$.content.length()").value(2))
-          .andExpect(jsonPath("$.page.total_elements").value(2))
-          .andExpect(jsonPath("$.page.total_pages").value(1))
-          .andExpect(jsonPath("$.page.size").value(20))
-          .andExpect(jsonPath("$.page.number").value(0))
-          .andExpect(jsonPath("$.content[0].template_identifier").value(TEMPLATE_IDENTIFIER));
+        @Test
+        @DisplayName("Should return paginated entities with default pagination")
+        @WithMockUser
+        void getEntities_invalid_pagination_200() throws Exception {
+            mockMvc.perform(get(ENTITIES_BY_TEMPLATE_IDENTIFIER_PATH, TEMPLATE_IDENTIFIER)
+                            .accept(APPLICATION_JSON))
+                    .andExpect(status().isOk())
+                    .andExpect(content().contentType(APPLICATION_JSON))
+                    .andExpect(jsonPath("$.content").isArray())
+                    .andExpect(jsonPath("$.content.length()").value(2))
+                    .andExpect(jsonPath("$.page.total_elements").value(2))
+                    .andExpect(jsonPath("$.page.total_pages").value(1))
+                    .andExpect(jsonPath("$.page.size").value(20))
+                    .andExpect(jsonPath("$.page.number").value(0))
+                    .andExpect(jsonPath("$.content[0].template_identifier").value(TEMPLATE_IDENTIFIER));
+        }
     }
-  }
 
   /// Tests for GET /api/v1/entities/{template-identifier}?q= endpoint
   @Nested
@@ -759,4 +762,259 @@ public class EntityControllerTest extends AbstractIntegrationTest {
     }
   }
 
+    @Nested
+    @DisplayName("DELETE /api/v1/entities/{template-identifier}/{entity-identifier} - Delete Entity")
+    class DeleteEntityTests {
+
+        private String createWebServicePayload(String name, String identifier) {
+            return """
+                    {
+                      "name": "%s",
+                      "identifier": "%s",
+                      "properties": {
+                        "applicationName": "catalog-api",
+                        "ownerEmail": "owner@example.com",
+                        "port": "8080",
+                        "environment": "DEV",
+                        "version": "1.2.3",
+                        "teamName": "platform-team",
+                        "baseUrl": "https://catalog.example.com",
+                        "protocol": "HTTP",
+                        "programmingLanguage": "JAVA"
+                      }
+                    }
+                    """.formatted(name, identifier);
+        }
+
+        private String createWebServicePayloadWithRelation(String name, String identifier,
+                                                           String targetEntityIdentifier) {
+            return """
+                    {
+                      "name": "%s",
+                      "identifier": "%s",
+                      "properties": {
+                        "applicationName": "catalog-api",
+                        "ownerEmail": "owner@example.com",
+                        "port": "8080",
+                        "environment": "DEV",
+                        "version": "1.2.3",
+                        "teamName": "platform-team",
+                        "baseUrl": "https://catalog.example.com",
+                        "protocol": "HTTP",
+                        "programmingLanguage": "JAVA"
+                      },
+                      "relations": [
+                        {
+                          "name": "%s",
+                          "target_entity_identifiers": ["%s"]
+                        }
+                      ]
+                    }
+                    """.formatted(name, identifier, "database", targetEntityIdentifier);
+        }
+
+        @Test
+        @WithMockUser()
+        @DisplayName("Should delete entity and return 204 No Content")
+        void deleteEntity_204_success() throws Exception {
+            var entityIdentifier = "delete-success-entity";
+            mockMvc.perform(MockMvcRequestBuilders.post(ENTITIES_BY_TEMPLATE_IDENTIFIER_PATH, TEMPLATE_IDENTIFIER)
+                            .contentType(APPLICATION_JSON)
+                            .accept(APPLICATION_JSON)
+                            .with(csrf())
+                            .content(createWebServicePayload("Delete Success Entity", entityIdentifier)))
+                    .andExpect(status().isCreated());
+
+            mockMvc.perform(delete(ENTITIES_BY_IDENTIFIER_PATH, TEMPLATE_IDENTIFIER, entityIdentifier)
+                            .accept(APPLICATION_JSON)
+                            .with(csrf()))
+                    .andExpect(status().isNoContent());
+
+            mockMvc.perform(get(ENTITIES_BY_IDENTIFIER_PATH, TEMPLATE_IDENTIFIER, entityIdentifier)
+                            .accept(APPLICATION_JSON))
+                    .andExpect(status().isNotFound());
+        }
+
+        @Test
+        @WithMockUser()
+        @DisplayName("Should return 404 when deleting non-existent entity")
+        void deleteEntity_404_non_existent_entity() throws Exception {
+            mockMvc.perform(delete(ENTITIES_BY_IDENTIFIER_PATH, TEMPLATE_IDENTIFIER, "non-existent-entity")
+                            .accept(APPLICATION_JSON)
+                            .with(csrf()))
+                    .andExpect(status().isNotFound());
+        }
+
+        @Test
+        @WithMockUser()
+        @DisplayName("Should return 404 when template does not exist")
+        void deleteEntity_404_non_existent_template() throws Exception {
+            mockMvc.perform(delete(ENTITIES_BY_IDENTIFIER_PATH, "non-existent-template", ENTITY_IDENTIFIER)
+                            .accept(APPLICATION_JSON)
+                            .with(csrf()))
+                    .andExpect(status().isNotFound());
+        }
+
+        @Test
+        @DisplayName("Should return 401 when deleting without authentication")
+        void deleteEntity_401_without_user_token() throws Exception {
+            mockMvc.perform(delete(ENTITIES_BY_IDENTIFIER_PATH, TEMPLATE_IDENTIFIER, ENTITY_IDENTIFIER)
+                            .accept(APPLICATION_JSON)
+                            .with(csrf()))
+                    .andExpect(status().isUnauthorized());
+        }
+
+        @Test
+        @WithMockUser
+        @DisplayName("Should return 403 when deleting without CSRF token")
+        void deleteEntity_403_without_csrf() throws Exception {
+            mockMvc.perform(delete(ENTITIES_BY_IDENTIFIER_PATH, TEMPLATE_IDENTIFIER, ENTITY_IDENTIFIER)
+                            .accept(APPLICATION_JSON))
+                    .andExpect(status().isForbidden());
+        }
+
+        @Test
+        @WithMockUser()
+        @DisplayName("Should clean up relations from parent entities when entity is deleted")
+        void deleteEntity_204_with_relation_cleanup() throws Exception {
+            var targetEntityIdentifier = "relation-target-entity";
+            var sourceEntityIdentifier = "relation-source-entity";
+
+            mockMvc.perform(MockMvcRequestBuilders.post(ENTITIES_BY_TEMPLATE_IDENTIFIER_PATH, TEMPLATE_IDENTIFIER)
+                            .contentType(APPLICATION_JSON)
+                            .accept(APPLICATION_JSON)
+                            .with(csrf())
+                            .content(createWebServicePayload("Relation Target Entity", targetEntityIdentifier)))
+                    .andExpect(status().isCreated());
+
+            mockMvc.perform(MockMvcRequestBuilders.post(ENTITIES_BY_TEMPLATE_IDENTIFIER_PATH, TEMPLATE_IDENTIFIER)
+                            .contentType(APPLICATION_JSON)
+                            .accept(APPLICATION_JSON)
+                            .with(csrf())
+                            .content(createWebServicePayloadWithRelation(
+                                    "Relation Source Entity",
+                                    sourceEntityIdentifier,
+                                    targetEntityIdentifier)))
+                    .andExpect(status().isCreated());
+
+            mockMvc.perform(get(ENTITIES_BY_IDENTIFIER_PATH, TEMPLATE_IDENTIFIER, targetEntityIdentifier)
+                            .accept(APPLICATION_JSON))
+                    .andExpect(status().isOk());
+
+            mockMvc.perform(delete(ENTITIES_BY_IDENTIFIER_PATH, TEMPLATE_IDENTIFIER, targetEntityIdentifier)
+                            .accept(APPLICATION_JSON)
+                            .with(csrf()))
+                    .andExpect(status().isNoContent());
+
+            mockMvc.perform(get(ENTITIES_BY_IDENTIFIER_PATH, TEMPLATE_IDENTIFIER, targetEntityIdentifier)
+                            .accept(APPLICATION_JSON))
+                    .andExpect(status().isNotFound());
+
+            mockMvc.perform(get(ENTITIES_BY_IDENTIFIER_PATH, TEMPLATE_IDENTIFIER, sourceEntityIdentifier)
+                            .accept(APPLICATION_JSON))
+                    .andExpect(status().isOk())
+                    .andExpect(content().string(org.hamcrest.Matchers.not(
+                            org.hamcrest.Matchers.containsString("\"identifier\":\"" + targetEntityIdentifier + "\""))));
+
+            mockMvc.perform(delete(ENTITIES_BY_IDENTIFIER_PATH, TEMPLATE_IDENTIFIER, sourceEntityIdentifier)
+                            .accept(APPLICATION_JSON)
+                            .with(csrf()))
+                    .andExpect(status().isNoContent());
+        }
+
+        @Test
+        @WithMockUser()
+        @DisplayName("Should handle deletion of entity with no incoming relations")
+        void deleteEntity_204_no_incoming_relations() throws Exception {
+            var entityIdentifier = "isolated-entity";
+
+            mockMvc.perform(MockMvcRequestBuilders.post(ENTITIES_BY_TEMPLATE_IDENTIFIER_PATH, TEMPLATE_IDENTIFIER)
+                            .contentType(APPLICATION_JSON)
+                            .accept(APPLICATION_JSON)
+                            .with(csrf())
+                            .content(createWebServicePayload("Isolated Entity", entityIdentifier)))
+                    .andExpect(status().isCreated());
+
+            mockMvc.perform(delete(ENTITIES_BY_IDENTIFIER_PATH, TEMPLATE_IDENTIFIER, entityIdentifier)
+                            .accept(APPLICATION_JSON)
+                            .with(csrf()))
+                    .andExpect(status().isNoContent());
+
+            mockMvc.perform(get(ENTITIES_BY_IDENTIFIER_PATH, TEMPLATE_IDENTIFIER, entityIdentifier)
+                            .accept(APPLICATION_JSON))
+                    .andExpect(status().isNotFound());
+        }
+
+        @Test
+        @WithMockUser()
+        @DisplayName("Should return 500 when entity identifier path segment is blank")
+        void deleteEntity_404_with_blank_entity_identifier() throws Exception {
+            mockMvc.perform(delete("/api/v1/entities/{template-identifier}/{entity-identifier}",
+                            TEMPLATE_IDENTIFIER, "")
+                            .accept(APPLICATION_JSON)
+                            .with(csrf()))
+                    .andExpect(status().isInternalServerError());
+        }
+
+        @Test
+        @WithMockUser()
+        @DisplayName("Should return 400 when template identifier path segment is blank")
+        void deleteEntity_404_with_blank_template_identifier() throws Exception {
+            mockMvc.perform(delete("/api/v1/entities/{template-identifier}/{entity-identifier}",
+                            "", ENTITY_IDENTIFIER)
+                            .accept(APPLICATION_JSON)
+                            .with(csrf()))
+                    .andExpect(status().isBadRequest());
+        }
+
+        @Test
+        @WithMockUser()
+        @DisplayName("Should delete entity with properties and relations")
+        void deleteEntity_204_with_properties_and_relations() throws Exception {
+            var entityIdentifier = "test-entity-with-relations";
+
+            mockMvc.perform(MockMvcRequestBuilders.post(ENTITIES_BY_TEMPLATE_IDENTIFIER_PATH, TEMPLATE_IDENTIFIER)
+                            .contentType(APPLICATION_JSON)
+                            .accept(APPLICATION_JSON)
+                            .with(csrf())
+                            .content(createWebServicePayloadWithRelation(
+                                    "Test Entity With Relations",
+                                    entityIdentifier,
+                                    "database-service-1")))
+                    .andExpect(status().isCreated());
+
+            mockMvc.perform(delete(ENTITIES_BY_IDENTIFIER_PATH, TEMPLATE_IDENTIFIER, entityIdentifier)
+                            .accept(APPLICATION_JSON)
+                            .with(csrf()))
+                    .andExpect(status().isNoContent());
+
+            mockMvc.perform(get(ENTITIES_BY_IDENTIFIER_PATH, TEMPLATE_IDENTIFIER, entityIdentifier)
+                            .accept(APPLICATION_JSON))
+                    .andExpect(status().isNotFound());
+        }
+
+        @Test
+        @WithMockUser()
+        @DisplayName("Should idempotently succeed on repeated deletion attempts (first succeeds, second fails)")
+        void deleteEntity_repeated_deletion() throws Exception {
+            var entityIdentifier = "idempotent-test";
+
+            mockMvc.perform(MockMvcRequestBuilders.post(ENTITIES_BY_TEMPLATE_IDENTIFIER_PATH, TEMPLATE_IDENTIFIER)
+                            .contentType(APPLICATION_JSON)
+                            .accept(APPLICATION_JSON)
+                            .with(csrf())
+                            .content(createWebServicePayload("Idempotent Test", entityIdentifier)))
+                    .andExpect(status().isCreated());
+
+            mockMvc.perform(delete(ENTITIES_BY_IDENTIFIER_PATH, TEMPLATE_IDENTIFIER, entityIdentifier)
+                            .accept(APPLICATION_JSON)
+                            .with(csrf()))
+                    .andExpect(status().isNoContent());
+
+            mockMvc.perform(delete(ENTITIES_BY_IDENTIFIER_PATH, TEMPLATE_IDENTIFIER, entityIdentifier)
+                            .accept(APPLICATION_JSON)
+                            .with(csrf()))
+                    .andExpect(status().isNotFound());
+        }
+    }
 }

@@ -287,8 +287,6 @@ When multiple related entities are allowed, list several identifiers:
 }
 ```
 
----
-
 ## Retrieving Entities
 
 ### List Entities by Template
@@ -401,6 +399,58 @@ curl -X PUT http://localhost:8084/api/v1/entities/web-service/my-web-service \
 | `403` | Insufficient permissions                               |
 | `404` | Template or entity not found for the given identifier  |
 | `500` | Unexpected server error                                |
+
+---
+
+## Deleting an Entity
+
+You delete an entity by sending a `DELETE` request to the entity resource path.
+
+### Delete Endpoint
+
+```text
+DELETE /api/v1/entities/{templateIdentifier}/{entityIdentifier}
+```
+
+### Delete Example Request
+
+```bash
+curl -X DELETE http://localhost:8084/api/v1/entities/web-service/my-web-service \
+  -H "Content-Type: application/json"
+```
+
+### Delete Response Codes
+
+| Code  | Description                                            |
+|-------|--------------------------------------------------------|
+| `204` | Entity deleted successfully                            |
+| `400` | Invalid identifiers or deletion not allowed            |
+| `401` | Missing or invalid authentication token                |
+| `403` | Insufficient permissions                               |
+| `404` | Template or entity not found for the given identifier  |
+| `500` | Unexpected server error                                |
+
+### Delete Behavior
+
+When an entity is deleted, IDP-Core automatically manages relation cleanup to maintain referential integrity:
+
+- **Direct deletion**: The entity and all its relations are removed from the system
+- **Cascade cleanup**: Any relations from other entities that reference the deleted entity are automatically removed from those parent entities
+- **Data integrity**: The system ensures no dangling references remain after deletion
+
+#### Example: Cascade Cleanup
+
+If you have:
+
+- Entity A with a relation "depends-on" targeting Entity B
+- Entity B with a relation "owns" targeting Entity C
+
+When you delete Entity B:
+
+1. Entity B is removed completely
+2. Entity A's "depends-on" relation is automatically cleaned up (removing the reference to B)
+3. Entity B's "owns" relation to Entity C is removed
+4. Entity C remains untouched (no incoming relations)
 
 ---
 

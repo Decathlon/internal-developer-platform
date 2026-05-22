@@ -31,8 +31,10 @@ import com.decathlon.idp_core.domain.exception.entity.EntityValidationException;
 import com.decathlon.idp_core.domain.exception.entity_template.EntityTemplateNotFoundException;
 import com.decathlon.idp_core.domain.model.entity.Entity;
 import com.decathlon.idp_core.domain.model.entity.EntityFilter;
+import com.decathlon.idp_core.domain.model.entity.Relation;
 import com.decathlon.idp_core.domain.model.entity.EntitySummary;
 import com.decathlon.idp_core.domain.model.entity_template.EntityTemplate;
+import com.decathlon.idp_core.domain.model.entity_template.RelationDefinition;
 import com.decathlon.idp_core.domain.port.EntityRepositoryPort;
 import com.decathlon.idp_core.domain.service.EntityQueryParserService;
 import com.decathlon.idp_core.domain.service.entity_template.EntityTemplateService;
@@ -252,8 +254,89 @@ class EntityServiceTest {
     verifyNoMoreInteractions(entityRepository);
   }
 
-  private Entity entity(String templateIdentifier, String identifier, String name) {
-    return new Entity(UUID.randomUUID(), templateIdentifier, name, identifier, List.of(),
-        List.of());
-  }
+    @Test
+    @DisplayName("Should remove required one-to-one relation from parent before deleting target entity")
+    void shouldRemoveRequiredOneToOneRelationBeforeDeletingTargetEntity() {
+        var relationId = UUID.randomUUID();
+        var parent = new Entity(
+                UUID.randomUUID(),
+                "application",
+                "Application A",
+                "app-a",
+                List.of(),
+                List.of(new Relation(relationId, "owner", "team", List.of("team-a"))));
+
+        var parentTemplate = new EntityTemplate(
+                UUID.randomUUID(),
+                "application",
+                "Application",
+                "desc",
+                List.of(),
+                List.of(new RelationDefinition(UUID.randomUUID(), "owner", "team", true, false)));
+
+        when(entityRepository.findEntitiesRelated("team-a")).thenReturn(List.of(parent));
+        when(entityTemplateService.getEntityTemplateByIdentifier("application")).thenReturn(parentTemplate);
+        when(entityRepository.findByTemplateIdentifierAndIdentifier("team", "team-a"))
+                .thenReturn(Optional.of(new Entity(UUID.randomUUID(), "team", "team-a", "team-a", List.of(), List.of())));
+
+        entityService.deleteEntity("team", "team-a");
+
+        var expectedParentAfterCleanup = new Entity(
+                parent.id(),
+                parent.templateIdentifier(),
+                parent.name(),
+                parent.identifier(),
+                parent.properties(),
+                List.of());
+
+        InOrder inOrder = inOrder(entityTemplateValidationService, entityValidationService, entityRepository, entityTemplateService, entityRepository);
+        inOrder.verify(entityTemplateValidationService).validateTemplateExists("team");
+        inOrder.verify(entityRepository).findEntitiesRelated("team-a");
+        inOrder.verify(entityTemplateService).getEntityTemplateByIdentifier("application");
+        inOrder.verify(entityRepository).save(expectedParentAfterCleanup);
+        inOrder.verify(entityRepository).deleteByTemplateIdentifierAndIdentifier("team", "team-a");
+    }
+
+    @Test
+    @DisplayName("Should keep relation and remove only deleted target when relation still has targets")
+    void shouldKeepRelationAndRemoveOnlyDeletedTargetWhenRelationStillHasTargets() {
+        var relationId = UUID.randomUUID();
+        var parent = new Entity(
+                UUID.randomUUID(),
+                "application",
+                "Application A",
+                "app-a",
+                List.of(),
+                List.of(new Relation(relationId, "dependencies", "service", List.of("catalog", "billing"))));
+
+        var parentTemplate = new EntityTemplate(
+                UUID.randomUUID(),
+                "application",
+                "Application",
+                "desc",
+                List.of(),
+                List.of(new RelationDefinition(UUID.randomUUID(), "dependencies", "service", false, true)));
+
+        when(entityRepository.findEntitiesRelated("catalog")).thenReturn(List.of(parent));
+        when(entityTemplateService.getEntityTemplateByIdentifier("application")).thenReturn(parentTemplate);
+        when(entityRepository.findByTemplateIdentifierAndIdentifier("service", "catalog"))
+                .thenReturn(Optional.of(new Entity(UUID.randomUUID(), "service", "catalog", "catalog", List.of(), List.of())));
+        entityService.deleteEntity("service", "catalog");
+
+        var expectedParentAfterCleanup = new Entity(
+                parent.id(),
+                parent.templateIdentifier(),
+                parent.name(),
+                parent.identifier(),
+                parent.properties(),
+                List.of(new Relation(relationId, "dependencies", "service", List.of("billing"))));
+
+        verify(entityRepository).save(expectedParentAfterCleanup);
+        verify(entityRepository).deleteByTemplateIdentifierAndIdentifier("service", "catalog");
+    }
+
+    private Entity entity(String templateIdentifier, String identifier, String name) {
+      return new Entity(UUID.randomUUID(), templateIdentifier, name, identifier, List.of(),
+          List.of());
+    }
 }
