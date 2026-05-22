@@ -1,5 +1,7 @@
 package com.decathlon.idp_core.infrastructure.adapters.api.controller;
 
+import static org.hamcrest.Matchers.hasItem;
+import static org.hamcrest.Matchers.not;
 import static org.springframework.http.MediaType.APPLICATION_JSON;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -476,6 +478,37 @@ public class EntityControllerTest extends AbstractIntegrationTest {
                     getJsonTestFileContent(ENTITY_JSON_FILES_TEST_PATH + "searchEntities_200_byRelationsAsTarget.json"),
                     result.getResponse().getContentAsString(),
                     JSONCompareMode.STRICT);
+        }
+
+        @Test
+        @DisplayName("Should search entities by bare relations_as_target presence (EQ)")
+        @WithMockUser
+        void search_200_byRelationsAsTargetPresence() throws Exception {
+            mockMvc.perform(MockMvcRequestBuilders.post(SEARCH_PATH)
+                    .contentType(APPLICATION_JSON)
+                    .accept(APPLICATION_JSON)
+                    .with(csrf())
+                    .content(getJsonTestFileContent(SEARCH_JSON_PATH + "search_request_relations_as_target_presence.json")))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.content.length()").value(1))
+                    .andExpect(jsonPath("$.content[0].identifier").value("microservice-1"));
+        }
+
+        @Test
+        @DisplayName("Should search entities by bare relations_as_target absence (NOT_CONTAINS)")
+        @WithMockUser
+        void search_200_byRelationsAsTargetAbsence() throws Exception {
+            // graph-svc-b and graph-svc-c are targeted by 'uses' relations; they must be excluded.
+            // graph-svc-a has a 'uses' outgoing relation but is itself not targeted; it must be included.
+            mockMvc.perform(MockMvcRequestBuilders.post(SEARCH_PATH)
+                    .contentType(APPLICATION_JSON)
+                    .accept(APPLICATION_JSON)
+                    .with(csrf())
+                    .content(getJsonTestFileContent(SEARCH_JSON_PATH + "search_request_relations_as_target_absence.json")))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.content[*].identifier", hasItem("graph-svc-a")))
+                    .andExpect(jsonPath("$.content[*].identifier", not(hasItem("graph-svc-b"))))
+                    .andExpect(jsonPath("$.content[*].identifier", not(hasItem("graph-svc-c"))));
         }
 
         @Test

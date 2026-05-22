@@ -24,6 +24,7 @@ import com.decathlon.idp_core.domain.model.enums.SearchOperator;
 /// - `relation.{name}` — filters by target entity identifier of a named relation
 /// - `relation.{name}.identifier` — explicit form of the above
 /// - `relation.{name}.name` — filters by target entity name of a named relation
+/// - `relations_as_target` — filters by the presence or absence of any reverse relation by name
 /// - `relations_as_target.{name}.identifier` — filters by source entity identifier in a reverse relation
 /// - `relations_as_target.{name}.name` — filters by source entity name in a reverse relation
 public sealed interface SearchFilterNode {

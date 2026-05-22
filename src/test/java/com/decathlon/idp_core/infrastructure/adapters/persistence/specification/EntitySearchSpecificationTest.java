@@ -188,6 +188,12 @@ class EntitySearchSpecificationTest {
         }
 
         @Test
+        @DisplayName("bare 'relations_as_target' field (filter on reverse relation name) returns non-null spec")
+        void bareRelationsAsTargetField_returnsSpec() {
+            assertThat(specFor("relations_as_target", SearchOperator.NOT_CONTAINS, "used_by")).isNotNull();
+        }
+
+        @Test
         @DisplayName("bare 'relation' field (filter on relation name) returns non-null spec")
         void bareRelationField_returnsSpec() {
             assertThat(specFor("relation", SearchOperator.CONTAINS, "api-link")).isNotNull();

@@ -1,0 +1,11 @@
+{
+  "filter": {
+    "connector": "AND",
+    "criteria": [
+      { "field": "template", "operation": "EQ", "value": "microservice" },
+      { "field": "relations_as_target", "operation": "EQ", "value": "api-link" }
+    ]
+  },
+  "page": 0,
+  "size": 20
+}

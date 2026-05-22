@@ -89,7 +89,7 @@ public class ValidationMessages {
     // Search filter validation messages
     public static final String SEARCH_INVALID_CONNECTOR = "Invalid connector '%s'. Supported values: AND, OR";
     public static final String SEARCH_INVALID_OPERATOR = "Invalid operation '%s'. Supported values: EQ, NEQ, CONTAINS, NOT_CONTAINS, STARTS_WITH, ENDS_WITH, GT, GTE, LT, LTE";
-    public static final String SEARCH_INVALID_FIELD = "Unknown field '%s'. Supported fields: template, identifier, name, relation, property.{name}, relation.{name}, relation.{name}.identifier, relation.{name}.name, relations_as_target.{name}.identifier, relations_as_target.{name}.name";
+    public static final String SEARCH_INVALID_FIELD = "Unknown field '%s'. Supported fields: template, identifier, name, relation, property.{name}, relation.{name}, relation.{name}.identifier, relation.{name}.name, relations_as_target, relations_as_target.{name}.identifier, relations_as_target.{name}.name";
     public static final String SEARCH_TOO_MANY_CRITERIA = "Search filter exceeds maximum of %d total criteria";
     public static final String SEARCH_NESTING_TOO_DEEP = "Search filter exceeds maximum nesting depth of %d";
     public static final String SEARCH_CRITERION_MISSING_FIELD = "A criterion node must have a non-blank 'field'";

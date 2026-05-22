@@ -53,6 +53,7 @@ public final class EntitySearchSpecification {
     private static final String NAME = "name";
     private static final String RELATION = "relation";
     private static final String RELATIONS = "relations";
+    private static final String RELATIONS_AS_TARGET = "relations_as_target";
     private static final String TARGET_ENTITY_IDENTIFIERS = "targetEntityIdentifiers";
     private static final String PROPERTY_PREFIX = "property.";
     private static final String RELATION_PREFIX = "relation.";
@@ -144,6 +145,9 @@ public final class EntitySearchSpecification {
         }
         if (field.startsWith(RELATIONS_AS_TARGET_PREFIX)) {
             return relationsAsTargetSpec(c, field.substring(RELATIONS_AS_TARGET_PREFIX.length()));
+        }
+        if (RELATIONS_AS_TARGET.equals(field)) {
+            return relationsAsTargetNameSpec(c);
         }
         if (RELATION.equals(field)) {
             return relationNameSpec(c);
@@ -248,6 +252,32 @@ public final class EntitySearchSpecification {
     }
 
     // --- Relations-as-target specs ---
+
+    private static Specification<EntityJpaEntity> relationsAsTargetNameSpec(SearchFilterNode.Criterion c) {
+        return (root, query, cb) -> {
+            // Subquery: collect all target entity identifiers from relations whose name matches.
+            // For NOT_CONTAINS / NEQ (negative operators): use NOT IN with the positive equivalent
+            // predicate so that the result means "not targeted by any matching reverse relation",
+            // which is the natural set-membership interpretation of "does not contain".
+            SearchOperator effectiveOp = switch (c.operation()) {
+                case NOT_CONTAINS -> SearchOperator.CONTAINS;
+                case NEQ -> SearchOperator.EQ;
+                default -> c.operation();
+            };
+
+            Subquery<String> subquery = query.subquery(String.class);
+            Root<EntityJpaEntity> sourceRoot = subquery.from(EntityJpaEntity.class);
+            Join<EntityJpaEntity, RelationJpaEntity> relJoin = sourceRoot.join(RELATIONS);
+            Join<RelationJpaEntity, String> targetJoin = relJoin.join(TARGET_ENTITY_IDENTIFIERS);
+            subquery.select(targetJoin)
+                    .where(buildPredicate(cb, relJoin.get(NAME), effectiveOp, c.value()));
+
+            boolean isNegated = c.operation() == SearchOperator.NOT_CONTAINS
+                    || c.operation() == SearchOperator.NEQ;
+            var membership = cb.in(root.get(IDENTIFIER)).value(subquery);
+            return isNegated ? cb.not(membership) : membership;
+        };
+    }
 
     private static Specification<EntityJpaEntity> relationsAsTargetSpec(
             SearchFilterNode.Criterion c, String relPart) {

@@ -34,7 +34,7 @@ public class EntitySearchDomainMapper {
     private static final String PROPERTY_PREFIX = "property.";
     private static final String RELATION_PREFIX = "relation.";
     private static final String RELATIONS_AS_TARGET_PREFIX = "relations_as_target.";
-    private static final Set<String> SIMPLE_FIELDS = Set.of("template", "identifier", "name", "relation");
+    private static final Set<String> SIMPLE_FIELDS = Set.of("template", "identifier", "name", "relation", "relations_as_target");
     private static final Set<SearchOperator> NUMERIC_OPERATORS =
             Set.of(SearchOperator.GT, SearchOperator.GTE, SearchOperator.LT,
                    SearchOperator.LTE);

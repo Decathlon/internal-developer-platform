@@ -1,0 +1,11 @@
+{
+  "filter": {
+    "connector": "AND",
+    "criteria": [
+      { "field": "template", "operation": "EQ", "value": "web-service" },
+      { "field": "relations_as_target", "operation": "NOT_CONTAINS", "value": "uses" }
+    ]
+  },
+  "page": 0,
+  "size": 20
+}

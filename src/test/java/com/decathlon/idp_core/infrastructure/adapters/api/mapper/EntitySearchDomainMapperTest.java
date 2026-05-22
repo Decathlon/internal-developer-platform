@@ -215,6 +215,12 @@ class EntitySearchDomainMapperTest {
         }
 
         @Test
+        @DisplayName("'relations_as_target' bare field is accepted")
+        void relationsAsTargetBareField_accepted() {
+            assertThat(criterionFor("relations_as_target")).isNotNull();
+        }
+
+        @Test
         @DisplayName("'relations_as_target.{name}.identifier' field is accepted")
         void relationsAsTargetIdentifierField_accepted() {
             assertThat(criterionFor("relations_as_target.api-link.identifier")).isNotNull();
