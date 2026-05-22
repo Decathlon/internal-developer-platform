@@ -1,4 +1,4 @@
-package com.decathlon.idp_core.domain.service;
+package com.decathlon.idp_core.domain.service.relation;
 
 import java.util.List;
 
@@ -11,9 +11,10 @@ import lombok.AllArgsConstructor;
 
 /// Domain service for managing entity relationship queries and navigation.
 ///
-/// **Business purpose:** Provides specialized relationship queries for understanding
-/// entity interconnections and dependency analysis. Supports reverse relationship
-/// navigation to identify which entities reference a given target entity.
+/// **Business purpose:** Provides specialized relationship queries for
+/// understanding entity interconnections and dependency analysis. Supports
+/// reverse relationship navigation to identify which entities reference a given
+/// target entity.
 ///
 /// **Key responsibilities:**
 /// - Relationship impact analysis for entity deletion scenarios
@@ -32,8 +33,10 @@ public class RelationService {
     /// deletion or modification operations.
     ///
     /// @param targetEntityIdentifiers business identifiers of entities to analyze
-    /// @return relationship summaries showing incoming connections to target entities
-    public List<RelationAsTargetSummary> findRelationsSummariesByTargetEntityIdentifiers(List<String> targetEntityIdentifiers) {
+    /// @return relationship summaries showing incoming connections to
+    ///         target entities
+    public List<RelationAsTargetSummary> findRelationsSummariesByTargetEntityIdentifiers(
+            List<String> targetEntityIdentifiers) {
         return relationRepository.findRelationsSummariesByTargetEntityIdentifiers(targetEntityIdentifiers);
     }
 
