@@ -66,6 +66,8 @@ public class SwaggerDescription {
 
     public static final String ENDPOINT_POST_ENTITY_SUMMARY = "Create a new entity";
     public static final String ENDPOINT_POST_ENTITY_DESCRIPTION = "Create a new entity in the system with the provided information";
+    public static final String ENDPOINT_PUT_ENTITY_SUMMARY = "Update an existing entity";
+    public static final String ENDPOINT_PUT_ENTITY_DESCRIPTION = "Update an existing entity in the system with the provided information";
 
 
     /// API response description constants
@@ -86,6 +88,7 @@ public class SwaggerDescription {
     public static final String RESPONSE_ENTITY_FOUND = "Entity found";
     public static final String RESPONSE_ENTITY_NOT_FOUND_IDENTIFIER = "Entity not found with the provided identifier";
     public static final String RESPONSE_ENTITY_CREATED = "Entity created successfully";
+    public static final String RESPONSE_ENTITY_UPDATED = "Entity updated successfully";
     public static final String RESPONSE_INVALID_ENTITY_DATA = "Invalid entity data provided";
     public static final String RESPONSE_UNEXPECTED_SERVER_ERROR = "Unexpected server-side failure";
     public static final String RESPONSE_INSUFFICIENT_RIGHTS = "Insufficient rights";
@@ -103,6 +106,8 @@ public class SwaggerDescription {
     public static final String SCHEMA_RELATION_DEFINITION_OUT = "Output DTO for relation definition";
     public static final String SCHEMA_PROPERTY_RULES_OUT = "Output DTO for property validation rules";
     public static final String SCHEMA_ENTITY_IN = "Input DTO for creating or updating an entity";
+    public static final String SCHEMA_ENTITY_CREATE_IN = "Input DTO for creating an entity";
+    public static final String SCHEMA_ENTITY_UPDATE_IN = "Input DTO for updating an entity";
     public static final String SCHEMA_ENTITY_RELATION_IN = "Input DTO for an entity relation instance";
 
     // --- Field descriptions (shared) ---

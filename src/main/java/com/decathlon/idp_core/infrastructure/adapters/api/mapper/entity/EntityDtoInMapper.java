@@ -2,15 +2,15 @@ package com.decathlon.idp_core.infrastructure.adapters.api.mapper.entity;
 
 import java.util.Collections;
 import java.util.List;
-import java.util.Map;
 
-import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
 import com.decathlon.idp_core.domain.model.entity.Entity;
 import com.decathlon.idp_core.domain.model.entity.Property;
 import com.decathlon.idp_core.domain.model.entity.Relation;
-import com.decathlon.idp_core.infrastructure.adapters.api.dto.in.EntityDtoIn;
+import com.decathlon.idp_core.infrastructure.adapters.api.dto.in.EntityCreateDtoIn;
+import com.decathlon.idp_core.infrastructure.adapters.api.dto.in.EntityDtoInCommonFields;
+import com.decathlon.idp_core.infrastructure.adapters.api.dto.in.EntityUpdateDtoIn;
 
 /// Adapter mapper for converting API request DTOs to domain [Entity] objects.
 ///
@@ -28,40 +28,56 @@ import com.decathlon.idp_core.infrastructure.adapters.api.dto.in.EntityDtoIn;
 /// **API contract support:** Enables clean separation between API request format
 /// and internal domain model structure for maintainable API evolution.
 @Component
-@RequiredArgsConstructor
 public class EntityDtoInMapper {
 
     /// Converts an entity creation request DTO to a domain entity.
     ///
-    /// @param entityDtoIn              the entity creation request payload
+    /// @param entityCreateDtoIn        the entity creation request payload
     /// @param entityTemplateIdentifier the target template identifier
     /// @return the mapped domain entity with audit fields populated
-    public Entity fromEntityDtoInToEntity(EntityDtoIn entityDtoIn, String entityTemplateIdentifier) {
+    public Entity fromPostEntityDtoInToEntity(EntityCreateDtoIn entityCreateDtoIn, String entityTemplateIdentifier) {
+        return buildEntity(
+                entityCreateDtoIn.getEntityDtoInCommonFields(),
+                entityTemplateIdentifier,
+                entityCreateDtoIn.getIdentifier()
+        );
+    }
 
-        List<Property> properties = entityDtoIn.getProperties() == null ? Collections.emptyList()
-                : entityDtoIn.getProperties().entrySet().stream()
-                .map((Map.Entry<String, String> entry) -> new Property(
-                        null,
-                        entry.getKey(),
-                        entry.getValue()
-                ))
+    /// Converts an entity update request DTO to a domain entity.
+    ///
+    /// @param entityUpdateDtoIn        the entity update request payload
+    /// @param entityTemplateIdentifier the target template identifier
+    /// @param entityIdentifier         the target entity identifier from request path
+    /// @return the mapped domain entity with audit fields populated
+    public Entity fromPutEntityDtoInToEntity(EntityUpdateDtoIn entityUpdateDtoIn,
+            String entityTemplateIdentifier,
+            String entityIdentifier) {
+        return buildEntity(
+                entityUpdateDtoIn.getEntityDtoInCommonFields(),
+                entityTemplateIdentifier,
+                entityIdentifier
+        );
+    }
+
+    /// Shared helper method to build the domain entity from common fields.
+    private Entity buildEntity(EntityDtoInCommonFields commonFields, String entityTemplateIdentifier, String identifier) {
+        List<Property> properties = commonFields.getProperties() == null
+                ? Collections.emptyList()
+                : commonFields.getProperties().entrySet().stream()
+                .map(entry -> new Property(null, entry.getKey(), entry.getValue()))
                 .toList();
 
-        List<Relation> relations = entityDtoIn.getRelations() == null ? Collections.emptyList()
-                : entityDtoIn.getRelations().stream()
-                .map(relDto -> new Relation(
-                        null,
-                        relDto.getName(),
-                        null,
-                        relDto.getTargetEntityIdentifiers()
-                ))
+        List<Relation> relations = commonFields.getRelations() == null
+                ? Collections.emptyList()
+                : commonFields.getRelations().stream()
+                .map(relDto -> new Relation(null, relDto.getName(), null, relDto.getTargetEntityIdentifiers()))
                 .toList();
 
         return new Entity(
                 null,
                 entityTemplateIdentifier,
-                entityDtoIn.getName(),
-                entityDtoIn.getIdentifier(),
+                commonFields.getName(),
+                identifier,
                 properties,
                 relations
         );

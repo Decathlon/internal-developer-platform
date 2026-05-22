@@ -309,6 +309,109 @@ GET /api/v1/entities/{templateIdentifier}/{entityIdentifier}
 
 ---
 
+## Updating an Entity
+
+You update an existing entity by sending a `PUT` request on the entity resource path.
+
+### Update Endpoint
+
+```text
+PUT /api/v1/entities/{templateIdentifier}/identifier/{entityIdentifier}
+```
+
+### Update Request Body
+
+The request body follows the same shape and validation rules as `POST /api/v1/entities/{templateIdentifier}`.
+
+```json
+{
+  "name": "my-web-service-updated",
+  "identifier": "my-web-service",
+  "properties": {
+    "applicationName": "catalog-api",
+    "ownerEmail": "owner@example.com",
+    "port": "8080",
+    "environment": "DEV",
+    "version": "1.2.3",
+    "teamName": "platform-team",
+    "baseUrl": "https://catalog.example.com",
+    "protocol": "HTTP",
+    "programmingLanguage": "JAVA"
+  },
+  "relations": [
+    {
+      "name": "depends-on",
+      "target_entity_identifiers": [
+        "web-api-1"
+      ]
+    }
+  ]
+}
+```
+
+### Update Example Request
+
+```bash
+curl -X PUT http://localhost:8084/api/v1/entities/web-service/identifier/my-web-service \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "my-web-service-updated",
+    "identifier": "my-web-service",
+    "properties": {
+      "applicationName": "catalog-api",
+      "ownerEmail": "owner@example.com",
+      "port": "8080",
+      "environment": "DEV",
+      "version": "1.2.3",
+      "teamName": "platform-team",
+      "baseUrl": "https://catalog.example.com",
+      "protocol": "HTTP",
+      "programmingLanguage": "JAVA"
+    }
+  }'
+```
+
+### Update Example Response
+
+```json
+{
+  "identifier": "my-web-service",
+  "name": "my-web-service-updated",
+  "template_identifier": "web-service",
+  "properties": {
+    "applicationName": "catalog-api",
+    "ownerEmail": "owner@example.com",
+    "port": "8080",
+    "environment": "DEV",
+    "version": "1.2.3",
+    "teamName": "platform-team",
+    "baseUrl": "https://catalog.example.com",
+    "protocol": "HTTP",
+    "programmingLanguage": "JAVA"
+  },
+  "relations": {},
+  "relations_as_target": {}
+}
+```
+
+### Additional Rule for Update
+
+- `identifier` in the request body must match `{entityIdentifier}` in the path.
+- If they differ, the API returns `400 Bad Request`.
+
+### Update Response Codes
+
+| Code  | Description                                            |
+|-------|--------------------------------------------------------|
+| `200` | Entity updated successfully                            |
+| `400` | Invalid request body or validation failure             |
+| `401` | Missing or invalid authentication token                |
+| `403` | Insufficient permissions                               |
+| `404` | Template or entity not found for the given identifier  |
+| `500` | Unexpected server error                                |
+
+---
+
 ## Dynamic Schema
 
 Because templates are configured at runtime, the entity structure is **dynamic**:
