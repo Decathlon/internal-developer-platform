@@ -6,6 +6,7 @@ import static com.decathlon.idp_core.infrastructure.adapters.api.configuration.S
 import static com.decathlon.idp_core.infrastructure.adapters.api.configuration.SwaggerDescription.OK_CODE;
 import static com.decathlon.idp_core.infrastructure.adapters.api.configuration.SwaggerDescription.PARAM_DEPTH_DESCRIPTION;
 import static com.decathlon.idp_core.infrastructure.adapters.api.configuration.SwaggerDescription.PARAM_INCLUDE_DATA_DESCRIPTION;
+import static com.decathlon.idp_core.infrastructure.adapters.api.configuration.SwaggerDescription.PARAM_PROPERTIES_DESCRIPTION;
 import static com.decathlon.idp_core.infrastructure.adapters.api.configuration.SwaggerDescription.PARAM_RELATIONS_DESCRIPTION;
 import static com.decathlon.idp_core.infrastructure.adapters.api.configuration.SwaggerDescription.RESPONSE_ENTITY_GRAPH_FLAT_SUCCESS;
 import static com.decathlon.idp_core.infrastructure.adapters.api.configuration.SwaggerDescription.RESPONSE_ENTITY_NOT_FOUND_IDENTIFIER;
@@ -60,6 +61,7 @@ public class EntityGraphController {
     /// @param depth              the maximum traversal depth (default 1, clamped between 1 and 10)
     /// @param includeData        when true, each node includes a data object with entity property values
     /// @param relations          when provided, only relations with matching names are included
+    /// @param properties         when provided, each node's data object is restricted to the listed property names
     /// @return flat DTO containing nodes and edges arrays
     @GetMapping("/{templateIdentifier}/{entityIdentifier}/graph")
     @ResponseStatus(OK)
@@ -79,16 +81,19 @@ public class EntityGraphController {
             @Parameter(description = PARAM_DEPTH_DESCRIPTION)
             @RequestParam(defaultValue = "1") int depth,
             @Parameter(description = PARAM_INCLUDE_DATA_DESCRIPTION)
-            @RequestParam(defaultValue = "false") boolean includeData,
+            @RequestParam(name = "include_data", defaultValue = "false") boolean includeData,
             @Parameter(description = PARAM_RELATIONS_DESCRIPTION)
-            @RequestParam(required = false) List<String> relations) {
+            @RequestParam(required = false) List<String> relations,
+            @Parameter(description = PARAM_PROPERTIES_DESCRIPTION)
+            @RequestParam(required = false) List<String> properties) {
 
-        // Convert the nullable list to a Set for O(1) lookup; empty set means no filter
+        // Convert the nullable lists to Sets for O(1) lookup; empty set means no filter
         Set<String> relationFilter = relations != null ? Set.copyOf(relations) : Set.of();
+        Set<String> propertyFilter = properties != null ? Set.copyOf(properties) : Set.of();
 
         EntityGraphNode graphNode = entityGraphService.getEntityGraph(
                 templateIdentifier, entityIdentifier, depth, includeData);
 
-        return EntityGraphFlatDtoOutMapper.toFlatDto(graphNode, relationFilter);
+        return EntityGraphFlatDtoOutMapper.toFlatDto(graphNode, relationFilter, propertyFilter);
     }
 }

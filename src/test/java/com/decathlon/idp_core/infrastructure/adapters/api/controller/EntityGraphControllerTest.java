@@ -152,4 +152,72 @@ public class EntityGraphControllerTest extends AbstractIntegrationTest {
                     .andExpect(status().isUnauthorized());
         }
     }
+
+    @Nested
+    @DisplayName("With 'properties' filter (include_data=true)")
+    class PropertyFilter {
+
+        @Test
+        @WithMockUser
+        @DisplayName("Should include only requested property in each node's data when one property is requested")
+        void shouldIncludeOnlyRequestedProperty() throws Exception {
+            mockMvc.perform(get(GRAPH_PATH, TEMPLATE, ENTITY_A)
+                            .param("depth", "3")
+                            .param("include_data", "true")
+                            .param("properties", "tier")
+                            .accept(APPLICATION_JSON))
+                    .andExpect(status().isOk())
+                    .andExpect(content().contentType(APPLICATION_JSON))
+                    // All three nodes are still returned
+                    .andExpect(jsonPath("$.nodes[*].identifier",
+                            containsInAnyOrder(ENTITY_A, ENTITY_B, ENTITY_C)))
+                    // Each node's data must contain "tier" …
+                    .andExpect(jsonPath("$.nodes[0].data.tier").exists())
+                    // … but must NOT contain "version"
+                    .andExpect(jsonPath("$.nodes[0].data.version").doesNotExist());
+        }
+
+        @Test
+        @WithMockUser
+        @DisplayName("Should include multiple requested properties in each node's data")
+        void shouldIncludeMultipleRequestedProperties() throws Exception {
+            mockMvc.perform(get(GRAPH_PATH, TEMPLATE, ENTITY_A)
+                            .param("depth", "3")
+                            .param("include_data", "true")
+                            .param("properties", "tier")
+                            .param("properties", "version")
+                            .accept(APPLICATION_JSON))
+                    .andExpect(status().isOk())
+                    .andExpect(content().contentType(APPLICATION_JSON))
+                    .andExpect(jsonPath("$.nodes[0].data.tier").exists())
+                    .andExpect(jsonPath("$.nodes[0].data.version").exists());
+        }
+
+        @Test
+        @WithMockUser
+        @DisplayName("Should return empty data when requested property does not exist on entity")
+        void shouldReturnEmptyDataForUnknownProperty() throws Exception {
+            mockMvc.perform(get(GRAPH_PATH, TEMPLATE, ENTITY_A)
+                            .param("depth", "3")
+                            .param("include_data", "true")
+                            .param("properties", "non-existent-prop")
+                            .accept(APPLICATION_JSON))
+                    .andExpect(status().isOk())
+                    // data field is omitted from JSON when empty (@JsonInclude NON_EMPTY)
+                    .andExpect(jsonPath("$.nodes[0].data").doesNotExist());
+        }
+
+        @Test
+        @WithMockUser
+        @DisplayName("Should include all properties when no property filter is supplied")
+        void shouldIncludeAllPropertiesWithoutFilter() throws Exception {
+            mockMvc.perform(get(GRAPH_PATH, TEMPLATE, ENTITY_A)
+                            .param("depth", "3")
+                            .param("include_data", "true")
+                            .accept(APPLICATION_JSON))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.nodes[0].data.tier").exists())
+                    .andExpect(jsonPath("$.nodes[0].data.version").exists());
+        }
+    }
 }
