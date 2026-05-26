@@ -1,5 +1,6 @@
 package com.decathlon.idp_core.infrastructure.adapters.api.dto.in;
 
+import java.util.Collections;
 import java.util.List;
 
 import io.swagger.v3.oas.annotations.media.Schema;
@@ -28,6 +29,14 @@ public record FilterNodeDtoIn(
         String operation,
 
         @Schema(description = "Value to compare against for a criterion node. Required for leaf nodes.", example = "microservice")
-        String value
-) {
+        String value) {
+
+    public FilterNodeDtoIn {
+        criteria = criteria == null ? null : Collections.unmodifiableList(List.copyOf(criteria));
+    }
+
+    @Override
+    public List<FilterNodeDtoIn> criteria() {
+        return criteria == null ? null : Collections.unmodifiableList(criteria);
+    }
 }
