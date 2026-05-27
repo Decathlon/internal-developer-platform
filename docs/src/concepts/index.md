@@ -49,6 +49,12 @@ graph TB
 
     Connections between entities forming a knowledge graph.
 
+- 🔍 **[Filtering Entities](entity-filtering.md)**
+
+    ---
+
+    Query entities by attributes, property values, and relations using the filter DSL.
+
 </div>
 
 ---

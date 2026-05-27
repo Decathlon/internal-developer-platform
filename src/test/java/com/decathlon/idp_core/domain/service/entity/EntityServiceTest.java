@@ -28,9 +28,11 @@ import com.decathlon.idp_core.domain.exception.entity.EntityAlreadyExistsExcepti
 import com.decathlon.idp_core.domain.exception.entity.EntityNotFoundException;
 import com.decathlon.idp_core.domain.exception.entity_template.EntityTemplateNotFoundException;
 import com.decathlon.idp_core.domain.model.entity.Entity;
+import com.decathlon.idp_core.domain.model.entity.EntityFilter;
 import com.decathlon.idp_core.domain.model.entity.EntitySummary;
 import com.decathlon.idp_core.domain.model.entity_template.EntityTemplate;
 import com.decathlon.idp_core.domain.port.EntityRepositoryPort;
+import com.decathlon.idp_core.domain.service.EntityQueryParserService;
 import com.decathlon.idp_core.domain.service.entity_template.EntityTemplateService;
 import com.decathlon.idp_core.domain.service.entity_template.EntityTemplateValidationService;
 
@@ -51,6 +53,9 @@ class EntityServiceTest {
     @Mock
     private EntityTemplateService entityTemplateService;
 
+    @Mock
+    private EntityQueryParserService entityQueryParserService;
+
     @InjectMocks
     private EntityService entityService;
 
@@ -60,13 +65,19 @@ class EntityServiceTest {
         var pageable = Pageable.ofSize(10);
         var entity = entity("template-a", "entity-a", "Entity A");
         var page = new PageImpl<>(List.of(entity));
+        var template = new EntityTemplate(UUID.randomUUID(), "template-a", "Template A", "desc", List.of(),
+                List.of());
 
-        when(entityRepository.findByTemplateIdentifier("template-a", pageable)).thenReturn(page);
+        when(entityTemplateService.getEntityTemplateByIdentifier("template-a")).thenReturn(template);
+        when(entityRepository.findByTemplateIdentifierWithFilter("template-a", EntityFilter.empty(), pageable))
+                .thenReturn(page);
 
-        var result = entityService.getEntitiesByTemplateIdentifier(pageable, "template-a");
+        var result = entityService.getEntitiesByTemplateIdentifier(pageable, "template-a", null);
 
         assertSame(page, result);
-        verify(entityRepository).findByTemplateIdentifier("template-a", pageable);
+        verify(entityTemplateService).getEntityTemplateByIdentifier("template-a");
+        verify(entityQueryParserService).validateFilterPropertyTypes(EntityFilter.empty(), template);
+        verify(entityRepository).findByTemplateIdentifierWithFilter("template-a", EntityFilter.empty(), pageable);
     }
 
     @Test
@@ -75,7 +86,7 @@ class EntityServiceTest {
         var summaries = List.of(new EntitySummary("service-a", "Service A", "web-service"));
         when(entityRepository.findByIdentifierIn(List.of("service-a"))).thenReturn(summaries);
 
-        var result = entityService.getEntitiesSummariesByIndentifiers(List.of("service-a"));
+        var result = entityService.getEntitiesSummariesByIdentifiers(List.of("service-a"));
 
         assertEquals(summaries, result);
         verify(entityRepository).findByIdentifierIn(List.of("service-a"));
