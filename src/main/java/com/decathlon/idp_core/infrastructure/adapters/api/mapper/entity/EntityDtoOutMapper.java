@@ -20,13 +20,13 @@ import com.decathlon.idp_core.domain.model.entity.RelationAsTargetSummary;
 import com.decathlon.idp_core.domain.model.entity_template.EntityTemplate;
 import com.decathlon.idp_core.domain.model.entity_template.PropertyDefinition;
 import com.decathlon.idp_core.domain.model.enums.PropertyType;
-import com.decathlon.idp_core.domain.service.EntityService;
+import com.decathlon.idp_core.domain.service.entity.EntityService;
 import com.decathlon.idp_core.domain.service.entity_template.EntityTemplateService;
-import com.decathlon.idp_core.domain.service.RelationService;
+import com.decathlon.idp_core.domain.service.relation.RelationService;
 import com.decathlon.idp_core.infrastructure.adapters.api.dto.out.entity.EntityDtoOut;
 import com.decathlon.idp_core.infrastructure.adapters.api.dto.out.entity.EntitySummaryDto;
 
-import lombok.AllArgsConstructor;
+import lombok.RequiredArgsConstructor;
 
 /// Adapter mapper for converting domain [Entity] objects to API DTOs.
 ///
@@ -46,12 +46,12 @@ import lombok.AllArgsConstructor;
 /// - Integrates with Jackson for JSON serialization patterns
 /// - Stateless design ensures thread safety in web containers
 @Component
-@AllArgsConstructor
+@RequiredArgsConstructor
 public class EntityDtoOutMapper {
 
-    private final EntityTemplateService entityTemplateService;
-    private final EntityService entityService;
-    private final RelationService relationService;
+        private final EntityTemplateService entityTemplateService;
+        private final EntityService entityService;
+        private final RelationService relationService;
 
     /// Maps a single domain entity to API DTO using template-based conversion.
     ///
@@ -300,7 +300,7 @@ public class EntityDtoOutMapper {
     private Map<String, EntitySummaryDto> buildEntitiesSummariesMap(List<String> targetIdentifiers) {
         return targetIdentifiers.isEmpty()
                 ? Collections.emptyMap()
-                : entityService.getEntitiesSummariesByIndentifiers(targetIdentifiers)
+                : entityService.getEntitiesSummariesByIdentifiers(targetIdentifiers)
                         .stream()
                         .collect(Collectors.toMap(
                                 EntitySummary::identifier,

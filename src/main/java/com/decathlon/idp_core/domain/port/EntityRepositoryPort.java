@@ -35,6 +35,8 @@ public interface EntityRepositoryPort {
 
     Optional<Entity> findByTemplateIdentifierAndIdentifier(String templateIdentifier, String identifier);
 
+    Optional<Entity> findByTemplateIdentifierAndName(String templateIdentifier, String entityName);
+
     Page<Entity> findByTemplateIdentifier(String templateIdentifier, Pageable pageable);
 
     Page<Entity> findByTemplateIdentifierWithFilter(String templateIdentifier, EntityFilter filter, Pageable pageable);

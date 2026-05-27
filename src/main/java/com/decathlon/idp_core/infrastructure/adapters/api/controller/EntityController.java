@@ -1,6 +1,7 @@
 package com.decathlon.idp_core.infrastructure.adapters.api.controller;
 
 import static com.decathlon.idp_core.infrastructure.adapters.api.configuration.SwaggerDescription.BAD_REQUEST_CODE;
+import static com.decathlon.idp_core.infrastructure.adapters.api.configuration.SwaggerDescription.CONFLICT_CODE;
 import static com.decathlon.idp_core.infrastructure.adapters.api.configuration.SwaggerDescription.CREATED_CODE;
 import static com.decathlon.idp_core.infrastructure.adapters.api.configuration.SwaggerDescription.ENDPOINT_GET_ENTITIES_PAGINATED_DESCRIPTION;
 import static com.decathlon.idp_core.infrastructure.adapters.api.configuration.SwaggerDescription.ENDPOINT_GET_ENTITIES_SUMMARY;
@@ -8,6 +9,8 @@ import static com.decathlon.idp_core.infrastructure.adapters.api.configuration.S
 import static com.decathlon.idp_core.infrastructure.adapters.api.configuration.SwaggerDescription.ENDPOINT_GET_ENTITY_BY_IDENTIFIER_SUMMARY;
 import static com.decathlon.idp_core.infrastructure.adapters.api.configuration.SwaggerDescription.ENDPOINT_POST_ENTITY_DESCRIPTION;
 import static com.decathlon.idp_core.infrastructure.adapters.api.configuration.SwaggerDescription.ENDPOINT_POST_ENTITY_SUMMARY;
+import static com.decathlon.idp_core.infrastructure.adapters.api.configuration.SwaggerDescription.FORBIDDEN_CODE;
+import static com.decathlon.idp_core.infrastructure.adapters.api.configuration.SwaggerDescription.INTERNAL_SERVER_ERROR_CODE;
 import static com.decathlon.idp_core.infrastructure.adapters.api.configuration.SwaggerDescription.NOT_FOUND_CODE;
 import static com.decathlon.idp_core.infrastructure.adapters.api.configuration.SwaggerDescription.OK_CODE;
 import static com.decathlon.idp_core.infrastructure.adapters.api.configuration.SwaggerDescription.PARAM_PAGE_DESCRIPTION;
@@ -15,17 +18,21 @@ import static com.decathlon.idp_core.infrastructure.adapters.api.configuration.S
 import static com.decathlon.idp_core.infrastructure.adapters.api.configuration.SwaggerDescription.PARAM_SIZE_DESCRIPTION;
 import static com.decathlon.idp_core.infrastructure.adapters.api.configuration.SwaggerDescription.PARAM_SORT_DESCRIPTION;
 import static com.decathlon.idp_core.infrastructure.adapters.api.configuration.SwaggerDescription.RESPONSE_ENTITIES_PAGINATED_SUCCESS;
+import static com.decathlon.idp_core.infrastructure.adapters.api.configuration.SwaggerDescription.RESPONSE_ENTITY_CONFLICT;
 import static com.decathlon.idp_core.infrastructure.adapters.api.configuration.SwaggerDescription.RESPONSE_ENTITY_CREATED;
 import static com.decathlon.idp_core.infrastructure.adapters.api.configuration.SwaggerDescription.RESPONSE_ENTITY_FOUND;
 import static com.decathlon.idp_core.infrastructure.adapters.api.configuration.SwaggerDescription.RESPONSE_ENTITY_NOT_FOUND_IDENTIFIER;
+import static com.decathlon.idp_core.infrastructure.adapters.api.configuration.SwaggerDescription.RESPONSE_INSUFFICIENT_RIGHTS;
 import static com.decathlon.idp_core.infrastructure.adapters.api.configuration.SwaggerDescription.RESPONSE_INVALID_ENTITY_DATA;
 import static com.decathlon.idp_core.infrastructure.adapters.api.configuration.SwaggerDescription.RESPONSE_INVALID_PAGINATION;
 import static com.decathlon.idp_core.infrastructure.adapters.api.configuration.SwaggerDescription.RESPONSE_INVALID_QUERY;
+import static com.decathlon.idp_core.infrastructure.adapters.api.configuration.SwaggerDescription.RESPONSE_TEMPLATE_NOT_FOUND_IDENTIFIER;
+import static com.decathlon.idp_core.infrastructure.adapters.api.configuration.SwaggerDescription.RESPONSE_UNAUTHORIZED;
+import static com.decathlon.idp_core.infrastructure.adapters.api.configuration.SwaggerDescription.RESPONSE_UNEXPECTED_SERVER_ERROR;
+import static com.decathlon.idp_core.infrastructure.adapters.api.configuration.SwaggerDescription.UNAUTHORIZED_CODE;
 import static org.springframework.http.HttpStatus.CREATED;
 import static org.springframework.http.HttpStatus.OK;
 
-import io.swagger.v3.oas.annotations.Parameter;
-import io.swagger.v3.oas.annotations.enums.ParameterIn;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -42,7 +49,7 @@ import org.springframework.web.bind.annotation.RestController;
 import com.decathlon.idp_core.domain.model.entity.Entity;
 import com.decathlon.idp_core.domain.model.entity.EntityFilter;
 import com.decathlon.idp_core.domain.service.EntityQueryParserService;
-import com.decathlon.idp_core.domain.service.EntityService;
+import com.decathlon.idp_core.domain.service.entity.EntityService;
 import com.decathlon.idp_core.infrastructure.adapters.api.configuration.SwaggerConfiguration.EntityPageResponse;
 import com.decathlon.idp_core.infrastructure.adapters.api.dto.in.EntityDtoIn;
 import com.decathlon.idp_core.infrastructure.adapters.api.dto.out.entity.EntityDtoOut;
@@ -52,11 +59,15 @@ import com.decathlon.idp_core.infrastructure.adapters.api.mapper.entity.EntityDt
 import com.decathlon.idp_core.infrastructure.adapters.api.mapper.entity.EntityDtoOutMapper;
 
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.enums.ParameterIn;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.tags.Tag;
-import lombok.AllArgsConstructor;
+import jakarta.validation.Valid;
+import jakarta.validation.constraints.NotBlank;
+import lombok.RequiredArgsConstructor;
 
 /// REST API adapter providing entity management endpoints.
 ///
@@ -69,8 +80,8 @@ import lombok.AllArgsConstructor;
 @RestController
 @RequestMapping("/api/v1/entities")
 @Tag(name = "Entities Management", description = "Operations related to entity management")
-@AllArgsConstructor
 @Validated
+@RequiredArgsConstructor
 public class EntityController {
 
     private final EntityService entityService;
@@ -84,8 +95,8 @@ public class EntityController {
     /// Supports standard REST pagination parameters and an optional `q` filter query.
     /// Template validation is handled by the domain service layer.
     ///
-    /// @param page zero-based page index for pagination navigation
-    /// @param size number of entities per page for response size control
+    /// @param page               zero-based page index for pagination navigation
+    /// @param size               number of entities per page for response size control
     /// @param templateIdentifier template filter for entity scope limitation
     /// @param q optional filter query string (e.g. `name:API;property.language=JAVA`)
     /// @return paginated entity DTOs matching the template and optional filter
@@ -108,7 +119,7 @@ public class EntityController {
             @RequestParam(required = false) String q) {
         Pageable pageable = PageRequest.of(page, size);
         EntityFilter filter = entityQueryParserService.parse(q);
-        Page<Entity> entities = entityService.getEntitiesByTemplateIdentifierWithFilter(pageable, templateIdentifier, filter);
+        Page<Entity> entities = entityService.getEntitiesByTemplateIdentifier(pageable, templateIdentifier, filter);
         return entityDtoOutMapper.fromEntitiesPageToDtoPage(entities, templateIdentifier);
     }
 
@@ -118,19 +129,19 @@ public class EntityController {
     /// Returns HTTP 404 if either template or entity doesn't exist, maintaining REST semantics.
     ///
     /// @param templateIdentifier business template identifier for entity scope
-    /// @param entityIdentifier unique business identifier within template context
+    /// @param entityIdentifier   unique business identifier within template context
     /// @return entity DTO with full property and relationship data
     @Operation(summary = ENDPOINT_GET_ENTITY_BY_IDENTIFIER_SUMMARY, description = ENDPOINT_GET_ENTITY_BY_IDENTIFIER_DESCRIPTION)
     @ApiResponse(responseCode = OK_CODE, description = RESPONSE_ENTITY_FOUND, content = {
-            @Content(schema = @Schema(implementation = EntityDtoOut.class)) })
+            @Content(schema = @Schema(implementation = EntityDtoOut.class))})
     @ApiResponse(responseCode = NOT_FOUND_CODE, description = RESPONSE_ENTITY_NOT_FOUND_IDENTIFIER, content = {
-            @Content(schema = @Schema(implementation = ApiExceptionHandler.ErrorResponse.class)) })
-    @GetMapping("/{templateIdentifier}/identifier/{entityIdentifier}")
+            @Content(schema = @Schema(implementation = ApiExceptionHandler.ErrorResponse.class))})
+    @GetMapping("/{templateIdentifier}/{entityIdentifier}")
     @ResponseStatus(OK)
     public EntityDtoOut getEntity(
             @PathVariable String templateIdentifier,
             @PathVariable String entityIdentifier) {
-        Entity entity = entityService.getEntityByTemplateIdentifierAnIdentifier(templateIdentifier, entityIdentifier);
+        Entity entity = entityService.getEntityByTemplateIdentifierAndIdentifier(templateIdentifier, entityIdentifier);
         return entityDtoOutMapper.fromEntity(entity);
     }
 
@@ -141,16 +152,22 @@ public class EntityController {
     /// and returns HTTP 201 on success, HTTP 400 for validation errors.
     ///
     /// @param templateIdentifier target template identifier for entity creation context
-    /// @param entityDtoIn entity creation payload with properties and relationships
+    /// @param entityDtoIn        entity creation payload with properties and relationships
     /// @return created entity DTO with server-generated identifiers
     @Operation(summary = ENDPOINT_POST_ENTITY_SUMMARY, description = ENDPOINT_POST_ENTITY_DESCRIPTION)
-    @ApiResponse(responseCode = CREATED_CODE, description = RESPONSE_ENTITY_CREATED, content = {
-            @Content(schema = @Schema(implementation = EntityDtoOut.class)) })
-    @ApiResponse(responseCode = BAD_REQUEST_CODE, description = RESPONSE_INVALID_ENTITY_DATA, content = {
-            @Content(schema = @Schema(implementation = ErrorResponse.class)) })
+    @ApiResponse(responseCode = CREATED_CODE, description = RESPONSE_ENTITY_CREATED, content = {@Content(schema = @Schema(implementation = EntityDtoOut.class))})
+    @ApiResponse(responseCode = BAD_REQUEST_CODE, description = RESPONSE_INVALID_ENTITY_DATA, content = {@Content(schema = @Schema(implementation = ErrorResponse.class))})
+    @ApiResponse(responseCode = UNAUTHORIZED_CODE, description = RESPONSE_UNAUTHORIZED, content = @Content)
+    @ApiResponse(responseCode = FORBIDDEN_CODE, description = RESPONSE_INSUFFICIENT_RIGHTS, content = @Content)
+    @ApiResponse(responseCode = CONFLICT_CODE, description = RESPONSE_ENTITY_CONFLICT, content = {@Content(schema = @Schema(implementation = ErrorResponse.class))})
+    @ApiResponse(responseCode = NOT_FOUND_CODE, description = RESPONSE_TEMPLATE_NOT_FOUND_IDENTIFIER, content = {@Content(schema = @Schema(implementation = ErrorResponse.class))})
+    @ApiResponse(responseCode = INTERNAL_SERVER_ERROR_CODE, description = RESPONSE_UNEXPECTED_SERVER_ERROR, content = {@Content(schema = @Schema(implementation = ErrorResponse.class))})
     @PostMapping("/{templateIdentifier}")
     @ResponseStatus(CREATED)
-    public EntityDtoOut createEntity(@PathVariable String templateIdentifier, @RequestBody EntityDtoIn entityDtoIn) {
+    public EntityDtoOut createEntity(
+            @NotBlank @PathVariable String templateIdentifier,
+            @Valid @RequestBody EntityDtoIn entityDtoIn) {
+
         Entity entity = entityDtoInMapper.fromEntityDtoInToEntity(entityDtoIn, templateIdentifier);
         Entity savedEntity = entityService.createEntity(entity);
         return entityDtoOutMapper.fromEntity(savedEntity);

@@ -13,9 +13,9 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.validation.annotation.Validated;
 
-import com.decathlon.idp_core.domain.exception.entity_template.EntityTemplateNotFoundException;
 import com.decathlon.idp_core.domain.exception.entity_template.EntityTemplateAlreadyExistsException;
 import com.decathlon.idp_core.domain.exception.entity_template.EntityTemplateNameAlreadyExistsException;
+import com.decathlon.idp_core.domain.exception.entity_template.EntityTemplateNotFoundException;
 import com.decathlon.idp_core.domain.model.entity_template.EntityTemplate;
 import com.decathlon.idp_core.domain.model.entity_template.PropertyDefinition;
 import com.decathlon.idp_core.domain.model.entity_template.PropertyRules;
