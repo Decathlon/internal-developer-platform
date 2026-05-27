@@ -4,9 +4,9 @@ package com.decathlon.idp_core.domain.exception;
 ///
 /// **Business semantics:** Signals that the caller provided a malformed filter query.
 /// This exception should be mapped to HTTP 400 Bad Request by the infrastructure layer.
-public class InvalidQueryException extends RuntimeException {
+public class InvalidQueryDslException extends RuntimeException {
 
-    public InvalidQueryException(String message) {
+    public InvalidQueryDslException(String message) {
         super(message);
     }
 }

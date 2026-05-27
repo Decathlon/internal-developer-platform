@@ -11,6 +11,7 @@ import com.decathlon.idp_core.domain.exception.entity_template.EntityTemplateNot
 import com.decathlon.idp_core.domain.model.entity.Entity;
 import com.decathlon.idp_core.domain.model.entity.EntityFilter;
 import com.decathlon.idp_core.domain.model.entity.EntitySummary;
+import com.decathlon.idp_core.domain.model.entity_template.EntityTemplate;
 import com.decathlon.idp_core.domain.port.EntityRepositoryPort;
 import com.decathlon.idp_core.domain.port.EntityTemplateRepositoryPort;
 
@@ -34,6 +35,7 @@ import lombok.AllArgsConstructor;
 public class EntityService {
     private final EntityRepositoryPort entityRepository;
     private final EntityTemplateRepositoryPort entityTemplateRepository;
+    private final EntityQueryParserService entityQueryParserService;
 
     /// Retrieves entities filtered by template with existence validation.
     ///
@@ -69,9 +71,9 @@ public class EntityService {
     public Page<Entity> getEntitiesByTemplateIdentifierWithFilter(
             Pageable pageable, String templateIdentifier, EntityFilter filter) {
 
-        if (!entityTemplateRepository.existsByIdentifier(templateIdentifier)) {
-            throw new EntityTemplateNotFoundException("identifier", templateIdentifier);
-        }
+        EntityTemplate template = entityTemplateRepository.findByIdentifier(templateIdentifier)
+                .orElseThrow(() -> new EntityTemplateNotFoundException("identifier", templateIdentifier));
+        entityQueryParserService.validateFilterPropertyTypes(filter, template);
         return entityRepository.findByTemplateIdentifierWithFilter(templateIdentifier, filter, pageable);
     }
 

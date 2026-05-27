@@ -12,6 +12,7 @@ import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.skyscreamer.jsonassert.JSONAssert;
 import org.skyscreamer.jsonassert.JSONCompareMode;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -69,6 +70,16 @@ public class EntityControllerTest extends AbstractIntegrationTest {
         void getEntities_paginated_404_when_non_existent_template() throws Exception {
             mockMvc.perform(get(ENTITIES_BY_TEMPLATE_IDENTIFIER_PATH, "non-existent-template-identifier")
                     .accept(APPLICATION_JSON))
+                    .andExpect(status().isNotFound());
+        }
+
+        @Test
+        @DisplayName("Should return 404 for non-existent template even when q is provided")
+        @WithMockUser
+        void getEntities_404_nonExistentTemplate_withFilter() throws Exception {
+            mockMvc.perform(get(ENTITIES_BY_TEMPLATE_IDENTIFIER_PATH, "non-existent-template-identifier")
+                            .param("q", "name=foo")
+                            .accept(APPLICATION_JSON))
                     .andExpect(status().isNotFound());
         }
 
@@ -223,6 +234,108 @@ public class EntityControllerTest extends AbstractIntegrationTest {
                             .accept(APPLICATION_JSON))
                     .andExpect(status().isBadRequest())
                     .andExpect(jsonPath("$.error_description").value("Filter query exceeds maximum of 10 criteria"));
+        }
+
+        @ParameterizedTest(name = "comparison filter ''{0}'' returns 400")
+        @CsvSource({
+            "name<Web API 2",
+            "name>Web API 1"
+        })
+        @DisplayName("Should return 400 when < or > is used on attribute fields")
+        @WithMockUser
+        void getEntities_400_comparisonOnAttribute(String query) throws Exception {
+            mockMvc.perform(get(ENTITIES_BY_TEMPLATE_IDENTIFIER_PATH, TEMPLATE_IDENTIFIER)
+                            .param("q", query.trim())
+                            .accept(APPLICATION_JSON))
+                    .andExpect(status().isBadRequest());
+        }
+
+        @ParameterizedTest(name = "comparison filter ''{0}'' returns 400")
+        @CsvSource({
+            "property.programmingLanguage<PYTHON",
+            "property.programmingLanguage>JAVA"
+        })
+        @DisplayName("Should return 400 when < or > is used on a STRING property")
+        @WithMockUser
+        void getEntities_400_comparisonOnStringProperty(String query) throws Exception {
+            mockMvc.perform(get(ENTITIES_BY_TEMPLATE_IDENTIFIER_PATH, TEMPLATE_IDENTIFIER)
+                            .param("q", query.trim())
+                            .accept(APPLICATION_JSON))
+                    .andExpect(status().isBadRequest())
+                    .andExpect(jsonPath("$.error_description").value(
+                            "Operation '%s' is not applicable for property 'programmingLanguage': only NUMBER properties support comparison operators."
+                                    .formatted(query.trim().contains("<") ? "<" : ">")));
+        }
+
+        @ParameterizedTest(name = "comparison filter ''{0}'' returns {1} result(s)")
+        @CsvSource({
+            "property.port<9090, 1",
+            "property.port>8080, 1"
+        })
+        @DisplayName("Should filter entities using < and > comparison operators on a NUMBER property")
+        @WithMockUser
+        void getEntities_200_comparisonOnNumberProperty(String query, int expectedCount) throws Exception {
+            mockMvc.perform(get(ENTITIES_BY_TEMPLATE_IDENTIFIER_PATH, TEMPLATE_IDENTIFIER)
+                            .param("q", query.trim())
+                            .accept(APPLICATION_JSON))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.content.length()").value(expectedCount));
+        }
+
+        @ParameterizedTest(name = "blank q ''{0}'' behaves like no filter")
+        @ValueSource(strings = {"", "   "})
+        @DisplayName("Should return all entities when q is empty or blank")
+        @WithMockUser
+        void getEntities_200_emptyOrBlankQ_returnsAllEntities(String q) throws Exception {
+            mockMvc.perform(get(ENTITIES_BY_TEMPLATE_IDENTIFIER_PATH, TEMPLATE_IDENTIFIER)
+                            .param("q", q)
+                            .accept(APPLICATION_JSON))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.content.length()").value(2))
+                    .andExpect(jsonPath("$.page.total_elements").value(2));
+        }
+
+        @Test
+        @DisplayName("Should filter and paginate when q and page/size are combined")
+        @WithMockUser
+        void getEntities_200_paginationWithFilter() throws Exception {
+            mockMvc.perform(get(ENTITIES_BY_TEMPLATE_IDENTIFIER_PATH, "monitoring-service")
+                            .param("q", "name:Monitoring")
+                            .param("page", "1")
+                            .param("size", "3")
+                            .accept(APPLICATION_JSON))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.content.length()").value(3))
+                    .andExpect(jsonPath("$.page.total_elements").value(6))
+                    .andExpect(jsonPath("$.page.total_pages").value(2))
+                    .andExpect(jsonPath("$.page.number").value(1));
+        }
+
+        @Test
+        @DisplayName("Should use raw (case-sensitive) comparison for < and >, unlike = and : which normalise to lowercase")
+        @WithMockUser
+        void getEntities_200_comparisonOperators_areCaseSensitive() throws Exception {
+            // EQUALS normalises both sides to lowercase → case-insensitive match
+            mockMvc.perform(get(ENTITIES_BY_TEMPLATE_IDENTIFIER_PATH, TEMPLATE_IDENTIFIER)
+                            .param("q", "property.programmingLanguage=python")
+                            .accept(APPLICATION_JSON))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.content.length()").value(1));
+
+            // LESS_THAN and GREATER_THAN pass values to the DB without lowercasing.
+            // port is a NUMBER property (8080 for web-api-1, 9090 for web-api-2).
+            // These assertions verify correct boundary semantics using raw numeric string comparison.
+            mockMvc.perform(get(ENTITIES_BY_TEMPLATE_IDENTIFIER_PATH, TEMPLATE_IDENTIFIER)
+                            .param("q", "property.port>8080")
+                            .accept(APPLICATION_JSON))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.content.length()").value(1));
+
+            mockMvc.perform(get(ENTITIES_BY_TEMPLATE_IDENTIFIER_PATH, TEMPLATE_IDENTIFIER)
+                            .param("q", "property.port<9090")
+                            .accept(APPLICATION_JSON))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.content.length()").value(1));
         }
 
         @Test

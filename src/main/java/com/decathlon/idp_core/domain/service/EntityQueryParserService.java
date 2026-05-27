@@ -6,14 +6,16 @@ import java.util.OptionalInt;
 import java.util.Set;
 import java.util.stream.Stream;
 
-import org.springframework.stereotype.Component;
+import com.decathlon.idp_core.domain.exception.InvalidQueryDslException;
+import org.springframework.stereotype.Service;
 
 import com.decathlon.idp_core.domain.constant.ValidationMessages;
-import com.decathlon.idp_core.domain.exception.InvalidQueryException;
 import com.decathlon.idp_core.domain.model.entity.EntityFilter;
 import com.decathlon.idp_core.domain.model.entity.FilterCriterion;
+import com.decathlon.idp_core.domain.model.entity_template.EntityTemplate;
 import com.decathlon.idp_core.domain.model.enums.FilterKeyType;
 import com.decathlon.idp_core.domain.model.enums.FilterOperator;
+import com.decathlon.idp_core.domain.model.enums.PropertyType;
 
 /// Parses the entity filter query string `q` into an [EntityFilter].
 ///
@@ -37,7 +39,7 @@ import com.decathlon.idp_core.domain.model.enums.FilterOperator;
 /// - Key names and values limited to MAX_KEY_VALUE_LENGTH characters
 ///
 /// **Example:** `name:API;property.language=JAVA;relation=api-link;relation.database=my-db;relation.api-link.identifier=microservice-1`
-@Component
+@Service
 public class EntityQueryParserService {
 
     private static final String RELATION = "relation";
@@ -48,6 +50,7 @@ public class EntityQueryParserService {
     private static final Set<String> VALID_ATTRIBUTE_NAMES = Set.of("identifier", "name");
 
     private static final Set<FilterKeyType> COMPARISON_INCOMPATIBLE_TYPES = Set.of(
+            FilterKeyType.ATTRIBUTE,
             FilterKeyType.RELATION_NAME,
             FilterKeyType.RELATION_ENTITY,
             FilterKeyType.RELATION_PROPERTY,
@@ -61,7 +64,7 @@ public class EntityQueryParserService {
     ///
     /// @param query the raw `q` parameter value; may be null or blank
     /// @return an [EntityFilter] with parsed criteria, or [EntityFilter#empty()] when query is blank
-    /// @throws InvalidQueryException when the query string is malformed or exceeds safety limits
+    /// @throws InvalidQueryDslException when the query string is malformed or exceeds safety limits
     public EntityFilter parse(String query) {
         if (query == null || query.isBlank()) {
             return EntityFilter.empty();
@@ -73,7 +76,7 @@ public class EntityQueryParserService {
                 .toList();
 
         if (criteria.size() > MAX_CRITERIA_COUNT) {
-            throw new InvalidQueryException(
+            throw new InvalidQueryDslException(
                     ValidationMessages.FILTER_TOO_MANY_CRITERIA.formatted(MAX_CRITERIA_COUNT));
         }
 
@@ -84,21 +87,14 @@ public class EntityQueryParserService {
 
     private FilterCriterion parseCriterion(String token) {
         int operatorIndex = findOperatorIndex(token)
-                .orElseThrow(() -> new InvalidQueryException(ValidationMessages.FILTER_INVALID_FORMAT));
+                .orElseThrow(() -> new InvalidQueryDslException(ValidationMessages.FILTER_INVALID_FORMAT));
 
         var rawKey = token.substring(0, operatorIndex);
         var operatorChar = token.charAt(operatorIndex);
         var value = token.substring(operatorIndex + 1);
 
-        if (rawKey.isBlank()) {
-            throw new InvalidQueryException(
-                    "Invalid filter criterion '%s': key must not be blank".formatted(token));
-        }
-        if (value.isBlank()) {
-            throw new InvalidQueryException(
-                    "Invalid filter criterion '%s': value must not be blank".formatted(token));
-        }
-
+        validateKey(rawKey, token);
+        validateValue(value, token);
         validateLength(rawKey, value, token);
 
         var operator = toOperator(operatorChar);
@@ -123,7 +119,7 @@ public class EntityQueryParserService {
             case ':' -> FilterOperator.CONTAINS;
             case '<' -> FilterOperator.LESS_THAN;
             case '>' -> FilterOperator.GREATER_THAN;
-            default -> throw new InvalidQueryException("Unknown operator character: " + c);
+            default -> throw new InvalidQueryDslException("Unknown operator character: " + c);
         };
     }
 
@@ -147,18 +143,18 @@ public class EntityQueryParserService {
 
         if (rawKey.startsWith(RELATIONS_AS_TARGET_PREFIX)) {
             var relationPart = rawKey.substring(RELATIONS_AS_TARGET_PREFIX.length());
-            validateNonBlankKeyName(relationPart, token);
+            validateKey(relationPart, token);
             return buildRelationsAsTargetCriterion(relationPart, operator, value, token);
         }
 
         if (rawKey.startsWith(RELATION_PREFIX)) {
             var relationPart = rawKey.substring(RELATION_PREFIX.length());
-            validateNonBlankKeyName(relationPart, token);
+            validateKey(relationPart, token);
             return buildRelationCriterion(relationPart, operator, value, token);
         }
 
         if (!VALID_ATTRIBUTE_NAMES.contains(rawKey)) {
-            throw new InvalidQueryException(
+            throw new InvalidQueryDslException(
                     "Unknown attribute '%s' in filter criterion '%s'. Valid attributes: %s"
                             .formatted(rawKey, token, VALID_ATTRIBUTE_NAMES));
         }
@@ -168,7 +164,7 @@ public class EntityQueryParserService {
     private FilterCriterion buildRelationsAsTargetCriterion(String relationPart, FilterOperator operator, String value, String token) {
         int dotIndex = relationPart.indexOf('.');
         if (dotIndex <= 0) {
-            throw new InvalidQueryException(
+            throw new InvalidQueryDslException(
                     "Invalid filter criterion '%s': relations_as_target requires the form 'relations_as_target.<relationName>.<identifier|name>'"
                             .formatted(token));
         }
@@ -176,11 +172,7 @@ public class EntityQueryParserService {
         var relationName = relationPart.substring(0, dotIndex);
         var propertyName = relationPart.substring(dotIndex + 1);
         validateKeyName(relationName, token);
-        if (!VALID_ATTRIBUTE_NAMES.contains(propertyName)) {
-            throw new InvalidQueryException(
-                    "Invalid property '%s' in criterion '%s': only 'identifier' and 'name' are supported for relations_as_target"
-                            .formatted(propertyName, token));
-        }
+        validatePropertyName(propertyName, RELATIONS_AS_TARGET, token);
         var compositeKey = relationName + "." + propertyName;
         return new FilterCriterion(FilterKeyType.RELATIONS_AS_TARGET_PROPERTY, compositeKey, operator, value);
     }
@@ -191,11 +183,7 @@ public class EntityQueryParserService {
             var relationName = relationPart.substring(0, dotIndex);
             var propertyName = relationPart.substring(dotIndex + 1);
             validateKeyName(relationName, token);
-            if (!VALID_ATTRIBUTE_NAMES.contains(propertyName)) {
-                throw new InvalidQueryException(
-                        "Invalid property '%s' in criterion '%s': only 'identifier' and 'name' are supported for relation"
-                                .formatted(propertyName, token));
-            }
+            validatePropertyName(propertyName, RELATION, token);
             var compositeKey = relationName + "." + propertyName;
             return new FilterCriterion(FilterKeyType.RELATION_PROPERTY, compositeKey, operator, value);
         }
@@ -210,7 +198,7 @@ public class EntityQueryParserService {
         for (FilterCriterion criterion : criteria) {
             String dedupeKey = criterion.keyType().name() + ":" + criterion.key();
             if (!seen.add(dedupeKey)) {
-                throw new InvalidQueryException(ValidationMessages.FILTER_DUPLICATE_CRITERION);
+                throw new InvalidQueryDslException(ValidationMessages.FILTER_DUPLICATE_CRITERION);
             }
         }
     }
@@ -219,28 +207,71 @@ public class EntityQueryParserService {
         if (COMPARISON_INCOMPATIBLE_TYPES.contains(keyType) &&
                 (operator == FilterOperator.LESS_THAN || operator == FilterOperator.GREATER_THAN)) {
             var opSymbol = operator == FilterOperator.LESS_THAN ? "<" : ">";
-            throw new InvalidQueryException(ValidationMessages.FILTER_TYPE_MISMATCH.formatted(opSymbol, rawKey));
+            throw new InvalidQueryDslException(ValidationMessages.FILTER_TYPE_MISMATCH.formatted(opSymbol, rawKey));
         }
     }
 
-    private void validateNonBlankKeyName(String keyName, String token) {
-        if (keyName.isBlank()) {
-            throw new InvalidQueryException(
-                    "Invalid filter criterion '%s': key name must not be blank after prefix".formatted(token));
+    /// Validates that all PROPERTY criteria using `<` or `>` operators
+    /// correspond to a NUMBER-typed property in the given template.
+    ///
+    /// This is a semantic check that requires the template to be available (i.e., it
+    /// cannot be performed in [#parse] which has no template context).
+    ///
+    /// @param filter the parsed query filter
+    /// @param template the entity template providing property type information
+    /// @throws InvalidQueryDslException when a comparison operator is used on a non-NUMBER property
+    public void validateFilterPropertyTypes(EntityFilter filter, EntityTemplate template) {
+        filter.criteria().stream()
+                .filter(c -> c.keyType() == FilterKeyType.PROPERTY)
+                .filter(c -> c.operator() == FilterOperator.LESS_THAN || c.operator() == FilterOperator.GREATER_THAN)
+                .forEach(c -> {
+                    var propertyDef = template.propertiesDefinitions().stream()
+                            .filter(p -> p.name().equals(c.key()))
+                            .findFirst();
+                    if (propertyDef.isEmpty() || propertyDef.get().type() != PropertyType.NUMBER) {
+                        var opSymbol = c.operator() == FilterOperator.LESS_THAN ? "<" : ">";
+                        throw new InvalidQueryDslException(
+                                ValidationMessages.FILTER_PROPERTY_TYPE_NOT_NUMERIC.formatted(opSymbol, c.key()));
+                    }
+                });
+    }
+
+    private void validateKey(String key, String token) {
+        if (key.isBlank()) {
+            throw new InvalidQueryDslException(
+                    "Invalid filter criterion '%s': key must not be blank".formatted(token));
         }
     }
 
     private void validateKeyName(String keyName, String token) {
-        validateNonBlankKeyName(keyName, token);
+        if (keyName.isBlank()) {
+            throw new InvalidQueryDslException(
+                    "Invalid filter criterion '%s': key name must not be blank".formatted(token));
+        }
+    }
+
+    private void validateValue(String value, String token) {
+        if (value.isBlank()) {
+            throw new InvalidQueryDslException(
+                    "Invalid filter criterion '%s': value must not be blank".formatted(token));
+        }
+    }
+
+    private void validatePropertyName(String propertyName, String contextType, String token) {
+        if (!VALID_ATTRIBUTE_NAMES.contains(propertyName)) {
+            throw new InvalidQueryDslException(
+                    "Invalid property '%s' in criterion '%s': only 'identifier' and 'name' are supported for %s"
+                            .formatted(propertyName, token, contextType));
+        }
     }
 
     private void validateLength(String rawKey, String value, String token) {
         if (rawKey.length() > MAX_KEY_VALUE_LENGTH) {
-            throw new InvalidQueryException(
+            throw new InvalidQueryDslException(
                     ValidationMessages.FILTER_KEY_TOO_LONG.formatted(MAX_KEY_VALUE_LENGTH, token));
         }
         if (value.length() > MAX_KEY_VALUE_LENGTH) {
-            throw new InvalidQueryException(
+            throw new InvalidQueryDslException(
                     ValidationMessages.FILTER_VALUE_TOO_LONG.formatted(MAX_KEY_VALUE_LENGTH, token));
         }
     }

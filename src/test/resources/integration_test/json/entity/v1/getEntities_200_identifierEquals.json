@@ -3,7 +3,7 @@
     {
       "identifier": "web-api-1",
       "name": "Web API 1",
-      "properties": { "environment": "PROD", "programmingLanguage": "JAVA" },
+      "properties": { "environment": "PROD", "programmingLanguage": "JAVA", "port": 8080 },
       "relations": {
         "database": [
           { "identifier": "database-service-1", "name": "Database Service 1" }

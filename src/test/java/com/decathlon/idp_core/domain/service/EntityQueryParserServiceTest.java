@@ -3,14 +3,18 @@ package com.decathlon.idp_core.domain.service;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import java.util.stream.Stream;
+
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
 import org.junit.jupiter.params.provider.ValueSource;
 
 import com.decathlon.idp_core.domain.constant.ValidationMessages;
-import com.decathlon.idp_core.domain.exception.InvalidQueryException;
+import com.decathlon.idp_core.domain.exception.InvalidQueryDslException;
 import com.decathlon.idp_core.domain.model.entity.EntityFilter;
 import com.decathlon.idp_core.domain.model.entity.FilterCriterion;
 import com.decathlon.idp_core.domain.model.enums.FilterKeyType;
@@ -60,20 +64,6 @@ class EntityQueryParserServiceTest {
         void parse_attributeNameContains() {
             var result = parser.parse("name:API");
             assertSingleCriterion(result, FilterKeyType.ATTRIBUTE, "name", FilterOperator.CONTAINS, "API");
-        }
-
-        @Test
-        @DisplayName("name less than")
-        void parse_attributeNameLessThan() {
-            var result = parser.parse("name<Z");
-            assertSingleCriterion(result, FilterKeyType.ATTRIBUTE, "name", FilterOperator.LESS_THAN, "Z");
-        }
-
-        @Test
-        @DisplayName("name greater than")
-        void parse_attributeNameGreaterThan() {
-            var result = parser.parse("name>A");
-            assertSingleCriterion(result, FilterKeyType.ATTRIBUTE, "name", FilterOperator.GREATER_THAN, "A");
         }
     }
 
@@ -167,10 +157,10 @@ class EntityQueryParserServiceTest {
         }
 
         @Test
-        @DisplayName("throws InvalidQueryException for unsupported property in relation (custom-prop is not identifier or name)")
+        @DisplayName("throws InvalidQueryDslException for unsupported property in relation (custom-prop is not identifier or name)")
         void parse_relationPropertyUnsupported_throwsException() {
             assertThatThrownBy(() -> parser.parse("relation.my-link.custom-prop=value"))
-                    .isInstanceOf(InvalidQueryException.class)
+                    .isInstanceOf(InvalidQueryDslException.class)
                     .hasMessageContaining("custom-prop")
                     .hasMessageContaining("identifier")
                     .hasMessageContaining("name");
@@ -213,7 +203,7 @@ class EntityQueryParserServiceTest {
         @DisplayName("throws exception for unsupported property in relations_as_target")
         void parse_relationsAsTargetInvalidProperty_throwsException() {
             assertThatThrownBy(() -> parser.parse("relations_as_target.api-link.language=JAVA"))
-                    .isInstanceOf(InvalidQueryException.class)
+                    .isInstanceOf(InvalidQueryDslException.class)
                     .hasMessageContaining("only 'identifier' and 'name' are supported");
         }
 
@@ -221,7 +211,7 @@ class EntityQueryParserServiceTest {
         @DisplayName("throws exception for relations_as_target without property")
         void parse_relationsAsTargetWithoutProperty_throwsException() {
             assertThatThrownBy(() -> parser.parse("relations_as_target.api-link=web-api-1"))
-                    .isInstanceOf(InvalidQueryException.class)
+                    .isInstanceOf(InvalidQueryDslException.class)
                     .hasMessageContaining("relations_as_target requires the form");
         }
     }
@@ -269,42 +259,42 @@ class EntityQueryParserServiceTest {
 
         @ParameterizedTest(name = "missing operator in: ''{0}''")
         @ValueSource(strings = {"noOperatorHere", "property.lang", "relation.db"})
-        @DisplayName("throws InvalidQueryException when operator is missing")
+        @DisplayName("throws InvalidQueryDslException when operator is missing")
         void parse_missingOperator_throwsException(String query) {
             assertThatThrownBy(() -> parser.parse(query))
-                    .isInstanceOf(InvalidQueryException.class)
+                    .isInstanceOf(InvalidQueryDslException.class)
                     .hasMessage(ValidationMessages.FILTER_INVALID_FORMAT);
         }
 
         @Test
-        @DisplayName("throws InvalidQueryException for unknown attribute")
+        @DisplayName("throws InvalidQueryDslException for unknown attribute")
         void parse_unknownAttribute_throwsException() {
             assertThatThrownBy(() -> parser.parse("unknownField=value"))
-                    .isInstanceOf(InvalidQueryException.class)
+                    .isInstanceOf(InvalidQueryDslException.class)
                     .hasMessageContaining("Unknown attribute");
         }
 
         @Test
-        @DisplayName("throws InvalidQueryException for blank value")
+        @DisplayName("throws InvalidQueryDslException for blank value")
         void parse_blankValue_throwsException() {
             assertThatThrownBy(() -> parser.parse("name="))
-                    .isInstanceOf(InvalidQueryException.class)
+                    .isInstanceOf(InvalidQueryDslException.class)
                     .hasMessageContaining("value must not be blank");
         }
 
         @Test
-        @DisplayName("throws InvalidQueryException for blank key")
+        @DisplayName("throws InvalidQueryDslException for blank key")
         void parse_blankKey_throwsException() {
             assertThatThrownBy(() -> parser.parse("=value"))
-                    .isInstanceOf(InvalidQueryException.class)
+                    .isInstanceOf(InvalidQueryDslException.class)
                     .hasMessageContaining("key must not be blank");
         }
 
         @Test
-        @DisplayName("throws InvalidQueryException for blank property name after prefix")
+        @DisplayName("throws InvalidQueryDslException for blank property name after prefix")
         void parse_blankPropertyName_throwsException() {
             assertThatThrownBy(() -> parser.parse("property.=JAVA"))
-                    .isInstanceOf(InvalidQueryException.class)
+                    .isInstanceOf(InvalidQueryDslException.class)
                     .hasMessageContaining("key name must not be blank");
         }
     }
@@ -314,13 +304,13 @@ class EntityQueryParserServiceTest {
     class SecurityConstraintTests {
 
         @Test
-        @DisplayName("throws InvalidQueryException when criteria count exceeds limit")
+        @DisplayName("throws InvalidQueryDslException when criteria count exceeds limit")
         void parse_tooManyCriteria_throwsException() {
             var query = "property.a=1;property.b=2;property.c=3;property.d=4;property.e=5;"
                     + "property.f=6;property.g=7;property.h=8;property.i=9;property.j=10;"
                     + "property.k=11";
             assertThatThrownBy(() -> parser.parse(query))
-                    .isInstanceOf(InvalidQueryException.class)
+                    .isInstanceOf(InvalidQueryDslException.class)
                     .hasMessageContaining("maximum of %d".formatted(EntityQueryParserService.MAX_CRITERIA_COUNT));
         }
 
@@ -334,20 +324,20 @@ class EntityQueryParserServiceTest {
         }
 
         @Test
-        @DisplayName("throws InvalidQueryException when value exceeds max length")
+        @DisplayName("throws InvalidQueryDslException when value exceeds max length")
         void parse_valueTooLong_throwsException() {
             var longValue = "a".repeat(EntityQueryParserService.MAX_KEY_VALUE_LENGTH + 1);
             assertThatThrownBy(() -> parser.parse("name=" + longValue))
-                    .isInstanceOf(InvalidQueryException.class)
+                    .isInstanceOf(InvalidQueryDslException.class)
                     .hasMessageContaining("must not exceed %d".formatted(EntityQueryParserService.MAX_KEY_VALUE_LENGTH));
         }
 
         @Test
-        @DisplayName("throws InvalidQueryException when key exceeds max length")
+        @DisplayName("throws InvalidQueryDslException when key exceeds max length")
         void parse_keyTooLong_throwsException() {
             var longKey = "property." + "a".repeat(EntityQueryParserService.MAX_KEY_VALUE_LENGTH);
             assertThatThrownBy(() -> parser.parse(longKey + "=value"))
-                    .isInstanceOf(InvalidQueryException.class)
+                    .isInstanceOf(InvalidQueryDslException.class)
                     .hasMessageContaining("must not exceed %d".formatted(EntityQueryParserService.MAX_KEY_VALUE_LENGTH));
         }
 
@@ -381,10 +371,10 @@ class EntityQueryParserServiceTest {
                 "property.language=JAVA;property.language=PYTHON",
                 "relation=api-link;relation=database"
         })
-        @DisplayName("throws InvalidQueryException for duplicate criteria")
+        @DisplayName("throws InvalidQueryDslException for duplicate criteria")
         void parse_duplicateCriterion_throwsException(String query) {
             assertThatThrownBy(() -> parser.parse(query))
-                    .isInstanceOf(InvalidQueryException.class)
+                    .isInstanceOf(InvalidQueryDslException.class)
                     .hasMessage(ValidationMessages.FILTER_DUPLICATE_CRITERION);
         }
 
@@ -409,36 +399,36 @@ class EntityQueryParserServiceTest {
 
         @ParameterizedTest(name = "comparison operator on: ''{0}''")
         @ValueSource(strings = {"relation<api-link", "relation>api-link"})
-        @DisplayName("throws InvalidQueryException for less/greater than on relation name")
+        @DisplayName("throws InvalidQueryDslException for less/greater than on relation name")
         void parse_comparisonOnRelationName_throwsException(String query) {
             assertThatThrownBy(() -> parser.parse(query))
-                    .isInstanceOf(InvalidQueryException.class)
+                    .isInstanceOf(InvalidQueryDslException.class)
                     .hasMessageContaining("is not applicable for field");
         }
 
         @ParameterizedTest(name = "comparison operator on: ''{0}''")
         @ValueSource(strings = {"relation.database<my-db", "relation.database>my-db"})
-        @DisplayName("throws InvalidQueryException for less/greater than on relation entity")
+        @DisplayName("throws InvalidQueryDslException for less/greater than on relation entity")
         void parse_comparisonOnRelationEntity_throwsException(String query) {
             assertThatThrownBy(() -> parser.parse(query))
-                    .isInstanceOf(InvalidQueryException.class)
+                    .isInstanceOf(InvalidQueryDslException.class)
                     .hasMessageContaining("is not applicable for field");
         }
 
         @ParameterizedTest(name = "comparison operator on: ''{0}''")
         @ValueSource(strings = {"relation.database.template<postgresql", "relation.database.template>postgresql"})
-        @DisplayName("throws InvalidQueryException for unsupported property on relation (template is not a valid relation property)")
+        @DisplayName("throws InvalidQueryDslException for unsupported property on relation (template is not a valid relation property)")
         void parse_comparisonOnRelationTemplate_throwsException(String query) {
             assertThatThrownBy(() -> parser.parse(query))
-                    .isInstanceOf(InvalidQueryException.class)
+                    .isInstanceOf(InvalidQueryDslException.class)
                     .hasMessageContaining("template");
         }
 
         @Test
-        @DisplayName("throws InvalidQueryException for unsupported property on relation with equals operator")
+        @DisplayName("throws InvalidQueryDslException for unsupported property on relation with equals operator")
         void parse_equalsOnRelationTemplate_throwsException() {
             assertThatThrownBy(() -> parser.parse("relation.database.template=postgresql"))
-                    .isInstanceOf(InvalidQueryException.class)
+                    .isInstanceOf(InvalidQueryDslException.class)
                     .hasMessageContaining("template")
                     .hasMessageContaining("identifier")
                     .hasMessageContaining("name");
@@ -446,26 +436,35 @@ class EntityQueryParserServiceTest {
 
         @ParameterizedTest(name = "comparison operator on: ''{0}''")
         @ValueSource(strings = {"relation.api-link.identifier<microservice-1", "relation.api-link.identifier>microservice-1"})
-        @DisplayName("throws InvalidQueryException for less/greater than on relation property")
+        @DisplayName("throws InvalidQueryDslException for less/greater than on relation property")
         void parse_comparisonOnRelationProperty_throwsException(String query) {
             assertThatThrownBy(() -> parser.parse(query))
-                    .isInstanceOf(InvalidQueryException.class)
+                    .isInstanceOf(InvalidQueryDslException.class)
                     .hasMessageContaining("is not applicable for field");
         }
 
         @ParameterizedTest(name = "comparison operator on: ''{0}''")
         @ValueSource(strings = {"relations_as_target.api-link.name<microservice", "relations_as_target.api-link.name>microservice"})
-        @DisplayName("throws InvalidQueryException for less/greater than on relations_as_target property")
+        @DisplayName("throws InvalidQueryDslException for less/greater than on relations_as_target property")
         void parse_comparisonOnRelationsAsTargetProperty_throwsException(String query) {
             assertThatThrownBy(() -> parser.parse(query))
-                    .isInstanceOf(InvalidQueryException.class)
+                    .isInstanceOf(InvalidQueryDslException.class)
                     .hasMessageContaining("is not applicable for field");
         }
 
         @ParameterizedTest(name = "comparison operator on: ''{0}''")
-        @ValueSource(strings = {"name<Z", "name>A", "identifier<z", "property.port<9000", "property.port>1000"})
-        @DisplayName("accepts less/greater than on attributes and properties")
-        void parse_comparisonOnAttributeOrProperty_succeeds(String query) {
+        @ValueSource(strings = {"name<Z", "name>A", "identifier<z"})
+        @DisplayName("throws InvalidQueryDslException for less/greater than on attribute fields")
+        void parse_comparisonOnAttribute_throwsException(String query) {
+            assertThatThrownBy(() -> parser.parse(query))
+                    .isInstanceOf(InvalidQueryDslException.class)
+                    .hasMessageContaining("is not applicable for field");
+        }
+
+        @ParameterizedTest(name = "comparison operator on: ''{0}''")
+        @ValueSource(strings = {"property.port<9000", "property.port>1000"})
+        @DisplayName("accepts less/greater than on NUMBER properties (type check is deferred to EntityService)")
+        void parse_comparisonOnProperty_succeeds(String query) {
             var result = parser.parse(query);
             assertThat(result.criteria()).hasSize(1);
         }
@@ -501,6 +500,27 @@ class EntityQueryParserServiceTest {
         void parse_valuesWithLikeWildcards_accepted() {
             var result = parser.parse("name:100%_success");
             assertSingleCriterion(result, FilterKeyType.ATTRIBUTE, "name", FilterOperator.CONTAINS, "100%_success");
+        }
+    }
+
+    @Nested
+    @DisplayName("Null or blank query")
+    class NullOrBlankQueryTests {
+
+        @ParameterizedTest(name = "returns empty filter for: {1}")
+        @MethodSource("provideNullOrBlankQueries")
+        @DisplayName("parse(null/empty/blank) returns empty filter with no criteria")
+        void parse_nullOrBlankQuery_returnsEmptyFilter(String query, String description) {
+            var result = parser.parse(query);
+            assertThat(result.criteria()).isEmpty();
+        }
+
+        private static Stream<Arguments> provideNullOrBlankQueries() {
+            return Stream.of(
+                Arguments.of(null, "null"),
+                Arguments.of("", "empty string"),
+                Arguments.of("   ", "blank string")
+            );
         }
     }
 

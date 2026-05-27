@@ -21,21 +21,25 @@ VALUES
 INSERT INTO idp_core.property (id, name, value)
 VALUES
   ('aa000000-0000-0000-0000-000000000001', 'programmingLanguage', 'JAVA'),
-  ('aa000000-0000-0000-0000-000000000002', 'environment', 'PROD');
+  ('aa000000-0000-0000-0000-000000000002', 'environment', 'PROD'),
+  ('aa000000-0000-0000-0000-000000000005', 'port', '8080');
 INSERT INTO idp_core.entity_properties (entity_id, property_id)
 VALUES
   ('550e8400-e29b-41d4-a716-446655440100', 'aa000000-0000-0000-0000-000000000001'),
-  ('550e8400-e29b-41d4-a716-446655440100', 'aa000000-0000-0000-0000-000000000002');
+  ('550e8400-e29b-41d4-a716-446655440100', 'aa000000-0000-0000-0000-000000000002'),
+  ('550e8400-e29b-41d4-a716-446655440100', 'aa000000-0000-0000-0000-000000000005');
 
 -- Properties for web-api-2 (language=PYTHON, environment=DEV)
 INSERT INTO idp_core.property (id, name, value)
 VALUES
   ('aa000000-0000-0000-0000-000000000003', 'programmingLanguage', 'PYTHON'),
-  ('aa000000-0000-0000-0000-000000000004', 'environment', 'DEV');
+  ('aa000000-0000-0000-0000-000000000004', 'environment', 'DEV'),
+  ('aa000000-0000-0000-0000-000000000006', 'port', '9090');
 INSERT INTO idp_core.entity_properties (entity_id, property_id)
 VALUES
   ('550e8400-e29b-41d4-a716-446655440101', 'aa000000-0000-0000-0000-000000000003'),
-  ('550e8400-e29b-41d4-a716-446655440101', 'aa000000-0000-0000-0000-000000000004');
+  ('550e8400-e29b-41d4-a716-446655440101', 'aa000000-0000-0000-0000-000000000004'),
+  ('550e8400-e29b-41d4-a716-446655440101', 'aa000000-0000-0000-0000-000000000006');
 
 -- Relations for web-api-1 (database -> database-service, targetTemplateIdentifier = database-service)
 INSERT INTO idp_core.relation (id, name, target_template_identifier)

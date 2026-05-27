@@ -5,6 +5,7 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
+import com.decathlon.idp_core.domain.exception.InvalidQueryDslException;
 import com.decathlon.idp_core.domain.exception.entity_template.PropertyDefinitionRulesConflictException;
 import com.decathlon.idp_core.domain.exception.entity_template.PropertyTypeChangeException;
 import com.decathlon.idp_core.domain.exception.entity_template.RelationCannotTargetItselfException;
@@ -17,7 +18,6 @@ import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 
 import com.decathlon.idp_core.domain.exception.EntityNotFoundException;
-import com.decathlon.idp_core.domain.exception.InvalidQueryException;
 import com.decathlon.idp_core.domain.exception.entity_template.PropertyNameAlreadyExistsException;
 import com.decathlon.idp_core.domain.exception.entity_template.RelationNameAlreadyExistsException;
 import com.decathlon.idp_core.domain.exception.entity_template.TargetTemplateNotFoundException;
@@ -70,10 +70,10 @@ public class ApiExceptionHandler {
 
     /// Handles domain exception for malformed filter query strings.
     ///
-    /// **HTTP mapping:** Maps domain [InvalidQueryException] to HTTP 400 Bad Request
+    /// **HTTP mapping:** Maps domain [InvalidQueryDslException] to HTTP 400 Bad Request
     /// so API consumers receive clear feedback about invalid `q` parameter syntax.
-    @ExceptionHandler(InvalidQueryException.class)
-    public ResponseEntity<ErrorResponse> handleInvalidQueryException(InvalidQueryException ex) {
+    @ExceptionHandler(InvalidQueryDslException.class)
+    public ResponseEntity<ErrorResponse> handleInvalidQueryDslException(InvalidQueryDslException ex) {
         log.warn("Invalid filter query: {}", ex.getMessage());
         return createErrorResponse(HttpStatus.BAD_REQUEST, ex.getMessage());
     }

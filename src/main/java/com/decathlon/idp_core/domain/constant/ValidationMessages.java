@@ -71,4 +71,5 @@ public class ValidationMessages {
     public static final String FILTER_INVALID_FORMAT = "Invalid query format, expected field:operator:value";
     public static final String FILTER_DUPLICATE_CRITERION = "Multiple filters for the same property are not supported";
     public static final String FILTER_TYPE_MISMATCH = "Operation '%s' is not applicable for field '%s'.";
+    public static final String FILTER_PROPERTY_TYPE_NOT_NUMERIC = "Operation '%s' is not applicable for property '%s': only NUMBER properties support comparison operators.";
 }
