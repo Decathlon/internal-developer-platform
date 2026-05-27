@@ -80,4 +80,4 @@ flowchart TD
 ## Next Steps
 
 * **[Contributing Overview](../contributing/index.md)** - Learn how to contribute to IDP-Core.
-* **[Development Environment](../contributing/development-environment.md)** - Set up your local environment for development and testing.
+* **[Development Setup](development-setup.md)** - Set up your local environment for development and testing.

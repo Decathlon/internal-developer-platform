@@ -56,7 +56,7 @@ git remote add upstream https://github.com/Decathlon/internal-developer-platform
 
 ## Start the project
 
-For your development setup, you can refer to the Getting started documentation here: [Getting Started](getting-started.md)
+For your development setup, you can refer to the Getting started documentation here: [Getting Started](../getting-started/index.md)
 
 Configure the application.yml security credentials and secrets locally using environment variables or a local, untracked configuration file.
 
@@ -159,6 +159,6 @@ git push origin feature/my-feature
 
 ## Next Steps
 
-- **[Architecture](architecture.md)** - Understand the codebase
+- **[Architecture](code/domain-infrastructure.md)** - Understand the codebase
 - **[Code Conventions](code/code-conventions.md)** - Follow coding standards
 - **[Testing](testing.md)** - Write effective tests

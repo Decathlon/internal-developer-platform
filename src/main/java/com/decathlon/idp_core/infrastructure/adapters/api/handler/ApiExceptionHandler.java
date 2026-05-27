@@ -5,6 +5,7 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
+import com.decathlon.idp_core.domain.exception.InvalidQueryDslException;
 import com.decathlon.idp_core.domain.exception.entity_template.PropertyDefinitionRulesConflictException;
 import com.decathlon.idp_core.domain.exception.entity_template.PropertyTypeChangeException;
 import com.decathlon.idp_core.domain.exception.entity_template.RelationCannotTargetItselfException;
@@ -67,6 +68,16 @@ public class ApiExceptionHandler {
         log.warn("Template not found: {}", ex.getMessage());
         ErrorResponse errorResponse = new ErrorResponse(NOT_FOUND.name(), ex.getMessage());
         return ResponseEntity.status(NOT_FOUND).body(errorResponse);
+    }
+
+    /// Handles domain exception for malformed filter query strings.
+    ///
+    /// **HTTP mapping:** Maps domain [InvalidQueryDslException] to HTTP 400 Bad Request
+    /// so API consumers receive clear feedback about invalid `q` parameter syntax.
+    @ExceptionHandler(InvalidQueryDslException.class)
+    public ResponseEntity<ErrorResponse> handleInvalidQueryDslException(InvalidQueryDslException ex) {
+        log.warn("Invalid filter query: {}", ex.getMessage());
+        return createErrorResponse(HttpStatus.BAD_REQUEST, ex.getMessage());
     }
 
     /// Handles domain exception when entity templates already exist.

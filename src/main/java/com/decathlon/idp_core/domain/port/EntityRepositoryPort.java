@@ -9,6 +9,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 
 import com.decathlon.idp_core.domain.model.entity.Entity;
+import com.decathlon.idp_core.domain.model.entity.EntityFilter;
 import com.decathlon.idp_core.domain.model.entity.EntitySummary;
 
 /// Driven port defining the contract for [Entity] persistence operations.
@@ -18,6 +19,7 @@ import com.decathlon.idp_core.domain.model.entity.EntitySummary;
 /// - `findById()` must return empty Optional for non-existent entities
 /// - `findByTemplateIdentifierAndIdentifier()` enforces business uniqueness constraints
 /// - `findByTemplateIdentifier()` must support pagination for large entity sets
+/// - `findByTemplateIdentifierWithFilter()` must apply all filter criteria with AND logic
 /// - `findByIdentifierIn()` optimizes bulk entity lookups for relationship resolution
 /// - `findByRelationIdIn()` enables reverse relationship navigation
 /// - `deletePropertiesByTemplateIdentifierAndPropertyName()` must remove all property instances matching the given names for entities of the specified template
@@ -36,6 +38,8 @@ public interface EntityRepositoryPort {
     Optional<Entity> findByTemplateIdentifierAndName(String templateIdentifier, String entityName);
 
     Page<Entity> findByTemplateIdentifier(String templateIdentifier, Pageable pageable);
+
+    Page<Entity> findByTemplateIdentifierWithFilter(String templateIdentifier, EntityFilter filter, Pageable pageable);
 
     List<EntitySummary> findByIdentifierIn(List<String> identifiers);
 

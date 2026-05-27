@@ -12,9 +12,11 @@ import com.decathlon.idp_core.domain.exception.entity.EntityNotFoundException;
 import com.decathlon.idp_core.domain.exception.entity.EntityValidationException;
 import com.decathlon.idp_core.domain.exception.entity_template.EntityTemplateNotFoundException;
 import com.decathlon.idp_core.domain.model.entity.Entity;
+import com.decathlon.idp_core.domain.model.entity.EntityFilter;
 import com.decathlon.idp_core.domain.model.entity.EntitySummary;
 import com.decathlon.idp_core.domain.model.entity_template.EntityTemplate;
 import com.decathlon.idp_core.domain.port.EntityRepositoryPort;
+import com.decathlon.idp_core.domain.service.EntityQueryParserService;
 import com.decathlon.idp_core.domain.service.entity_template.EntityTemplateService;
 import com.decathlon.idp_core.domain.service.entity_template.EntityTemplateValidationService;
 
@@ -42,21 +44,27 @@ public class EntityService {
     private final EntityValidationService entityValidationService;
     private final EntityTemplateValidationService entityTemplateValidationService;
     private final EntityTemplateService entityTemplateService;
+    private final EntityQueryParserService entityQueryParserService;
 
-    /// Retrieves entities filtered by template with existence validation.
+    /// Retrieves entities filtered by template with optional query filter.
     ///
-    /// **Contract:** Returns paginated entities that conform to the specified
-    /// template. Template existence is validated first to ensure meaningful results.
+    /// **Contract:** Returns paginated entities conforming to the specified template
+    /// that additionally satisfy all criteria in filter (when provided). Template
+    /// existence is validated first. When filter is null or empty, the result
+    /// includes all entities for the template.
     ///
     /// @param pageable           pagination configuration for large entity sets
     /// @param templateIdentifier business identifier of the entity template
-    /// @return paginated entities matching the template
+    /// @param entityFilter             the parsed query filter; null or [EntityFilter#empty()] for no filtering
+    /// @return paginated entities matching the template and all filter criteria
     /// @throws EntityTemplateNotFoundException when template doesn't exist
     @Transactional
-    public Page<Entity> getEntitiesByTemplateIdentifier(Pageable pageable, String templateIdentifier) {
-        entityTemplateValidationService.validateTemplateExists(templateIdentifier);
-        return entityRepository.findByTemplateIdentifier(templateIdentifier, pageable);
-
+    public Page<Entity> getEntitiesByTemplateIdentifier(
+            Pageable pageable, String templateIdentifier, EntityFilter entityFilter) {
+        EntityTemplate template = entityTemplateService.getEntityTemplateByIdentifier(templateIdentifier);
+        EntityFilter filter = entityFilter != null ? entityFilter : EntityFilter.empty();
+        entityQueryParserService.validateFilterPropertyTypes(filter, template);
+        return entityRepository.findByTemplateIdentifierWithFilter(templateIdentifier, filter, pageable);
     }
 
     /// Provides lightweight entity summaries for efficient bulk operations.
@@ -66,7 +74,7 @@ public class EntityService {
     ///
     /// @param identifiers business identifiers of entities to summarize
     /// @return lightweight entity summaries for the specified identifiers
-    public List<EntitySummary> getEntitiesSummariesByIndentifiers(List<String> identifiers) {
+    public List<EntitySummary> getEntitiesSummariesByIdentifiers(List<String> identifiers) {
         return entityRepository.findByIdentifierIn(identifiers);
     }
 
