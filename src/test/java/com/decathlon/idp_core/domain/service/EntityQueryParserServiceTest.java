@@ -507,19 +507,19 @@ class EntityQueryParserServiceTest {
     @DisplayName("Null or blank query")
     class NullOrBlankQueryTests {
 
-        @ParameterizedTest(name = "returns empty filter for: {1}")
+        @ParameterizedTest(name = "returns empty filter for: {0}")
         @MethodSource("provideNullOrBlankQueries")
         @DisplayName("parse(null/empty/blank) returns empty filter with no criteria")
-        void parse_nullOrBlankQuery_returnsEmptyFilter(String query, String description) {
+        void parse_nullOrBlankQuery_returnsEmptyFilter(String query) {
             var result = parser.parse(query);
             assertThat(result.criteria()).isEmpty();
         }
 
         private static Stream<Arguments> provideNullOrBlankQueries() {
             return Stream.of(
-                Arguments.of(null, "null"),
-                Arguments.of("", "empty string"),
-                Arguments.of("   ", "blank string")
+                Arguments.of((String) null),
+                Arguments.of(""),
+                Arguments.of("   ")
             );
         }
     }
