@@ -394,9 +394,6 @@
               <file>${project.basedir}/.spotless/eclipse-formatter.xml</file>
             </eclipse>
 
-            <!-- Remove unused imports -->
-            <removeUnusedImports/>
-
             <!-- Format import order -->
             <importOrder>
               <order>java,javax,jakarta,org,com</order>
