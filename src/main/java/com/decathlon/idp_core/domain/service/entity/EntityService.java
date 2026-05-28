@@ -129,4 +129,36 @@ public class EntityService {
     return entityRepository.save(entity);
   }
 
+    /// Updates an existing entity identified by template and entity identifiers.
+    ///
+    /// **Contract:** Validates template existence, then entity existence within the
+    /// template scope. Validates updated entity data against the template constraints
+    /// before persisting changes.
+    ///
+    /// @param templateIdentifier template identifier from the request path
+    /// @param entityIdentifier entity identifier from the request path
+    /// @param entity validated entity payload
+    /// @return persisted updated entity
+    /// @throws EntityTemplateNotFoundException when template doesn't exist
+    /// @throws EntityNotFoundException when target entity doesn't exist
+    /// @throws EntityValidationException when payload violates template constraints
+    @Transactional
+    public Entity updateEntity(String templateIdentifier, String entityIdentifier, @Valid Entity entity) {
+        EntityTemplate template = entityTemplateService.getEntityTemplateByIdentifier(templateIdentifier);
+        Entity existingEntity = entityRepository.findByTemplateIdentifierAndIdentifier(templateIdentifier, entityIdentifier)
+                .orElseThrow(() -> new EntityNotFoundException(templateIdentifier, entityIdentifier));
+
+        Entity entityToSave = new Entity(
+                existingEntity.id(),
+                templateIdentifier,
+                entity.name(),
+                entityIdentifier,
+                entity.properties(),
+                entity.relations());
+
+        entityValidationService.validateForUpdate(entityToSave, template);
+        return entityRepository.save(entityToSave);
+    }
+
+
 }

@@ -309,6 +309,101 @@ GET /api/v1/entities/{templateIdentifier}/{entityIdentifier}
 
 ---
 
+## Updating an Entity
+
+You update an existing entity by sending a `PUT` request on the entity resource path.
+
+### Update Endpoint
+
+```text
+PUT /api/v1/entities/{templateIdentifier}/{entityIdentifier}
+```
+
+### Update Request Body
+
+The request body has a similar shape and validation rules as `POST /api/v1/entities/{templateIdentifier}`, except the entity identifier is only present in path parameters.
+
+```json
+{
+  "name": "my-web-service-updated",
+  "properties": {
+    "applicationName": "catalog-api",
+    "ownerEmail": "owner@example.com",
+    "port": "8080",
+    "environment": "DEV",
+    "version": "1.2.3",
+    "teamName": "platform-team",
+    "baseUrl": "https://catalog.example.com",
+    "protocol": "HTTP",
+    "programmingLanguage": "JAVA"
+  },
+  "relations": [
+    {
+      "name": "depends-on",
+      "target_entity_identifiers": [
+        "web-api-1"
+      ]
+    }
+  ]
+}
+```
+
+### Update Example Request
+
+```bash
+curl -X PUT http://localhost:8084/api/v1/entities/web-service/my-web-service \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "my-web-service-updated",
+    "properties": {
+      "applicationName": "catalog-api",
+      "ownerEmail": "owner@example.com",
+      "port": "8080",
+      "environment": "DEV",
+      "version": "1.2.3",
+      "teamName": "platform-team",
+      "baseUrl": "https://catalog.example.com",
+      "protocol": "HTTP",
+      "programmingLanguage": "JAVA"
+    }
+  }'
+```
+
+### Update Example Response
+
+```json
+{
+  "name": "my-web-service-updated",
+  "template_identifier": "web-service",
+  "properties": {
+    "applicationName": "catalog-api",
+    "ownerEmail": "owner@example.com",
+    "port": "8080",
+    "environment": "DEV",
+    "version": "1.2.3",
+    "teamName": "platform-team",
+    "baseUrl": "https://catalog.example.com",
+    "protocol": "HTTP",
+    "programmingLanguage": "JAVA"
+  },
+  "relations": {},
+  "relations_as_target": {}
+}
+```
+
+### Update Response Codes
+
+| Code  | Description                                            |
+|-------|--------------------------------------------------------|
+| `200` | Entity updated successfully                            |
+| `400` | Invalid request body or validation failure             |
+| `401` | Missing or invalid authentication token                |
+| `403` | Insufficient permissions                               |
+| `404` | Template or entity not found for the given identifier  |
+| `500` | Unexpected server error                                |
+
+---
+
 ## Dynamic Schema
 
 Because templates are configured at runtime, the entity structure is **dynamic**:
