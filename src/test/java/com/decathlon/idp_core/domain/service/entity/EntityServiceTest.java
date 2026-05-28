@@ -211,24 +211,6 @@ class EntityServiceTest {
     }
 
     @Test
-    @DisplayName("Should reject update when path identifier and body identifier differ")
-    void shouldRejectUpdateWhenPathAndBodyIdentifierDiffer() {
-        var existing = new Entity(UUID.randomUUID(), "web-service", "Web API 2", "web-api-2", List.of(), List.of());
-        var payload = new Entity(null, "web-service", "Web API 2 Updated", "different-id", List.of(), List.of());
-        var template = new EntityTemplate(UUID.randomUUID(), "web-service", "Web Service", "desc", List.of(), List.of());
-
-        when(entityTemplateService.getEntityTemplateByIdentifier("web-service")).thenReturn(template);
-        when(entityRepository.findByTemplateIdentifierAndIdentifier("web-service", "web-api-2")).thenReturn(Optional.of(existing));
-
-        assertThrows(EntityValidationException.class,
-                () -> entityService.updateEntity("web-service", "web-api-2", payload));
-
-        verify(entityTemplateService).getEntityTemplateByIdentifier("web-service");
-        verify(entityRepository).findByTemplateIdentifierAndIdentifier("web-service", "web-api-2");
-        verifyNoInteractions(entityValidationService);
-    }
-
-    @Test
     @DisplayName("Should propagate two validation errors when update payload violates template constraints")
     void shouldPropagateTwoValidationErrorsWhenUpdatingInvalidEntity() {
         var existing = new Entity(UUID.randomUUID(), "web-service", "Web API 2", "web-api-2", List.of(), List.of());

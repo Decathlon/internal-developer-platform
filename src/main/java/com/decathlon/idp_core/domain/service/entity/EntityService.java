@@ -1,7 +1,5 @@
 package com.decathlon.idp_core.domain.service.entity;
 
-import static com.decathlon.idp_core.domain.constant.ValidationMessages.ENTITY_IDENTIFIER_MUST_MATCH_PATH;
-
 import java.util.List;
 
 import org.springframework.data.domain.Page;
@@ -141,10 +139,6 @@ public class EntityService {
         EntityTemplate template = entityTemplateService.getEntityTemplateByIdentifier(templateIdentifier);
         Entity existingEntity = entityRepository.findByTemplateIdentifierAndIdentifier(templateIdentifier, entityIdentifier)
                 .orElseThrow(() -> new EntityNotFoundException(templateIdentifier, entityIdentifier));
-
-        if (!entityIdentifier.equals(entity.identifier())) {
-            throw new EntityValidationException(List.of(ENTITY_IDENTIFIER_MUST_MATCH_PATH));
-        }
 
         Entity entityToSave = new Entity(
                 existingEntity.id(),

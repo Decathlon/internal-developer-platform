@@ -61,7 +61,6 @@ public class ValidationMessages {
     // Entity input validation messages
     public static final String ENTITY_NAME_MANDATORY = "Entity name is mandatory and cannot be blank";
     public static final String ENTITY_IDENTIFIER_MANDATORY = "Entity identifier is mandatory and cannot be blank";
-    public static final String ENTITY_IDENTIFIER_MUST_MATCH_PATH = "Entity identifier in body must match path identifier";
 
     // Entity creation validation messages
     public static final String ENTITY_NOT_FOUND = "Entity not found with template identifier %s and entity identifier '%s'";
