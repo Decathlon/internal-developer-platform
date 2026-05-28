@@ -98,15 +98,20 @@ public class EntityGraphService {
 
         // Guard: return a stub leaf if this node was already fully built in another branch.
         // This breaks both directed cycles (A→B→A) and shared references (A→B, C→B).
+        // Properties are still included so data is not silently dropped for shared nodes.
         var nodeId = entity.templateIdentifier() + ":" + entity.identifier();
         if (!visitedNodeIds.add(nodeId)) {
+            List<Property> stubProperties = includeProperties ? entity.properties() : List.of();
             return new EntityGraphNode(entity.templateIdentifier(), entity.identifier(), entity.name(),
-                    List.of(), List.of(), List.of());
+                    stubProperties, List.of(), List.of());
         }
 
+        // Depth exhausted — return a leaf with no relations but still carry properties
+        // so the deepest reachable entities expose their data when include_data=true.
         if (remainingDepth <= 0) {
+            List<Property> leafProperties = includeProperties ? entity.properties() : List.of();
             return new EntityGraphNode(entity.templateIdentifier(), entity.identifier(), entity.name(),
-                    List.of(), List.of(), List.of());
+                    leafProperties, List.of(), List.of());
         }
 
         List<EntityGraphRelation> outboundRelations = entity.relations().stream()
