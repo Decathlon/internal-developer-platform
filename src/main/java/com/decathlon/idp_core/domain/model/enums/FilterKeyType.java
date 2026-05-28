@@ -17,11 +17,5 @@ package com.decathlon.idp_core.domain.model.enums;
 ///   *source* entity in a reverse relation. Key format: `relationName.propertyName`
 ///   (e.g. `relations_as_target.api-link.name:microservice`)
 public enum FilterKeyType {
-    ATTRIBUTE,
-    PROPERTY,
-    RELATION_NAME,
-    RELATION_ENTITY,
-    RELATION_PROPERTY,
-    RELATIONS_AS_TARGET_NAME,
-    RELATIONS_AS_TARGET_PROPERTY
+  ATTRIBUTE, PROPERTY, RELATION_NAME, RELATION_ENTITY, RELATION_PROPERTY, RELATIONS_AS_TARGET_NAME, RELATIONS_AS_TARGET_PROPERTY
 }

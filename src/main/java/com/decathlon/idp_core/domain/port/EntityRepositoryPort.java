@@ -29,23 +29,27 @@ import com.decathlon.idp_core.domain.model.entity.EntitySummary;
 /// appropriately for the underlying persistence technology.
 public interface EntityRepositoryPort {
 
-    Entity save(Entity entity);
+  Entity save(Entity entity);
 
-    Optional<Entity> findById(UUID id);
+  Optional<Entity> findById(UUID id);
 
-    Optional<Entity> findByTemplateIdentifierAndIdentifier(String templateIdentifier, String identifier);
+  Optional<Entity> findByTemplateIdentifierAndIdentifier(String templateIdentifier,
+      String identifier);
 
-    Optional<Entity> findByTemplateIdentifierAndName(String templateIdentifier, String entityName);
+  Optional<Entity> findByTemplateIdentifierAndName(String templateIdentifier, String entityName);
 
-    Page<Entity> findByTemplateIdentifier(String templateIdentifier, Pageable pageable);
+  Page<Entity> findByTemplateIdentifier(String templateIdentifier, Pageable pageable);
 
-    Page<Entity> findByTemplateIdentifierWithFilter(String templateIdentifier, EntityFilter filter, Pageable pageable);
+  Page<Entity> findByTemplateIdentifierWithFilter(String templateIdentifier, EntityFilter filter,
+      Pageable pageable);
 
-    List<EntitySummary> findByIdentifierIn(List<String> identifiers);
+  List<EntitySummary> findByIdentifierIn(List<String> identifiers);
 
-    List<EntitySummary> findByRelationIdIn(List<UUID> relationIds);
+  List<EntitySummary> findByRelationIdIn(List<UUID> relationIds);
 
-    void deletePropertiesByTemplateIdentifierAndPropertyName(String templateIdentifier, Collection<String> propertyNames);
+  void deletePropertiesByTemplateIdentifierAndPropertyName(String templateIdentifier,
+      Collection<String> propertyNames);
 
-    void deleteRelationsByTemplateIdentifierAndRelationName(String templateIdentifier, Collection<String> relationNames);
+  void deleteRelationsByTemplateIdentifierAndRelationName(String templateIdentifier,
+      Collection<String> relationNames);
 }

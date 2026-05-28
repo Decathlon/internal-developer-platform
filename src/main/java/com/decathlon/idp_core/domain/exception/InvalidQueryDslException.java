@@ -6,7 +6,7 @@ package com.decathlon.idp_core.domain.exception;
 /// This exception should be mapped to HTTP 400 Bad Request by the infrastructure layer.
 public class InvalidQueryDslException extends RuntimeException {
 
-    public InvalidQueryDslException(String message) {
-        super(message);
-    }
+  public InvalidQueryDslException(String message) {
+    super(message);
+  }
 }

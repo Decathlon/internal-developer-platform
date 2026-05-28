@@ -8,8 +8,5 @@ package com.decathlon.idp_core.domain.model.enums;
 /// - [LESS_THAN] requires the field to be less than the value
 /// - [GREATER_THAN] requires the field to be greater than the value
 public enum FilterOperator {
-    EQUALS,
-    CONTAINS,
-    LESS_THAN,
-    GREATER_THAN
+  EQUALS, CONTAINS, LESS_THAN, GREATER_THAN
 }

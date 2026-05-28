@@ -4,11 +4,11 @@ import static com.decathlon.idp_core.domain.constant.ValidationMessages.PROPERTY
 
 import java.util.UUID;
 
+import jakarta.validation.constraints.NotBlank;
+
 import com.decathlon.idp_core.domain.model.entity_template.PropertyDefinition;
 import com.decathlon.idp_core.domain.model.entity_template.PropertyRules;
 import com.decathlon.idp_core.domain.model.enums.PropertyType;
-
-import jakarta.validation.constraints.NotBlank;
 
 /// A concrete property instance belonging to an [Entity].
 ///
@@ -26,10 +26,9 @@ import jakarta.validation.constraints.NotBlank;
 ///   [PropertyType] definition (carried as [Object] so the original JSON type —
 ///   String, Number, Boolean — is preserved for strict type-mismatch detection
 ///   at validation time).
-public record Property(
-        UUID id,
+public record Property(UUID id,
 
-        @NotBlank(message = PROPERTY_NAME_MANDATORY) String name,
+    @NotBlank(message = PROPERTY_NAME_MANDATORY) String name,
 
-        String value) {
+    String value) {
 }

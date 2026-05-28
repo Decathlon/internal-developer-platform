@@ -9,33 +9,33 @@ import java.util.List;
 /// validators stay focused on the rule they enforce rather than on string
 /// concatenation. Not thread-safe; intended for short-lived per-request use.
 public final class Violations {
-    private final List<String> messages = new ArrayList<>();
+  private final List<String> messages = new ArrayList<>();
 
-    void add(String message) {
-        messages.add(message);
-    }
+  void add(String message) {
+    messages.add(message);
+  }
 
-    public void add(String template, Object... args) {
-        messages.add(template.formatted(args));
-    }
+  public void add(String template, Object... args) {
+    messages.add(template.formatted(args));
+  }
 
-    void addIfBlank(String value, String message) {
-        if (value == null || value.isBlank()) {
-            messages.add(message);
-        }
+  void addIfBlank(String value, String message) {
+    if (value == null || value.isBlank()) {
+      messages.add(message);
     }
+  }
 
-    /// Adds a violation prefixed with the indexed collection name, e.g.
-    /// `Property[2]: Property name is mandatory`.
-    public void addIndexed(String collection, int index, String message) {
-        messages.add("%s[%d]: %s".formatted(collection, index, message));
-    }
+  /// Adds a violation prefixed with the indexed collection name, e.g.
+  /// `Property[2]: Property name is mandatory`.
+  public void addIndexed(String collection, int index, String message) {
+    messages.add("%s[%d]: %s".formatted(collection, index, message));
+  }
 
-    boolean isEmpty() {
-        return messages.isEmpty();
-    }
+  boolean isEmpty() {
+    return messages.isEmpty();
+  }
 
-    List<String> asList() {
-        return List.copyOf(messages);
-    }
+  List<String> asList() {
+    return List.copyOf(messages);
+  }
 }

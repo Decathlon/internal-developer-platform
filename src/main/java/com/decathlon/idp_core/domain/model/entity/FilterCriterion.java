@@ -13,10 +13,6 @@ import com.decathlon.idp_core.domain.model.enums.FilterOperator;
 /// - [FilterKeyType#RELATION_PROPERTY] — a property (`identifier` or `name`) of the target entity of a named relation. `key` format: `relationName.propertyName` (e.g., `api-link.identifier`)
 ///
 /// Multiple [FilterCriterion] instances combined in an [EntityFilter] are applied with implicit AND logic.
-public record FilterCriterion(
-        FilterKeyType keyType,
-        String key,
-        FilterOperator operator,
-        String value
-) {
+public record FilterCriterion(FilterKeyType keyType, String key, FilterOperator operator,
+    String value) {
 }
