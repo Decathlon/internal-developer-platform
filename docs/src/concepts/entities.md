@@ -316,17 +316,16 @@ You update an existing entity by sending a `PUT` request on the entity resource 
 ### Update Endpoint
 
 ```text
-PUT /api/v1/entities/{templateIdentifier}/identifier/{entityIdentifier}
+PUT /api/v1/entities/{templateIdentifier}/{entityIdentifier}
 ```
 
 ### Update Request Body
 
-The request body follows the same shape and validation rules as `POST /api/v1/entities/{templateIdentifier}`.
+The request body has a similar shape and validation rules as `POST /api/v1/entities/{templateIdentifier}`, except the entity identifier is only present in the url path.
 
 ```json
 {
   "name": "my-web-service-updated",
-  "identifier": "my-web-service",
   "properties": {
     "applicationName": "catalog-api",
     "ownerEmail": "owner@example.com",
@@ -352,11 +351,10 @@ The request body follows the same shape and validation rules as `POST /api/v1/en
 ### Update Example Request
 
 ```bash
-curl -X PUT http://localhost:8084/api/v1/entities/web-service/identifier/my-web-service \
+curl -X PUT http://localhost:8084/api/v1/entities/web-service/my-web-service \
   -H "Content-Type: application/json" \
   -d '{
     "name": "my-web-service-updated",
-    "identifier": "my-web-service",
     "properties": {
       "applicationName": "catalog-api",
       "ownerEmail": "owner@example.com",
@@ -375,7 +373,6 @@ curl -X PUT http://localhost:8084/api/v1/entities/web-service/identifier/my-web-
 
 ```json
 {
-  "identifier": "my-web-service",
   "name": "my-web-service-updated",
   "template_identifier": "web-service",
   "properties": {

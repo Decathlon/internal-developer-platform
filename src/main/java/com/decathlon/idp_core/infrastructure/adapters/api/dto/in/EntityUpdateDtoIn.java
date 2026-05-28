@@ -13,7 +13,7 @@ import com.fasterxml.jackson.databind.annotation.JsonNaming;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.Valid;
 
-/// Input DTO for creating a new entity within a template scope.
+/// Input DTO for updating an entity within a template scope.
 ///
 /// **Infrastructure validation:** Performs syntactic validation at the API boundary
 /// using Jakarta Validation annotations. Semantic validation (schema conformance

@@ -28,6 +28,7 @@ import com.decathlon.idp_core.domain.exception.entity.EntityAlreadyExistsExcepti
 import com.decathlon.idp_core.domain.exception.entity.EntityNotFoundException;
 import com.decathlon.idp_core.domain.exception.entity.EntityValidationException;
 import com.decathlon.idp_core.domain.exception.entity_template.EntityTemplateNotFoundException;
+import com.decathlon.idp_core.domain.constant.ValidationMessages;
 import com.decathlon.idp_core.domain.model.entity.Entity;
 import com.decathlon.idp_core.domain.model.entity.EntityFilter;
 import com.decathlon.idp_core.domain.model.entity.EntitySummary;
@@ -225,6 +226,32 @@ class EntityServiceTest {
         verify(entityTemplateService).getEntityTemplateByIdentifier("web-service");
         verify(entityRepository).findByTemplateIdentifierAndIdentifier("web-service", "web-api-2");
         verifyNoInteractions(entityValidationService);
+    }
+
+    @Test
+    @DisplayName("Should propagate two validation errors when update payload violates template constraints")
+    void shouldPropagateTwoValidationErrorsWhenUpdatingInvalidEntity() {
+        var existing = new Entity(UUID.randomUUID(), "web-service", "Web API 2", "web-api-2", List.of(), List.of());
+        var payload = new Entity(null, "web-service", "Web API 2 Updated", "web-api-2", List.of(), List.of());
+        var expectedToValidate = new Entity(existing.id(), "web-service", "Web API 2 Updated", "web-api-2", List.of(), List.of());
+        var template = new EntityTemplate(UUID.randomUUID(), "web-service", "Web Service", "desc", List.of(), List.of());
+        var validationErrors = List.of(
+                ValidationMessages.PROPERTY_NOT_DEFINED_IN_TEMPLATE.formatted("status", "web-service"),
+                ValidationMessages.RELATION_TARGET_ENTITY_NOT_FOUND.formatted("child_of", "missing-platform")
+        );
+
+        when(entityTemplateService.getEntityTemplateByIdentifier("web-service")).thenReturn(template);
+        when(entityRepository.findByTemplateIdentifierAndIdentifier("web-service", "web-api-2")).thenReturn(Optional.of(existing));
+        doThrow(new EntityValidationException(validationErrors))
+                .when(entityValidationService).validateForUpdate(expectedToValidate, template);
+
+        var thrown = assertThrows(EntityValidationException.class,
+                () -> entityService.updateEntity("web-service", "web-api-2", payload));
+
+        assertEquals(validationErrors, thrown.getViolations());
+        verify(entityValidationService).validateForUpdate(expectedToValidate, template);
+        verify(entityRepository).findByTemplateIdentifierAndIdentifier("web-service", "web-api-2");
+        verifyNoMoreInteractions(entityRepository);
     }
 
     private Entity entity(String templateIdentifier, String identifier, String name) {

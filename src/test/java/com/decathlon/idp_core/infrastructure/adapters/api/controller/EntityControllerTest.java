@@ -520,6 +520,79 @@ public class EntityControllerTest extends AbstractIntegrationTest {
                     )));
         }
 
+        @Test
+        @WithMockUser()
+        @DisplayName("Should return 400 when payload contains a property not defined in template")
+        void postEntity_400_when_property_not_defined_in_template() throws Exception {
+            var payload = """
+                    {
+                      "name": "web-service-extra-property",
+                      "identifier": "web-service-extra-property",
+                      "properties": {
+                        "applicationName": "catalog-api",
+                        "ownerEmail": "owner@example.com",
+                        "port": "8080",
+                        "environment": "DEV",
+                        "version": "1.2.3",
+                        "teamName": "platform-team",
+                        "baseUrl": "https://catalog.example.com",
+                        "protocol": "HTTP",
+                        "programmingLanguage": "JAVA",
+                        "status": "deprecated"
+                      }
+                    }
+                    """;
+
+            mockMvc.perform(MockMvcRequestBuilders.post(ENTITIES_BY_TEMPLATE_IDENTIFIER_PATH, TEMPLATE_IDENTIFIER)
+                            .contentType(APPLICATION_JSON)
+                            .accept(APPLICATION_JSON)
+                            .with(csrf())
+                            .content(payload))
+                    .andExpect(status().isBadRequest())
+                    .andExpect(jsonPath("$.error").value("BAD_REQUEST"))
+                    .andExpect(jsonPath("$.error_description").value(org.hamcrest.Matchers.containsString(
+                            "Property 'status' is not defined in template 'web-service'")));
+        }
+
+        @Test
+        @WithMockUser()
+        @DisplayName("Should return 400 when relation target entity does not exist")
+        void postEntity_400_when_relation_target_entity_does_not_exist() throws Exception {
+            var payload = """
+                    {
+                      "name": "web-service-missing-relation-target",
+                      "identifier": "web-service-missing-relation-target",
+                      "properties": {
+                        "applicationName": "catalog-api",
+                        "ownerEmail": "owner@example.com",
+                        "port": "8080",
+                        "environment": "DEV",
+                        "version": "1.2.3",
+                        "teamName": "platform-team",
+                        "baseUrl": "https://catalog.example.com",
+                        "protocol": "HTTP",
+                        "programmingLanguage": "JAVA"
+                      },
+                      "relations": [
+                        {
+                          "name": "database",
+                          "target_entity_identifiers": ["missing-database"]
+                        }
+                      ]
+                    }
+                    """;
+
+            mockMvc.perform(MockMvcRequestBuilders.post(ENTITIES_BY_TEMPLATE_IDENTIFIER_PATH, TEMPLATE_IDENTIFIER)
+                            .contentType(APPLICATION_JSON)
+                            .accept(APPLICATION_JSON)
+                            .with(csrf())
+                            .content(payload))
+                    .andExpect(status().isBadRequest())
+                    .andExpect(jsonPath("$.error").value("BAD_REQUEST"))
+                    .andExpect(jsonPath("$.error_description").value(org.hamcrest.Matchers.containsString(
+                            "Relation 'database': target entity 'missing-database' does not exist")));
+        }
+
     }
 
     @Nested
@@ -671,6 +744,47 @@ public class EntityControllerTest extends AbstractIntegrationTest {
                             org.hamcrest.Matchers.containsString("Property 'baseUrl' does not match expected format"),
                             org.hamcrest.Matchers.containsString("Property 'baseUrl' does not match required format URL"),
                             org.hamcrest.Matchers.containsString("Property 'port' value must be greater than or equal to 1024")
+                    )));
+        }
+
+        @Test
+        @WithMockUser
+        @DisplayName("Should return 400 when update contains a property not defined in template and a missing relation target")
+        void putEntity_400_when_property_not_defined_and_relation_target_missing() throws Exception {
+            var payload = """
+                    {
+                      "name": "Web API 2 Updated",
+                      "properties": {
+                        "applicationName": "catalog-api",
+                        "ownerEmail": "owner@example.com",
+                        "port": "8080",
+                        "environment": "DEV",
+                        "version": "1.2.3",
+                        "teamName": "platform-team",
+                        "baseUrl": "https://catalog.example.com",
+                        "protocol": "HTTP",
+                        "programmingLanguage": "JAVA",
+                        "status": "deprecated"
+                      },
+                      "relations": [
+                        {
+                          "name": "database",
+                          "target_entity_identifiers": ["missing-database"]
+                        }
+                      ]
+                    }
+                    """;
+
+            mockMvc.perform(put(ENTITIES_BY_IDENTIFIER_PATH, TEMPLATE_IDENTIFIER, ENTITY_IDENTIFIER)
+                            .contentType(APPLICATION_JSON)
+                            .accept(APPLICATION_JSON)
+                            .with(csrf())
+                            .content(payload))
+                    .andExpect(status().isBadRequest())
+                    .andExpect(jsonPath("$.error").value("BAD_REQUEST"))
+                    .andExpect(jsonPath("$.error_description").value(org.hamcrest.Matchers.allOf(
+                            org.hamcrest.Matchers.containsString("Property 'status' is not defined in template 'web-service'"),
+                            org.hamcrest.Matchers.containsString("Relation 'database': target entity 'missing-database' does not exist")
                     )));
         }
 

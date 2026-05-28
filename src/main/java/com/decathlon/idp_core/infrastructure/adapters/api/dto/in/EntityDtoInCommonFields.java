@@ -26,7 +26,8 @@ import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 
-/// Input DTO for creating a new entity within a template scope.
+///  Common fields shared between EntityCreateDtoIn (POST) and EntityUpdateDtoIn (PUT).
+
 ///
 /// **Infrastructure validation:** Performs syntactic validation at the API boundary
 /// using Jakarta Validation annotations. Semantic validation (schema conformance
