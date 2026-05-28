@@ -321,7 +321,7 @@ PUT /api/v1/entities/{templateIdentifier}/{entityIdentifier}
 
 ### Update Request Body
 
-The request body has a similar shape and validation rules as `POST /api/v1/entities/{templateIdentifier}`, except the entity identifier is only present in the url path.
+The request body has a similar shape and validation rules as `POST /api/v1/entities/{templateIdentifier}`, except the entity identifier is only present in path parameters.
 
 ```json
 {
