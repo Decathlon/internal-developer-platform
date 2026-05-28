@@ -74,6 +74,20 @@ class PropertyValidationServiceTest {
         }
 
         @Test
+        @DisplayName("Should report violation when provided property is not defined in template")
+        void shouldReportViolationWhenPropertyNotDefinedInTemplate() {
+            var template = new EntityTemplate(UUID.randomUUID(), "system-template", "System", "desc", List.of(), List.of());
+            var definition = new PropertyDefinition(UUID.randomUUID(), "owner", "Owner", PropertyType.STRING, true, null);
+            var extraProperty = new Property(UUID.randomUUID(), "status", "deprecated");
+            var violations = mock(Violations.class);
+
+            service.validatePropertiesAgainstTemplate(template, List.of(definition), Map.of("status", extraProperty), violations);
+
+            verify(violations).add(ValidationMessages.PROPERTY_NOT_DEFINED_IN_TEMPLATE, "status", "system-template");
+            verify(violations).add(ValidationMessages.PROPERTY_REQUIRED_MISSING, "owner", "system-template");
+        }
+
+        @Test
         @DisplayName("Should delegate to validatePropertyValue and accumulate rule violations")
         void shouldDelegateAndAccumulateRuleViolations() {
             var template = new EntityTemplate(UUID.randomUUID(), "system-template", "System", "desc", List.of(), List.of());

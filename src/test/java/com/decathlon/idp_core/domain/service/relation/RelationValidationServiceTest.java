@@ -2,31 +2,58 @@ package com.decathlon.idp_core.domain.service.relation;
 
 import static com.decathlon.idp_core.domain.constant.ValidationMessages.RELATION_NOT_DEFINED_IN_TEMPLATE;
 import static com.decathlon.idp_core.domain.constant.ValidationMessages.RELATION_REQUIRED_MISSING;
+import static com.decathlon.idp_core.domain.constant.ValidationMessages.RELATION_TARGET_ENTITY_NOT_FOUND;
 import static com.decathlon.idp_core.domain.constant.ValidationMessages.RELATION_TOO_MANY_TARGETS;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
+import static org.mockito.Mockito.when;
 
+import java.util.Arrays;
 import java.util.List;
 import java.util.UUID;
 
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
 
+import com.decathlon.idp_core.domain.model.entity.EntitySummary;
 import com.decathlon.idp_core.domain.model.entity.Relation;
 import com.decathlon.idp_core.domain.model.entity_template.EntityTemplate;
 import com.decathlon.idp_core.domain.model.entity_template.RelationDefinition;
+import com.decathlon.idp_core.domain.port.EntityRepositoryPort;
 import com.decathlon.idp_core.domain.service.entity.Violations;
 
 @DisplayName("RelationValidationService Tests")
+@ExtendWith(MockitoExtension.class)
 class RelationValidationServiceTest {
 
-    private final RelationValidationService service = new RelationValidationService();
+    @Mock
+    private EntityRepositoryPort entityRepository;
+
+    private RelationValidationService service;
+
+    @BeforeEach
+    void setUp() {
+        service = new RelationValidationService(entityRepository);
+    }
+
+    private void mockExistingEntities(String... identifiers) {
+        var summaries = Arrays.stream(identifiers)
+                .map(id -> new EntitySummary(id, "Name", "template"))
+                .toList();
+        when(entityRepository.findByIdentifierIn(any())).thenReturn(summaries);
+    }
 
     @Test
     @DisplayName("Should pass all checks cleanly when relations map exactly to definitions")
     void shouldPassCleanlyOnValidEntity() {
+        mockExistingEntities("team-a", "service-x", "service-y");
         var definition1 = definition("owned-by", true, false);
         var definition2 = definition("depends-on", false, true);
         var template = template("system-template", List.of(definition1, definition2));
@@ -97,6 +124,20 @@ class RelationValidationServiceTest {
 
             verifyNoInteractions(violations);
         }
+
+        @Test
+        @DisplayName("Should report violation when relation target entity does not exist")
+        void shouldReportViolationWhenRelationTargetEntityDoesNotExist() {
+            mockExistingEntities("existing-team");
+            var definition = definition("owned-by", true, false);
+            var template = template("system-template", List.of(definition));
+            var relation = relation("owned-by", List.of("missing-team"));
+            var violations = mock(Violations.class);
+
+            service.validateRelationsAgainstTemplate(template, List.of(relation), violations);
+
+            verify(violations).add(RELATION_TARGET_ENTITY_NOT_FOUND, "owned-by", "missing-team");
+        }
     }
 
     @Nested
@@ -161,6 +202,7 @@ class RelationValidationServiceTest {
         @Test
         @DisplayName("Should report violation when a non-toMany relation has multiple valid targets")
         void shouldReportViolationForMultipleTargetsOnSingleRelation() {
+            mockExistingEntities("team-a", "team-b");
             var definition = definition("owned-by", true, false);
             var template = template("system-template", List.of(definition));
             var relation = relation("owned-by", List.of("team-a", "team-b"));
@@ -174,6 +216,7 @@ class RelationValidationServiceTest {
         @Test
         @DisplayName("Should not report violation for multiple targets if toMany is true")
         void shouldNotReportViolationForMultipleTargetsWhenToManyIsTrue() {
+            mockExistingEntities("service-a", "service-b", "service-c");
             var definition = definition("depends-on", false, true);
             var template = template("system-template", List.of(definition));
             var relation = relation("depends-on", List.of("service-a", "service-b", "service-c"));
@@ -187,6 +230,7 @@ class RelationValidationServiceTest {
         @Test
         @DisplayName("Should ignore blank targets when checking cardinality constraints")
         void shouldIgnoreBlankTargetsForCardinality() {
+            mockExistingEntities("team-a");
             var definition = definition("owned-by", true, false);
             var template = template("system-template", List.of(definition));
             var relation = relation("owned-by", List.of("team-a", "   ", ""));
