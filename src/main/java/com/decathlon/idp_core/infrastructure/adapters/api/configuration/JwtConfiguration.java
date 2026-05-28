@@ -22,13 +22,12 @@ import org.springframework.security.oauth2.jwt.NimbusJwtDecoder;
 @Configuration
 public class JwtConfiguration {
 
-    @Value("${spring.security.oauth2.resourceserver.jwt.jwk-set-uri}")
-    private String jwkSetUri;
+  @Value("${spring.security.oauth2.resourceserver.jwt.jwk-set-uri}")
+  private String jwkSetUri;
 
-    @Bean
-    @ConditionalOnMissingBean
-    public JwtDecoder jwtDecoder() {
-        return NimbusJwtDecoder.withJwkSetUri(jwkSetUri)
-                .build();
-    }
+  @Bean
+  @ConditionalOnMissingBean
+  public JwtDecoder jwtDecoder() {
+    return NimbusJwtDecoder.withJwkSetUri(jwkSetUri).build();
+  }
 }

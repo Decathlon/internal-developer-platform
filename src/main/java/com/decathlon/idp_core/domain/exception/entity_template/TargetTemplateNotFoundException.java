@@ -13,10 +13,12 @@ import static com.decathlon.idp_core.domain.constant.ValidationMessages.TEMPLATE
 /// - Mapped to HTTP 400 Bad Request by [ApiExceptionHandler]
 public class TargetTemplateNotFoundException extends RuntimeException {
 
-    /// Constructs a new exception with the target template identifier that was not found.
-    ///
-    /// @param targetTemplateIdentifier the identifier of the target template that doesn't exist
-    public TargetTemplateNotFoundException(String targetTemplateIdentifier) {
-        super(String.format(TEMPLATE_IDENTIFIER_NOT_FOUND, targetTemplateIdentifier));
-    }
+  /// Constructs a new exception with the target template identifier that was not
+  /// found.
+  ///
+  /// @param targetTemplateIdentifier the identifier of the target template that
+  /// doesn't exist
+  public TargetTemplateNotFoundException(String targetTemplateIdentifier) {
+    super(String.format(TEMPLATE_IDENTIFIER_NOT_FOUND, targetTemplateIdentifier));
+  }
 }

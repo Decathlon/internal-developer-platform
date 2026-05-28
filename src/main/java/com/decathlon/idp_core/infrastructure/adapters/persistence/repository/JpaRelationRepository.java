@@ -14,15 +14,15 @@ import com.decathlon.idp_core.infrastructure.adapters.persistence.model.entity.R
 @Repository
 public interface JpaRelationRepository extends JpaRepository<RelationJpaEntity, UUID> {
 
-    @Query("""
-            SELECT new com.decathlon.idp_core.domain.model.entity.RelationAsTargetSummary(
-                tei, r.name, e.identifier, e.name
-            )
-            FROM EntityJpaEntity e
-            JOIN e.relations r
-            JOIN r.targetEntityIdentifiers tei
-            WHERE tei IN :targetEntityIdentifiers
-            """)
-    List<RelationAsTargetSummary> findRelationsSummariesByTargetEntityIdentifiers(
-            @Param("targetEntityIdentifiers") List<String> targetEntityIdentifiers);
+  @Query("""
+      SELECT new com.decathlon.idp_core.domain.model.entity.RelationAsTargetSummary(
+          tei, r.name, e.identifier, e.name
+      )
+      FROM EntityJpaEntity e
+      JOIN e.relations r
+      JOIN r.targetEntityIdentifiers tei
+      WHERE tei IN :targetEntityIdentifiers
+      """)
+  List<RelationAsTargetSummary> findRelationsSummariesByTargetEntityIdentifiers(
+      @Param("targetEntityIdentifiers") List<String> targetEntityIdentifiers);
 }

@@ -11,11 +11,8 @@ import java.util.List;
 /// @param name the relation name as defined in the entity template
 /// @param targetTemplateIdentifier the template identifier of the target entities
 /// @param targets the resolved target entity graph nodes (recursively populated up to depth)
-public record EntityGraphRelation(
-        String name,
-        List<EntityGraphNode> targets
-) {
-    public EntityGraphRelation {
-        targets = targets != null ? List.copyOf(targets) : List.of();
-    }
+public record EntityGraphRelation(String name, List<EntityGraphNode> targets) {
+  public EntityGraphRelation {
+    targets = targets != null ? List.copyOf(targets) : List.of();
+  }
 }

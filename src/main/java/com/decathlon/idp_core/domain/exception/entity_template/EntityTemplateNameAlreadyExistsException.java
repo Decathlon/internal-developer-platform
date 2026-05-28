@@ -19,7 +19,7 @@ import com.decathlon.idp_core.infrastructure.adapters.api.handler.ApiExceptionHa
 /// - Contains specific name that caused the conflict for debugging
 public class EntityTemplateNameAlreadyExistsException extends RuntimeException {
 
-    public EntityTemplateNameAlreadyExistsException(String name) {
-        super(String.format(TEMPLATE_NAME_ALREADY_EXISTS, name));
-    }
+  public EntityTemplateNameAlreadyExistsException(String name) {
+    super(String.format(TEMPLATE_NAME_ALREADY_EXISTS, name));
+  }
 }

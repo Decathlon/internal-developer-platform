@@ -21,54 +21,60 @@ import lombok.RequiredArgsConstructor;
 @RequiredArgsConstructor
 public class PostgresEntityAdapter implements EntityRepositoryPort {
 
-    private final JpaEntityRepository jpaEntityRepository;
-    private final EntityPersistenceMapper mapper;
+  private final JpaEntityRepository jpaEntityRepository;
+  private final EntityPersistenceMapper mapper;
 
-    @Override
-    public Entity save(Entity entity) {
-        return mapper.toDomain(jpaEntityRepository.save(mapper.toJpa(entity)));
-    }
+  @Override
+  public Entity save(Entity entity) {
+    return mapper.toDomain(jpaEntityRepository.save(mapper.toJpa(entity)));
+  }
 
-    @Override
-    public Optional<Entity> findById(UUID id) {
-        return jpaEntityRepository.findById(id).map(mapper::toDomain);
-    }
+  @Override
+  public Optional<Entity> findById(UUID id) {
+    return jpaEntityRepository.findById(id).map(mapper::toDomain);
+  }
 
-    @Override
-    public Optional<Entity> findByTemplateIdentifierAndIdentifier(String templateIdentifier, String identifier) {
-        return jpaEntityRepository.findByTemplateIdentifierAndIdentifier(templateIdentifier, identifier)
-                .map(mapper::toDomain);
-    }
+  @Override
+  public Optional<Entity> findByTemplateIdentifierAndIdentifier(String templateIdentifier,
+      String identifier) {
+    return jpaEntityRepository.findByTemplateIdentifierAndIdentifier(templateIdentifier, identifier)
+        .map(mapper::toDomain);
+  }
 
-    @Override
-    public Optional<Entity> findByTemplateIdentifierAndName(String templateIdentifier, String entityName) {
-        return jpaEntityRepository.findByTemplateIdentifierAndName(templateIdentifier, entityName)
-                .map(mapper::toDomain);
-    }
+  @Override
+  public Optional<Entity> findByTemplateIdentifierAndName(String templateIdentifier,
+      String entityName) {
+    return jpaEntityRepository.findByTemplateIdentifierAndName(templateIdentifier, entityName)
+        .map(mapper::toDomain);
+  }
 
-    @Override
-    public Page<Entity> findByTemplateIdentifier(String templateIdentifier, Pageable pageable) {
-        var pageableEntity = jpaEntityRepository.findByTemplateIdentifier(templateIdentifier, pageable);
-        return pageableEntity.map(mapper::toDomain);
-    }
+  @Override
+  public Page<Entity> findByTemplateIdentifier(String templateIdentifier, Pageable pageable) {
+    var pageableEntity = jpaEntityRepository.findByTemplateIdentifier(templateIdentifier, pageable);
+    return pageableEntity.map(mapper::toDomain);
+  }
 
-    @Override
-    public List<EntitySummary> findByIdentifierIn(List<String> identifiers) {
-        return jpaEntityRepository.findByIdentifierIn(identifiers);
-    }
+  @Override
+  public List<EntitySummary> findByIdentifierIn(List<String> identifiers) {
+    return jpaEntityRepository.findByIdentifierIn(identifiers);
+  }
 
-    @Override
-    public List<EntitySummary> findByRelationIdIn(List<UUID> relationIds) {
-        return jpaEntityRepository.findByRelationIdIn(relationIds);
-    }
+  @Override
+  public List<EntitySummary> findByRelationIdIn(List<UUID> relationIds) {
+    return jpaEntityRepository.findByRelationIdIn(relationIds);
+  }
 
-    @Override
-    public void deletePropertiesByTemplateIdentifierAndPropertyName(String templateIdentifier, Collection<String> propertyNames) {
-        jpaEntityRepository.deletePropertiesByTemplateIdentifierAndPropertyName(templateIdentifier, propertyNames);
-    }
+  @Override
+  public void deletePropertiesByTemplateIdentifierAndPropertyName(String templateIdentifier,
+      Collection<String> propertyNames) {
+    jpaEntityRepository.deletePropertiesByTemplateIdentifierAndPropertyName(templateIdentifier,
+        propertyNames);
+  }
 
-    @Override
-    public void deleteRelationsByTemplateIdentifierAndRelationName(String templateIdentifier, Collection<String> relationNames) {
-        jpaEntityRepository.deleteRelationsByTemplateIdentifierAndRelationName(templateIdentifier, relationNames);
-    }
+  @Override
+  public void deleteRelationsByTemplateIdentifierAndRelationName(String templateIdentifier,
+      Collection<String> relationNames) {
+    jpaEntityRepository.deleteRelationsByTemplateIdentifierAndRelationName(templateIdentifier,
+        relationNames);
+  }
 }

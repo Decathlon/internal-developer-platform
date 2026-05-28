@@ -6,8 +6,8 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 @SpringBootApplication
 public class IdpCoreApplication {
 
-    public static void main(String[] args) {
-        SpringApplication.run(IdpCoreApplication.class, args);
-    }
+  public static void main(String[] args) {
+    SpringApplication.run(IdpCoreApplication.class, args);
+  }
 
 }

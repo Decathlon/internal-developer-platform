@@ -7,11 +7,11 @@ import static com.decathlon.idp_core.domain.constant.ValidationMessages.RELATION
 import java.util.List;
 import java.util.UUID;
 
-import com.decathlon.idp_core.domain.model.entity_template.EntityTemplate;
-import com.decathlon.idp_core.domain.model.entity_template.RelationDefinition;
-
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
+
+import com.decathlon.idp_core.domain.model.entity_template.EntityTemplate;
+import com.decathlon.idp_core.domain.model.entity_template.RelationDefinition;
 
 /// A concrete relationship instance connecting entities in the business domain.
 ///
@@ -25,25 +25,22 @@ import jakarta.validation.constraints.NotNull;
 /// - Required relations cannot have empty target lists
 /// - Multiple targets allowed only when template's `toMany` is true
 /// - Target template identifiers must reference valid [EntityTemplate] identifiers
-public record Relation(
-    UUID id,
+public record Relation(UUID id,
 
-    @NotBlank(message = RELATION_NAME_MANDATORY_SIMPLE)
-    String name,
+    @NotBlank(message = RELATION_NAME_MANDATORY_SIMPLE) String name,
 
-    @NotBlank(message = RELATION_TARGET_IDENTIFIER_MANDATORY_SIMPLE)
-    String targetTemplateIdentifier,
+    @NotBlank(message = RELATION_TARGET_IDENTIFIER_MANDATORY_SIMPLE) String targetTemplateIdentifier,
 
-    @NotNull(message = RELATION_TARGET_IDENTIFIERS_NOT_NULL)
-    List<String> targetEntityIdentifiers
-) {
-    /// Ensures immutable defensive copying of target entity identifiers.
-    ///
-    /// **Why this exists:** Prevents external mutation of relationship targets after
-    /// construction, maintaining referential integrity in the business object graph.
-    public Relation {
-        targetEntityIdentifiers = targetEntityIdentifiers != null
-            ? List.copyOf(targetEntityIdentifiers)
-            : List.of();
-    }
+    @NotNull(message = RELATION_TARGET_IDENTIFIERS_NOT_NULL) List<String> targetEntityIdentifiers) {
+  /// Ensures immutable defensive copying of target entity identifiers.
+  ///
+  /// **Why this exists:** Prevents external mutation of relationship targets
+  /// after
+  /// construction, maintaining referential integrity in the business object
+  /// graph.
+  public Relation {
+    targetEntityIdentifiers = targetEntityIdentifiers != null
+        ? List.copyOf(targetEntityIdentifiers)
+        : List.of();
+  }
 }

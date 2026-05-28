@@ -14,11 +14,10 @@ import com.decathlon.idp_core.AbstractIntegrationTest;
 /// without authentication, ensuring system monitoring capabilities work correctly.
 class HealthControllerTest extends AbstractIntegrationTest {
 
-    @Test
-    void getHealthWithoutAuth() throws Exception {
-        mockMvc.perform(MockMvcRequestBuilders.get("/actuator/health").accept(APPLICATION_JSON))
-                .andExpect(status().isOk())
-                .andReturn();
-    }
+  @Test
+  void getHealthWithoutAuth() throws Exception {
+    mockMvc.perform(MockMvcRequestBuilders.get("/actuator/health").accept(APPLICATION_JSON))
+        .andExpect(status().isOk()).andReturn();
+  }
 
 }

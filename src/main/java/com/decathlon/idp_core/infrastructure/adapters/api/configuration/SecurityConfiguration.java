@@ -32,44 +32,40 @@ import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 @EnableConfigurationProperties(CorsProperties.class)
 public class SecurityConfiguration {
 
-    private final CorsProperties corsProperties;
+  private final CorsProperties corsProperties;
 
-    public SecurityConfiguration(CorsProperties corsProperties) {
-        this.corsProperties = corsProperties;
+  public SecurityConfiguration(CorsProperties corsProperties) {
+    this.corsProperties = corsProperties;
+  }
+
+  @Bean
+  public SecurityFilterChain securityFilterChain(HttpSecurity http) {
+    http.authorizeHttpRequests(authorize -> authorize.requestMatchers("/actuator/**").permitAll()
+        .requestMatchers("/", "/swagger-ui/**", "/swagger-ui.html", "/v3/api-docs/**").permitAll()
+        .requestMatchers("/api/v1/**").fullyAuthenticated().anyRequest().authenticated())
+        .cors(withDefaults()).oauth2ResourceServer(oauth2 -> oauth2.jwt(Customizer.withDefaults()));
+    return http.build();
+  }
+
+  @Bean
+  public CorsConfigurationSource corsConfigurationSource() {
+    CorsConfiguration configuration = new CorsConfiguration();
+
+    // Exact origins (no wildcard, safe with allowCredentials)
+    if (!corsProperties.allowedOrigins().isEmpty()) {
+      configuration.setAllowedOrigins(corsProperties.allowedOrigins());
     }
 
-    @Bean
-    public SecurityFilterChain securityFilterChain(HttpSecurity http) {
-        http.authorizeHttpRequests(authorize -> authorize
-                        .requestMatchers("/actuator/**").permitAll()
-                        .requestMatchers("/", "/swagger-ui/**", "/swagger-ui.html", "/v3/api-docs/**").permitAll()
-                        .requestMatchers("/api/v1/**").fullyAuthenticated()
-                        .anyRequest().authenticated()
-                )
-                .cors(withDefaults())
-                .oauth2ResourceServer(oauth2 -> oauth2.jwt(Customizer.withDefaults()));
-        return http.build();
+    if (!corsProperties.allowedOriginPatterns().isEmpty()) {
+      configuration.setAllowedOriginPatterns(corsProperties.allowedOriginPatterns());
     }
 
-    @Bean
-    public CorsConfigurationSource corsConfigurationSource() {
-        CorsConfiguration configuration = new CorsConfiguration();
+    configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
+    configuration.setAllowedHeaders(List.of("*"));
+    configuration.setAllowCredentials(true);
 
-        // Exact origins (no wildcard, safe with allowCredentials)
-        if (!corsProperties.allowedOrigins().isEmpty()) {
-            configuration.setAllowedOrigins(corsProperties.allowedOrigins());
-        }
-
-        if (!corsProperties.allowedOriginPatterns().isEmpty()) {
-            configuration.setAllowedOriginPatterns(corsProperties.allowedOriginPatterns());
-        }
-
-        configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
-        configuration.setAllowedHeaders(List.of("*"));
-        configuration.setAllowCredentials(true);
-
-        UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
-        source.registerCorsConfiguration("/**", configuration);
-        return source;
-    }
+    UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
+    source.registerCorsConfiguration("/**", configuration);
+    return source;
+  }
 }

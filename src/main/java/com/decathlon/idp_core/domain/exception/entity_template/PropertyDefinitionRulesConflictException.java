@@ -13,13 +13,13 @@ import com.decathlon.idp_core.domain.model.enums.PropertyType;
 /// - Property template updates introducing rule conflicts
 public class PropertyDefinitionRulesConflictException extends RuntimeException {
 
-    /// Constructs a new exception for rule type conflict.
-    ///
-    /// @param propertyName     the name of the property with invalid rules
-    /// @param propertyType     the data type of the property
-    /// @param violationMessage detailed explanation of what rule is invalid
-    public PropertyDefinitionRulesConflictException(String propertyName, PropertyType propertyType, String violationMessage) {
-        super("Property '" + propertyName + "' of type " + propertyType +
-                ": " + violationMessage);
-    }
+  /// Constructs a new exception for rule type conflict.
+  ///
+  /// @param propertyName the name of the property with invalid rules
+  /// @param propertyType the data type of the property
+  /// @param violationMessage detailed explanation of what rule is invalid
+  public PropertyDefinitionRulesConflictException(String propertyName, PropertyType propertyType,
+      String violationMessage) {
+    super("Property '" + propertyName + "' of type " + propertyType + ": " + violationMessage);
+  }
 }

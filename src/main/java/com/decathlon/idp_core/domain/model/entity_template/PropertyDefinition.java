@@ -6,10 +6,10 @@ import static com.decathlon.idp_core.domain.constant.ValidationMessages.PROPERTY
 
 import java.util.UUID;
 
-import com.decathlon.idp_core.domain.model.enums.PropertyType;
-
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
+
+import com.decathlon.idp_core.domain.model.enums.PropertyType;
 
 /// Defines the structure and constraints for a property within an [EntityTemplate].
 ///
@@ -22,20 +22,15 @@ import jakarta.validation.constraints.NotNull;
 /// - Required properties cannot be null/empty when creating entities
 /// - Validation rules in [PropertyRules] are enforced for all property values
 /// - Property descriptions support business documentation and user guidance
-public record PropertyDefinition(
-    UUID id,
+public record PropertyDefinition(UUID id,
 
-    @NotBlank(message = PROPERTY_NAME_MANDATORY)
-    String name,
+    @NotBlank(message = PROPERTY_NAME_MANDATORY) String name,
 
-    @NotBlank(message = PROPERTY_DESCRIPTION_MANDATORY)
-    String description,
+    @NotBlank(message = PROPERTY_DESCRIPTION_MANDATORY) String description,
 
-    @NotNull(message = PROPERTY_TYPE_MANDATORY)
-    PropertyType type,
+    @NotNull(message = PROPERTY_TYPE_MANDATORY) PropertyType type,
 
     boolean required,
 
-    PropertyRules rules
-) {
+    PropertyRules rules) {
 }

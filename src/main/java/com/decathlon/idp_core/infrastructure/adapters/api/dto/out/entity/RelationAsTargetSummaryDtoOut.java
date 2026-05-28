@@ -5,9 +5,6 @@ import com.fasterxml.jackson.databind.annotation.JsonNaming;
 
 /// Output DTO representing an incoming relationship where the entity is the target.
 @JsonNaming(SnakeCaseStrategy.class)
-public record RelationAsTargetSummaryDtoOut(
-        String targetEntityIdentifier,
-        String relationName,
-        String sourceEntityIdentifier,
-        String sourceEntityName
-) {}
+public record RelationAsTargetSummaryDtoOut(String targetEntityIdentifier, String relationName,
+    String sourceEntityIdentifier, String sourceEntityName) {
+}

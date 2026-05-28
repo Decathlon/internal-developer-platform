@@ -31,49 +31,44 @@ import lombok.RequiredArgsConstructor;
 @RequiredArgsConstructor
 public class PostgresEntityGraphAdapter implements EntityGraphRepositoryPort {
 
-    private final JpaEntityRepository jpaEntityRepository;
-    private final EntityPersistenceMapper mapper;
+  private final JpaEntityRepository jpaEntityRepository;
+  private final EntityPersistenceMapper mapper;
 
-    @Override
-    @Transactional(readOnly = true)
-    public Map<EntityCompositeKey, Entity> findEntityGraph(
-            String templateIdentifier,
-            String entityIdentifier,
-            int depth,
-            boolean includeProperties) {
-        // Step 1: collect all (identifier, template_identifier) pairs via recursive CTE.
-        // The CTE always traverses ALL relation types to discover all reachable nodes.
-        // Relation name filtering is applied at the service level when building edges,
-        // so nodes reachable via any path are included even if the filter only matches
-        // edges at deeper levels (e.g. filtering "owns" still returns B→C when A→B→C).
-        List<Object[]> graphPairs = jpaEntityRepository.findEntityGraphIdentifiers(
-                templateIdentifier, entityIdentifier, depth);
+  @Override
+  @Transactional(readOnly = true)
+  public Map<EntityCompositeKey, Entity> findEntityGraph(String templateIdentifier,
+      String entityIdentifier, int depth, boolean includeProperties) {
+    // Step 1: collect all (identifier, template_identifier) pairs via recursive
+    // CTE.
+    // The CTE always traverses ALL relation types to discover all reachable nodes.
+    // Relation name filtering is applied at the service level when building edges,
+    // so nodes reachable via any path are included even if the filter only matches
+    // edges at deeper levels (e.g. filtering "owns" still returns B→C when A→B→C).
+    List<Object[]> graphPairs = jpaEntityRepository.findEntityGraphIdentifiers(templateIdentifier,
+        entityIdentifier, depth);
 
-        if (graphPairs.isEmpty()) {
-            return Map.of();
-        }
-
-        // Step 2: extract unique identifiers for batch loading
-        List<String> identifiers = graphPairs.stream()
-                .map(pair -> (String) pair[0])
-                .distinct()
-                .toList();
-
-        // Step 3: batch-load entities with relations, then optionally properties in a separate
-        // query. Properties are skipped when not requested to avoid the extra round-trip and
-        // keep payloads lean. The two-query split also avoids Hibernate's MultipleBagFetchException.
-        List<EntityJpaEntity> jpaEntities =
-                jpaEntityRepository.findAllByIdentifierInWithRelations(identifiers);
-        if (includeProperties) {
-            jpaEntityRepository.findAllByIdentifierInWithProperties(identifiers);
-        }
-
-        // Step 4: map to domain and key by composite key for O(1) lookup
-        return jpaEntities.stream()
-                .map(mapper::toDomain)
-                .collect(Collectors.toMap(
-                        e -> new EntityCompositeKey(e.templateIdentifier(), e.identifier()),
-                        Function.identity()
-                ));
+    if (graphPairs.isEmpty()) {
+      return Map.of();
     }
+
+    // Step 2: extract unique identifiers for batch loading
+    List<String> identifiers = graphPairs.stream().map(pair -> (String) pair[0]).distinct()
+        .toList();
+
+    // Step 3: batch-load entities with relations, then optionally properties in a
+    // separate
+    // query. Properties are skipped when not requested to avoid the extra
+    // round-trip and
+    // keep payloads lean. The two-query split also avoids Hibernate's
+    // MultipleBagFetchException.
+    List<EntityJpaEntity> jpaEntities = jpaEntityRepository
+        .findAllByIdentifierInWithRelations(identifiers);
+    if (includeProperties) {
+      jpaEntityRepository.findAllByIdentifierInWithProperties(identifiers);
+    }
+
+    // Step 4: map to domain and key by composite key for O(1) lookup
+    return jpaEntities.stream().map(mapper::toDomain).collect(Collectors.toMap(
+        e -> new EntityCompositeKey(e.templateIdentifier(), e.identifier()), Function.identity()));
+  }
 }

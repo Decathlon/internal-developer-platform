@@ -14,11 +14,11 @@ import lombok.Data;
 @JsonNaming(SnakeCaseStrategy.class)
 public class EntityDtoOut {
 
-    private String templateIdentifier;
-    private String name;
-    private String identifier;
-    private Map<String, Object> properties;
-    private Map<String, List<EntitySummaryDto>> relations;
-    private Map<String, List<EntitySummaryDto>> relationsAsTarget;
+  private String templateIdentifier;
+  private String name;
+  private String identifier;
+  private Map<String, Object> properties;
+  private Map<String, List<EntitySummaryDto>> relations;
+  private Map<String, List<EntitySummaryDto>> relationsAsTarget;
 
 }

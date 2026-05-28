@@ -13,7 +13,5 @@ import com.decathlon.idp_core.domain.model.entity_template.PropertyDefinition;
 /// - Provides consistent data representation across persistence and APIs
 /// - Supports validation rule application based on data type
 public enum PropertyType {
-    STRING,
-    NUMBER,
-    BOOLEAN
+  STRING, NUMBER, BOOLEAN
 }

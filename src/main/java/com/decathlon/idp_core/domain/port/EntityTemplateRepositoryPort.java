@@ -22,17 +22,17 @@ import com.decathlon.idp_core.domain.model.entity_template.EntityTemplate;
 /// and handle referential integrity with existing entities.
 public interface EntityTemplateRepositoryPort {
 
-    Optional<EntityTemplate> findByIdentifier(String templateIdentifier);
+  Optional<EntityTemplate> findByIdentifier(String templateIdentifier);
 
-    Optional<EntityTemplate> findById(UUID id);
+  Optional<EntityTemplate> findById(UUID id);
 
-    Page<EntityTemplate> findAll(Pageable pageable);
+  Page<EntityTemplate> findAll(Pageable pageable);
 
-    boolean existsByIdentifier(String identifier);
+  boolean existsByIdentifier(String identifier);
 
-    boolean existsByName(String name);
+  boolean existsByName(String name);
 
-    EntityTemplate save(EntityTemplate entityTemplate);
+  EntityTemplate save(EntityTemplate entityTemplate);
 
-    void deleteByIdentifier(String identifier);
+  void deleteByIdentifier(String identifier);
 }

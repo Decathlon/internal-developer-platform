@@ -23,16 +23,19 @@ import com.decathlon.idp_core.infrastructure.adapters.api.handler.ApiExceptionHa
 /// - Contains specific identifier that caused the conflict for debugging
 public class EntityTemplateAlreadyExistsException extends RuntimeException {
 
-    /// Constructs a new exception with the specific identifier that already exists.
-    ///
-    /// **Why this constructor exists:**
-    /// - Formats exception message to include the duplicate identifier for clear debugging
-    /// - Provides consistent error messaging across the application
-    /// - Enables API consumers to understand which specific identifier caused the conflict
-    ///
-    /// @param identifier the identifier that already exists in the system, must not be null
-    /// @throws IllegalArgumentException if identifier is null
-    public EntityTemplateAlreadyExistsException(String identifier) {
-        super(String.format(TEMPLATE_ALREADY_EXISTS + ":%s", identifier));
-    }
+  /// Constructs a new exception with the specific identifier that already exists.
+  ///
+  /// **Why this constructor exists:**
+  /// - Formats exception message to include the duplicate identifier for clear
+  /// debugging
+  /// - Provides consistent error messaging across the application
+  /// - Enables API consumers to understand which specific identifier caused the
+  /// conflict
+  ///
+  /// @param identifier the identifier that already exists in the system, must not
+  /// be null
+  /// @throws IllegalArgumentException if identifier is null
+  public EntityTemplateAlreadyExistsException(String identifier) {
+    super(String.format(TEMPLATE_ALREADY_EXISTS + ":%s", identifier));
+  }
 }

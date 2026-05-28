@@ -19,15 +19,12 @@ import io.swagger.v3.oas.annotations.media.Schema;
 @JsonNaming(SnakeCaseStrategy.class)
 public record EntityGraphFlatDtoOut(
 
-        @Schema(description = ENTITY_GRAPH_FLAT_NODES_DESCRIPTION)
-        List<EntityGraphNodeFlatDtoOut> nodes,
+    @Schema(description = ENTITY_GRAPH_FLAT_NODES_DESCRIPTION) List<EntityGraphNodeFlatDtoOut> nodes,
 
-        @Schema(description = ENTITY_GRAPH_FLAT_EDGES_DESCRIPTION)
-        List<EntityGraphEdgeDtoOut> edges
-) {
-    /// Defensive copies prevent external mutation of the returned collections.
-    public EntityGraphFlatDtoOut {
-        nodes = nodes != null ? List.copyOf(nodes) : List.of();
-        edges = edges != null ? List.copyOf(edges) : List.of();
-    }
+    @Schema(description = ENTITY_GRAPH_FLAT_EDGES_DESCRIPTION) List<EntityGraphEdgeDtoOut> edges) {
+  /// Defensive copies prevent external mutation of the returned collections.
+  public EntityGraphFlatDtoOut {
+    nodes = nodes != null ? List.copyOf(nodes) : List.of();
+    edges = edges != null ? List.copyOf(edges) : List.of();
+  }
 }

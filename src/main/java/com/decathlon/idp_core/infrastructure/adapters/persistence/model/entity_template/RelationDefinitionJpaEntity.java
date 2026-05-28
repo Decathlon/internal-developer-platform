@@ -7,6 +7,7 @@ import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
+
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -22,18 +23,18 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 public class RelationDefinitionJpaEntity {
 
-    @Id
-    @GeneratedValue(strategy = GenerationType.UUID)
-    private UUID id;
+  @Id
+  @GeneratedValue(strategy = GenerationType.UUID)
+  private UUID id;
 
-    @EqualsAndHashCode.Include
-    private String name;
+  @EqualsAndHashCode.Include
+  private String name;
 
-    private String targetTemplateIdentifier;
+  private String targetTemplateIdentifier;
 
-    @Builder.Default
-    private boolean required = false;
+  @Builder.Default
+  private boolean required = false;
 
-    @Builder.Default
-    private boolean toMany = false;
+  @Builder.Default
+  private boolean toMany = false;
 }

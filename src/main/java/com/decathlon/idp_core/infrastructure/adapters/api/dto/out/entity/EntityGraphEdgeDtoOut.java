@@ -17,15 +17,11 @@ import io.swagger.v3.oas.annotations.media.Schema;
 @JsonNaming(SnakeCaseStrategy.class)
 public record EntityGraphEdgeDtoOut(
 
-        @Schema(description = ENTITY_GRAPH_FLAT_EDGE_ID_DESCRIPTION)
-        String id,
+    @Schema(description = ENTITY_GRAPH_FLAT_EDGE_ID_DESCRIPTION) String id,
 
-        @Schema(description = ENTITY_GRAPH_FLAT_EDGE_SOURCE_DESCRIPTION)
-        String source,
+    @Schema(description = ENTITY_GRAPH_FLAT_EDGE_SOURCE_DESCRIPTION) String source,
 
-        @Schema(description = ENTITY_GRAPH_FLAT_EDGE_TARGET_DESCRIPTION)
-        String target,
+    @Schema(description = ENTITY_GRAPH_FLAT_EDGE_TARGET_DESCRIPTION) String target,
 
-        @Schema(description = ENTITY_GRAPH_FLAT_EDGE_TYPE_DESCRIPTION)
-        String type
-) {}
+    @Schema(description = ENTITY_GRAPH_FLAT_EDGE_TYPE_DESCRIPTION) String type) {
+}

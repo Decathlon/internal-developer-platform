@@ -16,11 +16,11 @@ import com.decathlon.idp_core.domain.model.entity.Entity;
 /// - Maintains template-entity relationship integrity
 public class EntityAlreadyExistsException extends RuntimeException {
 
-    /// Constructs a new exception with template and entity identifiers.
-    ///
-    /// @param templateIdentifier the identifier of the template
-    /// @param entityName the duplicate entity name
-    public EntityAlreadyExistsException(String templateIdentifier, String entityName) {
-        super(String.format(ENTITY_ALREADY_EXISTS, entityName, templateIdentifier));
-    }
+  /// Constructs a new exception with template and entity identifiers.
+  ///
+  /// @param templateIdentifier the identifier of the template
+  /// @param entityName the duplicate entity name
+  public EntityAlreadyExistsException(String templateIdentifier, String entityName) {
+    super(String.format(ENTITY_ALREADY_EXISTS, entityName, templateIdentifier));
+  }
 }

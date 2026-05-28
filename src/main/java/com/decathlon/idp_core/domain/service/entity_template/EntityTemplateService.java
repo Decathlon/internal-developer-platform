@@ -8,6 +8,9 @@ import java.util.Set;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
+import jakarta.transaction.Transactional;
+import jakarta.validation.Valid;
+
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -23,8 +26,6 @@ import com.decathlon.idp_core.domain.model.entity_template.RelationDefinition;
 import com.decathlon.idp_core.domain.port.EntityRepositoryPort;
 import com.decathlon.idp_core.domain.port.EntityTemplateRepositoryPort;
 
-import jakarta.transaction.Transactional;
-import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 
 /// Domain service orchestrating [EntityTemplate] business operations and lifecycle management.
@@ -44,264 +45,272 @@ import lombok.RequiredArgsConstructor;
 @RequiredArgsConstructor
 public class EntityTemplateService {
 
-    private final EntityTemplateRepositoryPort entityTemplateRepositoryPort;
-    private final EntityTemplateValidationService entityTemplateValidationService;
-    private final EntityRepositoryPort entityRepositoryPort;
+  private final EntityTemplateRepositoryPort entityTemplateRepositoryPort;
+  private final EntityTemplateValidationService entityTemplateValidationService;
+  private final EntityRepositoryPort entityRepositoryPort;
 
-    /// Retrieves paginated entity templates for management interface display.
-    ///
-    /// **Contract:** Returns templates with pagination metadata for efficient UI rendering.
-    /// Supports sorting and filtering through Spring's Pageable interface for flexible
-    /// template browsing and administration.
-    ///
-    /// @param pageable pagination configuration including page size, number, and sorting
-    /// @return paginated template results with metadata
-    public Page<EntityTemplate> getEntityTemplates(Pageable pageable) {
-        return entityTemplateRepositoryPort.findAll(pageable);
+  /// Retrieves paginated entity templates for management interface display.
+  ///
+  /// **Contract:** Returns templates with pagination metadata for efficient UI
+  /// rendering.
+  /// Supports sorting and filtering through Spring's Pageable interface for
+  /// flexible
+  /// template browsing and administration.
+  ///
+  /// @param pageable pagination configuration including page size, number, and
+  /// sorting
+  /// @return paginated template results with metadata
+  public Page<EntityTemplate> getEntityTemplates(Pageable pageable) {
+    return entityTemplateRepositoryPort.findAll(pageable);
+  }
+
+  /// Retrieves a specific entity template by business identifier.
+  ///
+  /// **Contract:** Performs exact match lookup for template identification.
+  /// Case-sensitive matching ensures precise template resolution for entity
+  /// operations.
+  ///
+  /// @param identifier unique business identifier of the template
+  /// @return the matching [EntityTemplate]
+  /// @throws EntityTemplateNotFoundException when template doesn't exist
+  public EntityTemplate getEntityTemplateByIdentifier(String identifier) {
+    return entityTemplateRepositoryPort.findByIdentifier(identifier)
+        .orElseThrow(() -> new EntityTemplateNotFoundException("identifier", identifier));
+  }
+
+  /// Creates and persists a new entity template.
+  ///
+  /// **Contract:** Validates the provided `EntityTemplate` and enforces
+  /// uniqueness
+  /// constraints on both `identifier` and `name` when present. If validation
+  /// passes,
+  /// the template is persisted and the persisted instance (including any
+  /// generated
+  /// identifiers) is returned.
+  ///
+  /// **Business rules enforced:**
+  /// - If `identifier` is provided it must not already exist in the system.
+  /// - If `name` is provided it must not already exist in the system.
+  /// - Validation of property rules according to their defined constraints.
+  ///
+  /// @param entityTemplate validated template to create and persist
+  /// @return the persisted template with generated identifiers
+  /// @throws EntityTemplateAlreadyExistsException when identifier already exists
+  /// @throws EntityTemplateNameAlreadyExistsException when name already exists
+  @Transactional
+  public EntityTemplate createEntityTemplate(@Valid EntityTemplate entityTemplate) {
+    entityTemplateValidationService.validateForCreation(entityTemplate);
+    return entityTemplateRepositoryPort.save(entityTemplate);
+  }
+
+  /// Updates an existing entity template using full replacement with smart
+  /// merging.
+  ///
+  /// **Contract:** Replaces the template's scalar fields (identifier, name,
+  /// description) with the
+  /// incoming values, while performing an intelligent merge on nested collections
+  /// (properties and relations). Matching children (by name) preserve their
+  /// existing UUIDs
+  /// so the persistence layer treats them as updates rather than
+  /// delete-and-recreate,
+  /// avoiding unnecessary orphan removal and re-insertion.
+  ///
+  /// **Business rules enforced:**
+  /// - The target template must already exist (looked up by the path
+  /// `identifier`).
+  /// - If the caller changes the identifier, the new value must not collide with
+  /// another template.
+  /// - Property and relation definitions are merged by name:
+  /// - *Matched by name* → existing ID is preserved, other fields are
+  /// overwritten.
+  /// - *Not matched* → treated as a new definition (no ID yet).
+  /// - *Missing from update* → removed (handled downstream by the persistence
+  /// adapter).
+  /// - Validation of property rules according to their defined constraints.
+  ///
+  /// @param identifier current business identifier of the template to update
+  /// @param entityTemplate validated template carrying the desired state
+  /// @return the persisted template after merge, with generated or preserved
+  /// identifiers
+  /// @throws EntityTemplateNotFoundException when no template matches
+  /// `identifier`
+  /// @throws EntityTemplateAlreadyExistsException when renaming would cause a
+  /// duplicate
+  @Transactional
+  public EntityTemplate updateEntityTemplate(String identifier,
+      @Valid EntityTemplate entityTemplate) {
+    EntityTemplate existingTemplate = getEntityTemplateByIdentifier(identifier);
+    EntityTemplate mergedTemplate = new EntityTemplate(existingTemplate.id(),
+        entityTemplate.identifier(), entityTemplate.name(), entityTemplate.description(),
+        mergePropertyDefinitions(existingTemplate.propertiesDefinitions(),
+            entityTemplate.propertiesDefinitions()),
+        mergeRelationDefinitions(existingTemplate.relationsDefinitions(),
+            entityTemplate.relationsDefinitions()));
+    entityTemplateValidationService.validateForUpdate(identifier, existingTemplate.name(),
+        existingTemplate, mergedTemplate);
+    EntityTemplate savedTemplate = entityTemplateRepositoryPort.save(mergedTemplate);
+    purgeRemovedProperties(identifier, existingTemplate.propertiesDefinitions(),
+        entityTemplate.propertiesDefinitions());
+    purgeRemovedRelations(identifier, existingTemplate.relationsDefinitions(),
+        entityTemplate.relationsDefinitions());
+    return savedTemplate;
+  }
+
+  /// Deletes an entity template by business identifier with existence validation.
+  ///
+  /// **Contract:** Validates template existence before deletion to ensure
+  /// referential
+  /// integrity. Deletion cascades through persistence layer according to
+  /// configured
+  /// relationships. This operation is irreversible once committed.
+  ///
+  /// @param identifier unique business identifier of template to delete
+  /// @throws EntityTemplateNotFoundException when template doesn't exist
+  @Transactional
+  public void deleteEntityTemplate(String identifier) {
+    entityTemplateValidationService.validateForDeletion(identifier);
+    entityTemplateRepositoryPort.deleteByIdentifier(identifier);
+  }
+
+  private List<PropertyDefinition> mergePropertyDefinitions(List<PropertyDefinition> existing,
+      List<PropertyDefinition> updated) {
+
+    if (existing == null)
+      existing = new ArrayList<>();
+    if (updated == null)
+      return existing;
+
+    Map<String, PropertyDefinition> existingMap = existing.stream().collect(
+        Collectors.toMap(p -> p.name().toLowerCase(java.util.Locale.ROOT), Function.identity()));
+
+    List<PropertyDefinition> result = new ArrayList<>();
+
+    for (PropertyDefinition prop : updated) {
+      PropertyDefinition existingProp = existingMap
+          .get(prop.name().toLowerCase(java.util.Locale.ROOT));
+      if (existingProp != null) {
+        result.add(new PropertyDefinition(existingProp.id(), prop.name(), prop.description(),
+            prop.type(), prop.required(), mergePropertyRules(existingProp.rules(), prop.rules())));
+      } else {
+        result.add(prop);
+      }
     }
 
-    /// Retrieves a specific entity template by business identifier.
-    ///
-    /// **Contract:** Performs exact match lookup for template identification.
-    /// Case-sensitive matching ensures precise template resolution for entity operations.
-    ///
-    /// @param identifier unique business identifier of the template
-    /// @return the matching [EntityTemplate]
-    /// @throws EntityTemplateNotFoundException when template doesn't exist
-    public EntityTemplate getEntityTemplateByIdentifier(String identifier) {
-        return entityTemplateRepositoryPort.findByIdentifier(identifier)
-                .orElseThrow(() -> new EntityTemplateNotFoundException("identifier", identifier));
+    return result;
+  }
+
+  private PropertyRules mergePropertyRules(PropertyRules existingRules, PropertyRules newRules) {
+    if (newRules == null) {
+      return existingRules;
+    }
+    if (existingRules == null) {
+      return newRules;
     }
 
-    /// Creates and persists a new entity template.
-    ///
-    /// **Contract:** Validates the provided `EntityTemplate` and enforces uniqueness
-    /// constraints on both `identifier` and `name` when present. If validation passes,
-    /// the template is persisted and the persisted instance (including any generated
-    /// identifiers) is returned.
-    ///
-    /// **Business rules enforced:**
-    /// - If `identifier` is provided it must not already exist in the system.
-    /// - If `name` is provided it must not already exist in the system.
-    /// - Validation of property rules according to their defined constraints.
-    ///
-    /// @param entityTemplate validated template to create and persist
-    /// @return the persisted template with generated identifiers
-    /// @throws EntityTemplateAlreadyExistsException when identifier already exists
-    /// @throws EntityTemplateNameAlreadyExistsException when name already exists
-    @Transactional
-    public EntityTemplate createEntityTemplate(@Valid EntityTemplate entityTemplate) {
-        entityTemplateValidationService.validateForCreation(entityTemplate);
-        return entityTemplateRepositoryPort.save(entityTemplate);
+    return new PropertyRules(existingRules.id(), newRules.format(), newRules.enumValues(),
+        newRules.regex(), newRules.maxLength(), newRules.minLength(), newRules.maxValue(),
+        newRules.minValue());
+  }
+
+  private List<RelationDefinition> mergeRelationDefinitions(List<RelationDefinition> existing,
+      List<RelationDefinition> updated) {
+
+    if (existing == null)
+      existing = new ArrayList<>();
+    if (updated == null)
+      return existing;
+
+    Map<String, RelationDefinition> existingMap = existing.stream().collect(
+        Collectors.toMap(r -> r.name().toLowerCase(java.util.Locale.ROOT), Function.identity()));
+
+    List<RelationDefinition> result = new ArrayList<>();
+
+    for (RelationDefinition rel : updated) {
+      RelationDefinition existingRel = existingMap
+          .get(rel.name().toLowerCase(java.util.Locale.ROOT));
+      if (existingRel != null) {
+        result.add(new RelationDefinition(existingRel.id(), rel.name(),
+            rel.targetTemplateIdentifier(), rel.required(), rel.toMany()));
+      } else {
+        result.add(rel);
+      }
     }
 
-    /// Updates an existing entity template using full replacement with smart merging.
-    ///
-    /// **Contract:** Replaces the template's scalar fields (identifier, name, description) with the
-    /// incoming values, while performing an intelligent merge on nested collections
-    /// (properties and relations). Matching children (by name) preserve their existing UUIDs
-    /// so the persistence layer treats them as updates rather than delete-and-recreate,
-    /// avoiding unnecessary orphan removal and re-insertion.
-    ///
-    /// **Business rules enforced:**
-    /// - The target template must already exist (looked up by the path `identifier`).
-    /// - If the caller changes the identifier, the new value must not collide with another template.
-    /// - Property and relation definitions are merged by name:
-    ///   - *Matched by name* → existing ID is preserved, other fields are overwritten.
-    ///   - *Not matched* → treated as a new definition (no ID yet).
-    ///   - *Missing from update* → removed (handled downstream by the persistence adapter).
-    ///   - Validation of property rules according to their defined constraints.
-    ///
-    /// @param identifier current business identifier of the template to update
-    /// @param entityTemplate validated template carrying the desired state
-    /// @return the persisted template after merge, with generated or preserved identifiers
-    /// @throws EntityTemplateNotFoundException when no template matches `identifier`
-    /// @throws EntityTemplateAlreadyExistsException when renaming would cause a duplicate
-    @Transactional
-    public EntityTemplate updateEntityTemplate(String identifier, @Valid EntityTemplate entityTemplate) {
-        EntityTemplate existingTemplate = getEntityTemplateByIdentifier(identifier);
-        EntityTemplate mergedTemplate = new EntityTemplate(
-                existingTemplate.id(),
-                entityTemplate.identifier(),
-                entityTemplate.name(),
-                entityTemplate.description(),
-                mergePropertyDefinitions(existingTemplate.propertiesDefinitions(),
-                        entityTemplate.propertiesDefinitions()),
-                mergeRelationDefinitions(existingTemplate.relationsDefinitions(),
-                        entityTemplate.relationsDefinitions())
-        );
-        entityTemplateValidationService.validateForUpdate(identifier, existingTemplate.name(), existingTemplate, mergedTemplate);
-        EntityTemplate savedTemplate = entityTemplateRepositoryPort.save(mergedTemplate);
-        purgeRemovedProperties(identifier, existingTemplate.propertiesDefinitions(), entityTemplate.propertiesDefinitions());
-        purgeRemovedRelations(identifier, existingTemplate.relationsDefinitions(), entityTemplate.relationsDefinitions());
-        return savedTemplate;
+    return result;
+  }
+
+  /// Computes the names of relation definitions present in [existing] but absent
+  /// from [updated].
+  ///
+  /// **Business purpose:** Identifies which relations were removed in the
+  /// PUT request so the linked entity relation values can be purged.
+  ///
+  /// @param existing relation definitions currently persisted on the template
+  /// @param updated relation definitions from the incoming PUT request
+  /// @return names of relation definitions that were removed (never null, may be
+  /// empty)
+  private List<String> identifyDeletedRelationNames(List<RelationDefinition> existing,
+      List<RelationDefinition> updated) {
+    if (existing == null || existing.isEmpty()) {
+      return List.of();
     }
+    Set<String> updatedRelationNames = (updated == null ? List.<RelationDefinition>of() : updated)
+        .stream().map(r -> r.name().toLowerCase(Locale.ROOT)).collect(Collectors.toSet());
+    return existing.stream()
+        .filter(r -> !updatedRelationNames.contains(r.name().toLowerCase(Locale.ROOT)))
+        .map(RelationDefinition::name).toList();
+  }
 
-    /// Deletes an entity template by business identifier with existence validation.
-    ///
-    /// **Contract:** Validates template existence before deletion to ensure referential
-    /// integrity. Deletion cascades through persistence layer according to configured
-    /// relationships. This operation is irreversible once committed.
-    ///
-    /// @param identifier unique business identifier of template to delete
-    /// @throws EntityTemplateNotFoundException when template doesn't exist
-    @Transactional
-    public void deleteEntityTemplate(String identifier) {
-        entityTemplateValidationService.validateForDeletion(identifier);
-        entityTemplateRepositoryPort.deleteByIdentifier(identifier);
+  /// Computes the names of property definitions present in [existing] but absent
+  /// from [updated].
+  ///
+  /// **Business purpose:** Identifies which properties were removed in the
+  /// PUT request so their corresponding entity property values can be purged.
+  ///
+  /// @param existing property definitions currently persisted on the template
+  /// @param updated property definitions from the incoming PUT request
+  /// @return names of property definitions that were removed (never null, may be
+  /// empty)
+  private List<String> identifyDeletedPropertyNames(List<PropertyDefinition> existing,
+      List<PropertyDefinition> updated) {
+    if (existing == null || existing.isEmpty()) {
+      return List.of();
     }
+    Set<String> updatedPropertyNames = (updated == null ? List.<PropertyDefinition>of() : updated)
+        .stream().map(p -> p.name().toLowerCase(Locale.ROOT)).collect(Collectors.toSet());
+    return existing.stream()
+        .filter(p -> !updatedPropertyNames.contains(p.name().toLowerCase(Locale.ROOT)))
+        .map(PropertyDefinition::name).toList();
+  }
 
-    private List<PropertyDefinition> mergePropertyDefinitions(
-            List<PropertyDefinition> existing,
-            List<PropertyDefinition> updated) {
-
-        if (existing == null) existing = new ArrayList<>();
-        if (updated == null) return existing;
-
-        Map<String, PropertyDefinition> existingMap = existing.stream()
-                .collect(Collectors.toMap(p -> p.name().toLowerCase(java.util.Locale.ROOT), Function.identity()));
-
-        List<PropertyDefinition> result = new ArrayList<>();
-
-        for (PropertyDefinition prop : updated) {
-            PropertyDefinition existingProp = existingMap.get(prop.name().toLowerCase(java.util.Locale.ROOT));
-            if (existingProp != null) {
-                result.add(new PropertyDefinition(
-                        existingProp.id(),
-                        prop.name(),
-                        prop.description(),
-                        prop.type(),
-                        prop.required(),
-                        mergePropertyRules(existingProp.rules(), prop.rules())
-                ));
-            } else {
-                result.add(prop);
-            }
-        }
-
-        return result;
+  /// Identifies and purges property values from entities whose definitions were
+  /// removed during a template update.
+  ///
+  /// @param templateIdentifier the template's business identifier
+  /// @param existing property definitions currently persisted on the template
+  /// @param updated property definitions from the incoming PUT request
+  private void purgeRemovedProperties(String templateIdentifier, List<PropertyDefinition> existing,
+      List<PropertyDefinition> updated) {
+    List<String> removedNames = identifyDeletedPropertyNames(existing, updated);
+    if (!removedNames.isEmpty()) {
+      entityRepositoryPort.deletePropertiesByTemplateIdentifierAndPropertyName(templateIdentifier,
+          removedNames);
     }
+  }
 
-    private PropertyRules mergePropertyRules(PropertyRules existingRules, PropertyRules newRules) {
-        if (newRules == null) {
-            return existingRules;
-        }
-        if (existingRules == null) {
-            return newRules;
-        }
-
-        return new PropertyRules(
-                existingRules.id(),
-                newRules.format(),
-                newRules.enumValues(),
-                newRules.regex(),
-                newRules.maxLength(),
-                newRules.minLength(),
-                newRules.maxValue(),
-                newRules.minValue()
-        );
+  /// Identifies and purges relation values from entities whose definitions were
+  /// removed during a template update.
+  ///
+  /// @param templateIdentifier the template's business identifier
+  /// @param existing relation definitions currently persisted on the template
+  /// @param updated relation definitions from the incoming PUT request
+  private void purgeRemovedRelations(String templateIdentifier, List<RelationDefinition> existing,
+      List<RelationDefinition> updated) {
+    List<String> removedNames = identifyDeletedRelationNames(existing, updated);
+    if (!removedNames.isEmpty()) {
+      entityRepositoryPort.deleteRelationsByTemplateIdentifierAndRelationName(templateIdentifier,
+          removedNames);
     }
-
-    private List<RelationDefinition> mergeRelationDefinitions(
-            List<RelationDefinition> existing,
-            List<RelationDefinition> updated) {
-
-        if (existing == null) existing = new ArrayList<>();
-        if (updated == null) return existing;
-
-        Map<String, RelationDefinition> existingMap = existing.stream()
-                .collect(Collectors.toMap(r -> r.name().toLowerCase(java.util.Locale.ROOT), Function.identity()));
-
-        List<RelationDefinition> result = new ArrayList<>();
-
-        for (RelationDefinition rel : updated) {
-            RelationDefinition existingRel = existingMap.get(rel.name().toLowerCase(java.util.Locale.ROOT));
-            if (existingRel != null) {
-                result.add(new RelationDefinition(
-                        existingRel.id(),
-                        rel.name(),
-                        rel.targetTemplateIdentifier(),
-                        rel.required(),
-                        rel.toMany()
-                ));
-            } else {
-                result.add(rel);
-            }
-        }
-
-        return result;
-    }
-
-    /// Computes the names of relation definitions present in [existing] but absent from [updated].
-    ///
-    /// **Business purpose:** Identifies which relations were removed in the
-    /// PUT request so the linked entity relation values can be purged.
-    ///
-    /// @param existing relation definitions currently persisted on the template
-    /// @param updated  relation definitions from the incoming PUT request
-    /// @return names of relation definitions that were removed (never null, may be empty)
-    private List<String> identifyDeletedRelationNames(
-            List<RelationDefinition> existing,
-            List<RelationDefinition> updated) {
-        if (existing == null || existing.isEmpty()) {
-            return List.of();
-        }
-        Set<String> updatedRelationNames = (updated == null ? List.<RelationDefinition>of() : updated)
-                .stream()
-                .map(r -> r.name().toLowerCase(Locale.ROOT))
-                .collect(Collectors.toSet());
-        return existing.stream()
-                .filter(r -> !updatedRelationNames.contains(r.name().toLowerCase(Locale.ROOT)))
-                .map(RelationDefinition::name)
-                .toList();
-    }
-
-    /// Computes the names of property definitions present in [existing] but absent from [updated].
-    ///
-    /// **Business purpose:** Identifies which properties were removed in the
-    /// PUT request so their corresponding entity property values can be purged.
-    ///
-    /// @param existing property definitions currently persisted on the template
-    /// @param updated  property definitions from the incoming PUT request
-    /// @return names of property definitions that were removed (never null, may be empty)
-    private List<String> identifyDeletedPropertyNames(
-            List<PropertyDefinition> existing,
-            List<PropertyDefinition> updated) {
-        if (existing == null || existing.isEmpty()) {
-            return List.of();
-        }
-        Set<String> updatedPropertyNames = (updated == null ? List.<PropertyDefinition>of() : updated)
-                .stream()
-                .map(p -> p.name().toLowerCase(Locale.ROOT))
-                .collect(Collectors.toSet());
-        return existing.stream()
-                .filter(p -> !updatedPropertyNames.contains(p.name().toLowerCase(Locale.ROOT)))
-                .map(PropertyDefinition::name)
-                .toList();
-    }
-
-    /// Identifies and purges property values from entities whose definitions were removed during a template update.
-    ///
-    /// @param templateIdentifier the template's business identifier
-    /// @param existing           property definitions currently persisted on the template
-    /// @param updated            property definitions from the incoming PUT request
-    private void purgeRemovedProperties(String templateIdentifier, List<PropertyDefinition> existing, List<PropertyDefinition> updated) {
-        List<String> removedNames = identifyDeletedPropertyNames(existing, updated);
-        if (!removedNames.isEmpty()) {
-            entityRepositoryPort.deletePropertiesByTemplateIdentifierAndPropertyName(templateIdentifier, removedNames);
-        }
-    }
-
-    /// Identifies and purges relation values from entities whose definitions were removed during a template update.
-    ///
-    /// @param templateIdentifier the template's business identifier
-    /// @param existing           relation definitions currently persisted on the template
-    /// @param updated            relation definitions from the incoming PUT request
-    private void purgeRemovedRelations(String templateIdentifier, List<RelationDefinition> existing, List<RelationDefinition> updated) {
-        List<String> removedNames = identifyDeletedRelationNames(existing, updated);
-        if (!removedNames.isEmpty()) {
-            entityRepositoryPort.deleteRelationsByTemplateIdentifierAndRelationName(templateIdentifier, removedNames);
-        }
-    }
+  }
 
 }

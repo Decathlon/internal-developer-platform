@@ -18,17 +18,12 @@ import com.decathlon.idp_core.domain.model.entity.Property;
 /// @param properties the entity's property instances; empty when not requested
 /// @param relations the resolved outbound relations with their target graph nodes
 /// @param relationsAsTarget incoming relations where this entity is the target
-public record EntityGraphNode(
-        String templateIdentifier,
-        String identifier,
-        String name,
-        List<Property> properties,
-        List<EntityGraphRelation> relations,
-        List<EntityGraphRelation> relationsAsTarget
-) {
-    public EntityGraphNode {
-        properties = properties != null ? List.copyOf(properties) : List.of();
-        relations = relations != null ? List.copyOf(relations) : List.of();
-        relationsAsTarget = relationsAsTarget != null ? List.copyOf(relationsAsTarget) : List.of();
-    }
+public record EntityGraphNode(String templateIdentifier, String identifier, String name,
+    List<Property> properties, List<EntityGraphRelation> relations,
+    List<EntityGraphRelation> relationsAsTarget) {
+  public EntityGraphNode {
+    properties = properties != null ? List.copyOf(properties) : List.of();
+    relations = relations != null ? List.copyOf(relations) : List.of();
+    relationsAsTarget = relationsAsTarget != null ? List.copyOf(relationsAsTarget) : List.of();
+  }
 }

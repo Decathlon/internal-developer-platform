@@ -14,11 +14,12 @@ import lombok.RequiredArgsConstructor;
 @RequiredArgsConstructor
 public class PostgresRelationAdapter implements RelationRepositoryPort {
 
-    private final JpaRelationRepository jpaRelationRepository;
+  private final JpaRelationRepository jpaRelationRepository;
 
-    @Override
-    public List<RelationAsTargetSummary> findRelationsSummariesByTargetEntityIdentifiers(
-            List<String> targetEntityIdentifiers) {
-        return jpaRelationRepository.findRelationsSummariesByTargetEntityIdentifiers(targetEntityIdentifiers);
-    }
+  @Override
+  public List<RelationAsTargetSummary> findRelationsSummariesByTargetEntityIdentifiers(
+      List<String> targetEntityIdentifiers) {
+    return jpaRelationRepository
+        .findRelationsSummariesByTargetEntityIdentifiers(targetEntityIdentifiers);
+  }
 }

@@ -23,18 +23,21 @@ import lombok.AllArgsConstructor;
 @AllArgsConstructor
 public class RelationService {
 
-    private final RelationRepositoryPort relationRepository;
+  private final RelationRepositoryPort relationRepository;
 
-    /// Finds all incoming relationships where specified entities are targets.
-    ///
-    /// **Contract:** Returns relationship summaries for dependency analysis and
-    /// impact assessment. Useful for understanding entity interconnections before
-    /// deletion or modification operations.
-    ///
-    /// @param targetEntityIdentifiers business identifiers of entities to analyze
-    /// @return relationship summaries showing incoming connections to target entities
-    public List<RelationAsTargetSummary> findRelationsSummariesByTargetEntityIdentifiers(List<String> targetEntityIdentifiers) {
-        return relationRepository.findRelationsSummariesByTargetEntityIdentifiers(targetEntityIdentifiers);
-    }
+  /// Finds all incoming relationships where specified entities are targets.
+  ///
+  /// **Contract:** Returns relationship summaries for dependency analysis and
+  /// impact assessment. Useful for understanding entity interconnections before
+  /// deletion or modification operations.
+  ///
+  /// @param targetEntityIdentifiers business identifiers of entities to analyze
+  /// @return relationship summaries showing incoming connections to target
+  /// entities
+  public List<RelationAsTargetSummary> findRelationsSummariesByTargetEntityIdentifiers(
+      List<String> targetEntityIdentifiers) {
+    return relationRepository
+        .findRelationsSummariesByTargetEntityIdentifiers(targetEntityIdentifiers);
+  }
 
 }

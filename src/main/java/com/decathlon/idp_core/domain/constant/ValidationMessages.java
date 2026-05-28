@@ -6,78 +6,74 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor(access = AccessLevel.PRIVATE)
 public class ValidationMessages {
 
-    // Entity Template validation messages
-    public static final String TEMPLATE_ALREADY_EXISTS = "An Entity Template already exists with the same identifier";
-    public static final String TEMPLATE_IDENTIFIER_NOT_FOUND = "Target template with identifier '%s' does not exist.";
-    public static final String TEMPLATE_IDENTIFIER_MANDATORY = "Entity Template identifier is mandatory and cannot be blank";
-    public static final String TEMPLATE_IDENTIFIER_CANNOT_CHANGE = "Entity Template identifier cannot be changed. Current identifier: ";
-    public static final String TEMPLATE_NAME_ALREADY_EXISTS = "The entity template name %s already exists";
-    public static final String TEMPLATE_NAME_MANDATORY = "Entity template name is mandatory and cannot be blank";
-    public static final String TEMPLATE_NAME_MAX_SIZE = "Entity template name must not exceed 255 characters";
-    public static final String TEMPLATE_NAME_FORMAT = "Entity template name must only use alphanumeric characters, spaces, hyphens or underscores";
+  // Entity Template validation messages
+  public static final String TEMPLATE_ALREADY_EXISTS = "An Entity Template already exists with the same identifier";
+  public static final String TEMPLATE_IDENTIFIER_NOT_FOUND = "Target template with identifier '%s' does not exist.";
+  public static final String TEMPLATE_IDENTIFIER_MANDATORY = "Entity Template identifier is mandatory and cannot be blank";
+  public static final String TEMPLATE_IDENTIFIER_CANNOT_CHANGE = "Entity Template identifier cannot be changed. Current identifier: ";
+  public static final String TEMPLATE_NAME_ALREADY_EXISTS = "The entity template name %s already exists";
+  public static final String TEMPLATE_NAME_MANDATORY = "Entity template name is mandatory and cannot be blank";
+  public static final String TEMPLATE_NAME_MAX_SIZE = "Entity template name must not exceed 255 characters";
+  public static final String TEMPLATE_NAME_FORMAT = "Entity template name must only use alphanumeric characters, spaces, hyphens or underscores";
 
-    // Property Definition validation messages
-    public static final String PROPERTY_NAME_MANDATORY = "Property name is mandatory and cannot be blank";
-    public static final String PROPERTY_NAME_ALREADY_EXISTS = "Property name '%s' already exists within the template. Property names must be unique.";
-    public static final String PROPERTY_DESCRIPTION_MANDATORY = "Property description is mandatory and cannot be blank";
-    public static final String PROPERTY_TYPE_MANDATORY = "Property type is mandatory";
-    public static final String PROPERTY_VALUE_MANDATORY = "Property value is mandatory and cannot be blank";
-    public static final String PROPERTY_REQUIRED_MISSING = "Property '%s' is required by template '%s'";
-    public static final String PROPERTY_TYPE_MISMATCH = "Property '%s' must be of type %s";
-    public static final String PROPERTY_MIN_LENGTH_VIOLATION = "Property '%s' length must be greater than or equal to %d";
-    public static final String PROPERTY_MAX_LENGTH_VIOLATION = "Property '%s' length must be lower than or equal to %d";
-    public static final String PROPERTY_MIN_VALUE_VIOLATION = "Property '%s' value must be greater than or equal to %d";
-    public static final String PROPERTY_MAX_VALUE_VIOLATION = "Property '%s' value must be lower than or equal to %d";
-    public static final String PROPERTY_REGEX_VIOLATION = "Property '%s' does not match expected format";
-    public static final String PROPERTY_ENUM_VIOLATION = "Property '%s' must be one of %s";
-    public static final String PROPERTY_FORMAT_VIOLATION = "Property '%s' does not match required format %s";
-    public static final String PROPERTY_TYPE_CANNOT_CHANGE = "Cannot change type of property '%s' from %s to %s. Property types cannot be modified after creation. Please delete and recreate the property instead.";
+  // Property Definition validation messages
+  public static final String PROPERTY_NAME_MANDATORY = "Property name is mandatory and cannot be blank";
+  public static final String PROPERTY_NAME_ALREADY_EXISTS = "Property name '%s' already exists within the template. Property names must be unique.";
+  public static final String PROPERTY_DESCRIPTION_MANDATORY = "Property description is mandatory and cannot be blank";
+  public static final String PROPERTY_TYPE_MANDATORY = "Property type is mandatory";
+  public static final String PROPERTY_VALUE_MANDATORY = "Property value is mandatory and cannot be blank";
+  public static final String PROPERTY_REQUIRED_MISSING = "Property '%s' is required by template '%s'";
+  public static final String PROPERTY_TYPE_MISMATCH = "Property '%s' must be of type %s";
+  public static final String PROPERTY_MIN_LENGTH_VIOLATION = "Property '%s' length must be greater than or equal to %d";
+  public static final String PROPERTY_MAX_LENGTH_VIOLATION = "Property '%s' length must be lower than or equal to %d";
+  public static final String PROPERTY_MIN_VALUE_VIOLATION = "Property '%s' value must be greater than or equal to %d";
+  public static final String PROPERTY_MAX_VALUE_VIOLATION = "Property '%s' value must be lower than or equal to %d";
+  public static final String PROPERTY_REGEX_VIOLATION = "Property '%s' does not match expected format";
+  public static final String PROPERTY_ENUM_VIOLATION = "Property '%s' must be one of %s";
+  public static final String PROPERTY_FORMAT_VIOLATION = "Property '%s' does not match required format %s";
+  public static final String PROPERTY_TYPE_CANNOT_CHANGE = "Cannot change type of property '%s' from %s to %s. Property types cannot be modified after creation. Please delete and recreate the property instead.";
 
-    // Relation Definition validation messages
-    public static final String RELATION_NAME_MANDATORY = "Relation name is mandatory and cannot be blank";
-    public static final String RELATION_TARGET_IDENTIFIER_MANDATORY = "Target template identifier is mandatory and cannot be blank";
-    public static final String RELATION_NAME_MANDATORY_SIMPLE = "Relation name is mandatory";
-    public static final String RELATION_NAME_ALREADY_EXISTS = "Relation name '%s' already exists within the template. Relation names must be unique.";
-    public static final String RELATION_TARGET_IDENTIFIER_MANDATORY_SIMPLE = "Relation target identifier is mandatory";
-    public static final String RELATION_TARGET_IDENTIFIERS_NOT_NULL = "Target entity identifiers cannot be null";
-    public static final String RELATION_TARGET_TEMPLATE_CANNOT_CHANGE = "Cannot change target template of relation '%s' from '%s' to '%s'. Target template cannot be modified after creation. Please delete and recreate the relation instead.";
-    public static final String RELATION_CANNOT_TARGET_ITSELF = "Relation '%s' cannot reference its own template '%s' as the target.";
+  // Relation Definition validation messages
+  public static final String RELATION_NAME_MANDATORY = "Relation name is mandatory and cannot be blank";
+  public static final String RELATION_TARGET_IDENTIFIER_MANDATORY = "Target template identifier is mandatory and cannot be blank";
+  public static final String RELATION_NAME_MANDATORY_SIMPLE = "Relation name is mandatory";
+  public static final String RELATION_NAME_ALREADY_EXISTS = "Relation name '%s' already exists within the template. Relation names must be unique.";
+  public static final String RELATION_TARGET_IDENTIFIER_MANDATORY_SIMPLE = "Relation target identifier is mandatory";
+  public static final String RELATION_TARGET_IDENTIFIERS_NOT_NULL = "Target entity identifiers cannot be null";
+  public static final String RELATION_TARGET_TEMPLATE_CANNOT_CHANGE = "Cannot change target template of relation '%s' from '%s' to '%s'. Target template cannot be modified after creation. Please delete and recreate the relation instead.";
+  public static final String RELATION_CANNOT_TARGET_ITSELF = "Relation '%s' cannot reference its own template '%s' as the target.";
 
-    // Property Rules validation messages - templates and specific constraints
-    public static final String PROPERTY_RULES_RULE_NOT_ALLOWED_FOR_TYPE = "{rule} rule is not allowed for {type} property type";
-    public static final String PROPERTY_RULES_MIN_MAX_CONSTRAINT_VIOLATED = "min_{constraint} must be less than or equal to max_{constraint}";
-    public static final String PROPERTY_RULES_MIN_LENGTH_NON_NEGATIVE = "min_length must be greater than or equal to 0";
-    public static final String PROPERTY_RULES_MAX_LENGTH_POSITIVE = "max_length must be greater than 0";
-    public static final String PROPERTY_RULES_BOOLEAN_NOT_ALLOWED = "Boolean properties do not accept any rules";
-    public static final String PROPERTY_RULES_NUMERIC_RULE_NOT_ALLOWED = "Numeric rule {rule} is not allowed for STRING properties";
+  // Property Rules validation messages - templates and specific constraints
+  public static final String PROPERTY_RULES_RULE_NOT_ALLOWED_FOR_TYPE = "{rule} rule is not allowed for {type} property type";
+  public static final String PROPERTY_RULES_MIN_MAX_CONSTRAINT_VIOLATED = "min_{constraint} must be less than or equal to max_{constraint}";
+  public static final String PROPERTY_RULES_MIN_LENGTH_NON_NEGATIVE = "min_length must be greater than or equal to 0";
+  public static final String PROPERTY_RULES_MAX_LENGTH_POSITIVE = "max_length must be greater than 0";
+  public static final String PROPERTY_RULES_BOOLEAN_NOT_ALLOWED = "Boolean properties do not accept any rules";
+  public static final String PROPERTY_RULES_NUMERIC_RULE_NOT_ALLOWED = "Numeric rule {rule} is not allowed for STRING properties";
 
-    // Entity input validation messages
-    public static final String ENTITY_NAME_MANDATORY = "Entity name is mandatory and cannot be blank";
-    public static final String ENTITY_IDENTIFIER_MANDATORY = "Entity identifier is mandatory and cannot be blank";
+  // Entity input validation messages
+  public static final String ENTITY_NAME_MANDATORY = "Entity name is mandatory and cannot be blank";
+  public static final String ENTITY_IDENTIFIER_MANDATORY = "Entity identifier is mandatory and cannot be blank";
 
-    // Entity creation validation messages
-    public static final String ENTITY_NOT_FOUND = "Entity not found with template identifier %s and entity identifier '%s'";
-    public static final String ENTITY_ALREADY_EXISTS = "Entity with name '%s' already exists for template '%s'";
-    public static final String ENTITY_VALIDATION_FAILED = "Entity validation failed: ";
-    public static final String PROPERTY_RULES_MUTUALLY_EXCLUSIVE = "{rule1} and {rule2} are mutually exclusive for STRING properties";
+  // Entity creation validation messages
+  public static final String ENTITY_NOT_FOUND = "Entity not found with template identifier %s and entity identifier '%s'";
+  public static final String ENTITY_ALREADY_EXISTS = "Entity with name '%s' already exists for template '%s'";
+  public static final String ENTITY_VALIDATION_FAILED = "Entity validation failed: ";
+  public static final String PROPERTY_RULES_MUTUALLY_EXCLUSIVE = "{rule1} and {rule2} are mutually exclusive for STRING properties";
 
-    // Helper method to construct rules incompatibility message
-    public static String rulesAreIncompatible(String rule1, String rule2) {
-        return PROPERTY_RULES_MUTUALLY_EXCLUSIVE
-                .replace("{rule1}", rule1)
-                .replace("{rule2}", rule2);
-    }
+  // Helper method to construct rules incompatibility message
+  public static String rulesAreIncompatible(String rule1, String rule2) {
+    return PROPERTY_RULES_MUTUALLY_EXCLUSIVE.replace("{rule1}", rule1).replace("{rule2}", rule2);
+  }
 
-    // Helper method to construct rule-not-allowed message
-    public static String ruleNotAllowed(String rule, String propertyType) {
-        return PROPERTY_RULES_RULE_NOT_ALLOWED_FOR_TYPE
-                .replace("{rule}", rule)
-                .replace("{type}", propertyType);
-    }
+  // Helper method to construct rule-not-allowed message
+  public static String ruleNotAllowed(String rule, String propertyType) {
+    return PROPERTY_RULES_RULE_NOT_ALLOWED_FOR_TYPE.replace("{rule}", rule).replace("{type}",
+        propertyType);
+  }
 
-    // Helper method to construct min/max constraint violation message
-    public static String minMaxConstraintViolated(String constraint) {
-        return PROPERTY_RULES_MIN_MAX_CONSTRAINT_VIOLATED
-                .replace("{constraint}", constraint);
-    }
+  // Helper method to construct min/max constraint violation message
+  public static String minMaxConstraintViolated(String constraint) {
+    return PROPERTY_RULES_MIN_MAX_CONSTRAINT_VIOLATED.replace("{constraint}", constraint);
+  }
 }

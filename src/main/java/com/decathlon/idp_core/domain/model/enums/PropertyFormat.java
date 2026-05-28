@@ -13,6 +13,5 @@ import com.decathlon.idp_core.domain.model.entity_template.PropertyRules;
 /// - Provides consistent validation across the domain
 /// - Supports integration with external systems requiring specific formats
 public enum PropertyFormat {
-    URL,
-    EMAIL
+  URL, EMAIL
 }

@@ -25,25 +25,19 @@ import io.swagger.v3.oas.annotations.media.Schema;
 @JsonNaming(SnakeCaseStrategy.class)
 public record EntityGraphNodeFlatDtoOut(
 
-        @Schema(description = ENTITY_GRAPH_FLAT_NODE_ID_DESCRIPTION)
-        String id,
+    @Schema(description = ENTITY_GRAPH_FLAT_NODE_ID_DESCRIPTION) String id,
 
-        @Schema(description = ENTITY_GRAPH_FLAT_NODE_LABEL_DESCRIPTION)
-        String label,
+    @Schema(description = ENTITY_GRAPH_FLAT_NODE_LABEL_DESCRIPTION) String label,
 
-        @Schema(description = ENTITY_GRAPH_FLAT_NODE_TEMPLATE_DESCRIPTION)
-        String templateIdentifier,
+    @Schema(description = ENTITY_GRAPH_FLAT_NODE_TEMPLATE_DESCRIPTION) String templateIdentifier,
 
-        @Schema(description = ENTITY_GRAPH_FLAT_NODE_IDENTIFIER_DESCRIPTION)
-        String identifier,
+    @Schema(description = ENTITY_GRAPH_FLAT_NODE_IDENTIFIER_DESCRIPTION) String identifier,
 
-        @JsonInclude(Include.NON_EMPTY)
-        @Schema(description = ENTITY_GRAPH_FLAT_NODE_DATA_DESCRIPTION)
-        Map<String, Object> data
-) {
-    /// Compact constructor: defensively copies the data map to prevent external mutation
-    /// of the DTO after construction (EI_EXPOSE_REP2 / EI_EXPOSE_REP).
-    public EntityGraphNodeFlatDtoOut {
-        data = data == null ? Map.of() : Map.copyOf(data);
-    }
+    @JsonInclude(Include.NON_EMPTY) @Schema(description = ENTITY_GRAPH_FLAT_NODE_DATA_DESCRIPTION) Map<String, Object> data) {
+  /// Compact constructor: defensively copies the data map to prevent external
+  /// mutation
+  /// of the DTO after construction (EI_EXPOSE_REP2 / EI_EXPOSE_REP).
+  public EntityGraphNodeFlatDtoOut {
+    data = data == null ? Map.of() : Map.copyOf(data);
+  }
 }
