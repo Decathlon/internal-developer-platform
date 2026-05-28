@@ -18,43 +18,47 @@ import com.decathlon.idp_core.domain.model.entity.EntitySummary;
 import com.decathlon.idp_core.infrastructure.adapters.persistence.model.entity.EntityJpaEntity;
 
 @Repository
-public interface JpaEntityRepository extends JpaRepository<EntityJpaEntity, UUID>, JpaSpecificationExecutor<EntityJpaEntity> {
+public interface JpaEntityRepository
+    extends
+      JpaRepository<EntityJpaEntity, UUID>,
+      JpaSpecificationExecutor<EntityJpaEntity> {
 
-    @Query("SELECT e.identifier AS identifier, e.name AS name, e.templateIdentifier AS templateIdentifier FROM EntityJpaEntity e WHERE e.identifier IN :identifiers")
-    List<EntitySummary> findByIdentifierIn(List<String> identifiers);
+  @Query("SELECT e.identifier AS identifier, e.name AS name, e.templateIdentifier AS templateIdentifier FROM EntityJpaEntity e WHERE e.identifier IN :identifiers")
+  List<EntitySummary> findByIdentifierIn(List<String> identifiers);
 
-    @Query("SELECT e.identifier AS identifier, e.name AS name, e.templateIdentifier AS templateIdentifier FROM EntityJpaEntity e JOIN e.relations r WHERE r.id IN :relationIds")
-    List<EntitySummary> findByRelationIdIn(List<UUID> relationIds);
+  @Query("SELECT e.identifier AS identifier, e.name AS name, e.templateIdentifier AS templateIdentifier FROM EntityJpaEntity e JOIN e.relations r WHERE r.id IN :relationIds")
+  List<EntitySummary> findByRelationIdIn(List<UUID> relationIds);
 
-    Optional<EntityJpaEntity> findByTemplateIdentifierAndIdentifier(String templateIdentifier, String identifier);
+  Optional<EntityJpaEntity> findByTemplateIdentifierAndIdentifier(String templateIdentifier,
+      String identifier);
 
-    Optional<EntityJpaEntity> findByTemplateIdentifierAndName(String templateIdentifier, String name);
+  Optional<EntityJpaEntity> findByTemplateIdentifierAndName(String templateIdentifier, String name);
 
-    Page<EntityJpaEntity> findByTemplateIdentifier(String templateIdentifier, Pageable pageable);
+  Page<EntityJpaEntity> findByTemplateIdentifier(String templateIdentifier, Pageable pageable);
 
-    @Modifying(clearAutomatically = true, flushAutomatically = true)
-    @Query("""
-            DELETE FROM PropertyJpaEntity p
-            WHERE p IN (
-              SELECT p2 FROM EntityJpaEntity e JOIN e.properties p2
-              WHERE e.templateIdentifier = :templateIdentifier
-              AND p2.name IN :propertyNames
-            )
-            """)
-    void deletePropertiesByTemplateIdentifierAndPropertyName(
-            @Param("templateIdentifier") String templateIdentifier,
-            @Param("propertyNames") Collection<String> propertyNames);
+  @Modifying(clearAutomatically = true, flushAutomatically = true)
+  @Query("""
+      DELETE FROM PropertyJpaEntity p
+      WHERE p IN (
+        SELECT p2 FROM EntityJpaEntity e JOIN e.properties p2
+        WHERE e.templateIdentifier = :templateIdentifier
+        AND p2.name IN :propertyNames
+      )
+      """)
+  void deletePropertiesByTemplateIdentifierAndPropertyName(
+      @Param("templateIdentifier") String templateIdentifier,
+      @Param("propertyNames") Collection<String> propertyNames);
 
-    @Modifying(clearAutomatically = true, flushAutomatically = true)
-    @Query("""
-            DELETE FROM RelationJpaEntity r
-            WHERE r IN (
-              SELECT r2 FROM EntityJpaEntity e JOIN e.relations r2
-              WHERE e.templateIdentifier = :templateIdentifier
-              AND r2.name IN :relationNames
-            )
-            """)
-    void deleteRelationsByTemplateIdentifierAndRelationName(
-            @Param("templateIdentifier") String templateIdentifier,
-            @Param("relationNames") Collection<String> relationNames);
+  @Modifying(clearAutomatically = true, flushAutomatically = true)
+  @Query("""
+      DELETE FROM RelationJpaEntity r
+      WHERE r IN (
+        SELECT r2 FROM EntityJpaEntity e JOIN e.relations r2
+        WHERE e.templateIdentifier = :templateIdentifier
+        AND r2.name IN :relationNames
+      )
+      """)
+  void deleteRelationsByTemplateIdentifierAndRelationName(
+      @Param("templateIdentifier") String templateIdentifier,
+      @Param("relationNames") Collection<String> relationNames);
 }

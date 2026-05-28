@@ -30,6 +30,8 @@ import static org.springframework.http.HttpStatus.CREATED;
 import static org.springframework.http.HttpStatus.NO_CONTENT;
 import static org.springframework.http.HttpStatus.OK;
 
+import jakarta.validation.Valid;
+
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.web.PageableDefault;
@@ -60,7 +62,6 @@ import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.tags.Tag;
-import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 
 /// REST API adapter for Entity Template management operations.
@@ -86,93 +87,99 @@ import lombok.RequiredArgsConstructor;
 @Tag(name = "Entities Templates Management", description = "Operations related to entity template management")
 public class EntityTemplateController {
 
-        private final EntityTemplateService entityTemplateService;
-        private final EntityTemplateMapper templateMapper;
+  private final EntityTemplateService entityTemplateService;
+  private final EntityTemplateMapper templateMapper;
 
-        /// Retrieves paginated entity templates for administrative interfaces.
-        ///
-        /// **API contract:** Provides paginated template listings with configurable sorting
-        /// and page size. Defaults to 20 templates per page sorted by identifier for
-        /// consistent management interface display.
-        @Operation(summary = ENDPOINT_GET_TEMPLATES_PAGINATED_SUMMARY, description = ENDPOINT_GET_TEMPLATES_PAGINATED_DESCRIPTION)
-        @ApiResponse(responseCode = OK_CODE, description = RESPONSE_TEMPLATES_PAGINATED_SUCCESS, content = @Content(schema = @Schema(implementation = TemplatePageResponse.class)))
-        @ApiResponse(responseCode = BAD_REQUEST_CODE, description = RESPONSE_INVALID_PAGINATION, content = {
-                        @Content(schema = @Schema(implementation = ApiExceptionHandler.ErrorResponse.class)) })
-        @Parameter(name = "page", description = PARAM_PAGE_DESCRIPTION, in = ParameterIn.QUERY, content = @Content(schema = @Schema(type = "integer", defaultValue = "0")))
-        @Parameter(name = "size", description = PARAM_SIZE_DESCRIPTION, in = ParameterIn.QUERY, content = @Content(schema = @Schema(type = "integer", defaultValue = "20")))
-        @Parameter(name = "sort", description = PARAM_SORT_DESCRIPTION, in = ParameterIn.QUERY, content = @Content(schema = @Schema(type = "string", defaultValue = "identifier,asc")))
-        @GetMapping
-        @ResponseStatus(OK)
-        public Page<EntityTemplateDtoOut> getTemplatesPaginated(
-                        @PageableDefault(size = 20, sort = "identifier") @Parameter(hidden = true) Pageable pageable) {
-                Page<EntityTemplate> templates = entityTemplateService.getEntityTemplates(pageable);
-                return templates.map(templateMapper::fromEntityTemplatetoDto);
-        }
+  /// Retrieves paginated entity templates for administrative interfaces.
+  ///
+  /// **API contract:** Provides paginated template listings with configurable
+  /// sorting
+  /// and page size. Defaults to 20 templates per page sorted by identifier for
+  /// consistent management interface display.
+  @Operation(summary = ENDPOINT_GET_TEMPLATES_PAGINATED_SUMMARY, description = ENDPOINT_GET_TEMPLATES_PAGINATED_DESCRIPTION)
+  @ApiResponse(responseCode = OK_CODE, description = RESPONSE_TEMPLATES_PAGINATED_SUCCESS, content = @Content(schema = @Schema(implementation = TemplatePageResponse.class)))
+  @ApiResponse(responseCode = BAD_REQUEST_CODE, description = RESPONSE_INVALID_PAGINATION, content = {
+      @Content(schema = @Schema(implementation = ApiExceptionHandler.ErrorResponse.class))})
+  @Parameter(name = "page", description = PARAM_PAGE_DESCRIPTION, in = ParameterIn.QUERY, content = @Content(schema = @Schema(type = "integer", defaultValue = "0")))
+  @Parameter(name = "size", description = PARAM_SIZE_DESCRIPTION, in = ParameterIn.QUERY, content = @Content(schema = @Schema(type = "integer", defaultValue = "20")))
+  @Parameter(name = "sort", description = PARAM_SORT_DESCRIPTION, in = ParameterIn.QUERY, content = @Content(schema = @Schema(type = "string", defaultValue = "identifier,asc")))
+  @GetMapping
+  @ResponseStatus(OK)
+  public Page<EntityTemplateDtoOut> getTemplatesPaginated(
+      @PageableDefault(size = 20, sort = "identifier") @Parameter(hidden = true) Pageable pageable) {
+    Page<EntityTemplate> templates = entityTemplateService.getEntityTemplates(pageable);
+    return templates.map(templateMapper::fromEntityTemplatetoDto);
+  }
 
-        /// Retrieves specific entity template by business identifier.
-        ///
-        /// **API contract:** Returns complete template definition using case-sensitive
-        /// business identifier lookup. Provides HTTP 404 for non-existent templates
-        /// with meaningful error messages for API consumers.
-        @Operation(summary = ENDPOINT_GET_TEMPLATE_BY_IDENTIFIER_SUMMARY, description = ENDPOINT_GET_TEMPLATE_BY_IDENTIFIER_DESCRIPTION)
-        @ApiResponse(responseCode = OK_CODE, description = RESPONSE_TEMPLATE_FOUND, content = {
-                        @Content(schema = @Schema(implementation = EntityTemplateDtoOut.class)) })
-        @ApiResponse(responseCode = NOT_FOUND_CODE, description = RESPONSE_TEMPLATE_NOT_FOUND_IDENTIFIER, content = {
-                        @Content(schema = @Schema(implementation = ApiExceptionHandler.ErrorResponse.class)) })
-        @GetMapping("/{identifier}")
-        @ResponseStatus(OK)
-        public EntityTemplateDtoOut getTemplateByIdentifier(@PathVariable String identifier) {
-                EntityTemplate entity = entityTemplateService.getEntityTemplateByIdentifier(identifier);
-                return templateMapper.fromEntityTemplatetoDto(entity);
-        }
+  /// Retrieves specific entity template by business identifier.
+  ///
+  /// **API contract:** Returns complete template definition using case-sensitive
+  /// business identifier lookup. Provides HTTP 404 for non-existent templates
+  /// with meaningful error messages for API consumers.
+  @Operation(summary = ENDPOINT_GET_TEMPLATE_BY_IDENTIFIER_SUMMARY, description = ENDPOINT_GET_TEMPLATE_BY_IDENTIFIER_DESCRIPTION)
+  @ApiResponse(responseCode = OK_CODE, description = RESPONSE_TEMPLATE_FOUND, content = {
+      @Content(schema = @Schema(implementation = EntityTemplateDtoOut.class))})
+  @ApiResponse(responseCode = NOT_FOUND_CODE, description = RESPONSE_TEMPLATE_NOT_FOUND_IDENTIFIER, content = {
+      @Content(schema = @Schema(implementation = ApiExceptionHandler.ErrorResponse.class))})
+  @GetMapping("/{identifier}")
+  @ResponseStatus(OK)
+  public EntityTemplateDtoOut getTemplateByIdentifier(@PathVariable String identifier) {
+    EntityTemplate entity = entityTemplateService.getEntityTemplateByIdentifier(identifier);
+    return templateMapper.fromEntityTemplatetoDto(entity);
+  }
 
-        /// Creates new entity template with validation and uniqueness checks.
-        ///
-        /// **API contract:** Accepts template creation payload with comprehensive validation.
-        /// Returns HTTP 201 with created template including generated identifiers, or
-        /// HTTP 409 for duplicate identifier conflicts.
-        @Operation(summary = ENDPOINT_POST_TEMPLATE_SUMMARY, description = ENDPOINT_POST_TEMPLATE_DESCRIPTION)
-        @ApiResponse(responseCode = CREATED_CODE, description = RESPONSE_TEMPLATE_CREATED, content = {
-                        @Content(schema = @Schema(implementation = EntityTemplateDtoOut.class)) })
-        @ApiResponse(responseCode = BAD_REQUEST_CODE, description = RESPONSE_INVALID_TEMPLATE_DATA, content = {
-                        @Content(schema = @Schema(implementation = ApiExceptionHandler.ErrorResponse.class)) })
-        @PostMapping
-        @ResponseStatus(CREATED)
-        public EntityTemplateDtoOut createTemplate(@Valid @RequestBody EntityTemplateCreateDtoIn entityTemplateCreateDtoIn) {
-                EntityTemplate entityTemplate = entityTemplateService.createEntityTemplate(templateMapper.fromDtoToEntityTemplate(entityTemplateCreateDtoIn));
-                return templateMapper.fromEntityTemplatetoDto(entityTemplate);
-        }
+  /// Creates new entity template with validation and uniqueness checks.
+  ///
+  /// **API contract:** Accepts template creation payload with comprehensive
+  /// validation.
+  /// Returns HTTP 201 with created template including generated identifiers, or
+  /// HTTP 409 for duplicate identifier conflicts.
+  @Operation(summary = ENDPOINT_POST_TEMPLATE_SUMMARY, description = ENDPOINT_POST_TEMPLATE_DESCRIPTION)
+  @ApiResponse(responseCode = CREATED_CODE, description = RESPONSE_TEMPLATE_CREATED, content = {
+      @Content(schema = @Schema(implementation = EntityTemplateDtoOut.class))})
+  @ApiResponse(responseCode = BAD_REQUEST_CODE, description = RESPONSE_INVALID_TEMPLATE_DATA, content = {
+      @Content(schema = @Schema(implementation = ApiExceptionHandler.ErrorResponse.class))})
+  @PostMapping
+  @ResponseStatus(CREATED)
+  public EntityTemplateDtoOut createTemplate(
+      @Valid @RequestBody EntityTemplateCreateDtoIn entityTemplateCreateDtoIn) {
+    EntityTemplate entityTemplate = entityTemplateService
+        .createEntityTemplate(templateMapper.fromDtoToEntityTemplate(entityTemplateCreateDtoIn));
+    return templateMapper.fromEntityTemplatetoDto(entityTemplate);
+  }
 
-        /// Updates existing entity template with complete replacement strategy.
-        ///
-        /// **API contract:** Replaces entire template definition while preserving identifier.
-        /// Returns updated template with HTTP 200, or HTTP 404 for non-existent templates.
-        @Operation(summary = ENDPOINT_PUT_TEMPLATE_SUMMARY, description = ENDPOINT_PUT_TEMPLATE_DESCRIPTION)
-        @ApiResponse(responseCode = OK_CODE, description = RESPONSE_TEMPLATE_UPDATED, content = {
-                        @Content(schema = @Schema(implementation = EntityTemplateDtoOut.class)) })
-        @ApiResponse(responseCode = "404", description = RESPONSE_TEMPLATE_NOT_FOUND_IDENTIFIER, content = {
-                        @Content(schema = @Schema(implementation = ApiExceptionHandler.ErrorResponse.class)) })
-        @PutMapping("/{identifier}")
-        public EntityTemplateDtoOut updateTemplate(
-                        @PathVariable(name = "identifier") String identifier,
-                        @RequestBody @Valid EntityTemplateUpdateDtoIn entityTemplateUpdateDtoIn) {
-                EntityTemplate entityTemplate = entityTemplateService.updateEntityTemplate(identifier, templateMapper.fromPutDtoToEntityTemplate(identifier, entityTemplateUpdateDtoIn));
-                return templateMapper.fromEntityTemplatetoDto(entityTemplate);
-        }
+  /// Updates existing entity template with complete replacement strategy.
+  ///
+  /// **API contract:** Replaces entire template definition while preserving
+  /// identifier.
+  /// Returns updated template with HTTP 200, or HTTP 404 for non-existent
+  /// templates.
+  @Operation(summary = ENDPOINT_PUT_TEMPLATE_SUMMARY, description = ENDPOINT_PUT_TEMPLATE_DESCRIPTION)
+  @ApiResponse(responseCode = OK_CODE, description = RESPONSE_TEMPLATE_UPDATED, content = {
+      @Content(schema = @Schema(implementation = EntityTemplateDtoOut.class))})
+  @ApiResponse(responseCode = "404", description = RESPONSE_TEMPLATE_NOT_FOUND_IDENTIFIER, content = {
+      @Content(schema = @Schema(implementation = ApiExceptionHandler.ErrorResponse.class))})
+  @PutMapping("/{identifier}")
+  public EntityTemplateDtoOut updateTemplate(@PathVariable(name = "identifier") String identifier,
+      @RequestBody @Valid EntityTemplateUpdateDtoIn entityTemplateUpdateDtoIn) {
+    EntityTemplate entityTemplate = entityTemplateService.updateEntityTemplate(identifier,
+        templateMapper.fromPutDtoToEntityTemplate(identifier, entityTemplateUpdateDtoIn));
+    return templateMapper.fromEntityTemplatetoDto(entityTemplate);
+  }
 
-        /// Deletes entity template by business identifier with safety checks.
-        ///
-        /// **API contract:** Permanently removes template with HTTP 204 response.
-        /// Operation is idempotent - returns success even for non-existent templates.
-        /// **Warning:** Irreversible operation requiring referential integrity validation.
-        @Operation(summary = ENDPOINT_DELETE_TEMPLATE_SUMMARY, description = ENDPOINT_DELETE_TEMPLATE_DESCRIPTION)
-        @ApiResponse(responseCode = NO_CONTENT_CODE, description = RESPONSE_TEMPLATE_DELETED)
-        @ApiResponse(responseCode = NOT_FOUND_CODE, description = RESPONSE_TEMPLATE_NOT_FOUND_IDENTIFIER, content = {
-                        @Content(schema = @Schema(implementation = ErrorResponse.class))
-        })
-        @ResponseStatus(NO_CONTENT)
-        @DeleteMapping("/{identifier}")
-        public void deleteTemplate(@PathVariable String identifier) {
-                entityTemplateService.deleteEntityTemplate(identifier);
-        }
+  /// Deletes entity template by business identifier with safety checks.
+  ///
+  /// **API contract:** Permanently removes template with HTTP 204 response.
+  /// Operation is idempotent - returns success even for non-existent templates.
+  /// **Warning:** Irreversible operation requiring referential integrity
+  /// validation.
+  @Operation(summary = ENDPOINT_DELETE_TEMPLATE_SUMMARY, description = ENDPOINT_DELETE_TEMPLATE_DESCRIPTION)
+  @ApiResponse(responseCode = NO_CONTENT_CODE, description = RESPONSE_TEMPLATE_DELETED)
+  @ApiResponse(responseCode = NOT_FOUND_CODE, description = RESPONSE_TEMPLATE_NOT_FOUND_IDENTIFIER, content = {
+      @Content(schema = @Schema(implementation = ErrorResponse.class))})
+  @ResponseStatus(NO_CONTENT)
+  @DeleteMapping("/{identifier}")
+  public void deleteTemplate(@PathVariable String identifier) {
+    entityTemplateService.deleteEntityTemplate(identifier);
+  }
 }

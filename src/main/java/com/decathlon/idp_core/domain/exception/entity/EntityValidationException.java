@@ -24,22 +24,20 @@ import lombok.Getter;
 @Getter
 public class EntityValidationException extends RuntimeException {
 
-    /**
-     * -- GETTER --
-     * Returns the list of individual validation violation messages.
-     * ///
-     * ///
-     *
-     * @return immutable list of violation messages
-     */
-    private final List<String> violations;
+  /**
+   * -- GETTER -- Returns the list of individual validation violation messages.
+   * /// ///
+   *
+   * @return immutable list of violation messages
+   */
+  private final List<String> violations;
 
-    /// Constructs a new exception with a list of validation violation messages.
-    ///
-    /// @param violations the list of validation error messages
-    public EntityValidationException(List<String> violations) {
-        super(ENTITY_VALIDATION_FAILED + String.join("; ", violations));
-        this.violations = List.copyOf(violations);
-    }
+  /// Constructs a new exception with a list of validation violation messages.
+  ///
+  /// @param violations the list of validation error messages
+  public EntityValidationException(List<String> violations) {
+    super(ENTITY_VALIDATION_FAILED + String.join("; ", violations));
+    this.violations = List.copyOf(violations);
+  }
 
 }

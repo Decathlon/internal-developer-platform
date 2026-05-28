@@ -20,24 +20,24 @@ import lombok.NoArgsConstructor;
 @Schema(description = SCHEMA_PROPERTY_DEFINITION_IN)
 public class PropertyRulesDtoIn {
 
-    @Schema(description = "Property format validation", example = "EMAIL")
-    private PropertyFormat format;
+  @Schema(description = "Property format validation", example = "EMAIL")
+  private PropertyFormat format;
 
-    @Schema(description = "Enumeration values for enum properties", example = "[\"ACTIVE\", \"INACTIVE\"]")
-    private String[] enumValues;
+  @Schema(description = "Enumeration values for enum properties", example = "[\"ACTIVE\", \"INACTIVE\"]")
+  private String[] enumValues;
 
-    @Schema(description = "Regular expression pattern for validation", example = "^[a-zA-Z0-9]+$")
-    private String regex;
+  @Schema(description = "Regular expression pattern for validation", example = "^[a-zA-Z0-9]+$")
+  private String regex;
 
-    @Schema(description = "Maximum length for string properties", example = "255")
-    private Integer maxLength;
+  @Schema(description = "Maximum length for string properties", example = "255")
+  private Integer maxLength;
 
-    @Schema(description = "Minimum length for string properties", example = "1")
-    private Integer minLength;
+  @Schema(description = "Minimum length for string properties", example = "1")
+  private Integer minLength;
 
-    @Schema(description = "Maximum value for numeric properties", example = "100")
-    private Integer maxValue;
+  @Schema(description = "Maximum value for numeric properties", example = "100")
+  private Integer maxValue;
 
-    @Schema(description = "Minimum value for numeric properties", example = "0")
-    private Integer minValue;
+  @Schema(description = "Minimum value for numeric properties", example = "0")
+  private Integer minValue;
 }

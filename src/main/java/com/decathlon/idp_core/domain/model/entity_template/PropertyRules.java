@@ -17,21 +17,14 @@ import com.decathlon.idp_core.domain.model.enums.PropertyFormat;
 /// - Numeric constraints: `minValue` ≤ actual value ≤ `maxValue`
 /// - Enumeration constraints: values must be in `enumValues` list when specified
 /// - Regular expression patterns provide additional validation when `regex` is defined
-public record PropertyRules(
-    UUID id,
-    PropertyFormat format,
-    List<String> enumValues,
-    String regex,
-    Integer maxLength,
-    Integer minLength,
-    Integer maxValue,
-    Integer minValue
-) {
-    /// Ensures immutable defensive copying of enumeration values.
-    ///
-    /// **Why this exists:** Prevents external mutation of enum constraints after construction,
-    /// maintaining business rule integrity throughout the entity lifecycle.
-    public PropertyRules {
-        enumValues = enumValues != null ? List.copyOf(enumValues) : null;
-    }
+public record PropertyRules(UUID id, PropertyFormat format, List<String> enumValues, String regex,
+    Integer maxLength, Integer minLength, Integer maxValue, Integer minValue) {
+  /// Ensures immutable defensive copying of enumeration values.
+  ///
+  /// **Why this exists:** Prevents external mutation of enum constraints after
+  /// construction,
+  /// maintaining business rule integrity throughout the entity lifecycle.
+  public PropertyRules {
+    enumValues = enumValues != null ? List.copyOf(enumValues) : null;
+  }
 }

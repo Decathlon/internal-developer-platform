@@ -14,7 +14,7 @@ import org.springframework.security.web.SecurityFilterChain;
 /// This configuration ensures all requests are permitted without authentication.
 @TestConfiguration
 @EnableWebSecurity
-@Profile({ "test" })
+@Profile({"test"})
 public class TestSecurityConfiguration {
   /// Configures a permissive security filter chain for testing.
   ///
@@ -22,7 +22,8 @@ public class TestSecurityConfiguration {
   /// - CSRF protection disabled (not needed for API tests)
   /// - All requests permitted without authentication
   ///
-  /// **Why permissive security:** Test scenarios focus on business logic validation
+  /// **Why permissive security:** Test scenarios focus on business logic
+  /// validation
   /// rather than security enforcement, requiring unrestricted access.
   @Bean
   public SecurityFilterChain securityFilterChainTest(HttpSecurity http) throws Exception {

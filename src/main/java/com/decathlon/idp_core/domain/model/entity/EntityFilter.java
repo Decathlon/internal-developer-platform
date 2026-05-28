@@ -12,18 +12,18 @@ import java.util.List;
 /// Use [EntityFilter#empty()] to represent the absence of any filter constraint.
 public record EntityFilter(List<FilterCriterion> criteria) {
 
-    /// Constructs an [EntityFilter] with a defensive copy of the criteria list.
-    public EntityFilter {
-        criteria = criteria != null ? List.copyOf(criteria) : List.of();
-    }
+  /// Constructs an [EntityFilter] with a defensive copy of the criteria list.
+  public EntityFilter {
+    criteria = criteria != null ? List.copyOf(criteria) : List.of();
+  }
 
-    /// Returns an [EntityFilter] with no criteria (matches all entities).
-    public static EntityFilter empty() {
-        return new EntityFilter(List.of());
-    }
+  /// Returns an [EntityFilter] with no criteria (matches all entities).
+  public static EntityFilter empty() {
+    return new EntityFilter(List.of());
+  }
 
-    /// Returns true when no criteria have been defined.
-    public boolean isEmpty() {
-        return criteria.isEmpty();
-    }
+  /// Returns true when no criteria have been defined.
+  public boolean isEmpty() {
+    return criteria.isEmpty();
+  }
 }

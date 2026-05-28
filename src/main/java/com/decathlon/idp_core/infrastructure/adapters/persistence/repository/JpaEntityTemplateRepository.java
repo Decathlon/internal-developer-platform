@@ -15,22 +15,24 @@ import com.decathlon.idp_core.infrastructure.adapters.persistence.model.entity_t
 @Repository
 public interface JpaEntityTemplateRepository extends JpaRepository<EntityTemplateJpaEntity, UUID> {
 
-    @EntityGraph(attributePaths = {"propertiesDefinitions", "propertiesDefinitions.rules", "relationsDefinitions"})
-    Optional<EntityTemplateJpaEntity> findByIdentifier(String templateIdentifier);
+  @EntityGraph(attributePaths = {"propertiesDefinitions", "propertiesDefinitions.rules",
+      "relationsDefinitions"})
+  Optional<EntityTemplateJpaEntity> findByIdentifier(String templateIdentifier);
 
-    @Override
-    @EntityGraph(attributePaths = {"propertiesDefinitions", "propertiesDefinitions.rules", "relationsDefinitions"})
-    Optional<EntityTemplateJpaEntity> findById(UUID id);
+  @Override
+  @EntityGraph(attributePaths = {"propertiesDefinitions", "propertiesDefinitions.rules",
+      "relationsDefinitions"})
+  Optional<EntityTemplateJpaEntity> findById(UUID id);
 
-    @Override
-    @EntityGraph(attributePaths = {"propertiesDefinitions", "propertiesDefinitions.rules", "relationsDefinitions"})
-    Page<EntityTemplateJpaEntity> findAll(Pageable pageable);
+  @Override
+  @EntityGraph(attributePaths = {"propertiesDefinitions", "propertiesDefinitions.rules",
+      "relationsDefinitions"})
+  Page<EntityTemplateJpaEntity> findAll(Pageable pageable);
 
+  boolean existsByIdentifier(String identifier);
 
-    boolean existsByIdentifier(String identifier);
+  boolean existsByName(String name);
 
-    boolean existsByName(String name);
-
-    @Transactional
-    void deleteByIdentifier(String identifier);
+  @Transactional
+  void deleteByIdentifier(String identifier);
 }

@@ -13,6 +13,7 @@ import jakarta.persistence.Id;
 import jakarta.persistence.Index;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.Table;
+
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -26,20 +27,18 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 public class RelationJpaEntity {
 
-    @Id
-    @GeneratedValue(strategy = GenerationType.UUID)
-    private UUID id;
+  @Id
+  @GeneratedValue(strategy = GenerationType.UUID)
+  private UUID id;
 
-    @Column(nullable = false)
-    private String name;
+  @Column(nullable = false)
+  private String name;
 
-    @Column(name = "target_template_identifier", nullable = false)
-    private String targetTemplateIdentifier;
+  @Column(name = "target_template_identifier", nullable = false)
+  private String targetTemplateIdentifier;
 
-    @ElementCollection
-    @CollectionTable(name = "relation_target_entities",
-        joinColumns = @JoinColumn(name = "relation_id"),
-        indexes = @Index(columnList = "relation_id"))
-    @Column(name = "target_entity_identifier")
-    private List<String> targetEntityIdentifiers;
+  @ElementCollection
+  @CollectionTable(name = "relation_target_entities", joinColumns = @JoinColumn(name = "relation_id"), indexes = @Index(columnList = "relation_id"))
+  @Column(name = "target_entity_identifier")
+  private List<String> targetEntityIdentifiers;
 }

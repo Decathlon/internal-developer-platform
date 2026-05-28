@@ -14,4 +14,5 @@ import lombok.Builder;
 /// - Relationship target references
 /// - Performance-optimized read operations where full entity data isn't required
 @Builder
-public record EntitySummary(String identifier, String name, String templateIdentifier) {}
+public record EntitySummary(String identifier, String name, String templateIdentifier) {
+}

@@ -2,9 +2,6 @@ package com.decathlon.idp_core.domain.exception.entity_template;
 
 import static com.decathlon.idp_core.domain.constant.ValidationMessages.TEMPLATE_ALREADY_EXISTS;
 
-import com.decathlon.idp_core.domain.model.entity_template.EntityTemplate;
-import com.decathlon.idp_core.domain.service.entity_template.EntityTemplateService;
-
 /// Exception thrown when attempting to create an [EntityTemplate] with an identifier that already exists.
 ///
 /// This exception is part of the domain layer and represents a business rule violation
@@ -22,16 +19,19 @@ import com.decathlon.idp_core.domain.service.entity_template.EntityTemplateServi
 /// - Contains specific identifier that caused the conflict for debugging
 public class EntityTemplateAlreadyExistsException extends RuntimeException {
 
-    /// Constructs a new exception with the specific identifier that already exists.
-    ///
-    /// **Why this constructor exists:**
-    /// - Formats exception message to include the duplicate identifier for clear debugging
-    /// - Provides consistent error messaging across the application
-    /// - Enables API consumers to understand which specific identifier caused the conflict
-    ///
-    /// @param identifier the identifier that already exists in the system, must not be null
-    /// @throws IllegalArgumentException if identifier is null
-    public EntityTemplateAlreadyExistsException(String identifier) {
-        super(String.format(TEMPLATE_ALREADY_EXISTS + ":%s", identifier));
-    }
+  /// Constructs a new exception with the specific identifier that already exists.
+  ///
+  /// **Why this constructor exists:**
+  /// - Formats exception message to include the duplicate identifier for clear
+  /// debugging
+  /// - Provides consistent error messaging across the application
+  /// - Enables API consumers to understand which specific identifier caused the
+  /// conflict
+  ///
+  /// @param identifier the identifier that already exists in the system, must not
+  /// be null
+  /// @throws IllegalArgumentException if identifier is null
+  public EntityTemplateAlreadyExistsException(String identifier) {
+    super(String.format(TEMPLATE_ALREADY_EXISTS + ":%s", identifier));
+  }
 }

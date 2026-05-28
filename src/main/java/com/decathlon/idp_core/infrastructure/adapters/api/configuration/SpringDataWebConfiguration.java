@@ -4,7 +4,6 @@ package com.decathlon.idp_core.infrastructure.adapters.api.configuration;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.data.web.config.EnableSpringDataWebSupport;
 
-
 /// Spring Data Web configuration optimizing REST API response serialization.
 ///
 /// **Infrastructure rationale:** Configures clean DTO-style pagination responses instead
@@ -21,9 +20,7 @@ import org.springframework.data.web.config.EnableSpringDataWebSupport;
 /// **Alternative avoided:** Default HATEOAS format includes `_links` and `_embedded`
 /// properties that increase response size and complexity for simple API consumption.
 @Configuration
-@EnableSpringDataWebSupport(
-    pageSerializationMode = EnableSpringDataWebSupport.PageSerializationMode.VIA_DTO
-)
+@EnableSpringDataWebSupport(pageSerializationMode = EnableSpringDataWebSupport.PageSerializationMode.VIA_DTO)
 public class SpringDataWebConfiguration {
 
 }

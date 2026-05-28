@@ -1,7 +1,5 @@
 package com.decathlon.idp_core.domain.exception.entity_template;
 
-import com.decathlon.idp_core.domain.model.entity_template.EntityTemplate;
-
 import static com.decathlon.idp_core.domain.constant.ValidationMessages.PROPERTY_NAME_ALREADY_EXISTS;
 
 /// Exception thrown when attempting to create or update an [EntityTemplate] with duplicate property names.
@@ -15,10 +13,10 @@ import static com.decathlon.idp_core.domain.constant.ValidationMessages.PROPERTY
 /// - Mapped to HTTP 400 Bad Request by [ApiExceptionHandler]
 public class PropertyNameAlreadyExistsException extends RuntimeException {
 
-    /// Constructs a new exception with the duplicate property name.
-    ///
-    /// @param propertyName the property name that appears more than once
-    public PropertyNameAlreadyExistsException(String propertyName) {
-        super(String.format(PROPERTY_NAME_ALREADY_EXISTS, propertyName));
-    }
+  /// Constructs a new exception with the duplicate property name.
+  ///
+  /// @param propertyName the property name that appears more than once
+  public PropertyNameAlreadyExistsException(String propertyName) {
+    super(String.format(PROPERTY_NAME_ALREADY_EXISTS, propertyName));
+  }
 }

@@ -19,17 +19,13 @@ import jakarta.validation.constraints.NotBlank;
 /// - Required relations cannot be null when creating entities
 /// - `toMany` relationships allow multiple target connections (one-to-many/many-to-many)
 /// - `!toMany` relationships enforce single target connections (one-to-one/many-to-one)
-public record RelationDefinition(
-    UUID id,
+public record RelationDefinition(UUID id,
 
-    @NotBlank(message = RELATION_NAME_MANDATORY_SIMPLE)
-    String name,
+    @NotBlank(message = RELATION_NAME_MANDATORY_SIMPLE) String name,
 
-    @NotBlank(message = RELATION_TARGET_IDENTIFIER_MANDATORY_SIMPLE)
-    String targetTemplateIdentifier,
+    @NotBlank(message = RELATION_TARGET_IDENTIFIER_MANDATORY_SIMPLE) String targetTemplateIdentifier,
 
     boolean required,
 
-    boolean toMany
-) {
+    boolean toMany) {
 }

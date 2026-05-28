@@ -1,9 +1,5 @@
 package com.decathlon.idp_core.domain.exception.entity_template;
 
-import com.decathlon.idp_core.domain.model.entity_template.EntityTemplate;
-import com.decathlon.idp_core.domain.service.entity_template.EntityTemplateService;
-import com.decathlon.idp_core.infrastructure.adapters.api.handler.ApiExceptionHandler;
-
 import static com.decathlon.idp_core.domain.constant.ValidationMessages.TEMPLATE_IDENTIFIER_CANNOT_CHANGE;
 
 /// Exception thrown when attempting to change an [EntityTemplate] identifier after creation.
@@ -19,7 +15,7 @@ import static com.decathlon.idp_core.domain.constant.ValidationMessages.TEMPLATE
 /// - Contains the identifier that was attempted to be changed for debugging
 public class EntityTemplateIdentifierCannotChangeException extends RuntimeException {
 
-    public EntityTemplateIdentifierCannotChangeException(String identifier) {
-        super(TEMPLATE_IDENTIFIER_CANNOT_CHANGE + identifier);
-    }
+  public EntityTemplateIdentifierCannotChangeException(String identifier) {
+    super(TEMPLATE_IDENTIFIER_CANNOT_CHANGE + identifier);
+  }
 }

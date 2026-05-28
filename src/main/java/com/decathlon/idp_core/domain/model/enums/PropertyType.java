@@ -1,7 +1,5 @@
 package com.decathlon.idp_core.domain.model.enums;
 
-import com.decathlon.idp_core.domain.model.entity_template.PropertyDefinition;
-
 /// Fundamental data types supported for entity properties in [PropertyDefinition].
 ///
 /// Defines the basic business data types that can be stored and validated within
@@ -13,7 +11,5 @@ import com.decathlon.idp_core.domain.model.entity_template.PropertyDefinition;
 /// - Provides consistent data representation across persistence and APIs
 /// - Supports validation rule application based on data type
 public enum PropertyType {
-    STRING,
-    NUMBER,
-    BOOLEAN
+  STRING, NUMBER, BOOLEAN
 }

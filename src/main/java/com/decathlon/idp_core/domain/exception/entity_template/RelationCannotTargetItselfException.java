@@ -11,11 +11,12 @@ import static com.decathlon.idp_core.domain.constant.ValidationMessages.RELATION
 /// - Mapped to HTTP 400 Bad Request by [ApiExceptionHandler]
 public class RelationCannotTargetItselfException extends RuntimeException {
 
-    /// Constructs a new exception for a self-referential relation attempt.
-    ///
-    /// @param relationName        the name of the relation pointing to its own template
-    /// @param templateIdentifier  the identifier of the template that is both owner and target
-    public RelationCannotTargetItselfException(String relationName, String templateIdentifier) {
-        super(String.format(RELATION_CANNOT_TARGET_ITSELF, relationName, templateIdentifier));
-    }
+  /// Constructs a new exception for a self-referential relation attempt.
+  ///
+  /// @param relationName the name of the relation pointing to its own template
+  /// @param templateIdentifier the identifier of the template that is both owner
+  /// and target
+  public RelationCannotTargetItselfException(String relationName, String templateIdentifier) {
+    super(String.format(RELATION_CANNOT_TARGET_ITSELF, relationName, templateIdentifier));
+  }
 }
