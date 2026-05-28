@@ -9,6 +9,7 @@ import java.util.Set;
 import java.util.stream.Collectors;
 import org.springframework.stereotype.Service;
 
+import com.decathlon.idp_core.domain.model.entity.EntitySummary;
 import com.decathlon.idp_core.domain.model.entity.Relation;
 import com.decathlon.idp_core.domain.model.entity_template.EntityTemplate;
 import com.decathlon.idp_core.domain.model.entity_template.RelationDefinition;
@@ -79,7 +80,7 @@ public class RelationValidationService {
 
         var existingEntities = entityRepository.findByIdentifierIn(targetIdentifiers);
         Set<String> existingIdentifiers = existingEntities.stream()
-                .map(entity -> entity.identifier())
+                .map(EntitySummary::identifier)
                 .collect(Collectors.toSet());
 
         for (String identifier : targetIdentifiers) {

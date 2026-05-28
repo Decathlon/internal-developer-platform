@@ -123,9 +123,9 @@ public class EntityService {
 
     /// Updates an existing entity identified by template and entity identifiers.
     ///
-    /// **Contract:** validates that the path identifier and payload identifier are
-    /// aligned, then applies the same template-based semantic checks as creation
-    /// before persisting the updated aggregate.
+    /// **Contract:** Validates template existence, then entity existence within the
+    /// template scope. Validates updated entity data against the template constraints
+    /// before persisting changes.
     ///
     /// @param templateIdentifier template identifier from the request path
     /// @param entityIdentifier entity identifier from the request path

@@ -391,11 +391,6 @@ curl -X PUT http://localhost:8084/api/v1/entities/web-service/my-web-service \
 }
 ```
 
-### Additional Rule for Update
-
-- `identifier` in the request body must match `{entityIdentifier}` in the path.
-- If they differ, the API returns `400 Bad Request`.
-
 ### Update Response Codes
 
 | Code  | Description                                            |
