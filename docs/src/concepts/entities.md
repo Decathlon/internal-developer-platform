@@ -133,6 +133,8 @@ After syntactic checks pass, the domain service validates the entity against its
 - **Property value types** - Values must conform to the property definition type (STRING, NUMBER, BOOLEAN).
 - **Property rules** - Values must satisfy the template's property rules (min/max length, format, regex, enum).
 - **Required properties** - All properties marked as required in the template must be present.
+- **Relation names** - Each provided relation must exist in the template relation definitions.
+- **Relation constraints** - Required relations must be present, and non-`to_many` relations can target only one entity.
 - **Duplicate check** - An entity with the same identifier must not already exist for the template. Returns
   `409 Conflict` if it does.
 
@@ -302,8 +304,103 @@ GET /api/v1/entities/{templateIdentifier}?page=0&size=20&sort=identifier,asc
 Retrieve a specific entity using its template and entity identifiers:
 
 ```text
-GET /api/v1/entities/{templateIdentifier}/identifier/{entityIdentifier}
+GET /api/v1/entities/{templateIdentifier}/{entityIdentifier}
 ```
+
+---
+
+## Updating an Entity
+
+You update an existing entity by sending a `PUT` request on the entity resource path.
+
+### Update Endpoint
+
+```text
+PUT /api/v1/entities/{templateIdentifier}/{entityIdentifier}
+```
+
+### Update Request Body
+
+The request body has a similar shape and validation rules as `POST /api/v1/entities/{templateIdentifier}`, except the entity identifier is only present in path parameters.
+
+```json
+{
+  "name": "my-web-service-updated",
+  "properties": {
+    "applicationName": "catalog-api",
+    "ownerEmail": "owner@example.com",
+    "port": "8080",
+    "environment": "DEV",
+    "version": "1.2.3",
+    "teamName": "platform-team",
+    "baseUrl": "https://catalog.example.com",
+    "protocol": "HTTP",
+    "programmingLanguage": "JAVA"
+  },
+  "relations": [
+    {
+      "name": "depends-on",
+      "target_entity_identifiers": [
+        "web-api-1"
+      ]
+    }
+  ]
+}
+```
+
+### Update Example Request
+
+```bash
+curl -X PUT http://localhost:8084/api/v1/entities/web-service/my-web-service \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "my-web-service-updated",
+    "properties": {
+      "applicationName": "catalog-api",
+      "ownerEmail": "owner@example.com",
+      "port": "8080",
+      "environment": "DEV",
+      "version": "1.2.3",
+      "teamName": "platform-team",
+      "baseUrl": "https://catalog.example.com",
+      "protocol": "HTTP",
+      "programmingLanguage": "JAVA"
+    }
+  }'
+```
+
+### Update Example Response
+
+```json
+{
+  "name": "my-web-service-updated",
+  "template_identifier": "web-service",
+  "properties": {
+    "applicationName": "catalog-api",
+    "ownerEmail": "owner@example.com",
+    "port": "8080",
+    "environment": "DEV",
+    "version": "1.2.3",
+    "teamName": "platform-team",
+    "baseUrl": "https://catalog.example.com",
+    "protocol": "HTTP",
+    "programmingLanguage": "JAVA"
+  },
+  "relations": {},
+  "relations_as_target": {}
+}
+```
+
+### Update Response Codes
+
+| Code  | Description                                            |
+|-------|--------------------------------------------------------|
+| `200` | Entity updated successfully                            |
+| `400` | Invalid request body or validation failure             |
+| `401` | Missing or invalid authentication token                |
+| `403` | Insufficient permissions                               |
+| `404` | Template or entity not found for the given identifier  |
+| `500` | Unexpected server error                                |
 
 ---
 
@@ -324,4 +421,4 @@ Because templates are configured at runtime, the entity structure is **dynamic**
 
 - **[Properties](properties.md)** - Property types and validation rules
 - **[Relations](relations.md)** - How entities connect
-- **[API Reference](../api/index.md)** - Interactive Swagger UI documentation
+- **[Filtering Entities](entity-filtering.md)** - Query entities with the filter DSL

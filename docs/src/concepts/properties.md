@@ -397,4 +397,3 @@ Only mark properties as required if they truly are:
 ## Next Steps
 
 - **[Relations](relations.md)** - Connect entities together
-- **[Calculated Properties](calculated-properties.md)** - Compute derived values

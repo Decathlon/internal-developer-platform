@@ -9,6 +9,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 
 import com.decathlon.idp_core.domain.model.entity.Entity;
+import com.decathlon.idp_core.domain.model.entity.EntityFilter;
 import com.decathlon.idp_core.domain.model.entity.EntitySummary;
 
 /// Driven port defining the contract for [Entity] persistence operations.
@@ -18,6 +19,7 @@ import com.decathlon.idp_core.domain.model.entity.EntitySummary;
 /// - `findById()` must return empty Optional for non-existent entities
 /// - `findByTemplateIdentifierAndIdentifier()` enforces business uniqueness constraints
 /// - `findByTemplateIdentifier()` must support pagination for large entity sets
+/// - `findByTemplateIdentifierWithFilter()` must apply all filter criteria with AND logic
 /// - `findByIdentifierIn()` optimizes bulk entity lookups for relationship resolution
 /// - `findByRelationIdIn()` enables reverse relationship navigation
 /// - `deletePropertiesByTemplateIdentifierAndPropertyName()` must remove all property instances matching the given names for entities of the specified template
@@ -27,24 +29,23 @@ import com.decathlon.idp_core.domain.model.entity.EntitySummary;
 /// appropriately for the underlying persistence technology.
 public interface EntityRepositoryPort {
 
-  Entity save(Entity entity);
+    Entity save(Entity entity);
 
-  Optional<Entity> findById(UUID id);
+    Optional<Entity> findById(UUID id);
 
-  Optional<Entity> findByTemplateIdentifierAndIdentifier(String templateIdentifier,
-      String identifier);
+    Optional<Entity> findByTemplateIdentifierAndIdentifier(String templateIdentifier, String identifier);
 
-  Optional<Entity> findByTemplateIdentifierAndName(String templateIdentifier, String entityName);
+    Optional<Entity> findByTemplateIdentifierAndName(String templateIdentifier, String entityName);
 
-  Page<Entity> findByTemplateIdentifier(String templateIdentifier, Pageable pageable);
+    Page<Entity> findByTemplateIdentifier(String templateIdentifier, Pageable pageable);
 
-  List<EntitySummary> findByIdentifierIn(List<String> identifiers);
+    Page<Entity> findByTemplateIdentifierWithFilter(String templateIdentifier, EntityFilter filter, Pageable pageable);
 
-  List<EntitySummary> findByRelationIdIn(List<UUID> relationIds);
+    List<EntitySummary> findByIdentifierIn(List<String> identifiers);
 
-  void deletePropertiesByTemplateIdentifierAndPropertyName(String templateIdentifier,
-      Collection<String> propertyNames);
+    List<EntitySummary> findByRelationIdIn(List<UUID> relationIds);
 
-  void deleteRelationsByTemplateIdentifierAndRelationName(String templateIdentifier,
-      Collection<String> relationNames);
+    void deletePropertiesByTemplateIdentifierAndPropertyName(String templateIdentifier, Collection<String> propertyNames);
+
+    void deleteRelationsByTemplateIdentifierAndRelationName(String templateIdentifier, Collection<String> relationNames);
 }

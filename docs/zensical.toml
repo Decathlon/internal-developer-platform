@@ -32,7 +32,10 @@ nav = [
   { "Concepts" = [
     "concepts/index.md",
     "concepts/entity-templates.md",
-    "concepts/entities.md",
+    { "Entities" = [
+        "concepts/entities.md",
+        "concepts/entity-filtering.md"
+    ]},
     "concepts/properties.md",
     "concepts/relations.md"
   ]},

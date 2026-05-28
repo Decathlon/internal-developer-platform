@@ -26,27 +26,26 @@ import jakarta.validation.constraints.Size;
 /// - Relation names must be unique within the template (if any)
 /// - All property definitions must have valid types and constraints
 /// - Relations must reference valid target template identifiers
-public record EntityTemplate(UUID id,
+public record EntityTemplate(
+        UUID id,
 
-    @NotBlank(message = TEMPLATE_IDENTIFIER_MANDATORY) String identifier,
+        @NotBlank(message = TEMPLATE_IDENTIFIER_MANDATORY)
+        String identifier,
 
-    @Size(max = 255, message = TEMPLATE_NAME_MAX_SIZE) @NotBlank(message = TEMPLATE_NAME_MANDATORY) @Pattern(regexp = ENTITY_TEMPLATE_NAME_REGEX, message = TEMPLATE_NAME_FORMAT) String name,
+        @Size(max = 255, message = TEMPLATE_NAME_MAX_SIZE)
+        @NotBlank(message = TEMPLATE_NAME_MANDATORY)
+        @Pattern(regexp = ENTITY_TEMPLATE_NAME_REGEX, message = TEMPLATE_NAME_FORMAT)
+        String name,
 
-    String description,
+        String description,
 
-    List<PropertyDefinition> propertiesDefinitions,
+        List<PropertyDefinition> propertiesDefinitions,
 
-    List<RelationDefinition> relationsDefinitions) {
-  /// Compact constructor: defensively copies mutable lists to prevent external
-  /// mutation
-  /// and guarantee immutability of the domain model (EI_EXPOSE_REP2 /
-  /// EI_EXPOSE_REP).
-  public EntityTemplate {
-    propertiesDefinitions = propertiesDefinitions == null
-        ? List.of()
-        : List.copyOf(propertiesDefinitions);
-    relationsDefinitions = relationsDefinitions == null
-        ? List.of()
-        : List.copyOf(relationsDefinitions);
-  }
+        List<RelationDefinition> relationsDefinitions
+) {
+    /// Compact constructor defensively copies mutable collections to preserve immutability.
+    public EntityTemplate {
+        propertiesDefinitions = propertiesDefinitions != null ? List.copyOf(propertiesDefinitions) : List.of();
+        relationsDefinitions = relationsDefinitions != null ? List.copyOf(relationsDefinitions) : List.of();
+    }
 }

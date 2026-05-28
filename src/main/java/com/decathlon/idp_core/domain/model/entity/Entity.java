@@ -7,9 +7,9 @@ import static com.decathlon.idp_core.domain.constant.ValidationMessages.TEMPLATE
 import java.util.List;
 import java.util.UUID;
 
-import jakarta.validation.constraints.NotBlank;
-
 import com.decathlon.idp_core.domain.model.entity_template.EntityTemplate;
+
+import jakarta.validation.constraints.NotBlank;
 
 /// Domain entity representing a concrete instance of an [EntityTemplate].
 ///
@@ -19,24 +19,24 @@ import com.decathlon.idp_core.domain.model.entity_template.EntityTemplate;
 /// - [properties] must conform to the template's property definitions
 /// - [relations] must satisfy the template's relation constraints
 ///
-/// Ubiquitous language: An Entity is a materialized instance of a template schema,
-/// containing actual values that comply with the template's structure and rules.
+/// Ubiquitous language: An Entity is a materialized instance of a template
+/// schema, containing actual values that comply with the template's structure
+/// and rules.
 
-public record Entity(UUID id,
+public record Entity(
+                UUID id,
 
-    @NotBlank(message = TEMPLATE_IDENTIFIER_MANDATORY) String templateIdentifier,
-    @NotBlank(message = ENTITY_NAME_MANDATORY) String name,
-    @NotBlank(message = ENTITY_IDENTIFIER_MANDATORY) String identifier,
+                @NotBlank(message = TEMPLATE_IDENTIFIER_MANDATORY) String templateIdentifier,
+                @NotBlank(message = ENTITY_NAME_MANDATORY) String name,
+                @NotBlank(message = ENTITY_IDENTIFIER_MANDATORY) String identifier,
 
-    List<Property> properties,
+                List<Property> properties,
 
-    List<Relation> relations) {
-  /// Compact constructor: defensively copies mutable lists to prevent external
-  /// mutation
-  /// and guarantee immutability of the domain model (EI_EXPOSE_REP2 /
-  /// EI_EXPOSE_REP).
-  public Entity {
-    properties = properties == null ? List.of() : List.copyOf(properties);
-    relations = relations == null ? List.of() : List.copyOf(relations);
-  }
+                List<Relation> relations) {
+        /// Compact constructor defensively copies mutable collections to keep the
+        /// record immutable.
+        public Entity {
+                properties = properties != null ? List.copyOf(properties) : List.of();
+                relations = relations != null ? List.copyOf(relations) : List.of();
+        }
 }

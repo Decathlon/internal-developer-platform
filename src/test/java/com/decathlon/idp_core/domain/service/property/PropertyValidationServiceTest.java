@@ -1,367 +1,455 @@
 package com.decathlon.idp_core.domain.service.property;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Stream;
+import java.util.UUID;
 
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
 import org.junit.jupiter.params.provider.ValueSource;
 
+
 import com.decathlon.idp_core.domain.constant.ValidationMessages;
+import com.decathlon.idp_core.domain.model.entity.Property;
+import com.decathlon.idp_core.domain.model.entity_template.EntityTemplate;
 import com.decathlon.idp_core.domain.model.entity_template.PropertyDefinition;
 import com.decathlon.idp_core.domain.model.entity_template.PropertyRules;
 import com.decathlon.idp_core.domain.model.enums.PropertyFormat;
 import com.decathlon.idp_core.domain.model.enums.PropertyType;
+import com.decathlon.idp_core.domain.service.entity.Violations;
 
 @DisplayName("PropertyValidationService Tests")
 class PropertyValidationServiceTest {
 
-  private final PropertyValidationService service = new PropertyValidationService();
+    private final PropertyValidationService service = new PropertyValidationService();
 
-  @Nested
-  @DisplayName("STRING validation")
-  class StringValidationTests {
+    @Nested
+    @DisplayName("validatePropertiesAgainstTemplate Orchestration Tests")
+    class AgainstTemplateValidationTests {
 
-    @Test
-    @DisplayName("Should report type mismatch when STRING value is null")
-    void shouldReportTypeMismatchWhenStringValueIsNull() {
-      var definition = propertyDefinition("label", PropertyType.STRING, null);
+        @Test
+        @DisplayName("Should report violation when required property is completely missing")
+        void shouldReportViolationWhenRequiredPropertyIsMissing() {
+            var template = new EntityTemplate(UUID.randomUUID(), "system-template", "System", "desc", List.of(), List.of());
+            var definition = new PropertyDefinition(UUID.randomUUID(), "owner", "Owner", PropertyType.STRING, true, null);
+            var violations = mock(Violations.class);
 
-      var violations = service.validatePropertyValue(definition, null);
+            service.validatePropertiesAgainstTemplate(template, List.of(definition), Map.of(), violations);
 
-      assertEquals(
-          List.of(
-              ValidationMessages.PROPERTY_TYPE_MISMATCH.formatted("label", PropertyType.STRING)),
-          violations);
+            verify(violations).add(ValidationMessages.PROPERTY_REQUIRED_MISSING, "owner", "system-template");
+        }
+
+        @Test
+        @DisplayName("Should report violation when required property is present but blank")
+        void shouldReportViolationWhenRequiredPropertyIsBlank() {
+            var template = new EntityTemplate(UUID.randomUUID(), "system-template", "System", "desc", List.of(), List.of());
+            var definition = new PropertyDefinition(UUID.randomUUID(), "owner", "Owner", PropertyType.STRING, true, null);
+            var property = new Property(UUID.randomUUID(), "owner", "   ");
+            var violations = mock(Violations.class);
+
+            service.validatePropertiesAgainstTemplate(template, List.of(definition), Map.of("owner", property), violations);
+
+            verify(violations).add(ValidationMessages.PROPERTY_REQUIRED_MISSING, "owner", "system-template");
+        }
+
+        @Test
+        @DisplayName("Should not report violation when optional property is missing")
+        void shouldNotReportViolationWhenOptionalPropertyIsMissing() {
+            var template = new EntityTemplate(UUID.randomUUID(), "system-template", "System", "desc", List.of(), List.of());
+            var definition = new PropertyDefinition(UUID.randomUUID(), "description", "Desc", PropertyType.STRING, false, null);
+            var violations = mock(Violations.class);
+
+            service.validatePropertiesAgainstTemplate(template, List.of(definition), Map.of(), violations);
+
+            verifyNoInteractions(violations);
+        }
+
+        @Test
+        @DisplayName("Should report violation when provided property is not defined in template")
+        void shouldReportViolationWhenPropertyNotDefinedInTemplate() {
+            var template = new EntityTemplate(UUID.randomUUID(), "system-template", "System", "desc", List.of(), List.of());
+            var definition = new PropertyDefinition(UUID.randomUUID(), "owner", "Owner", PropertyType.STRING, true, null);
+            var extraProperty = new Property(UUID.randomUUID(), "status", "deprecated");
+            var violations = mock(Violations.class);
+
+            service.validatePropertiesAgainstTemplate(template, List.of(definition), Map.of("status", extraProperty), violations);
+
+            verify(violations).add(ValidationMessages.PROPERTY_NOT_DEFINED_IN_TEMPLATE, "status", "system-template");
+            verify(violations).add(ValidationMessages.PROPERTY_REQUIRED_MISSING, "owner", "system-template");
+        }
+
+        @Test
+        @DisplayName("Should delegate to validatePropertyValue and accumulate rule violations")
+        void shouldDelegateAndAccumulateRuleViolations() {
+            var template = new EntityTemplate(UUID.randomUUID(), "system-template", "System", "desc", List.of(), List.of());
+            var definition = new PropertyDefinition(UUID.randomUUID(), "port", "Port", PropertyType.NUMBER, true, null);
+            var property = new Property(UUID.randomUUID(), "port", "not-a-number");
+            var violations = mock(Violations.class);
+
+            service.validatePropertiesAgainstTemplate(template, List.of(definition), Map.of("port", property), violations);
+
+            verify(violations).add(ValidationMessages.PROPERTY_TYPE_MISMATCH.formatted("port", PropertyType.NUMBER));
+        }
+
+        @Test
+        @DisplayName("Should add no violations when required property is present and valid")
+        void shouldAddNoViolationsWhenValid() {
+            var template = new EntityTemplate(UUID.randomUUID(), "system-template", "System", "desc", List.of(), List.of());
+            var definition = new PropertyDefinition(UUID.randomUUID(), "port", "Port", PropertyType.NUMBER, true, null);
+            var property = new Property(UUID.randomUUID(), "port", "8080");
+            var violations = mock(Violations.class);
+
+            service.validatePropertiesAgainstTemplate(template, List.of(definition), Map.of("port", property), violations);
+
+            verifyNoInteractions(violations);
+        }
     }
 
-    @Test
-    @DisplayName("Should return no violations when STRING has no rules")
-    void shouldReturnNoViolationsWhenStringHasNoRules() {
-      var definition = propertyDefinition("label", PropertyType.STRING, null);
+    @Nested
+    @DisplayName("STRING validation")
+    class StringValidationTests {
 
-      var violations = service.validatePropertyValue(definition, "hello");
+        @Test
+        @DisplayName("Should report type mismatch when STRING value is null")
+        void shouldReportTypeMismatchWhenStringValueIsNull() {
+            var definition = propertyDefinition("label", PropertyType.STRING, null);
 
-      assertEquals(List.of(), violations);
+            var violations = service.validatePropertyValue(definition, null);
+
+            assertEquals(List.of(ValidationMessages.PROPERTY_TYPE_MISMATCH.formatted("label", PropertyType.STRING)), violations);
+        }
+
+        @Test
+        @DisplayName("Should return no violations when STRING has no rules")
+        void shouldReturnNoViolationsWhenStringHasNoRules() {
+            var definition = propertyDefinition("label", PropertyType.STRING, null);
+
+            var violations = service.validatePropertyValue(definition, "hello");
+
+            assertEquals(List.of(), violations);
+        }
+
+        @Test
+        @DisplayName("Should return no violations when STRING value satisfies all rules")
+        void shouldReturnNoViolationsWhenStringPassesAllRules() {
+            var rules = new PropertyRules(null, null, List.of("dev", "prod"), "^[a-z]+$", 10, 2, null, null);
+            var definition = propertyDefinition("env", PropertyType.STRING, rules);
+
+            var violations = service.validatePropertyValue(definition, "dev");
+
+            assertEquals(List.of(), violations);
+        }
+
+        @Test
+        @DisplayName("Should report minLength violation")
+        void shouldReportMinLengthViolation() {
+            var rules = new PropertyRules(null, null, null, null, null, 5, null, null);
+            var definition = propertyDefinition("name", PropertyType.STRING, rules);
+
+            var violations = service.validatePropertyValue(definition, "ab");
+
+            assertEquals(List.of(ValidationMessages.PROPERTY_MIN_LENGTH_VIOLATION.formatted("name", 5)), violations);
+        }
+
+        @Test
+        @DisplayName("Should report maxLength violation")
+        void shouldReportMaxLengthViolation() {
+            var rules = new PropertyRules(null, null, null, null, 5, null, null, null);
+            var definition = propertyDefinition("name", PropertyType.STRING, rules);
+
+            var violations = service.validatePropertyValue(definition, "too-long-value");
+
+            assertEquals(List.of(ValidationMessages.PROPERTY_MAX_LENGTH_VIOLATION.formatted("name", 5)), violations);
+        }
+
+        @Test
+        @DisplayName("Should report regex violation")
+        void shouldReportRegexViolation() {
+            var rules = new PropertyRules(null, null, null, "^[0-9]+$", null, null, null, null);
+            var definition = propertyDefinition("code", PropertyType.STRING, rules);
+
+            var violations = service.validatePropertyValue(definition, "abc");
+
+            assertEquals(List.of(ValidationMessages.PROPERTY_REGEX_VIOLATION.formatted("code")), violations);
+        }
+
+        @Test
+        @DisplayName("Should accept value matching regex")
+        void shouldAcceptValueMatchingRegex() {
+            var rules = new PropertyRules(null, null, null, "^[0-9]+$", null, null, null, null);
+            var definition = propertyDefinition("code", PropertyType.STRING, rules);
+
+            var violations = service.validatePropertyValue(definition, "12345");
+
+            assertEquals(List.of(), violations);
+        }
+
+        @Test
+        @DisplayName("Should report enum violation when value not in allowed list")
+        void shouldReportEnumViolation() {
+            var rules = new PropertyRules(null, null, List.of("ACTIVE", "INACTIVE"), null, null, null, null, null);
+            var definition = propertyDefinition("status", PropertyType.STRING, rules);
+
+            var violations = service.validatePropertyValue(definition, "UNKNOWN");
+
+            assertEquals(List.of(ValidationMessages.PROPERTY_ENUM_VIOLATION.formatted("status", List.of("ACTIVE", "INACTIVE"))), violations);
+        }
+
+        @Test
+        @DisplayName("Should accept enum value with case-insensitive match")
+        void shouldAcceptEnumValueCaseInsensitive() {
+            var rules = new PropertyRules(null, null, List.of("ACTIVE", "INACTIVE"), null, null, null, null, null);
+            var definition = propertyDefinition("status", PropertyType.STRING, rules);
+
+            var violations = service.validatePropertyValue(definition, "active");
+
+            assertEquals(List.of(), violations);
+        }
+
+        @Test
+        @DisplayName("Should skip enum check when enumValues is empty")
+        void shouldSkipEnumCheckWhenEnumValuesIsEmpty() {
+            var rules = new PropertyRules(null, null, List.of(), null, null, null, null, null);
+            var definition = propertyDefinition("status", PropertyType.STRING, rules);
+
+            var violations = service.validatePropertyValue(definition, "anything");
+
+            assertEquals(List.of(), violations);
+        }
+
+        @Test
+        @DisplayName("Should report format violation for invalid EMAIL")
+        void shouldReportFormatViolationForInvalidEmail() {
+            var rules = new PropertyRules(null, PropertyFormat.EMAIL, null, null, null, null, null, null);
+            var definition = propertyDefinition("email", PropertyType.STRING, rules);
+
+            var violations = service.validatePropertyValue(definition, "not-an-email");
+
+            assertEquals(List.of(ValidationMessages.PROPERTY_FORMAT_VIOLATION.formatted("email", PropertyFormat.EMAIL)), violations);
+        }
+
+        @Test
+        @DisplayName("Should accept valid EMAIL format")
+        void shouldAcceptValidEmailFormat() {
+            var rules = new PropertyRules(null, PropertyFormat.EMAIL, null, null, null, null, null, null);
+            var definition = propertyDefinition("email", PropertyType.STRING, rules);
+
+            var violations = service.validatePropertyValue(definition, "user@example.com");
+
+            assertEquals(List.of(), violations);
+        }
+
+        @Test
+        @DisplayName("Should report format violation for invalid URL")
+        void shouldReportFormatViolationForInvalidUrl() {
+            var rules = new PropertyRules(null, PropertyFormat.URL, null, null, null, null, null, null);
+            var definition = propertyDefinition("url", PropertyType.STRING, rules);
+
+            var violations = service.validatePropertyValue(definition, "not-a-url");
+
+            assertEquals(List.of(ValidationMessages.PROPERTY_FORMAT_VIOLATION.formatted("url", PropertyFormat.URL)), violations);
+        }
+
+        @Test
+        @DisplayName("Should accept valid URL format")
+        void shouldAcceptValidUrlFormat() {
+            var rules = new PropertyRules(null, PropertyFormat.URL, null, null, null, null, null, null);
+            var definition = propertyDefinition("url", PropertyType.STRING, rules);
+
+            var violations = service.validatePropertyValue(definition, "https://github.com/org/repo");
+
+            assertEquals(List.of(), violations);
+        }
+
+        @Test
+        @DisplayName("Should report multiple violations at once")
+        void shouldReportMultipleStringViolations() {
+            var rules = new PropertyRules(null, PropertyFormat.EMAIL, List.of("prod", "dev"), "^[a-z]+$", 5, 3, null, null);
+            var definition = propertyDefinition("name", PropertyType.STRING, rules);
+
+            var violations = service.validatePropertyValue(definition, "AA");
+
+            assertEquals(4, violations.size());
+        }
+
+        @Test
+        @DisplayName("Should use cached pattern for repeated regex validations")
+        void shouldUseCachedPatternForRepeatedRegex() {
+            var rules = new PropertyRules(null, null, null, "^[a-z]+$", null, null, null, null);
+            var definition = propertyDefinition("code", PropertyType.STRING, rules);
+
+            // Validate twice with the same regex to exercise the cache
+            var violations1 = service.validatePropertyValue(definition, "abc");
+            var violations2 = service.validatePropertyValue(definition, "def");
+
+            assertEquals(List.of(), violations1);
+            assertEquals(List.of(), violations2);
+        }
     }
 
-    @Test
-    @DisplayName("Should return no violations when STRING value satisfies all rules")
-    void shouldReturnNoViolationsWhenStringPassesAllRules() {
-      var rules = new PropertyRules(null, null, List.of("dev", "prod"), "^[a-z]+$", 10, 2, null,
-          null);
-      var definition = propertyDefinition("env", PropertyType.STRING, rules);
+    @Nested
+    @DisplayName("NUMBER validation")
+    class NumberValidationTests {
 
-      var violations = service.validatePropertyValue(definition, "dev");
+        @Test
+        @DisplayName("Should report type mismatch when NUMBER value is null")
+        void shouldReportTypeMismatchWhenNumberValueIsNull() {
+            var definition = propertyDefinition("score", PropertyType.NUMBER, null);
+            var violations = service.validatePropertyValue(definition, null);
 
-      assertEquals(List.of(), violations);
+            assertEquals(List.of(ValidationMessages.PROPERTY_TYPE_MISMATCH.formatted("score", PropertyType.NUMBER)), violations);
+        }
+
+        @Test
+        @DisplayName("Should report type mismatch for non-numeric NUMBER value")
+        void shouldReportTypeMismatchWhenNumberValueIsInvalid() {
+            var definition = propertyDefinition("score", PropertyType.NUMBER, null);
+
+            var violations = service.validatePropertyValue(definition, "not-a-number");
+
+            assertEquals(List.of(ValidationMessages.PROPERTY_TYPE_MISMATCH.formatted("score", PropertyType.NUMBER)), violations);
+        }
+
+        @Test
+        @DisplayName("Should accept primitive/boxed Number objects")
+        void shouldAcceptBoxedNumberObjects() {
+            var definition = propertyDefinition("score", PropertyType.NUMBER, null);
+            var violationsInt = service.validatePropertyValue(definition, 42);
+            var violationsDouble = service.validatePropertyValue(definition, 42.5);
+
+            assertEquals(List.of(), violationsInt);
+            assertEquals(List.of(), violationsDouble);
+        }
+
+        @Test
+        @DisplayName("Should return no violations when NUMBER has no rules")
+        void shouldReturnNoViolationsWhenNumberHasNoRules() {
+            var definition = propertyDefinition("count", PropertyType.NUMBER, null);
+
+            var violations = service.validatePropertyValue(definition, "42");
+
+            assertEquals(List.of(), violations);
+        }
+
+        @Test
+        @DisplayName("Should return no violations when NUMBER is within bounds")
+        void shouldReturnNoViolationsWhenNumberIsWithinBounds() {
+            var rules = new PropertyRules(null, null, null, null, null, null, 100, 0);
+            var definition = propertyDefinition("score", PropertyType.NUMBER, rules);
+
+            var violations = service.validatePropertyValue(definition, "50");
+
+            assertEquals(List.of(), violations);
+        }
+
+        @Test
+        @DisplayName("Should report minValue violation")
+        void shouldReportMinValueViolation() {
+            var rules = new PropertyRules(null, null, null, null, null, null, 10, 5);
+            var definition = propertyDefinition("size", PropertyType.NUMBER, rules);
+
+            var violations = service.validatePropertyValue(definition, "3");
+
+            assertEquals(List.of(ValidationMessages.PROPERTY_MIN_VALUE_VIOLATION.formatted("size", 5)), violations);
+        }
+
+        @Test
+        @DisplayName("Should report maxValue violation")
+        void shouldReportMaxValueViolation() {
+            var rules = new PropertyRules(null, null, null, null, null, null, 10, 0);
+            var definition = propertyDefinition("size", PropertyType.NUMBER, rules);
+
+            var violations = service.validatePropertyValue(definition, "15");
+
+            assertEquals(List.of(ValidationMessages.PROPERTY_MAX_VALUE_VIOLATION.formatted("size", 10)), violations);
+        }
+
+        @Test
+        @DisplayName("Should report both minValue and maxValue violations")
+        void shouldReportBothMinAndMaxViolations() {
+            // minValue > maxValue edge case — value below min triggers min violation
+            var rules = new PropertyRules(null, null, null, null, null, null, 5, 10);
+            var definition = propertyDefinition("range", PropertyType.NUMBER, rules);
+
+            var violations = service.validatePropertyValue(definition, "7");
+
+            // 7 < 10 (minValue) → min violation; 7 > 5 (maxValue) → max violation
+            assertEquals(2, violations.size());
+        }
+
+        @Test
+        @DisplayName("Should accept decimal number values")
+        void shouldAcceptDecimalNumberValues() {
+            var rules = new PropertyRules(null, null, null, null, null, null, 100, 0);
+            var definition = propertyDefinition("rate", PropertyType.NUMBER, rules);
+
+            var violations = service.validatePropertyValue(definition, "99.5");
+
+            assertEquals(List.of(), violations);
+        }
+
+        @Test
+        @DisplayName("Should report type mismatch when a boolean is sent for a NUMBER property")
+        void shouldReportTypeMismatchWhenBooleanSentForNumber() {
+            var definition = propertyDefinition("count", PropertyType.NUMBER, null);
+
+            var violations = service.validatePropertyValue(definition, "true");
+
+            assertEquals(List.of(ValidationMessages.PROPERTY_TYPE_MISMATCH.formatted("count", PropertyType.NUMBER)), violations);
+        }
     }
 
-    @Test
-    @DisplayName("Should report minLength violation")
-    void shouldReportMinLengthViolation() {
-      var rules = new PropertyRules(null, null, null, null, null, 5, null, null);
-      var definition = propertyDefinition("name", PropertyType.STRING, rules);
+    @Nested
+    @DisplayName("BOOLEAN validation")
+    class BooleanValidationTests {
 
-      var violations = service.validatePropertyValue(definition, "ab");
+        @Test
+        @DisplayName("Should accept raw Boolean objects")
+        void shouldAcceptRawBooleanObjects() {
+            var definition = propertyDefinition("flag", PropertyType.BOOLEAN, null);
 
-      assertEquals(List.of(ValidationMessages.PROPERTY_MIN_LENGTH_VIOLATION.formatted("name", 5)),
-          violations);
+            var violationsTrue = service.validatePropertyValue(definition, true);
+            var violationsFalse = service.validatePropertyValue(definition, Boolean.FALSE);
+
+            assertEquals(List.of(), violationsTrue);
+            assertEquals(List.of(), violationsFalse);
+        }
+
+        @ParameterizedTest(name = "Should accept valid boolean string value: ''{0}''")
+        @ValueSource(strings = {"true", "false", "TRUE", "FALSE"})
+        void shouldAcceptValidBooleanValues(String value) {
+            var definition = propertyDefinition("flag", PropertyType.BOOLEAN, null);
+
+            var violations = service.validatePropertyValue(definition, value);
+
+            assertEquals(List.of(), violations);
+        }
+
+        @ParameterizedTest(name = "Should report type mismatch for invalid BOOLEAN input: {0}")
+        @MethodSource("invalidBooleanValues")
+        void shouldReportTypeMismatchForInvalidBooleanInputs(Object value) {
+            var definition = propertyDefinition("flag", PropertyType.BOOLEAN, null);
+
+            var violations = service.validatePropertyValue(definition, value);
+
+            assertEquals(List.of(ValidationMessages.PROPERTY_TYPE_MISMATCH.formatted("flag", PropertyType.BOOLEAN)), violations);
+        }
+
+        private static Stream<Object> invalidBooleanValues() {
+            return Stream.of(null, "yes", "42");
+        }
     }
 
-    @Test
-    @DisplayName("Should report maxLength violation")
-    void shouldReportMaxLengthViolation() {
-      var rules = new PropertyRules(null, null, null, null, 5, null, null, null);
-      var definition = propertyDefinition("name", PropertyType.STRING, rules);
-
-      var violations = service.validatePropertyValue(definition, "too-long-value");
-
-      assertEquals(List.of(ValidationMessages.PROPERTY_MAX_LENGTH_VIOLATION.formatted("name", 5)),
-          violations);
+    private PropertyDefinition propertyDefinition(String name, PropertyType type, PropertyRules rules) {
+        return new PropertyDefinition(null, name, "description", type, true, rules);
     }
-
-    @Test
-    @DisplayName("Should report regex violation")
-    void shouldReportRegexViolation() {
-      var rules = new PropertyRules(null, null, null, "^[0-9]+$", null, null, null, null);
-      var definition = propertyDefinition("code", PropertyType.STRING, rules);
-
-      var violations = service.validatePropertyValue(definition, "abc");
-
-      assertEquals(List.of(ValidationMessages.PROPERTY_REGEX_VIOLATION.formatted("code")),
-          violations);
-    }
-
-    @Test
-    @DisplayName("Should accept value matching regex")
-    void shouldAcceptValueMatchingRegex() {
-      var rules = new PropertyRules(null, null, null, "^[0-9]+$", null, null, null, null);
-      var definition = propertyDefinition("code", PropertyType.STRING, rules);
-
-      var violations = service.validatePropertyValue(definition, "12345");
-
-      assertEquals(List.of(), violations);
-    }
-
-    @Test
-    @DisplayName("Should report enum violation when value not in allowed list")
-    void shouldReportEnumViolation() {
-      var rules = new PropertyRules(null, null, List.of("ACTIVE", "INACTIVE"), null, null, null,
-          null, null);
-      var definition = propertyDefinition("status", PropertyType.STRING, rules);
-
-      var violations = service.validatePropertyValue(definition, "UNKNOWN");
-
-      assertEquals(List.of(ValidationMessages.PROPERTY_ENUM_VIOLATION.formatted("status",
-          List.of("ACTIVE", "INACTIVE"))), violations);
-    }
-
-    @Test
-    @DisplayName("Should accept enum value with case-insensitive match")
-    void shouldAcceptEnumValueCaseInsensitive() {
-      var rules = new PropertyRules(null, null, List.of("ACTIVE", "INACTIVE"), null, null, null,
-          null, null);
-      var definition = propertyDefinition("status", PropertyType.STRING, rules);
-
-      var violations = service.validatePropertyValue(definition, "active");
-
-      assertEquals(List.of(), violations);
-    }
-
-    @Test
-    @DisplayName("Should skip enum check when enumValues is empty")
-    void shouldSkipEnumCheckWhenEnumValuesIsEmpty() {
-      var rules = new PropertyRules(null, null, List.of(), null, null, null, null, null);
-      var definition = propertyDefinition("status", PropertyType.STRING, rules);
-
-      var violations = service.validatePropertyValue(definition, "anything");
-
-      assertEquals(List.of(), violations);
-    }
-
-    @Test
-    @DisplayName("Should report format violation for invalid EMAIL")
-    void shouldReportFormatViolationForInvalidEmail() {
-      var rules = new PropertyRules(null, PropertyFormat.EMAIL, null, null, null, null, null, null);
-      var definition = propertyDefinition("email", PropertyType.STRING, rules);
-
-      var violations = service.validatePropertyValue(definition, "not-an-email");
-
-      assertEquals(List.of(
-          ValidationMessages.PROPERTY_FORMAT_VIOLATION.formatted("email", PropertyFormat.EMAIL)),
-          violations);
-    }
-
-    @Test
-    @DisplayName("Should accept valid EMAIL format")
-    void shouldAcceptValidEmailFormat() {
-      var rules = new PropertyRules(null, PropertyFormat.EMAIL, null, null, null, null, null, null);
-      var definition = propertyDefinition("email", PropertyType.STRING, rules);
-
-      var violations = service.validatePropertyValue(definition, "user@example.com");
-
-      assertEquals(List.of(), violations);
-    }
-
-    @Test
-    @DisplayName("Should report format violation for invalid URL")
-    void shouldReportFormatViolationForInvalidUrl() {
-      var rules = new PropertyRules(null, PropertyFormat.URL, null, null, null, null, null, null);
-      var definition = propertyDefinition("url", PropertyType.STRING, rules);
-
-      var violations = service.validatePropertyValue(definition, "not-a-url");
-
-      assertEquals(
-          List.of(
-              ValidationMessages.PROPERTY_FORMAT_VIOLATION.formatted("url", PropertyFormat.URL)),
-          violations);
-    }
-
-    @Test
-    @DisplayName("Should accept valid URL format")
-    void shouldAcceptValidUrlFormat() {
-      var rules = new PropertyRules(null, PropertyFormat.URL, null, null, null, null, null, null);
-      var definition = propertyDefinition("url", PropertyType.STRING, rules);
-
-      var violations = service.validatePropertyValue(definition, "https://github.com/org/repo");
-
-      assertEquals(List.of(), violations);
-    }
-
-    @Test
-    @DisplayName("Should report multiple violations at once")
-    void shouldReportMultipleStringViolations() {
-      var rules = new PropertyRules(null, PropertyFormat.EMAIL, List.of("prod", "dev"), "^[a-z]+$",
-          5, 3, null, null);
-      var definition = propertyDefinition("name", PropertyType.STRING, rules);
-
-      var violations = service.validatePropertyValue(definition, "AA");
-
-      assertEquals(4, violations.size());
-    }
-
-    @Test
-    @DisplayName("Should use cached pattern for repeated regex validations")
-    void shouldUseCachedPatternForRepeatedRegex() {
-      var rules = new PropertyRules(null, null, null, "^[a-z]+$", null, null, null, null);
-      var definition = propertyDefinition("code", PropertyType.STRING, rules);
-
-      // Validate twice with the same regex to exercise the cache
-      var violations1 = service.validatePropertyValue(definition, "abc");
-      var violations2 = service.validatePropertyValue(definition, "def");
-
-      assertEquals(List.of(), violations1);
-      assertEquals(List.of(), violations2);
-    }
-  }
-
-  @Nested
-  @DisplayName("NUMBER validation")
-  class NumberValidationTests {
-
-    @Test
-    @DisplayName("Should report type mismatch for non-numeric NUMBER value")
-    void shouldReportTypeMismatchWhenNumberValueIsInvalid() {
-      var definition = propertyDefinition("score", PropertyType.NUMBER, null);
-
-      var violations = service.validatePropertyValue(definition, "not-a-number");
-
-      assertEquals(
-          List.of(
-              ValidationMessages.PROPERTY_TYPE_MISMATCH.formatted("score", PropertyType.NUMBER)),
-          violations);
-    }
-
-    @Test
-    @DisplayName("Should return no violations when NUMBER has no rules")
-    void shouldReturnNoViolationsWhenNumberHasNoRules() {
-      var definition = propertyDefinition("count", PropertyType.NUMBER, null);
-
-      var violations = service.validatePropertyValue(definition, "42");
-
-      assertEquals(List.of(), violations);
-    }
-
-    @Test
-    @DisplayName("Should return no violations when NUMBER is within bounds")
-    void shouldReturnNoViolationsWhenNumberIsWithinBounds() {
-      var rules = new PropertyRules(null, null, null, null, null, null, 100, 0);
-      var definition = propertyDefinition("score", PropertyType.NUMBER, rules);
-
-      var violations = service.validatePropertyValue(definition, "50");
-
-      assertEquals(List.of(), violations);
-    }
-
-    @Test
-    @DisplayName("Should report minValue violation")
-    void shouldReportMinValueViolation() {
-      var rules = new PropertyRules(null, null, null, null, null, null, 10, 5);
-      var definition = propertyDefinition("size", PropertyType.NUMBER, rules);
-
-      var violations = service.validatePropertyValue(definition, "3");
-
-      assertEquals(List.of(ValidationMessages.PROPERTY_MIN_VALUE_VIOLATION.formatted("size", 5)),
-          violations);
-    }
-
-    @Test
-    @DisplayName("Should report maxValue violation")
-    void shouldReportMaxValueViolation() {
-      var rules = new PropertyRules(null, null, null, null, null, null, 10, 0);
-      var definition = propertyDefinition("size", PropertyType.NUMBER, rules);
-
-      var violations = service.validatePropertyValue(definition, "15");
-
-      assertEquals(List.of(ValidationMessages.PROPERTY_MAX_VALUE_VIOLATION.formatted("size", 10)),
-          violations);
-    }
-
-    @Test
-    @DisplayName("Should report both minValue and maxValue violations")
-    void shouldReportBothMinAndMaxViolations() {
-      // minValue > maxValue edge case — value below min triggers min violation
-      var rules = new PropertyRules(null, null, null, null, null, null, 5, 10);
-      var definition = propertyDefinition("range", PropertyType.NUMBER, rules);
-
-      var violations = service.validatePropertyValue(definition, "7");
-
-      // 7 < 10 (minValue) → min violation; 7 > 5 (maxValue) → max violation
-      assertEquals(2, violations.size());
-    }
-
-    @Test
-    @DisplayName("Should accept decimal number values")
-    void shouldAcceptDecimalNumberValues() {
-      var rules = new PropertyRules(null, null, null, null, null, null, 100, 0);
-      var definition = propertyDefinition("rate", PropertyType.NUMBER, rules);
-
-      var violations = service.validatePropertyValue(definition, "99.5");
-
-      assertEquals(List.of(), violations);
-    }
-
-    @Test
-    @DisplayName("Should report type mismatch when a boolean is sent for a NUMBER property")
-    void shouldReportTypeMismatchWhenBooleanSentForNumber() {
-      var definition = propertyDefinition("count", PropertyType.NUMBER, null);
-
-      var violations = service.validatePropertyValue(definition, "true");
-
-      assertEquals(
-          List.of(
-              ValidationMessages.PROPERTY_TYPE_MISMATCH.formatted("count", PropertyType.NUMBER)),
-          violations);
-    }
-  }
-
-  @Nested
-  @DisplayName("BOOLEAN validation")
-  class BooleanValidationTests {
-
-    @ParameterizedTest(name = "Should accept valid boolean value: ''{0}''")
-    @ValueSource(strings = {"true", "false", "TRUE", "FALSE"})
-    void shouldAcceptValidBooleanValues(String value) {
-      var definition = propertyDefinition("flag", PropertyType.BOOLEAN, null);
-
-      var violations = service.validatePropertyValue(definition, value);
-
-      assertEquals(List.of(), violations);
-    }
-
-    @Test
-    @DisplayName("Should report type mismatch for invalid boolean value")
-    void shouldReportTypeMismatchForInvalidBoolean() {
-      var definition = propertyDefinition("flag", PropertyType.BOOLEAN, null);
-
-      var violations = service.validatePropertyValue(definition, "yes");
-
-      assertEquals(
-          List.of(
-              ValidationMessages.PROPERTY_TYPE_MISMATCH.formatted("flag", PropertyType.BOOLEAN)),
-          violations);
-    }
-
-    @Test
-    @DisplayName("Should report type mismatch when a number is sent for a BOOLEAN property")
-    void shouldReportTypeMismatchWhenNumberSentForBoolean() {
-      var definition = propertyDefinition("flag", PropertyType.BOOLEAN, null);
-
-      var violations = service.validatePropertyValue(definition, "42");
-
-      assertEquals(
-          List.of(
-              ValidationMessages.PROPERTY_TYPE_MISMATCH.formatted("flag", PropertyType.BOOLEAN)),
-          violations);
-    }
-  }
-
-  private PropertyDefinition propertyDefinition(String name, PropertyType type,
-      PropertyRules rules) {
-    return new PropertyDefinition(null, name, "description", type, true, rules);
-  }
 }
