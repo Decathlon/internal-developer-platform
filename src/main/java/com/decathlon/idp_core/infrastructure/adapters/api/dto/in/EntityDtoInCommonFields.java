@@ -26,8 +26,7 @@ import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 
-///  Common fields shared between EntityCreateDtoIn (POST) and EntityUpdateDtoIn (PUT).
-
+/// Input DTO for common fields of an entity creation or update request.
 ///
 /// **Infrastructure validation:** Performs syntactic validation at the API boundary
 /// using Jakarta Validation annotations. Semantic validation (schema conformance
