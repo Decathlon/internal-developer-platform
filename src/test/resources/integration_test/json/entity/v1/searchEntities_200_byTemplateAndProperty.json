@@ -1,0 +1,38 @@
+{
+  "content": [
+    {
+      "identifier": "web-api-1",
+      "name": "Web API 1",
+      "properties": { "environment": "PROD", "programmingLanguage": "JAVA", "port": 8080.0 },
+      "relations": {
+        "database": [
+          { "identifier": "database-service-1", "name": "Database Service 1" }
+        ],
+        "api-link": [
+          { "identifier": "microservice-1", "name": "Microservice 1" }
+        ]
+      },
+      "relations_as_target": {},
+      "template_identifier": "web-service"
+    },
+    {
+      "identifier": "web-service-valid-1",
+      "name": "web-service-valid-1",
+      "properties": {
+        "teamName": "platform-team",
+        "environment": "DEV",
+        "baseUrl": "https://catalog.example.com",
+        "protocol": "HTTP",
+        "port": 8080.0,
+        "programmingLanguage": "JAVA",
+        "version": "1.2.3",
+        "applicationName": "catalog-api",
+        "ownerEmail": "owner@example.com"
+      },
+      "relations": {},
+      "relations_as_target": {},
+      "template_identifier": "web-service"
+    }
+  ],
+  "page": { "size": 20, "number": 0, "total_elements": 2, "total_pages": 1 }
+}

@@ -24,17 +24,22 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
 
+import com.decathlon.idp_core.domain.constant.SearchConstraints;
 import com.decathlon.idp_core.domain.constant.ValidationMessages;
 import com.decathlon.idp_core.domain.exception.entity.EntityAlreadyExistsException;
 import com.decathlon.idp_core.domain.exception.entity.EntityNotFoundException;
 import com.decathlon.idp_core.domain.exception.entity.EntityValidationException;
 import com.decathlon.idp_core.domain.exception.entity_template.EntityTemplateNotFoundException;
+import com.decathlon.idp_core.domain.exception.search.InvalidSearchQueryException;
 import com.decathlon.idp_core.domain.model.entity.Entity;
 import com.decathlon.idp_core.domain.model.entity.EntityFilter;
 import com.decathlon.idp_core.domain.model.entity.EntitySummary;
+import com.decathlon.idp_core.domain.model.entity.SearchFilterNode;
 import com.decathlon.idp_core.domain.model.entity_template.EntityTemplate;
+import com.decathlon.idp_core.domain.model.enums.LogicalConnector;
 import com.decathlon.idp_core.domain.port.EntityRepositoryPort;
-import com.decathlon.idp_core.domain.service.EntityQueryParserService;
+import com.decathlon.idp_core.domain.service.filter.EntityFilterDslParser;
+import com.decathlon.idp_core.domain.service.search.SearchFilterValidationService;
 import com.decathlon.idp_core.domain.service.entity_template.EntityTemplateService;
 import com.decathlon.idp_core.domain.service.entity_template.EntityTemplateValidationService;
 
@@ -55,7 +60,10 @@ class EntityServiceTest {
   private EntityTemplateService entityTemplateService;
 
   @Mock
-  private EntityQueryParserService entityQueryParserService;
+  private EntityFilterDslParser entityFilterDslParser;
+
+  @Mock
+  private SearchFilterValidationService searchFilterValidationService;
 
   @InjectMocks
   private EntityService entityService;
@@ -77,7 +85,7 @@ class EntityServiceTest {
 
     assertSame(page, result);
     verify(entityTemplateService).getEntityTemplateByIdentifier("template-a");
-    verify(entityQueryParserService).validateFilterPropertyTypes(EntityFilter.empty(), template);
+    verify(entityFilterDslParser).validateFilterPropertyTypes(EntityFilter.empty(), template);
     verify(entityRepository).findByTemplateIdentifierWithFilter("template-a", EntityFilter.empty(),
         pageable);
   }
@@ -255,5 +263,84 @@ class EntityServiceTest {
   private Entity entity(String templateIdentifier, String identifier, String name) {
     return new Entity(UUID.randomUUID(), templateIdentifier, name, identifier, List.of(),
         List.of());
+  }
+
+  private SearchFilterNode emptyFilter() {
+    return new SearchFilterNode.Group(LogicalConnector.AND, List.of());
+  }
+
+  @Test
+  @DisplayName("Should search entities with valid parameters")
+  void shouldSearchEntitiesWithValidParameters() {
+    var filter = emptyFilter();
+    var page = new PageImpl<>(List.of(entity("tmpl", "ent-a", "Entity A")));
+    when(entityRepository.search(filter, "api", Pageable.ofSize(20))).thenReturn(page);
+
+    var result = entityService.searchEntities(filter, "api", 0, 20, null);
+
+    assertSame(page, result);
+    verify(searchFilterValidationService).validate(filter, "api");
+  }
+
+  @Test
+  @DisplayName("Should search entities with valid sort")
+  void shouldSearchEntitiesWithValidSort() {
+    var filter = emptyFilter();
+    var page = new PageImpl<>(List.of(entity("tmpl", "ent-a", "Entity A")));
+    when(entityRepository.search(org.mockito.ArgumentMatchers.any(),
+        org.mockito.ArgumentMatchers.any(), org.mockito.ArgumentMatchers.any())).thenReturn(page);
+
+    var result = entityService.searchEntities(filter, null, 0, 10, "identifier:asc");
+
+    assertSame(page, result);
+  }
+
+  @Test
+  @DisplayName("Should reject page size exceeding maximum")
+  void shouldRejectPageSizeExceedingMaximum() {
+    var filter = emptyFilter();
+    assertThrows(InvalidSearchQueryException.class,
+        () -> entityService.searchEntities(filter, null, 0, SearchConstraints.MAX_PAGE_SIZE + 1,
+            null));
+  }
+
+  @Test
+  @DisplayName("Should reject negative page index")
+  void shouldRejectNegativePageIndex() {
+    var filter = emptyFilter();
+    assertThrows(InvalidSearchQueryException.class,
+        () -> entityService.searchEntities(filter, null, -1, 20, null));
+  }
+
+  @Test
+  @DisplayName("Should reject non-positive page size")
+  void shouldRejectNonPositivePageSize() {
+    var filter = emptyFilter();
+    assertThrows(InvalidSearchQueryException.class,
+        () -> entityService.searchEntities(filter, null, 0, 0, null));
+  }
+
+  @Test
+  @DisplayName("Should reject invalid sort field")
+  void shouldRejectInvalidSortField() {
+    var filter = emptyFilter();
+    assertThrows(InvalidSearchQueryException.class,
+        () -> entityService.searchEntities(filter, null, 0, 20, "badField:asc"));
+  }
+
+  @Test
+  @DisplayName("Should reject invalid sort direction")
+  void shouldRejectInvalidSortDirection() {
+    var filter = emptyFilter();
+    assertThrows(InvalidSearchQueryException.class,
+        () -> entityService.searchEntities(filter, null, 0, 20, "identifier:zzz"));
+  }
+
+  @Test
+  @DisplayName("Should reject extra sort expression segments")
+  void shouldRejectExtraSortSegments() {
+    var filter = emptyFilter();
+    assertThrows(InvalidSearchQueryException.class,
+        () -> entityService.searchEntities(filter, null, 0, 20, "identifier:asc:extra"));
   }
 }

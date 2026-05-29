@@ -83,12 +83,34 @@ public class ValidationMessages {
     return PROPERTY_RULES_MIN_MAX_CONSTRAINT_VIOLATED.replace("{constraint}", constraint);
   }
 
-  // Filter query validation messages
-  public static final String FILTER_TOO_MANY_CRITERIA = "Filter query exceeds maximum of %d criteria";
-  public static final String FILTER_VALUE_TOO_LONG = "Filter value must not exceed %d characters in criterion '%s'";
-  public static final String FILTER_KEY_TOO_LONG = "Filter key must not exceed %d characters in criterion '%s'";
-  public static final String FILTER_INVALID_FORMAT = "Invalid query format, expected field:operator:value";
-  public static final String FILTER_DUPLICATE_CRITERION = "Multiple filters for the same property are not supported";
-  public static final String FILTER_TYPE_MISMATCH = "Operation '%s' is not applicable for field '%s'.";
-  public static final String FILTER_PROPERTY_TYPE_NOT_NUMERIC = "Operation '%s' is not applicable for property '%s': only NUMBER properties support comparison operators.";
+    // Filter query validation messages
+    public static final String FILTER_TOO_MANY_CRITERIA = "Filter query exceeds maximum of %d criteria";
+    public static final String FILTER_VALUE_TOO_LONG = "Filter value must not exceed %d characters in criterion '%s'";
+    public static final String FILTER_KEY_TOO_LONG = "Filter key must not exceed %d characters in criterion '%s'";
+    public static final String FILTER_INVALID_FORMAT = "Invalid query format, expected field:operator:value";
+    public static final String FILTER_DUPLICATE_CRITERION = "Multiple filters for the same property are not supported";
+    public static final String FILTER_TYPE_MISMATCH = "Operation '%s' is not applicable for field '%s'.";
+    public static final String FILTER_PROPERTY_TYPE_NOT_NUMERIC = "Operation '%s' is not applicable for property '%s': only NUMBER properties support comparison operators.";
+
+    // Search filter validation messages
+    public static final String SEARCH_INVALID_CONNECTOR = "Invalid connector '%s'. Supported values: AND, OR";
+    public static final String SEARCH_INVALID_OPERATOR = "Invalid operation '%s'. Supported values: EQ, NEQ, CONTAINS, NOT_CONTAINS, STARTS_WITH, ENDS_WITH, GT, GTE, LT, LTE";
+    public static final String SEARCH_INVALID_FIELD = "Unknown field '%s'. Supported fields: template, identifier, name, relation, property.{name}, relation.{name}, relation.{name}.identifier, relation.{name}.name, relations_as_target, relations_as_target.{name}.identifier, relations_as_target.{name}.name";
+    public static final String SEARCH_TOO_MANY_CRITERIA = "Search filter exceeds maximum of %d total criteria";
+    public static final String SEARCH_NESTING_TOO_DEEP = "Search filter exceeds maximum nesting depth of %d";
+    public static final String SEARCH_CRITERION_MISSING_FIELD = "A criterion node must have a non-blank 'field'";
+    public static final String SEARCH_CRITERION_MISSING_OPERATION = "A criterion node must have a non-blank 'operation'";
+    public static final String SEARCH_CRITERION_MISSING_VALUE = "A criterion node must have a non-blank 'value'";
+    public static final String SEARCH_GROUP_MISSING_CONNECTOR = "A group node must have a non-blank 'connector'";
+    public static final String SEARCH_GROUP_MISSING_CRITERIA = "A group node must have a non-empty 'criteria' list";
+    public static final String SEARCH_QUERY_TOO_LONG = "Search query must not exceed %d characters";
+    public static final String SEARCH_NUMERIC_OPERATOR_REQUIRES_PROPERTY = "Operator '%s' is only valid for property.{name} fields";
+    public static final String SEARCH_INVALID_SORT_FIELD = "Invalid sort field '%s'. Supported fields: identifier, name, templateIdentifier";
+    public static final String SEARCH_INVALID_SORT_FORMAT = "Invalid sort expression '%s'. Expected format: field or field:asc|desc";
+    public static final String SEARCH_PAGE_SIZE_TOO_LARGE = "Page size must not exceed %d";
+    public static final String SEARCH_PAGE_INVALID = "Page index must be 0 or greater";
+    public static final String SEARCH_SIZE_INVALID = "Page size must be greater than 0";
+    public static final String SEARCH_NUMERIC_OPERATOR_INVALID_VALUE = "Value '%s' is not a valid number for operator '%s'";
+    public static final String SEARCH_NUMERIC_OPERATOR_PROPERTY_TYPE_MISMATCH = "Property '%s' in template '%s' is of type %s; operators GT, GTE, LT, LTE require type NUMBER";
+
 }

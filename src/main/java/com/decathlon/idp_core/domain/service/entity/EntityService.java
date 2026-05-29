@@ -6,20 +6,27 @@ import jakarta.transaction.Transactional;
 import jakarta.validation.Valid;
 
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.validation.annotation.Validated;
 
+import com.decathlon.idp_core.domain.constant.SearchConstraints;
+import com.decathlon.idp_core.domain.constant.ValidationMessages;
 import com.decathlon.idp_core.domain.exception.entity.EntityAlreadyExistsException;
 import com.decathlon.idp_core.domain.exception.entity.EntityNotFoundException;
 import com.decathlon.idp_core.domain.exception.entity.EntityValidationException;
 import com.decathlon.idp_core.domain.exception.entity_template.EntityTemplateNotFoundException;
+import com.decathlon.idp_core.domain.exception.search.InvalidSearchQueryException;
 import com.decathlon.idp_core.domain.model.entity.Entity;
 import com.decathlon.idp_core.domain.model.entity.EntityFilter;
 import com.decathlon.idp_core.domain.model.entity.EntitySummary;
+import com.decathlon.idp_core.domain.model.entity.SearchFilterNode;
 import com.decathlon.idp_core.domain.model.entity_template.EntityTemplate;
 import com.decathlon.idp_core.domain.port.EntityRepositoryPort;
-import com.decathlon.idp_core.domain.service.EntityQueryParserService;
+import com.decathlon.idp_core.domain.service.filter.EntityFilterDslParser;
+import com.decathlon.idp_core.domain.service.search.SearchFilterValidationService;
 import com.decathlon.idp_core.domain.service.entity_template.EntityTemplateService;
 import com.decathlon.idp_core.domain.service.entity_template.EntityTemplateValidationService;
 
@@ -41,11 +48,12 @@ import lombok.RequiredArgsConstructor;
 @Validated
 @RequiredArgsConstructor
 public class EntityService {
-  private final EntityRepositoryPort entityRepository;
-  private final EntityValidationService entityValidationService;
-  private final EntityTemplateValidationService entityTemplateValidationService;
-  private final EntityTemplateService entityTemplateService;
-  private final EntityQueryParserService entityQueryParserService;
+    private final EntityRepositoryPort entityRepository;
+    private final EntityValidationService entityValidationService;
+    private final EntityTemplateValidationService entityTemplateValidationService;
+    private final EntityTemplateService entityTemplateService;
+    private final EntityFilterDslParser entityQueryParserService;
+    private final SearchFilterValidationService searchFilterValidationService;
 
   /// Retrieves entities filtered by template with optional query filter.
   ///
@@ -158,5 +166,67 @@ public class EntityService {
     entityValidationService.validateForUpdate(entityToSave, template);
     return entityRepository.save(entityToSave);
   }
+
+    /// Searches for entities across all templates using a nested filter tree and optional free-text query.
+    ///
+    /// **Contract:** Executes a global entity search using the provided filter tree and optional text query.
+    /// Not scoped to a single template; include a template criterion in the filter
+    /// to scope the result to a specific template. Validates and builds pagination internally.
+    ///
+    /// @param filter   root node of the search filter tree; an empty group returns all entities
+    /// @param query    optional free-text string searched across identifier, name, templateIdentifier,
+    ///                 and all property values; null means no text restriction
+    /// @param page     zero-based page index; must be 0 or greater
+    /// @param size     number of items per page; must be between 1 and [SearchConstraints#MAX_PAGE_SIZE]
+    /// @param sort     optional sort expression in the form `field` or `field:asc|desc;
+    ///                 null or blank means default ordering
+    /// @return paginated entities matching the filter and query
+    /// @throws InvalidSearchQueryException when page, size, or sort parameters are invalid
+    @Transactional
+    public Page<Entity> searchEntities(SearchFilterNode filter, String query, int page, int size, String sort) {
+        searchFilterValidationService.validate(filter, query);
+        Pageable pageable = buildPageable(page, size, sort);
+        return entityRepository.search(filter, query, pageable);
+    }
+
+    private Pageable buildPageable(int page, int size, String sort) {
+        if (page < 0) {
+            throw new InvalidSearchQueryException(ValidationMessages.SEARCH_PAGE_INVALID);
+        }
+        if (size <= 0) {
+            throw new InvalidSearchQueryException(ValidationMessages.SEARCH_SIZE_INVALID);
+        }
+        if (size > SearchConstraints.MAX_PAGE_SIZE) {
+            throw new InvalidSearchQueryException(
+                    ValidationMessages.SEARCH_PAGE_SIZE_TOO_LARGE.formatted(SearchConstraints.MAX_PAGE_SIZE));
+        }
+        if (sort == null || sort.isBlank()) {
+            return PageRequest.of(page, size);
+        }
+        return PageRequest.of(page, size, parseSortExpression(sort));
+    }
+
+    private Sort parseSortExpression(String sortExpression) {
+        String[] parts = sortExpression.split(":");
+        if (parts.length > 2) {
+            throw new InvalidSearchQueryException(
+                    ValidationMessages.SEARCH_INVALID_SORT_FORMAT.formatted(sortExpression));
+        }
+        String property = parts[0].trim();
+        if (!SearchConstraints.ALLOWED_SORT_FIELDS.contains(property)) {
+            throw new InvalidSearchQueryException(
+                    ValidationMessages.SEARCH_INVALID_SORT_FIELD.formatted(property));
+        }
+        if (parts.length == 1) {
+            return Sort.by(Sort.Direction.ASC, property);
+        }
+        String direction = parts[1].trim().toLowerCase();
+        return switch (direction) {
+            case "asc" -> Sort.by(Sort.Direction.ASC, property);
+            case "desc" -> Sort.by(Sort.Direction.DESC, property);
+            default -> throw new InvalidSearchQueryException(
+                    ValidationMessages.SEARCH_INVALID_SORT_FORMAT.formatted(sortExpression));
+        };
+    }
 
 }
