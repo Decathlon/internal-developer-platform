@@ -285,4 +285,3 @@ INSERT INTO entity_template_relations_definitions (entity_template_id, relations
 ('550e8400-e29b-41d4-a716-446655440079', '550e8400-e29b-41d4-a716-446655440053'), -- database
 ('550e8400-e29b-41d4-a716-446655440079', '550e8400-e29b-41d4-a716-446655440057'), -- networks
 ('550e8400-e29b-41d4-a716-446655440079', '550e8400-e29b-41d4-a716-446655440064'); -- external_apis
-

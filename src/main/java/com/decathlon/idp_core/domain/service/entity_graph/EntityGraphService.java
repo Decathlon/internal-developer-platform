@@ -19,6 +19,7 @@ import com.decathlon.idp_core.domain.model.entity_graph.EntityGraphNode;
 import com.decathlon.idp_core.domain.model.entity_graph.EntityGraphRelation;
 import com.decathlon.idp_core.domain.port.EntityGraphRepositoryPort;
 import com.decathlon.idp_core.domain.port.EntityRepositoryPort;
+import com.decathlon.idp_core.domain.service.entity_template.EntityTemplateValidationService;
 
 import lombok.RequiredArgsConstructor;
 
@@ -49,6 +50,7 @@ public class EntityGraphService {
 
   private final EntityRepositoryPort entityRepositoryPort;
   private final EntityGraphRepositoryPort entityGraphRepositoryPort;
+  private final EntityTemplateValidationService entityTemplateValidationService;
 
   /// Builds the relationship graph for an entity starting from its composite key.
   ///
@@ -63,6 +65,8 @@ public class EntityGraphService {
   public EntityGraphNode getEntityGraph(String templateIdentifier, String entityIdentifier,
       int depth, boolean includeProperties) {
     int effectiveDepth = Math.clamp(depth, 1, MAX_DEPTH);
+
+    entityTemplateValidationService.validateTemplateExists(templateIdentifier);
 
     Entity rootEntity = entityRepositoryPort
         .findByTemplateIdentifierAndIdentifier(templateIdentifier, entityIdentifier)

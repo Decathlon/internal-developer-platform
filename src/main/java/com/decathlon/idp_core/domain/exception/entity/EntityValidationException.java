@@ -26,7 +26,7 @@ public class EntityValidationException extends RuntimeException {
   /**
    * -- GETTER -- Returns the list of individual validation violation messages.
    * /// ///
-   * 
+   *
    * @return immutable list of violation messages
    */
   private final List<String> violations;
