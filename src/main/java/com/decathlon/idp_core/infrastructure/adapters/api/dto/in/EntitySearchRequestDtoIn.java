@@ -5,20 +5,17 @@ import io.swagger.v3.oas.annotations.media.Schema;
 /// Request body for the `POST /api/v1/entities/search` endpoint.
 ///
 /// Supports two complementary search modes that can be combined:
-/// <ul>
-///   <li>{@code query} — a free-text string searched across identifier, name,
-///       templateIdentifier, and all property values (case-insensitive CONTAINS).</li>
-///   <li>{@code filter} — a structured, nested filter tree for precise queries.</li>
-/// </ul>
-/// When both are provided the results must satisfy both (AND semantics).
+/// - `query` — a free-text string searched across identifier, name,
+///   templateIdentifier, and all property values (case-insensitive CONTAINS).
+/// - `filter` — a structured, nested filter tree for precise queries.
 ///
-/// <h3>Free-text search example</h3>
-/// <pre>{@code
+/// ### Free-text search example
+/// ```
 /// { "query": "checkout", "page": 0, "size": 20 }
-/// }</pre>
+/// ```
 ///
-/// <h3>Structured filter example</h3>
-/// <pre>{@code
+/// ### Structured filter example
+/// ```
 /// {
 ///   "filter": {
 ///     "connector": "AND",
@@ -31,7 +28,7 @@ import io.swagger.v3.oas.annotations.media.Schema;
 ///   "size": 20,
 ///   "sort": "identifier:asc"
 /// }
-/// }</pre>
+/// ```
 @Schema(description = "Request body for the POST /api/v1/entities/search endpoint")
 public record EntitySearchRequestDtoIn(
 

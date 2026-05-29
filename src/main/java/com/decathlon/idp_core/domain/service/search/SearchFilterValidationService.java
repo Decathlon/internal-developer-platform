@@ -34,14 +34,14 @@ import lombok.AllArgsConstructor;
 @AllArgsConstructor
 public class SearchFilterValidationService {
 
-  private static final Set<SearchOperator> NUMERIC_OPERATORS = Set.of(SearchOperator.GT,
-      SearchOperator.GTE, SearchOperator.LT, SearchOperator.LTE);
-  private static final Set<String> SIMPLE_FIELDS = Set.of("template", "identifier", "name",
-      "relation", "relations_as_target");
   private static final String PROPERTY_PREFIX = "property.";
   private static final String RELATION_PREFIX = "relation.";
   private static final String RELATIONS_AS_TARGET_PREFIX = "relations_as_target.";
   private static final String TEMPLATE_FIELD = "template";
+  private static final Set<SearchOperator> NUMERIC_OPERATORS = Set.of(SearchOperator.GT,
+      SearchOperator.GTE, SearchOperator.LT, SearchOperator.LTE);
+  private static final Set<String> SIMPLE_FIELDS = Set.of(TEMPLATE_FIELD, "identifier", "name",
+      "relation", "relations_as_target");
 
   private final EntityTemplateRepositoryPort entityTemplateRepository;
 

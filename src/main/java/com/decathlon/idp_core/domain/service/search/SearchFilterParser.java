@@ -16,13 +16,11 @@ import com.decathlon.idp_core.domain.model.enums.SearchOperator;
 ///
 /// **Responsibility:** Parses the raw string representation produced by the infrastructure mapper and
 /// enforces all structural and safety business rules:
-/// <ul>
-///   <li>Maximum nesting depth ([SearchConstraints#MAX_NESTING_DEPTH])</li>
-///   <li>Maximum total criteria count ([SearchConstraints#MAX_TOTAL_CRITERIA])</li>
-///   <li>Required fields on criterion nodes (field, operation, value)</li>
-///   <li>Required fields on group nodes (connector, non-empty criteria)</li>
-///   <li>Valid enum values for connectors and operators</li>
-/// </ul>
+/// - Maximum nesting depth ([SearchConstraints#MAX_NESTING_DEPTH])
+/// - Maximum total criteria count ([SearchConstraints#MAX_TOTAL_CRITERIA])
+/// - Required fields on criterion nodes (field, operation, value)
+/// - Required fields on group nodes (connector, non-empty criteria)
+/// - Valid enum values for connectors and operators
 ///
 /// Semantic validation (field name grammar, numeric operator constraints, query length) is
 /// handled separately by [SearchFilterValidationService].

@@ -87,9 +87,6 @@ final class JpaPredicateBuilder {
 
   static Predicate buildNumericPredicate(CriteriaBuilder cb, Expression<?> field,
       SearchOperator operator, BigDecimal numericValue) {
-    // Explicit SQL CAST(field AS NUMERIC): the property value column is VARCHAR;
-    // without
-    // this cast PostgreSQL would reject the comparison with a numeric literal.
     Expression<BigDecimal> numericField = ((HibernateCriteriaBuilder) cb)
         .cast((org.hibernate.query.criteria.JpaExpression<?>) field, BigDecimal.class);
     return switch (operator) {
