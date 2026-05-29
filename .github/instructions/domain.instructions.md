@@ -211,4 +211,4 @@ domain/
 
 - Organize exceptions by aggregate/subdomain (for example, `entity/`, `entity_template/`, `property/`)
 - Each exception class should have a clear, descriptive name that follows the naming conventions above
-- Keep exception hierarchy flat — avoid deep inheritance trees
+- Keep exception hierarchy flat. Avoid deep inheritance trees
