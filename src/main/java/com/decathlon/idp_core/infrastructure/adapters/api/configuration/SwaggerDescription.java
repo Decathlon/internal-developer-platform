@@ -68,7 +68,7 @@ public class SwaggerDescription {
     public static final String ENDPOINT_GET_WEBHOOK_CONNECTOR_PAGINATED_DESCRIPTION = "Retrieve a paginated list of webhook connectors with optional sorting";
 
     public static final String ENDPOINT_DELETE_WEBHOOK_CONNECTOR_SUMMARY = "Delete a webhook connector by identifier";
-    public static final String ENDPOINT_DELETE_WEBHOOK_CONNECTOR_DESCRIPTION = "Remove a delete webhook connector from the system using its unique identifier";
+    public static final String ENDPOINT_DELETE_WEBHOOK_CONNECTOR_DESCRIPTION = "Remove a webhook connector from the system using its unique identifier";
 
     public static final String ENDPOINT_GET_WEBHOOK_CONNECTOR_BY_IDENTIFIER_SUMMARY = "Get a webhook connector by identifier";
     public static final String ENDPOINT_GET_WEBHOOK_CONNECTOR_BY_IDENTIFIER_DESCRIPTION = "Retrieve a specific webhook connector using its string identifier";
