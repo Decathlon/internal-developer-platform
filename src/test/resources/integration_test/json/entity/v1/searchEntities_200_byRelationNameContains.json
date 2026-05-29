@@ -3,7 +3,11 @@
     {
       "identifier": "web-api-1",
       "name": "Web API 1",
-      "properties": { "environment": "PROD", "programmingLanguage": "JAVA", "port": 8080.0 },
+      "properties": {
+        "environment": "PROD",
+        "port": 8080.0,
+        "programmingLanguage": "JAVA"
+      },
       "relations": {
         "database": [
           { "identifier": "database-service-1", "name": "Database Service 1" }
@@ -14,19 +18,7 @@
       },
       "relations_as_target": {},
       "template_identifier": "web-service"
-    },
-    {
-      "identifier": "web-api-2",
-      "name": "Web API 2",
-      "properties": { "environment": "DEV", "programmingLanguage": "PYTHON", "port": 9090.0 },
-      "relations": {
-        "database": [
-          { "identifier": "cache-service-1", "name": "Cache Service 1" }
-        ]
-      },
-      "relations_as_target": {},
-      "template_identifier": "web-service"
     }
   ],
-  "page": { "size": 20, "number": 0, "total_elements": 2, "total_pages": 1 }
+  "page": { "size": 20, "number": 0, "total_elements": 1, "total_pages": 1 }
 }

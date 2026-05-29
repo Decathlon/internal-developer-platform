@@ -1188,8 +1188,9 @@ public class EntityControllerTest extends AbstractIntegrationTest {
               .accept(APPLICATION_JSON).with(csrf()).content("""
                   { "query": "JAVA", "page": 0, "size": 20 }
                   """))
-          .andExpect(status().isOk()).andExpect(jsonPath("$.content.length()").value(2))
+          .andExpect(status().isOk()).andExpect(jsonPath("$.content.length()").value(3))
           .andExpect(jsonPath("$.content[*].identifier", hasItem("web-api-1")))
+          .andExpect(jsonPath("$.content[*].identifier", hasItem("web-api-2")))
           .andExpect(jsonPath("$.content[*].identifier", hasItem("web-service-valid-1")));
     }
 
@@ -1211,8 +1212,9 @@ public class EntityControllerTest extends AbstractIntegrationTest {
                     "size": 20
                   }
                   """))
-          .andExpect(status().isOk()).andExpect(jsonPath("$.content.length()").value(2))
+          .andExpect(status().isOk()).andExpect(jsonPath("$.content.length()").value(3))
           .andExpect(jsonPath("$.content[*].identifier", hasItem("web-api-1")))
+          .andExpect(jsonPath("$.content[*].identifier", hasItem("web-api-2")))
           .andExpect(jsonPath("$.content[*].identifier", hasItem("web-service-valid-1")));
     }
 
@@ -1323,14 +1325,16 @@ public class EntityControllerTest extends AbstractIntegrationTest {
                       "connector": "AND",
                       "criteria": [
                         { "field": "template", "operation": "EQ", "value": "web-service" },
-                        { "field": "property.port", "operation": "GT", "value": "8085" }
+                        { "field": "property.port", "operation": "GT", "value": "8079" }
                       ]
                     },
                     "page": 0, "size": 20
                   }
                   """))
-          .andExpect(status().isOk()).andExpect(jsonPath("$.page.total_elements").value(1))
-          .andExpect(jsonPath("$.content[0].identifier").value("web-api-2"));
+          .andExpect(status().isOk()).andExpect(jsonPath("$.page.total_elements").value(3))
+          .andExpect(jsonPath("$.content[0].identifier").value("web-api-1"))
+          .andExpect(jsonPath("$.content[1].identifier").value("web-service-valid-1"))
+          .andExpect(jsonPath("$.content[2].identifier").value("web-api-2"));
     }
 
     @Test

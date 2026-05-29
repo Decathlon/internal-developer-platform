@@ -2,13 +2,19 @@
   "content": [
     {
       "identifier": "web-api-2",
-      "name": "Web API 2",
-      "properties": { "environment": "DEV", "programmingLanguage": "PYTHON", "port": 9090.0 },
-      "relations": {
-        "database": [
-          { "identifier": "cache-service-1", "name": "Cache Service 1" }
-        ]
+      "name": "Web API 2 Updated",
+      "properties": {
+        "teamName": "platform-team",
+        "environment": "DEV",
+        "baseUrl": "https://catalog.example.com",
+        "protocol": "HTTP",
+        "port": 8080.0,
+        "programmingLanguage": "JAVA",
+        "version": "1.2.3",
+        "applicationName": "catalog-api",
+        "ownerEmail": "owner@example.com"
       },
+      "relations": {},
       "relations_as_target": {},
       "template_identifier": "web-service"
     }
