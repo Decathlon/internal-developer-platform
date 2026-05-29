@@ -8,8 +8,6 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 
-import com.decathlon.idp_core.infrastructure.adapters.api.controller.EntityControllerTest;
-
 /// Unit tests for [EntitySpecification].
 ///
 /// Focuses on the LIKE wildcard escaping logic which is security-critical.

@@ -1,7 +1,5 @@
 package com.decathlon.idp_core.domain.model.enums;
 
-import com.decathlon.idp_core.domain.model.entity_template.PropertyRules;
-
 /// Business format constraints for property validation in [PropertyRules].
 ///
 /// Defines standardized data formats that properties must conform to beyond basic

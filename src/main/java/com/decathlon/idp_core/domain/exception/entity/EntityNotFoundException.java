@@ -2,8 +2,6 @@ package com.decathlon.idp_core.domain.exception.entity;
 
 import static com.decathlon.idp_core.domain.constant.ValidationMessages.ENTITY_NOT_FOUND;
 
-import com.decathlon.idp_core.domain.model.entity.Entity;
-
 /// Domain exception for missing [Entity] business entities.
 ///
 /// **Business purpose:** Represents the business rule violation when attempting

@@ -2,10 +2,6 @@ package com.decathlon.idp_core.domain.exception.entity_template;
 
 import static com.decathlon.idp_core.domain.constant.ValidationMessages.TEMPLATE_ALREADY_EXISTS;
 
-import com.decathlon.idp_core.domain.model.entity_template.EntityTemplate;
-import com.decathlon.idp_core.domain.service.entity_template.EntityTemplateService;
-import com.decathlon.idp_core.infrastructure.adapters.api.handler.ApiExceptionHandler;
-
 /// Exception thrown when attempting to create an [EntityTemplate] with an identifier that already exists.
 ///
 /// This exception is part of the domain layer and represents a business rule violation

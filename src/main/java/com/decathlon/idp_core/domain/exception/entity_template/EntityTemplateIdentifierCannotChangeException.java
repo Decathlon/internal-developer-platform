@@ -6,6 +6,7 @@ import com.decathlon.idp_core.domain.model.entity_template.EntityTemplate;
 import com.decathlon.idp_core.domain.service.entity_template.EntityTemplateService;
 import com.decathlon.idp_core.infrastructure.adapters.api.handler.ApiExceptionHandler;
 
+
 /// Exception thrown when attempting to change an [EntityTemplate] identifier after creation.
 ///
 /// **Why this exception exists:**

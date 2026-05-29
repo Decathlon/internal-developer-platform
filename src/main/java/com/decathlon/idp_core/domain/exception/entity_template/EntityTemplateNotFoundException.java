@@ -2,8 +2,6 @@ package com.decathlon.idp_core.domain.exception.entity_template;
 
 import java.util.UUID;
 
-import com.decathlon.idp_core.domain.model.entity_template.EntityTemplate;
-
 /// Domain exception for missing [EntityTemplate] business entities.
 ///
 /// **Business purpose:** Represents the business rule violation when attempting
