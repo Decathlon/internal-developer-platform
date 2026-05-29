@@ -15,12 +15,13 @@ import com.decathlon.idp_core.domain.model.enums.PropertyType;
 /// - Mapped to HTTP 400 Bad Request by [ApiExceptionHandler]
 public class PropertyTypeChangeException extends RuntimeException {
 
-    /// Constructs a new exception for a type conversion.
-    ///
-    /// @param propertyName the name of the property whose type is being changed
-    /// @param fromType the current property type
-    /// @param toType the requested new property type
-    public PropertyTypeChangeException(String propertyName, PropertyType fromType, PropertyType toType) {
-        super(String.format(PROPERTY_TYPE_CANNOT_CHANGE, propertyName, fromType, toType));
-    }
+  /// Constructs a new exception for a type conversion.
+  ///
+  /// @param propertyName the name of the property whose type is being changed
+  /// @param fromType the current property type
+  /// @param toType the requested new property type
+  public PropertyTypeChangeException(String propertyName, PropertyType fromType,
+      PropertyType toType) {
+    super(String.format(PROPERTY_TYPE_CANNOT_CHANGE, propertyName, fromType, toType));
+  }
 }

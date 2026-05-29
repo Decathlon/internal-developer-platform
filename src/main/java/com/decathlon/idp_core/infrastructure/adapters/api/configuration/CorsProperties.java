@@ -6,12 +6,11 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 
 /// Type-safe CORS configuration properties bound from `spring.web.cors`.
 @ConfigurationProperties(prefix = "spring.web.cors")
-public record CorsProperties(
-        List<String> allowedOrigins,
-        List<String> allowedOriginPatterns
-) {
-    public CorsProperties {
-        allowedOrigins = allowedOrigins != null ? List.copyOf(allowedOrigins) : List.of();
-        allowedOriginPatterns = allowedOriginPatterns != null ? List.copyOf(allowedOriginPatterns) : List.of();
-    }
+public record CorsProperties(List<String> allowedOrigins, List<String> allowedOriginPatterns) {
+  public CorsProperties {
+    allowedOrigins = allowedOrigins != null ? List.copyOf(allowedOrigins) : List.of();
+    allowedOriginPatterns = allowedOriginPatterns != null
+        ? List.copyOf(allowedOriginPatterns)
+        : List.of();
+  }
 }

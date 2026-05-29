@@ -13,15 +13,15 @@ import com.decathlon.idp_core.infrastructure.adapters.persistence.model.entity.R
 @Mapper(componentModel = MappingConstants.ComponentModel.SPRING)
 public interface EntityPersistenceMapper {
 
-    Entity toDomain(EntityJpaEntity jpa);
+  Entity toDomain(EntityJpaEntity jpa);
 
-    EntityJpaEntity toJpa(Entity domain);
+  EntityJpaEntity toJpa(Entity domain);
 
-    Property toDomain(PropertyJpaEntity jpa);
+  Property toDomain(PropertyJpaEntity jpa);
 
-    PropertyJpaEntity toJpa(Property domain);
+  PropertyJpaEntity toJpa(Property domain);
 
-    Relation toDomain(RelationJpaEntity jpa);
+  Relation toDomain(RelationJpaEntity jpa);
 
-    RelationJpaEntity toJpa(Relation domain);
+  RelationJpaEntity toJpa(Relation domain);
 }

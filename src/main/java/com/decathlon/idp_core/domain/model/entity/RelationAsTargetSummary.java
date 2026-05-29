@@ -11,9 +11,6 @@ package com.decathlon.idp_core.domain.model.entity;
 /// - Dependency impact analysis before entity deletion
 /// - Bidirectional relationship navigation
 /// - Audit trails for relationship changes
-public record RelationAsTargetSummary(
-    String targetEntityIdentifier,
-    String relationName,
-    String sourceEntityIdentifier,
-    String sourceEntityName
-) {}
+public record RelationAsTargetSummary(String targetEntityIdentifier, String relationName,
+    String sourceEntityIdentifier, String sourceEntityName) {
+}

@@ -12,6 +12,6 @@ import lombok.Data;
 @AllArgsConstructor
 @JsonNaming(SnakeCaseStrategy.class)
 public class EntitySummaryDto {
-    private String identifier;
-    private String name;
+  private String identifier;
+  private String name;
 }

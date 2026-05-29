@@ -1,7 +1,5 @@
 package com.decathlon.idp_core.domain.exception.entity_template;
 
-import com.decathlon.idp_core.domain.model.entity_template.EntityTemplate;
-
 import static com.decathlon.idp_core.domain.constant.ValidationMessages.RELATION_NAME_ALREADY_EXISTS;
 
 /// Exception thrown when attempting to create or update an [EntityTemplate] with duplicate relation names.
@@ -15,10 +13,10 @@ import static com.decathlon.idp_core.domain.constant.ValidationMessages.RELATION
 /// - Mapped to HTTP 400 Bad Request by [ApiExceptionHandler]
 public class RelationNameAlreadyExistsException extends RuntimeException {
 
-    /// Constructs a new exception with the duplicate relation name.
-    ///
-    /// @param relationName the relation name that appears more than once
-    public RelationNameAlreadyExistsException(String relationName) {
-        super(String.format(RELATION_NAME_ALREADY_EXISTS, relationName));
-    }
+  /// Constructs a new exception with the duplicate relation name.
+  ///
+  /// @param relationName the relation name that appears more than once
+  public RelationNameAlreadyExistsException(String relationName) {
+    super(String.format(RELATION_NAME_ALREADY_EXISTS, relationName));
+  }
 }

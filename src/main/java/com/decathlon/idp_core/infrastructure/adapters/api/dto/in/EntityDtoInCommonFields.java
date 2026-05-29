@@ -14,17 +14,18 @@ import static com.decathlon.idp_core.infrastructure.adapters.api.configuration.S
 import java.util.List;
 import java.util.Map;
 
+import jakarta.validation.Valid;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
+
+import com.fasterxml.jackson.databind.PropertyNamingStrategies.SnakeCaseStrategy;
+import com.fasterxml.jackson.databind.annotation.JsonNaming;
+
+import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
-
-import com.fasterxml.jackson.databind.PropertyNamingStrategies.SnakeCaseStrategy;
-import com.fasterxml.jackson.databind.annotation.JsonNaming;
-import io.swagger.v3.oas.annotations.media.Schema;
-import jakarta.validation.Valid;
-import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.NotNull;
 
 /// Input DTO for common fields of an entity creation or update request.
 ///
@@ -39,35 +40,35 @@ import jakarta.validation.constraints.NotNull;
 @Schema(description = SCHEMA_ENTITY_IN)
 public class EntityDtoInCommonFields {
 
-    @NotBlank(message = ENTITY_NAME_MANDATORY)
-    @Schema(description = FIELD_ENTITY_NAME, example = "my-web-service")
+  @NotBlank(message = ENTITY_NAME_MANDATORY)
+  @Schema(description = FIELD_ENTITY_NAME, example = "my-web-service")
+  private String name;
+
+  @Schema(description = FIELD_ENTITY_PROPERTIES, example = "{\"port\": \"8080\", \"environment\": \"dev\"}")
+  private Map<String, String> properties;
+
+  @Valid
+  @Schema(description = FIELD_ENTITY_RELATIONS)
+  private List<RelationDtoIn> relations;
+
+  /// Input DTO for an entity relation instance.
+  ///
+  /// **Infrastructure validation:** Validates relation name presence and target
+  /// identifiers at the API boundary before domain-level schema checks.
+  @Data
+  @Builder
+  @NoArgsConstructor
+  @AllArgsConstructor
+  @JsonNaming(SnakeCaseStrategy.class)
+  @Schema(description = SCHEMA_ENTITY_RELATION_IN)
+  public static class RelationDtoIn {
+
+    @NotBlank(message = RELATION_NAME_MANDATORY_SIMPLE)
+    @Schema(description = FIELD_ENTITY_RELATION_NAME, example = "depends-on")
     private String name;
 
-    @Schema(description = FIELD_ENTITY_PROPERTIES, example = "{\"port\": \"8080\", \"environment\": \"dev\"}")
-    private Map<String, String> properties;
-
-    @Valid
-    @Schema(description = FIELD_ENTITY_RELATIONS)
-    private List<RelationDtoIn> relations;
-
-    /// Input DTO for an entity relation instance.
-    ///
-    /// **Infrastructure validation:** Validates relation name presence and target
-    /// identifiers at the API boundary before domain-level schema checks.
-    @Data
-    @Builder
-    @NoArgsConstructor
-    @AllArgsConstructor
-    @JsonNaming(SnakeCaseStrategy.class)
-    @Schema(description = SCHEMA_ENTITY_RELATION_IN)
-    public static class RelationDtoIn {
-
-        @NotBlank(message = RELATION_NAME_MANDATORY_SIMPLE)
-        @Schema(description = FIELD_ENTITY_RELATION_NAME, example = "depends-on")
-        private String name;
-
-        @NotNull(message = RELATION_TARGET_IDENTIFIERS_NOT_NULL)
-        @Schema(description = FIELD_ENTITY_RELATION_TARGETS, example = "[\"web-api-1\", \"web-api-2\"]")
-        private List<String> targetEntityIdentifiers;
-    }
+    @NotNull(message = RELATION_TARGET_IDENTIFIERS_NOT_NULL)
+    @Schema(description = FIELD_ENTITY_RELATION_TARGETS, example = "[\"web-api-1\", \"web-api-2\"]")
+    private List<String> targetEntityIdentifiers;
+  }
 }

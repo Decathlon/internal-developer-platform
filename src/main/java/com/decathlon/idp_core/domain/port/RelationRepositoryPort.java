@@ -16,6 +16,6 @@ import com.decathlon.idp_core.domain.model.entity.RelationAsTargetSummary;
 /// and bidirectional navigation through the entity relationship graph.
 public interface RelationRepositoryPort {
 
-    List<RelationAsTargetSummary> findRelationsSummariesByTargetEntityIdentifiers(
-            List<String> targetEntityIdentifiers);
+  List<RelationAsTargetSummary> findRelationsSummariesByTargetEntityIdentifiers(
+      List<String> targetEntityIdentifiers);
 }

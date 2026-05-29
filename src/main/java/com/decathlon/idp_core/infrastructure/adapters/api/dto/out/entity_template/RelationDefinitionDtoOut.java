@@ -22,16 +22,16 @@ import lombok.NoArgsConstructor;
 @Schema(description = "Output DTO for relation definition")
 public class RelationDefinitionDtoOut {
 
-    @Schema(description = FIELD_RELATION_NAME, example = "dependencies")
-    private String name;
+  @Schema(description = FIELD_RELATION_NAME, example = "dependencies")
+  private String name;
 
-    @Schema(description = FIELD_RELATION_TARGET_IDENTIFIER, example = "component-template")
-    private String targetTemplateIdentifier;
+  @Schema(description = FIELD_RELATION_TARGET_IDENTIFIER, example = "component-template")
+  private String targetTemplateIdentifier;
 
-    @Schema(description = FIELD_RELATION_REQUIRED, example = "false")
-    private boolean required;
+  @Schema(description = FIELD_RELATION_REQUIRED, example = "false")
+  private boolean required;
 
-    @Schema(description = FIELD_RELATION_TO_MANY, example = "true")
-    private boolean toMany;
+  @Schema(description = FIELD_RELATION_TO_MANY, example = "true")
+  private boolean toMany;
 
 }

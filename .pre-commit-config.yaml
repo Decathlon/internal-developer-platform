@@ -46,3 +46,12 @@ repos:
         args: [sync]
       - id: vale
         args: [--output=line, --minAlertLevel=error]
+  - repo: local
+    hooks:
+      - id: spotless-check
+        name: Spotless code formatting check
+        entry: ./mvnw spotless:check
+        language: system
+        pass_filenames: false
+        files: \.java$
+        stages: [commit]

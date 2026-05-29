@@ -27,25 +27,25 @@ import lombok.NoArgsConstructor;
 @Schema(description = SCHEMA_PROPERTY_RULES_OUT)
 public class PropertyRulesDtoOut {
 
-    @Schema(description = FIELD_PROPERTY_RULES_FORMAT, example = "STRING")
-    private PropertyFormat format;
+  @Schema(description = FIELD_PROPERTY_RULES_FORMAT, example = "STRING")
+  private PropertyFormat format;
 
-    @Schema(description = FIELD_PROPERTY_RULES_ENUM_VALUES, example = "[\"VALUE1\", \"VALUE2\"]")
-    private String[] enumValues;
+  @Schema(description = FIELD_PROPERTY_RULES_ENUM_VALUES, example = "[\"VALUE1\", \"VALUE2\"]")
+  private String[] enumValues;
 
-    @Schema(description = FIELD_PROPERTY_RULES_REGEX, example = "^[A-Za-z0-9]+$")
-    private String regex;
+  @Schema(description = FIELD_PROPERTY_RULES_REGEX, example = "^[A-Za-z0-9]+$")
+  private String regex;
 
-    @Schema(description = FIELD_PROPERTY_RULES_MAX_LENGTH, example = "255")
-    private Integer maxLength;
+  @Schema(description = FIELD_PROPERTY_RULES_MAX_LENGTH, example = "255")
+  private Integer maxLength;
 
-    @Schema(description = FIELD_PROPERTY_RULES_MIN_LENGTH, example = "1")
-    private Integer minLength;
+  @Schema(description = FIELD_PROPERTY_RULES_MIN_LENGTH, example = "1")
+  private Integer minLength;
 
-    @Schema(description = FIELD_PROPERTY_RULES_MAX_VALUE, example = "100")
-    private Integer maxValue;
+  @Schema(description = FIELD_PROPERTY_RULES_MAX_VALUE, example = "100")
+  private Integer maxValue;
 
-    @Schema(description = FIELD_PROPERTY_RULES_MIN_VALUE, example = "0")
-    private Integer minValue;
+  @Schema(description = FIELD_PROPERTY_RULES_MIN_VALUE, example = "0")
+  private Integer minValue;
 
 }
