@@ -15,7 +15,9 @@ import com.decathlon.idp_core.infrastructure.adapters.persistence.model.entity.R
 public interface JpaRelationRepository extends JpaRepository<RelationJpaEntity, UUID> {
 
   @Query("""
-      SELECT tei AS targetEntityIdentifier, r.name AS relationName, e.identifier AS sourceEntityIdentifier, e.name AS sourceEntityName
+      SELECT new com.decathlon.idp_core.domain.model.entity.RelationAsTargetSummary(
+          tei, r.name, e.identifier, e.name
+      )
       FROM EntityJpaEntity e
       JOIN e.relations r
       JOIN r.targetEntityIdentifiers tei

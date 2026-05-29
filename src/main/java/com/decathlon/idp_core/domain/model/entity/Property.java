@@ -6,6 +6,10 @@ import java.util.UUID;
 
 import jakarta.validation.constraints.NotBlank;
 
+import com.decathlon.idp_core.domain.model.entity_template.PropertyDefinition;
+import com.decathlon.idp_core.domain.model.entity_template.PropertyRules;
+import com.decathlon.idp_core.domain.model.enums.PropertyType;
+
 /// A concrete property instance belonging to an [Entity].
 ///
 /// Represents actual business data values that conform to the constraints
