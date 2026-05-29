@@ -287,6 +287,8 @@ When multiple related entities are allowed, list several identifiers:
 }
 ```
 
+---
+
 ## Retrieving Entities
 
 ### List Entities by Template
