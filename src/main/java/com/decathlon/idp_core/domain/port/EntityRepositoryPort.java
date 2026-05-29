@@ -52,7 +52,8 @@ public interface EntityRepositoryPort {
   void deletePropertiesByTemplateIdentifierAndPropertyName(String templateIdentifier,
       Collection<String> propertyNames);
 
-  void deleteRelationsByTemplateIdentifierAndRelationName(String templateIdentifier, Collection<String> relationNames);
+  void deleteRelationsByTemplateIdentifierAndRelationName(String templateIdentifier,
+      Collection<String> relationNames);
 
   Page<Entity> search(SearchFilterNode filter, String query, Pageable pageable);
 }

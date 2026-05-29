@@ -5,7 +5,6 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import java.util.stream.Stream;
 
-import com.decathlon.idp_core.domain.exception.filter.InvalidFilterDslException;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -14,8 +13,9 @@ import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 import org.junit.jupiter.params.provider.ValueSource;
 
-import com.decathlon.idp_core.domain.constant.ValidationMessages;
 import com.decathlon.idp_core.domain.constant.FilterConstraints;
+import com.decathlon.idp_core.domain.constant.ValidationMessages;
+import com.decathlon.idp_core.domain.exception.filter.InvalidFilterDslException;
 import com.decathlon.idp_core.domain.model.entity.EntityFilter;
 import com.decathlon.idp_core.domain.model.entity.FilterCriterion;
 import com.decathlon.idp_core.domain.model.enums.FilterKeyType;
@@ -25,504 +25,498 @@ import com.decathlon.idp_core.domain.model.enums.FilterOperator;
 @SuppressWarnings("java:S2187")
 class EntityFilterDslParserTest {
 
-    private final EntityFilterDslParser parser = new EntityFilterDslParser();
+  private final EntityFilterDslParser parser = new EntityFilterDslParser();
 
-    private void assertSingleCriterion(
-            EntityFilter result,
-            FilterKeyType expectedKeyType,
-            String expectedKeyName,
-            FilterOperator expectedOperator,
-            String expectedValue) {
-        assertThat(result.criteria()).hasSize(1);
-        assertCriterion(result.criteria().getFirst(), expectedKeyType, expectedKeyName, expectedOperator, expectedValue);
+  private void assertSingleCriterion(EntityFilter result, FilterKeyType expectedKeyType,
+      String expectedKeyName, FilterOperator expectedOperator, String expectedValue) {
+    assertThat(result.criteria()).hasSize(1);
+    assertCriterion(result.criteria().getFirst(), expectedKeyType, expectedKeyName,
+        expectedOperator, expectedValue);
+  }
+
+  private void assertCriterion(FilterCriterion criterion, FilterKeyType expectedKeyType,
+      String expectedKeyName, FilterOperator expectedOperator, String expectedValue) {
+    assertThat(criterion.keyType()).isEqualTo(expectedKeyType);
+    assertThat(criterion.key()).isEqualTo(expectedKeyName);
+    assertThat(criterion.operator()).isEqualTo(expectedOperator);
+    assertThat(criterion.value()).isEqualTo(expectedValue);
+  }
+
+  @Nested
+  @DisplayName("Attribute filters")
+  class AttributeFilterTests {
+
+    @Test
+    @DisplayName("identifier equals")
+    void parse_attributeIdentifierEquals() {
+      var result = parser.parse("identifier=web-api-1");
+      assertSingleCriterion(result, FilterKeyType.ATTRIBUTE, "identifier", FilterOperator.EQUALS,
+          "web-api-1");
     }
 
-    private void assertCriterion(
-            FilterCriterion criterion,
-            FilterKeyType expectedKeyType,
-            String expectedKeyName,
-            FilterOperator expectedOperator,
-            String expectedValue) {
-        assertThat(criterion.keyType()).isEqualTo(expectedKeyType);
-        assertThat(criterion.key()).isEqualTo(expectedKeyName);
-        assertThat(criterion.operator()).isEqualTo(expectedOperator);
-        assertThat(criterion.value()).isEqualTo(expectedValue);
+    @Test
+    @DisplayName("name contains")
+    void parse_attributeNameContains() {
+      var result = parser.parse("name:API");
+      assertSingleCriterion(result, FilterKeyType.ATTRIBUTE, "name", FilterOperator.CONTAINS,
+          "API");
+    }
+  }
+
+  @Nested
+  @DisplayName("Property filters")
+  class PropertyFilterTests {
+
+    @Test
+    @DisplayName("property equals")
+    void parse_propertyEquals() {
+      var result = parser.parse("property.language=JAVA");
+      assertSingleCriterion(result, FilterKeyType.PROPERTY, "language", FilterOperator.EQUALS,
+          "JAVA");
     }
 
-    @Nested
-    @DisplayName("Attribute filters")
-    class AttributeFilterTests {
-
-        @Test
-        @DisplayName("identifier equals")
-        void parse_attributeIdentifierEquals() {
-            var result = parser.parse("identifier=web-api-1");
-            assertSingleCriterion(result, FilterKeyType.ATTRIBUTE, "identifier", FilterOperator.EQUALS, "web-api-1");
-        }
-
-        @Test
-        @DisplayName("name contains")
-        void parse_attributeNameContains() {
-            var result = parser.parse("name:API");
-            assertSingleCriterion(result, FilterKeyType.ATTRIBUTE, "name", FilterOperator.CONTAINS, "API");
-        }
+    @Test
+    @DisplayName("property contains")
+    void parse_propertyContains() {
+      var result = parser.parse("property.version:1.0");
+      assertSingleCriterion(result, FilterKeyType.PROPERTY, "version", FilterOperator.CONTAINS,
+          "1.0");
     }
 
-    @Nested
-    @DisplayName("Property filters")
-    class PropertyFilterTests {
-
-        @Test
-        @DisplayName("property equals")
-        void parse_propertyEquals() {
-            var result = parser.parse("property.language=JAVA");
-            assertSingleCriterion(result, FilterKeyType.PROPERTY, "language", FilterOperator.EQUALS, "JAVA");
-        }
-
-        @Test
-        @DisplayName("property contains")
-        void parse_propertyContains() {
-            var result = parser.parse("property.version:1.0");
-            assertSingleCriterion(result, FilterKeyType.PROPERTY, "version", FilterOperator.CONTAINS, "1.0");
-        }
-
-        @Test
-        @DisplayName("property less than")
-        void parse_propertyLessThan() {
-            var result = parser.parse("property.port<9000");
-            assertSingleCriterion(result, FilterKeyType.PROPERTY, "port", FilterOperator.LESS_THAN, "9000");
-        }
-
-        @Test
-        @DisplayName("property greater than")
-        void parse_propertyGreaterThan() {
-            var result = parser.parse("property.port>1000");
-            assertSingleCriterion(result, FilterKeyType.PROPERTY, "port", FilterOperator.GREATER_THAN, "1000");
-        }
+    @Test
+    @DisplayName("property less than")
+    void parse_propertyLessThan() {
+      var result = parser.parse("property.port<9000");
+      assertSingleCriterion(result, FilterKeyType.PROPERTY, "port", FilterOperator.LESS_THAN,
+          "9000");
     }
 
-    @Nested
-    @DisplayName("Relation name filters")
-    class RelationNameFilterTests {
+    @Test
+    @DisplayName("property greater than")
+    void parse_propertyGreaterThan() {
+      var result = parser.parse("property.port>1000");
+      assertSingleCriterion(result, FilterKeyType.PROPERTY, "port", FilterOperator.GREATER_THAN,
+          "1000");
+    }
+  }
 
-        @Test
-        @DisplayName("relation name equals")
-        void parse_relationNameEquals() {
-            var result = parser.parse("relation=api-link");
-            assertSingleCriterion(result, FilterKeyType.RELATION_NAME, "", FilterOperator.EQUALS, "api-link");
-        }
+  @Nested
+  @DisplayName("Relation name filters")
+  class RelationNameFilterTests {
 
-        @Test
-        @DisplayName("relation name contains")
-        void parse_relationNameContains() {
-            var result = parser.parse("relation:rover");
-            assertSingleCriterion(result, FilterKeyType.RELATION_NAME, "", FilterOperator.CONTAINS, "rover");
-        }
+    @Test
+    @DisplayName("relation name equals")
+    void parse_relationNameEquals() {
+      var result = parser.parse("relation=api-link");
+      assertSingleCriterion(result, FilterKeyType.RELATION_NAME, "", FilterOperator.EQUALS,
+          "api-link");
     }
 
-    @Nested
-    @DisplayName("Relation entity filters")
-    class RelationEntityFilterTests {
+    @Test
+    @DisplayName("relation name contains")
+    void parse_relationNameContains() {
+      var result = parser.parse("relation:rover");
+      assertSingleCriterion(result, FilterKeyType.RELATION_NAME, "", FilterOperator.CONTAINS,
+          "rover");
+    }
+  }
 
-        @Test
-        @DisplayName("relation entity equals")
-        void parse_relationEntityEquals() {
-            var result = parser.parse("relation.database=my-db");
-            assertSingleCriterion(result, FilterKeyType.RELATION_ENTITY, "database", FilterOperator.EQUALS, "my-db");
-        }
+  @Nested
+  @DisplayName("Relation entity filters")
+  class RelationEntityFilterTests {
 
-        @Test
-        @DisplayName("relation entity contains")
-        void parse_relationEntityContains() {
-            var result = parser.parse("relation.database:my");
-            assertSingleCriterion(result, FilterKeyType.RELATION_ENTITY, "database", FilterOperator.CONTAINS, "my");
-        }
+    @Test
+    @DisplayName("relation entity equals")
+    void parse_relationEntityEquals() {
+      var result = parser.parse("relation.database=my-db");
+      assertSingleCriterion(result, FilterKeyType.RELATION_ENTITY, "database",
+          FilterOperator.EQUALS, "my-db");
     }
 
-    @Nested
-    @DisplayName("Relation property filters")
-    class RelationPropertyFilterTests {
+    @Test
+    @DisplayName("relation entity contains")
+    void parse_relationEntityContains() {
+      var result = parser.parse("relation.database:my");
+      assertSingleCriterion(result, FilterKeyType.RELATION_ENTITY, "database",
+          FilterOperator.CONTAINS, "my");
+    }
+  }
 
-        @Test
-        @DisplayName("relation property equals")
-        void parse_relationPropertyEquals() {
-            var result = parser.parse("relation.api-link.identifier=microservice-1");
-            assertSingleCriterion(result, FilterKeyType.RELATION_PROPERTY, "api-link.identifier", FilterOperator.EQUALS, "microservice-1");
-        }
+  @Nested
+  @DisplayName("Relation property filters")
+  class RelationPropertyFilterTests {
 
-        @Test
-        @DisplayName("relation property contains")
-        void parse_relationPropertyContains() {
-            var result = parser.parse("relation.api-link.name:microservice");
-            assertSingleCriterion(result, FilterKeyType.RELATION_PROPERTY, "api-link.name", FilterOperator.CONTAINS, "microservice");
-        }
-
-        @Test
-        @DisplayName("throws InvalidFilterDslException for unsupported property in relation (custom-prop is not identifier or name)")
-        void parse_relationPropertyUnsupported_throwsException() {
-            assertThatThrownBy(() -> parser.parse("relation.my-link.custom-prop=value"))
-                    .isInstanceOf(InvalidFilterDslException.class)
-                    .hasMessageContaining("custom-prop")
-                    .hasMessageContaining("identifier")
-                    .hasMessageContaining("name");
-        }
+    @Test
+    @DisplayName("relation property equals")
+    void parse_relationPropertyEquals() {
+      var result = parser.parse("relation.api-link.identifier=microservice-1");
+      assertSingleCriterion(result, FilterKeyType.RELATION_PROPERTY, "api-link.identifier",
+          FilterOperator.EQUALS, "microservice-1");
     }
 
-    @Nested
-    @DisplayName("Relations as target filters")
-    class RelationsAsTargetFilterTests {
-
-        @Test
-        @DisplayName("relations_as_target name equals")
-        void parse_relationsAsTargetNameEquals() {
-            var result = parser.parse("relations_as_target=api-link");
-            assertSingleCriterion(result, FilterKeyType.RELATIONS_AS_TARGET_NAME, "", FilterOperator.EQUALS, "api-link");
-        }
-
-        @Test
-        @DisplayName("relations_as_target name contains")
-        void parse_relationsAsTargetNameContains() {
-            var result = parser.parse("relations_as_target:rover");
-            assertSingleCriterion(result, FilterKeyType.RELATIONS_AS_TARGET_NAME, "", FilterOperator.CONTAINS, "rover");
-        }
-
-        @Test
-        @DisplayName("relations_as_target property identifier equals")
-        void parse_relationsAsTargetPropertyIdentifierEquals() {
-            var result = parser.parse("relations_as_target.api-link.identifier=web-api-1");
-            assertSingleCriterion(result, FilterKeyType.RELATIONS_AS_TARGET_PROPERTY, "api-link.identifier", FilterOperator.EQUALS, "web-api-1");
-        }
-
-        @Test
-        @DisplayName("relations_as_target property name contains")
-        void parse_relationsAsTargetPropertyNameContains() {
-            var result = parser.parse("relations_as_target.api-link.name:microservice");
-            assertSingleCriterion(result, FilterKeyType.RELATIONS_AS_TARGET_PROPERTY, "api-link.name", FilterOperator.CONTAINS, "microservice");
-        }
-
-        @Test
-        @DisplayName("throws exception for unsupported property in relations_as_target")
-        void parse_relationsAsTargetInvalidProperty_throwsException() {
-            assertThatThrownBy(() -> parser.parse("relations_as_target.api-link.language=JAVA"))
-                    .isInstanceOf(InvalidFilterDslException.class)
-                    .hasMessageContaining("only 'identifier' and 'name' are supported");
-        }
-
-        @Test
-        @DisplayName("throws exception for relations_as_target without property")
-        void parse_relationsAsTargetWithoutProperty_throwsException() {
-            assertThatThrownBy(() -> parser.parse("relations_as_target.api-link=web-api-1"))
-                    .isInstanceOf(InvalidFilterDslException.class)
-                    .hasMessageContaining("relations_as_target requires the form");
-        }
+    @Test
+    @DisplayName("relation property contains")
+    void parse_relationPropertyContains() {
+      var result = parser.parse("relation.api-link.name:microservice");
+      assertSingleCriterion(result, FilterKeyType.RELATION_PROPERTY, "api-link.name",
+          FilterOperator.CONTAINS, "microservice");
     }
 
-    @Nested
-    @DisplayName("Combined AND criteria")
-    class CombinedCriteriaTests {
+    @Test
+    @DisplayName("throws InvalidFilterDslException for unsupported property in relation (custom-prop is not identifier or name)")
+    void parse_relationPropertyUnsupported_throwsException() {
+      assertThatThrownBy(() -> parser.parse("relation.my-link.custom-prop=value"))
+          .isInstanceOf(InvalidFilterDslException.class).hasMessageContaining("custom-prop")
+          .hasMessageContaining("identifier").hasMessageContaining("name");
+    }
+  }
 
-        @Test
-        @DisplayName("two criteria separated by semicolon")
-        void parse_twoCriteriaWithSemicolon() {
-            var result = parser.parse("name:API;property.language=JAVA");
-            assertThat(result.criteria()).hasSize(2);
-            assertCriterion(result.criteria().get(0), FilterKeyType.ATTRIBUTE, "name", FilterOperator.CONTAINS, "API");
-            assertCriterion(result.criteria().get(1), FilterKeyType.PROPERTY, "language", FilterOperator.EQUALS, "JAVA");
-        }
+  @Nested
+  @DisplayName("Relations as target filters")
+  class RelationsAsTargetFilterTests {
 
-        @Test
-        @DisplayName("four criteria of different key types")
-        void parse_fourCriteria() {
-            var result = parser.parse("name:API;property.language=JAVA;relation.database=my-db;relation.api-link.identifier=service-1");
-            assertThat(result.criteria()).hasSize(4);
-            assertCriterion(result.criteria().get(0), FilterKeyType.ATTRIBUTE, "name", FilterOperator.CONTAINS, "API");
-            assertCriterion(result.criteria().get(1), FilterKeyType.PROPERTY, "language", FilterOperator.EQUALS, "JAVA");
-            assertCriterion(result.criteria().get(2), FilterKeyType.RELATION_ENTITY, "database", FilterOperator.EQUALS, "my-db");
-            assertCriterion(result.criteria().get(3), FilterKeyType.RELATION_PROPERTY, "api-link.identifier", FilterOperator.EQUALS, "service-1");
-        }
-
-        @Test
-        @DisplayName("five criteria including relation property and reverse relation")
-        void parse_fiveCriteriaWithRelationProperty() {
-            var result = parser.parse("name:API;property.language=JAVA;relation.database=my-db;relation.api-link.identifier=service-1;relations_as_target.owned_by.name:platform");
-            assertThat(result.criteria()).hasSize(5);
-            assertCriterion(result.criteria().get(0), FilterKeyType.ATTRIBUTE, "name", FilterOperator.CONTAINS, "API");
-            assertCriterion(result.criteria().get(1), FilterKeyType.PROPERTY, "language", FilterOperator.EQUALS, "JAVA");
-            assertCriterion(result.criteria().get(2), FilterKeyType.RELATION_ENTITY, "database", FilterOperator.EQUALS, "my-db");
-            assertCriterion(result.criteria().get(3), FilterKeyType.RELATION_PROPERTY, "api-link.identifier", FilterOperator.EQUALS, "service-1");
-            assertCriterion(result.criteria().get(4), FilterKeyType.RELATIONS_AS_TARGET_PROPERTY, "owned_by.name", FilterOperator.CONTAINS, "platform");
-        }
+    @Test
+    @DisplayName("relations_as_target name equals")
+    void parse_relationsAsTargetNameEquals() {
+      var result = parser.parse("relations_as_target=api-link");
+      assertSingleCriterion(result, FilterKeyType.RELATIONS_AS_TARGET_NAME, "",
+          FilterOperator.EQUALS, "api-link");
     }
 
-    @Nested
-    @DisplayName("Invalid query syntax")
-    class InvalidQueryTests {
-
-        @ParameterizedTest(name = "missing operator in: ''{0}''")
-        @ValueSource(strings = {"noOperatorHere", "property.lang", "relation.db"})
-        @DisplayName("throws InvalidFilterDslException when operator is missing")
-        void parse_missingOperator_throwsException(String query) {
-            assertThatThrownBy(() -> parser.parse(query))
-                    .isInstanceOf(InvalidFilterDslException.class)
-                    .hasMessage(ValidationMessages.FILTER_INVALID_FORMAT);
-        }
-
-        @Test
-        @DisplayName("throws InvalidFilterDslException for unknown attribute")
-        void parse_unknownAttribute_throwsException() {
-            assertThatThrownBy(() -> parser.parse("unknownField=value"))
-                    .isInstanceOf(InvalidFilterDslException.class)
-                    .hasMessageContaining("Unknown attribute");
-        }
-
-        @Test
-        @DisplayName("throws InvalidFilterDslException for blank value")
-        void parse_blankValue_throwsException() {
-            assertThatThrownBy(() -> parser.parse("name="))
-                    .isInstanceOf(InvalidFilterDslException.class)
-                    .hasMessageContaining("value must not be blank");
-        }
-
-        @Test
-        @DisplayName("throws InvalidFilterDslException for blank key")
-        void parse_blankKey_throwsException() {
-            assertThatThrownBy(() -> parser.parse("=value"))
-                    .isInstanceOf(InvalidFilterDslException.class)
-                    .hasMessageContaining("key must not be blank");
-        }
-
-        @Test
-        @DisplayName("throws InvalidFilterDslException for blank property name after prefix")
-        void parse_blankPropertyName_throwsException() {
-            assertThatThrownBy(() -> parser.parse("property.=JAVA"))
-                    .isInstanceOf(InvalidFilterDslException.class)
-                    .hasMessageContaining("key name must not be blank");
-        }
+    @Test
+    @DisplayName("relations_as_target name contains")
+    void parse_relationsAsTargetNameContains() {
+      var result = parser.parse("relations_as_target:rover");
+      assertSingleCriterion(result, FilterKeyType.RELATIONS_AS_TARGET_NAME, "",
+          FilterOperator.CONTAINS, "rover");
     }
 
-    @Nested
-    @DisplayName("Security constraints")
-    class SecurityConstraintTests {
-
-        @Test
-        @DisplayName("throws InvalidFilterDslException when criteria count exceeds limit")
-        void parse_tooManyCriteria_throwsException() {
-            var query = "property.a=1;property.b=2;property.c=3;property.d=4;property.e=5;"
-                    + "property.f=6;property.g=7;property.h=8;property.i=9;property.j=10;"
-                    + "property.k=11";
-            assertThatThrownBy(() -> parser.parse(query))
-                    .isInstanceOf(InvalidFilterDslException.class)
-                    .hasMessageContaining("maximum of %d".formatted(FilterConstraints.MAX_CRITERIA_COUNT));
-        }
-
-        @Test
-        @DisplayName("accepts exactly the maximum number of criteria")
-        void parse_exactlyMaxCriteria_succeeds() {
-            var query = "property.a=1;property.b=2;property.c=3;property.d=4;property.e=5;"
-                    + "property.f=6;property.g=7;property.h=8;property.i=9;property.j=10";
-            var result = parser.parse(query);
-            assertThat(result.criteria()).hasSize(FilterConstraints.MAX_CRITERIA_COUNT);
-        }
-
-        @Test
-        @DisplayName("throws InvalidFilterDslException when value exceeds max length")
-        void parse_valueTooLong_throwsException() {
-            var longValue = "a".repeat(FilterConstraints.MAX_KEY_VALUE_LENGTH + 1);
-            assertThatThrownBy(() -> parser.parse("name=" + longValue))
-                    .isInstanceOf(InvalidFilterDslException.class)
-                    .hasMessageContaining("must not exceed %d".formatted(FilterConstraints.MAX_KEY_VALUE_LENGTH));
-        }
-
-        @Test
-        @DisplayName("throws InvalidFilterDslException when key exceeds max length")
-        void parse_keyTooLong_throwsException() {
-            var longKey = "property." + "a".repeat(FilterConstraints.MAX_KEY_VALUE_LENGTH);
-            assertThatThrownBy(() -> parser.parse(longKey + "=value"))
-                    .isInstanceOf(InvalidFilterDslException.class)
-                    .hasMessageContaining("must not exceed %d".formatted(FilterConstraints.MAX_KEY_VALUE_LENGTH));
-        }
-
-        @ParameterizedTest(name = "valid key name: ''{0}''")
-        @ValueSource(strings = {
-                "property.language=JAVA",
-                "property.my-key=value",
-                "property.my_key=value",
-                "property.key123=value",
-                "property.lang@ge=JAVA",
-                "property.my key=JAVA",
-                "property.lang/age=JAVA",
-                "relation.database=my-db",
-                "relation.db$name=my-db",
-                "relation.my-cache.identifier=redis-1"
-        })
-        @DisplayName("accepts valid key name characters")
-        void parse_validKeyNameChars_succeeds(String query) {
-            var result = parser.parse(query);
-            assertThat(result.criteria()).hasSize(1);
-        }
+    @Test
+    @DisplayName("relations_as_target property identifier equals")
+    void parse_relationsAsTargetPropertyIdentifierEquals() {
+      var result = parser.parse("relations_as_target.api-link.identifier=web-api-1");
+      assertSingleCriterion(result, FilterKeyType.RELATIONS_AS_TARGET_PROPERTY,
+          "api-link.identifier", FilterOperator.EQUALS, "web-api-1");
     }
 
-    @Nested
-    @DisplayName("Duplicate criterion detection")
-    class DuplicateCriterionTests {
-
-        @ParameterizedTest(name = "duplicate criterion in: ''{0}''")
-        @ValueSource(strings = {
-                "name=A;name=B",
-                "property.language=JAVA;property.language=PYTHON",
-                "relation=api-link;relation=database"
-        })
-        @DisplayName("throws InvalidFilterDslException for duplicate criteria")
-        void parse_duplicateCriterion_throwsException(String query) {
-            assertThatThrownBy(() -> parser.parse(query))
-                    .isInstanceOf(InvalidFilterDslException.class)
-                    .hasMessage(ValidationMessages.FILTER_DUPLICATE_CRITERION);
-        }
-
-        @Test
-        @DisplayName("accepts distinct attribute criteria")
-        void parse_distinctAttributeCriteria_succeeds() {
-            var result = parser.parse("identifier=web-api-1;name=Web API 1");
-            assertThat(result.criteria()).hasSize(2);
-        }
-
-        @Test
-        @DisplayName("accepts distinct property criteria")
-        void parse_distinctPropertyCriteria_succeeds() {
-            var result = parser.parse("property.language=JAVA;property.environment=PROD");
-            assertThat(result.criteria()).hasSize(2);
-        }
+    @Test
+    @DisplayName("relations_as_target property name contains")
+    void parse_relationsAsTargetPropertyNameContains() {
+      var result = parser.parse("relations_as_target.api-link.name:microservice");
+      assertSingleCriterion(result, FilterKeyType.RELATIONS_AS_TARGET_PROPERTY, "api-link.name",
+          FilterOperator.CONTAINS, "microservice");
     }
 
-    @Nested
-    @DisplayName("Type mismatch validation")
-    class TypeMismatchTests {
-
-        @ParameterizedTest(name = "comparison operator on: ''{0}''")
-        @ValueSource(strings = {"relation<api-link", "relation>api-link"})
-        @DisplayName("throws InvalidFilterDslException for less/greater than on relation name")
-        void parse_comparisonOnRelationName_throwsException(String query) {
-            assertThatThrownBy(() -> parser.parse(query))
-                    .isInstanceOf(InvalidFilterDslException.class)
-                    .hasMessageContaining("is not applicable for field");
-        }
-
-        @ParameterizedTest(name = "comparison operator on: ''{0}''")
-        @ValueSource(strings = {"relation.database<my-db", "relation.database>my-db"})
-        @DisplayName("throws InvalidFilterDslException for less/greater than on relation entity")
-        void parse_comparisonOnRelationEntity_throwsException(String query) {
-            assertThatThrownBy(() -> parser.parse(query))
-                    .isInstanceOf(InvalidFilterDslException.class)
-                    .hasMessageContaining("is not applicable for field");
-        }
-
-        @ParameterizedTest(name = "comparison operator on: ''{0}''")
-        @ValueSource(strings = {"relation.database.template<postgresql", "relation.database.template>postgresql"})
-        @DisplayName("throws InvalidFilterDslException for unsupported property on relation (template is not a valid relation property)")
-        void parse_comparisonOnRelationTemplate_throwsException(String query) {
-            assertThatThrownBy(() -> parser.parse(query))
-                    .isInstanceOf(InvalidFilterDslException.class)
-                    .hasMessageContaining("template");
-        }
-
-        @Test
-        @DisplayName("throws InvalidFilterDslException for unsupported property on relation with equals operator")
-        void parse_equalsOnRelationTemplate_throwsException() {
-            assertThatThrownBy(() -> parser.parse("relation.database.template=postgresql"))
-                    .isInstanceOf(InvalidFilterDslException.class)
-                    .hasMessageContaining("template")
-                    .hasMessageContaining("identifier")
-                    .hasMessageContaining("name");
-        }
-
-        @ParameterizedTest(name = "comparison operator on: ''{0}''")
-        @ValueSource(strings = {"relation.api-link.identifier<microservice-1", "relation.api-link.identifier>microservice-1"})
-        @DisplayName("throws InvalidFilterDslException for less/greater than on relation property")
-        void parse_comparisonOnRelationProperty_throwsException(String query) {
-            assertThatThrownBy(() -> parser.parse(query))
-                    .isInstanceOf(InvalidFilterDslException.class)
-                    .hasMessageContaining("is not applicable for field");
-        }
-
-        @ParameterizedTest(name = "comparison operator on: ''{0}''")
-        @ValueSource(strings = {"relations_as_target.api-link.name<microservice", "relations_as_target.api-link.name>microservice"})
-        @DisplayName("throws InvalidFilterDslException for less/greater than on relations_as_target property")
-        void parse_comparisonOnRelationsAsTargetProperty_throwsException(String query) {
-            assertThatThrownBy(() -> parser.parse(query))
-                    .isInstanceOf(InvalidFilterDslException.class)
-                    .hasMessageContaining("is not applicable for field");
-        }
-
-        @ParameterizedTest(name = "comparison operator on: ''{0}''")
-        @ValueSource(strings = {"name<Z", "name>A", "identifier<z"})
-        @DisplayName("throws InvalidFilterDslException for less/greater than on attribute fields")
-        void parse_comparisonOnAttribute_throwsException(String query) {
-            assertThatThrownBy(() -> parser.parse(query))
-                    .isInstanceOf(InvalidFilterDslException.class)
-                    .hasMessageContaining("is not applicable for field");
-        }
-
-        @ParameterizedTest(name = "comparison operator on: ''{0}''")
-        @ValueSource(strings = {"property.port<9000", "property.port>1000"})
-        @DisplayName("accepts less/greater than on NUMBER properties (type check is deferred to EntityService)")
-        void parse_comparisonOnProperty_succeeds(String query) {
-            var result = parser.parse(query);
-            assertThat(result.criteria()).hasSize(1);
-        }
+    @Test
+    @DisplayName("throws exception for unsupported property in relations_as_target")
+    void parse_relationsAsTargetInvalidProperty_throwsException() {
+      assertThatThrownBy(() -> parser.parse("relations_as_target.api-link.language=JAVA"))
+          .isInstanceOf(InvalidFilterDslException.class)
+          .hasMessageContaining("only 'identifier' and 'name' are supported");
     }
 
-    @Nested
-    @DisplayName("Edge cases")
-    class EdgeCaseTests {
+    @Test
+    @DisplayName("throws exception for relations_as_target without property")
+    void parse_relationsAsTargetWithoutProperty_throwsException() {
+      assertThatThrownBy(() -> parser.parse("relations_as_target.api-link=web-api-1"))
+          .isInstanceOf(InvalidFilterDslException.class)
+          .hasMessageContaining("relations_as_target requires the form");
+    }
+  }
 
-        @Test
-        @DisplayName("consecutive semicolons produce empty filter")
-        void parse_consecutiveSemicolons_ignoresEmptyTokens() {
-            var result = parser.parse("name=API;;property.lang=JAVA");
-            assertThat(result.criteria()).hasSize(2);
-        }
+  @Nested
+  @DisplayName("Combined AND criteria")
+  class CombinedCriteriaTests {
 
-        @Test
-        @DisplayName("trailing semicolon is ignored")
-        void parse_trailingSemicolon_ignored() {
-            var result = parser.parse("name=API;");
-            assertThat(result.criteria()).hasSize(1);
-        }
-
-        @Test
-        @DisplayName("leading semicolon is ignored")
-        void parse_leadingSemicolon_ignored() {
-            var result = parser.parse(";name=API");
-            assertThat(result.criteria()).hasSize(1);
-        }
-
-        @Test
-        @DisplayName("values containing SQL LIKE wildcards are accepted")
-        void parse_valuesWithLikeWildcards_accepted() {
-            var result = parser.parse("name:100%_success");
-            assertSingleCriterion(result, FilterKeyType.ATTRIBUTE, "name", FilterOperator.CONTAINS, "100%_success");
-        }
+    @Test
+    @DisplayName("two criteria separated by semicolon")
+    void parse_twoCriteriaWithSemicolon() {
+      var result = parser.parse("name:API;property.language=JAVA");
+      assertThat(result.criteria()).hasSize(2);
+      assertCriterion(result.criteria().get(0), FilterKeyType.ATTRIBUTE, "name",
+          FilterOperator.CONTAINS, "API");
+      assertCriterion(result.criteria().get(1), FilterKeyType.PROPERTY, "language",
+          FilterOperator.EQUALS, "JAVA");
     }
 
-    @Nested
-    @DisplayName("Null or blank query")
-    class NullOrBlankQueryTests {
-
-        @ParameterizedTest(name = "returns empty filter for: {0}")
-        @MethodSource("provideNullOrBlankQueries")
-        @DisplayName("parse(null/empty/blank) returns empty filter with no criteria")
-        void parse_nullOrBlankQuery_returnsEmptyFilter(String query) {
-            var result = parser.parse(query);
-            assertThat(result.criteria()).isEmpty();
-        }
-
-        private static Stream<Arguments> provideNullOrBlankQueries() {
-            return Stream.of(
-                Arguments.of((String) null),
-                Arguments.of(""),
-                Arguments.of("   ")
-            );
-        }
+    @Test
+    @DisplayName("four criteria of different key types")
+    void parse_fourCriteria() {
+      var result = parser.parse(
+          "name:API;property.language=JAVA;relation.database=my-db;relation.api-link.identifier=service-1");
+      assertThat(result.criteria()).hasSize(4);
+      assertCriterion(result.criteria().get(0), FilterKeyType.ATTRIBUTE, "name",
+          FilterOperator.CONTAINS, "API");
+      assertCriterion(result.criteria().get(1), FilterKeyType.PROPERTY, "language",
+          FilterOperator.EQUALS, "JAVA");
+      assertCriterion(result.criteria().get(2), FilterKeyType.RELATION_ENTITY, "database",
+          FilterOperator.EQUALS, "my-db");
+      assertCriterion(result.criteria().get(3), FilterKeyType.RELATION_PROPERTY,
+          "api-link.identifier", FilterOperator.EQUALS, "service-1");
     }
+
+    @Test
+    @DisplayName("five criteria including relation property and reverse relation")
+    void parse_fiveCriteriaWithRelationProperty() {
+      var result = parser.parse(
+          "name:API;property.language=JAVA;relation.database=my-db;relation.api-link.identifier=service-1;relations_as_target.owned_by.name:platform");
+      assertThat(result.criteria()).hasSize(5);
+      assertCriterion(result.criteria().get(0), FilterKeyType.ATTRIBUTE, "name",
+          FilterOperator.CONTAINS, "API");
+      assertCriterion(result.criteria().get(1), FilterKeyType.PROPERTY, "language",
+          FilterOperator.EQUALS, "JAVA");
+      assertCriterion(result.criteria().get(2), FilterKeyType.RELATION_ENTITY, "database",
+          FilterOperator.EQUALS, "my-db");
+      assertCriterion(result.criteria().get(3), FilterKeyType.RELATION_PROPERTY,
+          "api-link.identifier", FilterOperator.EQUALS, "service-1");
+      assertCriterion(result.criteria().get(4), FilterKeyType.RELATIONS_AS_TARGET_PROPERTY,
+          "owned_by.name", FilterOperator.CONTAINS, "platform");
+    }
+  }
+
+  @Nested
+  @DisplayName("Invalid query syntax")
+  class InvalidQueryTests {
+
+    @ParameterizedTest(name = "missing operator in: ''{0}''")
+    @ValueSource(strings = {"noOperatorHere", "property.lang", "relation.db"})
+    @DisplayName("throws InvalidFilterDslException when operator is missing")
+    void parse_missingOperator_throwsException(String query) {
+      assertThatThrownBy(() -> parser.parse(query)).isInstanceOf(InvalidFilterDslException.class)
+          .hasMessage(ValidationMessages.FILTER_INVALID_FORMAT);
+    }
+
+    @Test
+    @DisplayName("throws InvalidFilterDslException for unknown attribute")
+    void parse_unknownAttribute_throwsException() {
+      assertThatThrownBy(() -> parser.parse("unknownField=value"))
+          .isInstanceOf(InvalidFilterDslException.class).hasMessageContaining("Unknown attribute");
+    }
+
+    @Test
+    @DisplayName("throws InvalidFilterDslException for blank value")
+    void parse_blankValue_throwsException() {
+      assertThatThrownBy(() -> parser.parse("name=")).isInstanceOf(InvalidFilterDslException.class)
+          .hasMessageContaining("value must not be blank");
+    }
+
+    @Test
+    @DisplayName("throws InvalidFilterDslException for blank key")
+    void parse_blankKey_throwsException() {
+      assertThatThrownBy(() -> parser.parse("=value")).isInstanceOf(InvalidFilterDslException.class)
+          .hasMessageContaining("key must not be blank");
+    }
+
+    @Test
+    @DisplayName("throws InvalidFilterDslException for blank property name after prefix")
+    void parse_blankPropertyName_throwsException() {
+      assertThatThrownBy(() -> parser.parse("property.=JAVA"))
+          .isInstanceOf(InvalidFilterDslException.class)
+          .hasMessageContaining("key name must not be blank");
+    }
+  }
+
+  @Nested
+  @DisplayName("Security constraints")
+  class SecurityConstraintTests {
+
+    @Test
+    @DisplayName("throws InvalidFilterDslException when criteria count exceeds limit")
+    void parse_tooManyCriteria_throwsException() {
+      var query = "property.a=1;property.b=2;property.c=3;property.d=4;property.e=5;"
+          + "property.f=6;property.g=7;property.h=8;property.i=9;property.j=10;" + "property.k=11";
+      assertThatThrownBy(() -> parser.parse(query)).isInstanceOf(InvalidFilterDslException.class)
+          .hasMessageContaining("maximum of %d".formatted(FilterConstraints.MAX_CRITERIA_COUNT));
+    }
+
+    @Test
+    @DisplayName("accepts exactly the maximum number of criteria")
+    void parse_exactlyMaxCriteria_succeeds() {
+      var query = "property.a=1;property.b=2;property.c=3;property.d=4;property.e=5;"
+          + "property.f=6;property.g=7;property.h=8;property.i=9;property.j=10";
+      var result = parser.parse(query);
+      assertThat(result.criteria()).hasSize(FilterConstraints.MAX_CRITERIA_COUNT);
+    }
+
+    @Test
+    @DisplayName("throws InvalidFilterDslException when value exceeds max length")
+    void parse_valueTooLong_throwsException() {
+      var longValue = "a".repeat(FilterConstraints.MAX_KEY_VALUE_LENGTH + 1);
+      assertThatThrownBy(() -> parser.parse("name=" + longValue))
+          .isInstanceOf(InvalidFilterDslException.class).hasMessageContaining(
+              "must not exceed %d".formatted(FilterConstraints.MAX_KEY_VALUE_LENGTH));
+    }
+
+    @Test
+    @DisplayName("throws InvalidFilterDslException when key exceeds max length")
+    void parse_keyTooLong_throwsException() {
+      var longKey = "property." + "a".repeat(FilterConstraints.MAX_KEY_VALUE_LENGTH);
+      assertThatThrownBy(() -> parser.parse(longKey + "=value"))
+          .isInstanceOf(InvalidFilterDslException.class).hasMessageContaining(
+              "must not exceed %d".formatted(FilterConstraints.MAX_KEY_VALUE_LENGTH));
+    }
+
+    @ParameterizedTest(name = "valid key name: ''{0}''")
+    @ValueSource(strings = {"property.language=JAVA", "property.my-key=value",
+        "property.my_key=value", "property.key123=value", "property.lang@ge=JAVA",
+        "property.my key=JAVA", "property.lang/age=JAVA", "relation.database=my-db",
+        "relation.db$name=my-db", "relation.my-cache.identifier=redis-1"})
+    @DisplayName("accepts valid key name characters")
+    void parse_validKeyNameChars_succeeds(String query) {
+      var result = parser.parse(query);
+      assertThat(result.criteria()).hasSize(1);
+    }
+  }
+
+  @Nested
+  @DisplayName("Duplicate criterion detection")
+  class DuplicateCriterionTests {
+
+    @ParameterizedTest(name = "duplicate criterion in: ''{0}''")
+    @ValueSource(strings = {"name=A;name=B", "property.language=JAVA;property.language=PYTHON",
+        "relation=api-link;relation=database"})
+    @DisplayName("throws InvalidFilterDslException for duplicate criteria")
+    void parse_duplicateCriterion_throwsException(String query) {
+      assertThatThrownBy(() -> parser.parse(query)).isInstanceOf(InvalidFilterDslException.class)
+          .hasMessage(ValidationMessages.FILTER_DUPLICATE_CRITERION);
+    }
+
+    @Test
+    @DisplayName("accepts distinct attribute criteria")
+    void parse_distinctAttributeCriteria_succeeds() {
+      var result = parser.parse("identifier=web-api-1;name=Web API 1");
+      assertThat(result.criteria()).hasSize(2);
+    }
+
+    @Test
+    @DisplayName("accepts distinct property criteria")
+    void parse_distinctPropertyCriteria_succeeds() {
+      var result = parser.parse("property.language=JAVA;property.environment=PROD");
+      assertThat(result.criteria()).hasSize(2);
+    }
+  }
+
+  @Nested
+  @DisplayName("Type mismatch validation")
+  class TypeMismatchTests {
+
+    @ParameterizedTest(name = "comparison operator on: ''{0}''")
+    @ValueSource(strings = {"relation<api-link", "relation>api-link"})
+    @DisplayName("throws InvalidFilterDslException for less/greater than on relation name")
+    void parse_comparisonOnRelationName_throwsException(String query) {
+      assertThatThrownBy(() -> parser.parse(query)).isInstanceOf(InvalidFilterDslException.class)
+          .hasMessageContaining("is not applicable for field");
+    }
+
+    @ParameterizedTest(name = "comparison operator on: ''{0}''")
+    @ValueSource(strings = {"relation.database<my-db", "relation.database>my-db"})
+    @DisplayName("throws InvalidFilterDslException for less/greater than on relation entity")
+    void parse_comparisonOnRelationEntity_throwsException(String query) {
+      assertThatThrownBy(() -> parser.parse(query)).isInstanceOf(InvalidFilterDslException.class)
+          .hasMessageContaining("is not applicable for field");
+    }
+
+    @ParameterizedTest(name = "comparison operator on: ''{0}''")
+    @ValueSource(strings = {"relation.database.template<postgresql",
+        "relation.database.template>postgresql"})
+    @DisplayName("throws InvalidFilterDslException for unsupported property on relation (template is not a valid relation property)")
+    void parse_comparisonOnRelationTemplate_throwsException(String query) {
+      assertThatThrownBy(() -> parser.parse(query)).isInstanceOf(InvalidFilterDslException.class)
+          .hasMessageContaining("template");
+    }
+
+    @Test
+    @DisplayName("throws InvalidFilterDslException for unsupported property on relation with equals operator")
+    void parse_equalsOnRelationTemplate_throwsException() {
+      assertThatThrownBy(() -> parser.parse("relation.database.template=postgresql"))
+          .isInstanceOf(InvalidFilterDslException.class).hasMessageContaining("template")
+          .hasMessageContaining("identifier").hasMessageContaining("name");
+    }
+
+    @ParameterizedTest(name = "comparison operator on: ''{0}''")
+    @ValueSource(strings = {"relation.api-link.identifier<microservice-1",
+        "relation.api-link.identifier>microservice-1"})
+    @DisplayName("throws InvalidFilterDslException for less/greater than on relation property")
+    void parse_comparisonOnRelationProperty_throwsException(String query) {
+      assertThatThrownBy(() -> parser.parse(query)).isInstanceOf(InvalidFilterDslException.class)
+          .hasMessageContaining("is not applicable for field");
+    }
+
+    @ParameterizedTest(name = "comparison operator on: ''{0}''")
+    @ValueSource(strings = {"relations_as_target.api-link.name<microservice",
+        "relations_as_target.api-link.name>microservice"})
+    @DisplayName("throws InvalidFilterDslException for less/greater than on relations_as_target property")
+    void parse_comparisonOnRelationsAsTargetProperty_throwsException(String query) {
+      assertThatThrownBy(() -> parser.parse(query)).isInstanceOf(InvalidFilterDslException.class)
+          .hasMessageContaining("is not applicable for field");
+    }
+
+    @ParameterizedTest(name = "comparison operator on: ''{0}''")
+    @ValueSource(strings = {"name<Z", "name>A", "identifier<z"})
+    @DisplayName("throws InvalidFilterDslException for less/greater than on attribute fields")
+    void parse_comparisonOnAttribute_throwsException(String query) {
+      assertThatThrownBy(() -> parser.parse(query)).isInstanceOf(InvalidFilterDslException.class)
+          .hasMessageContaining("is not applicable for field");
+    }
+
+    @ParameterizedTest(name = "comparison operator on: ''{0}''")
+    @ValueSource(strings = {"property.port<9000", "property.port>1000"})
+    @DisplayName("accepts less/greater than on NUMBER properties (type check is deferred to EntityService)")
+    void parse_comparisonOnProperty_succeeds(String query) {
+      var result = parser.parse(query);
+      assertThat(result.criteria()).hasSize(1);
+    }
+  }
+
+  @Nested
+  @DisplayName("Edge cases")
+  class EdgeCaseTests {
+
+    @Test
+    @DisplayName("consecutive semicolons produce empty filter")
+    void parse_consecutiveSemicolons_ignoresEmptyTokens() {
+      var result = parser.parse("name=API;;property.lang=JAVA");
+      assertThat(result.criteria()).hasSize(2);
+    }
+
+    @Test
+    @DisplayName("trailing semicolon is ignored")
+    void parse_trailingSemicolon_ignored() {
+      var result = parser.parse("name=API;");
+      assertThat(result.criteria()).hasSize(1);
+    }
+
+    @Test
+    @DisplayName("leading semicolon is ignored")
+    void parse_leadingSemicolon_ignored() {
+      var result = parser.parse(";name=API");
+      assertThat(result.criteria()).hasSize(1);
+    }
+
+    @Test
+    @DisplayName("values containing SQL LIKE wildcards are accepted")
+    void parse_valuesWithLikeWildcards_accepted() {
+      var result = parser.parse("name:100%_success");
+      assertSingleCriterion(result, FilterKeyType.ATTRIBUTE, "name", FilterOperator.CONTAINS,
+          "100%_success");
+    }
+  }
+
+  @Nested
+  @DisplayName("Null or blank query")
+  class NullOrBlankQueryTests {
+
+    @ParameterizedTest(name = "returns empty filter for: {0}")
+    @MethodSource("provideNullOrBlankQueries")
+    @DisplayName("parse(null/empty/blank) returns empty filter with no criteria")
+    void parse_nullOrBlankQuery_returnsEmptyFilter(String query) {
+      var result = parser.parse(query);
+      assertThat(result.criteria()).isEmpty();
+    }
+
+    private static Stream<Arguments> provideNullOrBlankQueries() {
+      return Stream.of(Arguments.of((String) null), Arguments.of(""), Arguments.of("   "));
+    }
+  }
 
 }

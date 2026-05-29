@@ -7,7 +7,7 @@ package com.decathlon.idp_core.domain.exception.filter;
 /// mapped to HTTP 400 Bad Request by the infrastructure layer.
 public class InvalidFilterDslException extends RuntimeException {
 
-    public InvalidFilterDslException(String message) {
-        super(message);
-    }
+  public InvalidFilterDslException(String message) {
+    super(message);
+  }
 }

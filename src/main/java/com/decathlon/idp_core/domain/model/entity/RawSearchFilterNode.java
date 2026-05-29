@@ -16,21 +16,24 @@ import java.util.List;
 /// - [Criterion] — a leaf predicate with raw field, operation, and value strings
 public sealed interface RawSearchFilterNode {
 
-    /// A logical group combining multiple child [RawSearchFilterNode]s.
-    ///
-    /// @param connector raw connector string (e.g. "AND", "OR"); may be null or blank until validated
-    /// @param nodes     child nodes; may be null until validated
-    record Group(String connector, List<RawSearchFilterNode> nodes) implements RawSearchFilterNode {
-        public Group {
-            nodes = nodes != null ? List.copyOf(nodes) : List.of();
-        }
+  /// A logical group combining multiple child [RawSearchFilterNode]s.
+  ///
+  /// @param connector raw connector string (e.g. "AND", "OR"); may be null or
+  /// blank until validated
+  /// @param nodes child nodes; may be null until validated
+  record Group(String connector, List<RawSearchFilterNode> nodes) implements RawSearchFilterNode {
+    public Group {
+      nodes = nodes != null ? List.copyOf(nodes) : List.of();
     }
+  }
 
-    /// A leaf predicate in the filter tree.
-    ///
-    /// @param field     raw field name (e.g. "template", "property.language"); may be null until validated
-    /// @param operation raw operation string (e.g. "EQ", "CONTAINS"); may be null until validated
-    /// @param value     raw value string; may be null until validated
-    record Criterion(String field, String operation, String value) implements RawSearchFilterNode {
-    }
+  /// A leaf predicate in the filter tree.
+  ///
+  /// @param field raw field name (e.g. "template", "property.language"); may be
+  /// null until validated
+  /// @param operation raw operation string (e.g. "EQ", "CONTAINS"); may be null
+  /// until validated
+  /// @param value raw value string; may be null until validated
+  record Criterion(String field, String operation, String value) implements RawSearchFilterNode {
+  }
 }

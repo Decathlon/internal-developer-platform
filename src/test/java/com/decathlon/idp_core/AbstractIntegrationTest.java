@@ -157,7 +157,6 @@ public abstract class AbstractIntegrationTest {
     return requestDefinition;
   }
 
-
   @SneakyThrows
   public static String getJsonTestFileContent(String path) {
     try (var inputStream = new ClassPathResource(path).getInputStream()) {

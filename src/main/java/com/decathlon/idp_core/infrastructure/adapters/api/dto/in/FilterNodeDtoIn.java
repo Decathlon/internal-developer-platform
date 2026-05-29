@@ -15,19 +15,13 @@ import io.swagger.v3.oas.annotations.media.Schema;
 @Schema(description = "A node in the search filter tree. Either a logical group (connector + criteria) or a leaf criterion (field + operation + value).")
 public record FilterNodeDtoIn(
 
-        @Schema(description = "Logical connector for a group node. One of: AND, OR. Required for group nodes.", example = "AND")
-        String connector,
+    @Schema(description = "Logical connector for a group node. One of: AND, OR. Required for group nodes.", example = "AND") String connector,
 
-        @Schema(description = "Child filter nodes for a group node. Required for group nodes (must be non-empty).")
-        List<FilterNodeDtoIn> criteria,
+    @Schema(description = "Child filter nodes for a group node. Required for group nodes (must be non-empty).") List<FilterNodeDtoIn> criteria,
 
-        @Schema(description = "Field to filter on for a criterion node. Required for leaf nodes. Examples: template, identifier, name, relation, property.language, relation.api-link, relation.api-link.identifier, relations_as_target.api-link.name", example = "template")
-        String field,
+    @Schema(description = "Field to filter on for a criterion node. Required for leaf nodes. Examples: template, identifier, name, relation, property.language, relation.api-link, relation.api-link.identifier, relations_as_target.api-link.name", example = "template") String field,
 
-        @Schema(description = "Filter operation for a criterion node. One of: EQ, NEQ, CONTAINS, NOT_CONTAINS, STARTS_WITH, ENDS_WITH, GT, GTE, LT, LTE. Required for leaf nodes.", example = "EQ")
-        String operation,
+    @Schema(description = "Filter operation for a criterion node. One of: EQ, NEQ, CONTAINS, NOT_CONTAINS, STARTS_WITH, ENDS_WITH, GT, GTE, LT, LTE. Required for leaf nodes.", example = "EQ") String operation,
 
-        @Schema(description = "Value to compare against for a criterion node. Required for leaf nodes.", example = "microservice")
-        String value
-) {
+    @Schema(description = "Value to compare against for a criterion node. Required for leaf nodes.", example = "microservice") String value) {
 }

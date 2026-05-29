@@ -29,21 +29,25 @@ import com.decathlon.idp_core.domain.model.enums.SearchOperator;
 /// - `relations_as_target.{name}.name` — filters by source entity name in a reverse relation
 public sealed interface SearchFilterNode {
 
-    /// A logical group combining multiple child [SearchFilterNode]s with a connector.
-    ///
-    /// @param connector how child nodes are logically combined
-    /// @param nodes     child nodes; an empty list matches all entities
-    record Group(LogicalConnector connector, List<SearchFilterNode> nodes) implements SearchFilterNode {
-        public Group {
-            nodes = nodes != null ? List.copyOf(nodes) : List.of();
-        }
+  /// A logical group combining multiple child [SearchFilterNode]s with a
+  /// connector.
+  ///
+  /// @param connector how child nodes are logically combined
+  /// @param nodes child nodes; an empty list matches all entities
+  record Group(LogicalConnector connector,
+      List<SearchFilterNode> nodes) implements SearchFilterNode {
+    public Group {
+      nodes = nodes != null ? List.copyOf(nodes) : List.of();
     }
+  }
 
-    /// A leaf predicate in the search filter tree.
-    ///
-    /// @param field     the entity field to filter on (see [SearchFilterNode] for supported fields)
-    /// @param operation the comparison operator to apply
-    /// @param value     the value to compare against
-    record Criterion(String field, SearchOperator operation, String value) implements SearchFilterNode {
-    }
+  /// A leaf predicate in the search filter tree.
+  ///
+  /// @param field the entity field to filter on (see [SearchFilterNode] for
+  /// supported fields)
+  /// @param operation the comparison operator to apply
+  /// @param value the value to compare against
+  record Criterion(String field, SearchOperator operation,
+      String value) implements SearchFilterNode {
+  }
 }

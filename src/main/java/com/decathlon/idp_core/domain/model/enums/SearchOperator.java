@@ -14,14 +14,5 @@ package com.decathlon.idp_core.domain.model.enums;
 /// - [LT] requires the field to be strictly less than the value
 /// - [LTE] requires the field to be less than or equal to the value
 public enum SearchOperator {
-    EQ,
-    NEQ,
-    CONTAINS,
-    NOT_CONTAINS,
-    STARTS_WITH,
-    ENDS_WITH,
-    GT,
-    GTE,
-    LT,
-    LTE
+  EQ, NEQ, CONTAINS, NOT_CONTAINS, STARTS_WITH, ENDS_WITH, GT, GTE, LT, LTE
 }

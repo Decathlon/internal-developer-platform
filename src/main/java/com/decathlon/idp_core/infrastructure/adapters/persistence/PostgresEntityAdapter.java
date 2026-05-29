@@ -84,17 +84,19 @@ public class PostgresEntityAdapter implements EntityRepositoryPort {
         propertyNames);
   }
 
-    @Override
-    public void deleteRelationsByTemplateIdentifierAndRelationName(String templateIdentifier, Collection<String> relationNames) {
-        jpaEntityRepository.deleteRelationsByTemplateIdentifierAndRelationName(templateIdentifier, relationNames);
-    }
+  @Override
+  public void deleteRelationsByTemplateIdentifierAndRelationName(String templateIdentifier,
+      Collection<String> relationNames) {
+    jpaEntityRepository.deleteRelationsByTemplateIdentifierAndRelationName(templateIdentifier,
+        relationNames);
+  }
 
-    @Override
-    public Page<Entity> search(SearchFilterNode filter, String query, Pageable pageable) {
-        Specification<EntityJpaEntity> spec = EntitySearchSpecification.of(filter);
-        if (query != null && !query.isBlank()) {
-            spec = spec.and(EntitySearchSpecification.globalTextSearch(query));
-        }
-        return jpaEntityRepository.findAll(spec, pageable).map(mapper::toDomain);
+  @Override
+  public Page<Entity> search(SearchFilterNode filter, String query, Pageable pageable) {
+    Specification<EntityJpaEntity> spec = EntitySearchSpecification.of(filter);
+    if (query != null && !query.isBlank()) {
+      spec = spec.and(EntitySearchSpecification.globalTextSearch(query));
     }
+    return jpaEntityRepository.findAll(spec, pageable).map(mapper::toDomain);
+  }
 }

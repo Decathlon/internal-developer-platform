@@ -9,10 +9,10 @@ import static com.decathlon.idp_core.infrastructure.adapters.api.configuration.S
 import static com.decathlon.idp_core.infrastructure.adapters.api.configuration.SwaggerDescription.ENDPOINT_GET_ENTITY_BY_IDENTIFIER_SUMMARY;
 import static com.decathlon.idp_core.infrastructure.adapters.api.configuration.SwaggerDescription.ENDPOINT_POST_ENTITY_DESCRIPTION;
 import static com.decathlon.idp_core.infrastructure.adapters.api.configuration.SwaggerDescription.ENDPOINT_POST_ENTITY_SUMMARY;
-import static com.decathlon.idp_core.infrastructure.adapters.api.configuration.SwaggerDescription.ENDPOINT_PUT_ENTITY_DESCRIPTION;
-import static com.decathlon.idp_core.infrastructure.adapters.api.configuration.SwaggerDescription.ENDPOINT_PUT_ENTITY_SUMMARY;
 import static com.decathlon.idp_core.infrastructure.adapters.api.configuration.SwaggerDescription.ENDPOINT_POST_SEARCH_DESCRIPTION;
 import static com.decathlon.idp_core.infrastructure.adapters.api.configuration.SwaggerDescription.ENDPOINT_POST_SEARCH_SUMMARY;
+import static com.decathlon.idp_core.infrastructure.adapters.api.configuration.SwaggerDescription.ENDPOINT_PUT_ENTITY_DESCRIPTION;
+import static com.decathlon.idp_core.infrastructure.adapters.api.configuration.SwaggerDescription.ENDPOINT_PUT_ENTITY_SUMMARY;
 import static com.decathlon.idp_core.infrastructure.adapters.api.configuration.SwaggerDescription.FORBIDDEN_CODE;
 import static com.decathlon.idp_core.infrastructure.adapters.api.configuration.SwaggerDescription.INTERNAL_SERVER_ERROR_CODE;
 import static com.decathlon.idp_core.infrastructure.adapters.api.configuration.SwaggerDescription.NOT_FOUND_CODE;
@@ -33,17 +33,12 @@ import static com.decathlon.idp_core.infrastructure.adapters.api.configuration.S
 import static com.decathlon.idp_core.infrastructure.adapters.api.configuration.SwaggerDescription.RESPONSE_INVALID_QUERY;
 import static com.decathlon.idp_core.infrastructure.adapters.api.configuration.SwaggerDescription.RESPONSE_INVALID_SEARCH_QUERY;
 import static com.decathlon.idp_core.infrastructure.adapters.api.configuration.SwaggerDescription.RESPONSE_SEARCH_SUCCESS;
-import static org.springframework.http.HttpStatus.CREATED;
-import static org.springframework.http.HttpStatus.OK;
-
-import io.swagger.v3.oas.annotations.Parameter;
-import io.swagger.v3.oas.annotations.enums.ParameterIn;
 import static com.decathlon.idp_core.infrastructure.adapters.api.configuration.SwaggerDescription.RESPONSE_TEMPLATE_NOT_FOUND_IDENTIFIER;
 import static com.decathlon.idp_core.infrastructure.adapters.api.configuration.SwaggerDescription.RESPONSE_UNAUTHORIZED;
 import static com.decathlon.idp_core.infrastructure.adapters.api.configuration.SwaggerDescription.RESPONSE_UNEXPECTED_SERVER_ERROR;
 import static com.decathlon.idp_core.infrastructure.adapters.api.configuration.SwaggerDescription.UNAUTHORIZED_CODE;
-
-import lombok.RequiredArgsConstructor;
+import static org.springframework.http.HttpStatus.CREATED;
+import static org.springframework.http.HttpStatus.OK;
 
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
@@ -66,13 +61,13 @@ import com.decathlon.idp_core.domain.model.entity.Entity;
 import com.decathlon.idp_core.domain.model.entity.EntityFilter;
 import com.decathlon.idp_core.domain.model.entity.RawSearchFilterNode;
 import com.decathlon.idp_core.domain.model.entity.SearchFilterNode;
-import com.decathlon.idp_core.domain.service.filter.EntityFilterDslParser;
 import com.decathlon.idp_core.domain.service.entity.EntityService;
+import com.decathlon.idp_core.domain.service.filter.EntityFilterDslParser;
 import com.decathlon.idp_core.domain.service.search.SearchFilterParser;
 import com.decathlon.idp_core.infrastructure.adapters.api.configuration.SwaggerConfiguration.EntityPageResponse;
 import com.decathlon.idp_core.infrastructure.adapters.api.dto.in.EntityCreateDtoIn;
-import com.decathlon.idp_core.infrastructure.adapters.api.dto.in.EntityUpdateDtoIn;
 import com.decathlon.idp_core.infrastructure.adapters.api.dto.in.EntitySearchRequestDtoIn;
+import com.decathlon.idp_core.infrastructure.adapters.api.dto.in.EntityUpdateDtoIn;
 import com.decathlon.idp_core.infrastructure.adapters.api.dto.out.entity.EntityDtoOut;
 import com.decathlon.idp_core.infrastructure.adapters.api.handler.ApiExceptionHandler;
 import com.decathlon.idp_core.infrastructure.adapters.api.handler.ApiExceptionHandler.ErrorResponse;
@@ -81,10 +76,13 @@ import com.decathlon.idp_core.infrastructure.adapters.api.mapper.entity.EntityDt
 import com.decathlon.idp_core.infrastructure.adapters.api.mapper.entity.SearchFilterMapper;
 
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.enums.ParameterIn;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import lombok.RequiredArgsConstructor;
 
 /// REST API adapter providing entity management endpoints.
 ///
@@ -101,46 +99,49 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 @RequiredArgsConstructor
 public class EntityController {
 
-    private final EntityService entityService;
-    private final EntityDtoOutMapper entityDtoOutMapper;
-    private final EntityDtoInMapper entityDtoInMapper;
-    private final EntityFilterDslParser entityFilterDslParser;
-    private final SearchFilterMapper searchFilterMapper;
-    private final SearchFilterParser searchFilterParser;
+  private final EntityService entityService;
+  private final EntityDtoOutMapper entityDtoOutMapper;
+  private final EntityDtoInMapper entityDtoInMapper;
+  private final EntityFilterDslParser entityFilterDslParser;
+  private final SearchFilterMapper searchFilterMapper;
+  private final SearchFilterParser searchFilterParser;
 
-    /// Returns paginated entities filtered by template with HTTP pagination support.
-    ///
-    /// **API contract:** Provides paginated entity listings for template-specific views.
-    /// Supports standard REST pagination parameters and an optional `q` filter query.
-    /// Template validation is handled by the domain service layer.
-    ///
-    /// @param page               zero-based page index for pagination navigation
-    /// @param size               number of entities per page for response size control
-    /// @param templateIdentifier template filter for entity scope limitation
-    /// @param q optional filter query string (e.g. `name:API;property.language=JAVA`)
-    /// @return paginated entity DTOs matching the template and optional filter
-    @Operation(summary = ENDPOINT_GET_ENTITIES_SUMMARY, description = ENDPOINT_GET_ENTITIES_PAGINATED_DESCRIPTION)
-    @ApiResponse(responseCode = OK_CODE, description = RESPONSE_ENTITIES_PAGINATED_SUCCESS, content = @Content(schema = @Schema(implementation = EntityPageResponse.class)))
-    @ApiResponse(responseCode = BAD_REQUEST_CODE, description = RESPONSE_INVALID_PAGINATION, content = {
-            @Content(schema = @Schema(implementation = ApiExceptionHandler.ErrorResponse.class))})
-    @ApiResponse(responseCode = BAD_REQUEST_CODE, description = RESPONSE_INVALID_QUERY, content = {
-            @Content(schema = @Schema(implementation = ApiExceptionHandler.ErrorResponse.class))})
-    @Parameter(name = "page", description = PARAM_PAGE_DESCRIPTION, in = ParameterIn.QUERY, content = @Content(schema = @Schema(type = "integer", defaultValue = "0")))
-    @Parameter(name = "size", description = PARAM_SIZE_DESCRIPTION, in = ParameterIn.QUERY, content = @Content(schema = @Schema(type = "integer", defaultValue = "20")))
-    @Parameter(name = "sort", description = PARAM_SORT_DESCRIPTION, in = ParameterIn.QUERY, content = @Content(schema = @Schema(type = "string", defaultValue = "identifier,asc")))
-    @Parameter(name = "q", description = PARAM_QUERY_DESCRIPTION, in = ParameterIn.QUERY, content = @Content(schema = @Schema(type = "string")))
-    @ResponseStatus(OK)
-    @GetMapping("/{templateIdentifier}")
-    public Page<EntityDtoOut> getEntities(
-            @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "20") int size,
-            @PathVariable String templateIdentifier,
-            @RequestParam(required = false) String q) {
-        Pageable pageable = PageRequest.of(page, size);
-        EntityFilter filter = entityFilterDslParser.parse(q);
-        Page<Entity> entities = entityService.getEntitiesByTemplateIdentifier(pageable, templateIdentifier, filter);
-        return entityDtoOutMapper.fromEntitiesPageToDtoPage(entities, templateIdentifier);
-    }
+  /// Returns paginated entities filtered by template with HTTP pagination
+  /// support.
+  ///
+  /// **API contract:** Provides paginated entity listings for template-specific
+  /// views.
+  /// Supports standard REST pagination parameters and an optional `q` filter
+  /// query.
+  /// Template validation is handled by the domain service layer.
+  ///
+  /// @param page zero-based page index for pagination navigation
+  /// @param size number of entities per page for response size control
+  /// @param templateIdentifier template filter for entity scope limitation
+  /// @param q optional filter query string (e.g.
+  /// `name:API;property.language=JAVA`)
+  /// @return paginated entity DTOs matching the template and optional filter
+  @Operation(summary = ENDPOINT_GET_ENTITIES_SUMMARY, description = ENDPOINT_GET_ENTITIES_PAGINATED_DESCRIPTION)
+  @ApiResponse(responseCode = OK_CODE, description = RESPONSE_ENTITIES_PAGINATED_SUCCESS, content = @Content(schema = @Schema(implementation = EntityPageResponse.class)))
+  @ApiResponse(responseCode = BAD_REQUEST_CODE, description = RESPONSE_INVALID_PAGINATION, content = {
+      @Content(schema = @Schema(implementation = ApiExceptionHandler.ErrorResponse.class))})
+  @ApiResponse(responseCode = BAD_REQUEST_CODE, description = RESPONSE_INVALID_QUERY, content = {
+      @Content(schema = @Schema(implementation = ApiExceptionHandler.ErrorResponse.class))})
+  @Parameter(name = "page", description = PARAM_PAGE_DESCRIPTION, in = ParameterIn.QUERY, content = @Content(schema = @Schema(type = "integer", defaultValue = "0")))
+  @Parameter(name = "size", description = PARAM_SIZE_DESCRIPTION, in = ParameterIn.QUERY, content = @Content(schema = @Schema(type = "integer", defaultValue = "20")))
+  @Parameter(name = "sort", description = PARAM_SORT_DESCRIPTION, in = ParameterIn.QUERY, content = @Content(schema = @Schema(type = "string", defaultValue = "identifier,asc")))
+  @Parameter(name = "q", description = PARAM_QUERY_DESCRIPTION, in = ParameterIn.QUERY, content = @Content(schema = @Schema(type = "string")))
+  @ResponseStatus(OK)
+  @GetMapping("/{templateIdentifier}")
+  public Page<EntityDtoOut> getEntities(@RequestParam(defaultValue = "0") int page,
+      @RequestParam(defaultValue = "20") int size, @PathVariable String templateIdentifier,
+      @RequestParam(required = false) String q) {
+    Pageable pageable = PageRequest.of(page, size);
+    EntityFilter filter = entityFilterDslParser.parse(q);
+    Page<Entity> entities = entityService.getEntitiesByTemplateIdentifier(pageable,
+        templateIdentifier, filter);
+    return entityDtoOutMapper.fromEntitiesPageToDtoPage(entities, templateIdentifier);
+  }
 
   /// Retrieves a single entity by template and entity identifiers.
   ///
@@ -197,12 +198,13 @@ public class EntityController {
   public EntityDtoOut createEntity(@NotBlank @PathVariable String templateIdentifier,
       @Valid @RequestBody EntityCreateDtoIn entityCreateDtoIn) {
 
-        Entity entity = entityDtoInMapper.fromEntityDtoInToEntity(entityDtoIn, templateIdentifier);
-        Entity savedEntity = entityService.createEntity(entity);
-        return entityDtoOutMapper.fromEntity(savedEntity);
-    }
+    Entity entity = entityDtoInMapper.fromPostEntityDtoInToEntity(entityCreateDtoIn,
+        templateIdentifier);
+    Entity savedEntity = entityService.createEntity(entity);
+    return entityDtoOutMapper.fromEntity(savedEntity);
+  }
 
-    /// Updates an existing entity for the specified template.
+  /// Updates an existing entity for the specified template.
   ///
   /// **API contract:** Accepts entity update payload and returns updated entity.
   /// Validates
@@ -239,26 +241,29 @@ public class EntityController {
     return entityDtoOutMapper.fromEntity(updatedEntity);
   }
 
-    /// Searches for entities across all templates using a nested filter query.
-    ///
-    /// **API contract:** Accepts a JSON body with a nested filter tree, pagination, and
-    /// sorting parameters. Returns a paginated list of entities matching the filter.
-    /// No template scoping is applied by default; include a template criterion
-    /// in the filter to scope results to a specific template.
-    ///
-    /// @param searchRequest the search request body with filter, page, size, and sort
-    /// @return paginated entity DTOs matching the filter
-    @Operation(summary = ENDPOINT_POST_SEARCH_SUMMARY, description = ENDPOINT_POST_SEARCH_DESCRIPTION)
-    @ApiResponse(responseCode = OK_CODE, description = RESPONSE_SEARCH_SUCCESS, content = @Content(schema = @Schema(implementation = EntityPageResponse.class)))
-    @ApiResponse(responseCode = BAD_REQUEST_CODE, description = RESPONSE_INVALID_SEARCH_QUERY, content = {
-            @Content(schema = @Schema(implementation = ErrorResponse.class)) })
-    @PostMapping("/search")
-    @ResponseStatus(OK)
-    public Page<EntityDtoOut> searchEntities(@RequestBody EntitySearchRequestDtoIn searchRequest) {
-        RawSearchFilterNode rawFilter = searchFilterMapper.toRaw(searchRequest.filter());
-        SearchFilterNode filter = searchFilterParser.parse(rawFilter);
-        Page<Entity> entities = entityService.searchEntities(
-                filter, searchRequest.query(), searchRequest.page(), searchRequest.size(), searchRequest.sort());
-        return entityDtoOutMapper.fromEntitiesSearchPageToDtoPage(entities);
-    }
+  /// Searches for entities across all templates using a nested filter query.
+  ///
+  /// **API contract:** Accepts a JSON body with a nested filter tree, pagination,
+  /// and
+  /// sorting parameters. Returns a paginated list of entities matching the
+  /// filter.
+  /// No template scoping is applied by default; include a template criterion
+  /// in the filter to scope results to a specific template.
+  ///
+  /// @param searchRequest the search request body with filter, page, size, and
+  /// sort
+  /// @return paginated entity DTOs matching the filter
+  @Operation(summary = ENDPOINT_POST_SEARCH_SUMMARY, description = ENDPOINT_POST_SEARCH_DESCRIPTION)
+  @ApiResponse(responseCode = OK_CODE, description = RESPONSE_SEARCH_SUCCESS, content = @Content(schema = @Schema(implementation = EntityPageResponse.class)))
+  @ApiResponse(responseCode = BAD_REQUEST_CODE, description = RESPONSE_INVALID_SEARCH_QUERY, content = {
+      @Content(schema = @Schema(implementation = ErrorResponse.class))})
+  @PostMapping("/search")
+  @ResponseStatus(OK)
+  public Page<EntityDtoOut> searchEntities(@RequestBody EntitySearchRequestDtoIn searchRequest) {
+    RawSearchFilterNode rawFilter = searchFilterMapper.toRaw(searchRequest.filter());
+    SearchFilterNode filter = searchFilterParser.parse(rawFilter);
+    Page<Entity> entities = entityService.searchEntities(filter, searchRequest.query(),
+        searchRequest.page(), searchRequest.size(), searchRequest.sort());
+    return entityDtoOutMapper.fromEntitiesSearchPageToDtoPage(entities);
+  }
 }

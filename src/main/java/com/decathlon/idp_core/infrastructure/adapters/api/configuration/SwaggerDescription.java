@@ -147,22 +147,22 @@ public class SwaggerDescription {
   public static final String FIELD_RELATION_REQUIRED = "Whether this relation is required";
   public static final String FIELD_RELATION_TO_MANY = "Whether this relation can have multiple targets";
 
-    // --- Pagination and sorting parameter descriptions ---
-    public static final String PARAM_PAGE_DESCRIPTION = "Page number for pagination. Defaults to 0.";
-    public static final String PARAM_SIZE_DESCRIPTION = "Number of items per page. Defaults to 20.";
-    public static final String PARAM_SORT_DESCRIPTION = "Sorting criteria in the format: property(,asc|desc). Defaults to identifier,asc.";
-    public static final String PARAM_QUERY_DESCRIPTION = """
-            Optional filter query using a simple expression language. See more details in the API documentation. Example: `name:idp` for entities with names containing 'idp'.
-            """;
-    public static final String RESPONSE_INVALID_QUERY = "Invalid filter query syntax";
+  // --- Pagination and sorting parameter descriptions ---
+  public static final String PARAM_PAGE_DESCRIPTION = "Page number for pagination. Defaults to 0.";
+  public static final String PARAM_SIZE_DESCRIPTION = "Number of items per page. Defaults to 20.";
+  public static final String PARAM_SORT_DESCRIPTION = "Sorting criteria in the format: property(,asc|desc). Defaults to identifier,asc.";
+  public static final String PARAM_QUERY_DESCRIPTION = """
+      Optional filter query using a simple expression language. See more details in the API documentation. Example: `name:idp` for entities with names containing 'idp'.
+      """;
+  public static final String RESPONSE_INVALID_QUERY = "Invalid filter query syntax";
 
-    /// Search API endpoint constants
-    public static final String ENDPOINT_POST_SEARCH_SUMMARY = "Search entities";
-    public static final String ENDPOINT_POST_SEARCH_DESCRIPTION = """
-            Search for entities across all templates using nested filter queries. \
-            Supports complex logical compositions (AND / OR / IN) of filter criteria on \
-            template, identifier, name, properties, relations, and reverse relations.""";
-    public static final String RESPONSE_SEARCH_SUCCESS = "Entities retrieved successfully";
-    public static final String RESPONSE_INVALID_SEARCH_QUERY = "Invalid search filter";
+  /// Search API endpoint constants
+  public static final String ENDPOINT_POST_SEARCH_SUMMARY = "Search entities";
+  public static final String ENDPOINT_POST_SEARCH_DESCRIPTION = """
+      Search for entities across all templates using nested filter queries. \
+      Supports complex logical compositions (AND / OR / IN) of filter criteria on \
+      template, identifier, name, properties, relations, and reverse relations.""";
+  public static final String RESPONSE_SEARCH_SUCCESS = "Entities retrieved successfully";
+  public static final String RESPONSE_INVALID_SEARCH_QUERY = "Invalid search filter";
 
 }

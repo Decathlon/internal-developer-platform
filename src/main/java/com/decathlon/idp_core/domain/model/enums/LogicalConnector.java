@@ -6,6 +6,5 @@ package com.decathlon.idp_core.domain.model.enums;
 /// - [AND] — all child nodes must match
 /// - [OR] — at least one child node must match
 public enum LogicalConnector {
-    AND,
-    OR
+  AND, OR
 }

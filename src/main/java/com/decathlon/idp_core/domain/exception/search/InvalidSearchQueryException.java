@@ -7,7 +7,7 @@ package com.decathlon.idp_core.domain.exception.search;
 /// HTTP 400 Bad Request by the infrastructure layer.
 public class InvalidSearchQueryException extends RuntimeException {
 
-    public InvalidSearchQueryException(String message) {
-        super(message);
-    }
+  public InvalidSearchQueryException(String message) {
+    super(message);
+  }
 }

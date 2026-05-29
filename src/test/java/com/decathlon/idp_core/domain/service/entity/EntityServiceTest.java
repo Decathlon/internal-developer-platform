@@ -38,10 +38,10 @@ import com.decathlon.idp_core.domain.model.entity.SearchFilterNode;
 import com.decathlon.idp_core.domain.model.entity_template.EntityTemplate;
 import com.decathlon.idp_core.domain.model.enums.LogicalConnector;
 import com.decathlon.idp_core.domain.port.EntityRepositoryPort;
-import com.decathlon.idp_core.domain.service.filter.EntityFilterDslParser;
-import com.decathlon.idp_core.domain.service.search.SearchFilterValidationService;
 import com.decathlon.idp_core.domain.service.entity_template.EntityTemplateService;
 import com.decathlon.idp_core.domain.service.entity_template.EntityTemplateValidationService;
+import com.decathlon.idp_core.domain.service.filter.EntityFilterDslParser;
+import com.decathlon.idp_core.domain.service.search.SearchFilterValidationService;
 
 @ExtendWith(MockitoExtension.class)
 @DisplayName("EntityService Tests")
@@ -299,9 +299,8 @@ class EntityServiceTest {
   @DisplayName("Should reject page size exceeding maximum")
   void shouldRejectPageSizeExceedingMaximum() {
     var filter = emptyFilter();
-    assertThrows(InvalidSearchQueryException.class,
-        () -> entityService.searchEntities(filter, null, 0, SearchConstraints.MAX_PAGE_SIZE + 1,
-            null));
+    assertThrows(InvalidSearchQueryException.class, () -> entityService.searchEntities(filter, null,
+        0, SearchConstraints.MAX_PAGE_SIZE + 1, null));
   }
 
   @Test
