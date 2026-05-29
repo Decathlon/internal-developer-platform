@@ -13,11 +13,13 @@ import org.springframework.stereotype.Component;
 import com.decathlon.idp_core.domain.model.entity.Entity;
 import com.decathlon.idp_core.domain.model.entity.EntityFilter;
 import com.decathlon.idp_core.domain.model.entity.EntitySummary;
+import com.decathlon.idp_core.domain.model.entity.SearchFilterNode;
 import com.decathlon.idp_core.domain.port.EntityRepositoryPort;
 import com.decathlon.idp_core.infrastructure.adapters.persistence.mapper.EntityPersistenceMapper;
 import com.decathlon.idp_core.infrastructure.adapters.persistence.model.entity.EntityJpaEntity;
 import com.decathlon.idp_core.infrastructure.adapters.persistence.repository.JpaEntityRepository;
-import com.decathlon.idp_core.infrastructure.adapters.persistence.specification.EntitySpecification;
+import com.decathlon.idp_core.infrastructure.adapters.persistence.specification.EntityFilterSpecification;
+import com.decathlon.idp_core.infrastructure.adapters.persistence.specification.EntitySearchSpecification;
 
 import lombok.RequiredArgsConstructor;
 
@@ -61,7 +63,7 @@ public class PostgresEntityAdapter implements EntityRepositoryPort {
   @Override
   public Page<Entity> findByTemplateIdentifierWithFilter(String templateIdentifier,
       EntityFilter filter, Pageable pageable) {
-    Specification<EntityJpaEntity> spec = EntitySpecification.of(templateIdentifier, filter);
+    Specification<EntityJpaEntity> spec = EntityFilterSpecification.of(templateIdentifier, filter);
     return jpaEntityRepository.findAll(spec, pageable).map(mapper::toDomain);
   }
 
@@ -87,5 +89,14 @@ public class PostgresEntityAdapter implements EntityRepositoryPort {
       Collection<String> relationNames) {
     jpaEntityRepository.deleteRelationsByTemplateIdentifierAndRelationName(templateIdentifier,
         relationNames);
+  }
+
+  @Override
+  public Page<Entity> search(SearchFilterNode filter, String query, Pageable pageable) {
+    Specification<EntityJpaEntity> spec = EntitySearchSpecification.of(filter);
+    if (query != null && !query.isBlank()) {
+      spec = spec.and(EntitySearchSpecification.globalTextSearch(query));
+    }
+    return jpaEntityRepository.findAll(spec, pageable).map(mapper::toDomain);
   }
 }

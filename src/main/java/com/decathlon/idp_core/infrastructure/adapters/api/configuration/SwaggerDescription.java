@@ -155,4 +155,14 @@ public class SwaggerDescription {
       Optional filter query using a simple expression language. See more details in the API documentation. Example: `name:idp` for entities with names containing 'idp'.
       """;
   public static final String RESPONSE_INVALID_QUERY = "Invalid filter query syntax";
+
+  /// Search API endpoint constants
+  public static final String ENDPOINT_POST_SEARCH_SUMMARY = "Search entities";
+  public static final String ENDPOINT_POST_SEARCH_DESCRIPTION = """
+      Search for entities across all templates using nested filter queries. \
+      Supports complex logical compositions (AND / OR / IN) of filter criteria on \
+      template, identifier, name, properties, relations, and reverse relations.""";
+  public static final String RESPONSE_SEARCH_SUCCESS = "Entities retrieved successfully";
+  public static final String RESPONSE_INVALID_SEARCH_QUERY = "Invalid search filter";
+
 }

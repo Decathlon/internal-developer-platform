@@ -68,6 +68,48 @@ public class EntityDtoOutMapper {
     return fromEntityUsingEntityTemplate(entity, entityTemplate);
   }
 
+  /// Maps paginated search results to API DTOs with optimized bulk operations.
+  ///
+  /// **Performance optimization:** Batches template resolution across all
+  /// templates
+  /// referenced in the page — unlike [#fromEntitiesPageToDtoPage] which is scoped
+  /// to a single template, this method handles multi-template result sets.
+  ///
+  /// @param entities paginated domain entities, possibly spanning several
+  /// templates
+  /// @return paginated API DTOs with complete relationship data
+  public Page<EntityDtoOut> fromEntitiesSearchPageToDtoPage(Page<Entity> entities) {
+    if (entities.isEmpty()) {
+      return entities.map(entity -> entityDtoOutMapper(entity, Map.of(), Map.of()));
+    }
+
+    Map<String, EntitySummaryDto> pageEntitiesSummaries = buildRelatedEntitiesSummaryMapByPage(
+        entities);
+    Map<String, List<RelationAsTargetSummary>> relationTargetOwnershipsMap = buildRelationsAsTargetSummaryMapByPage(
+        entities);
+
+    Map<String, EntityTemplate> templatesByIdentifier = entities.stream()
+        .map(Entity::templateIdentifier).filter(Objects::nonNull).distinct().collect(Collectors
+            .toMap(Function.identity(), entityTemplateService::getEntityTemplateByIdentifier));
+
+    return entities.map(entity -> {
+      EntityTemplate template = templatesByIdentifier.get(entity.templateIdentifier());
+      if (template == null) {
+        return entityDtoOutMapper(entity, pageEntitiesSummaries, relationTargetOwnershipsMap);
+      }
+      return fromEntityUsingEntityTemplateAndSummaryMap(entity, template, pageEntitiesSummaries,
+          relationTargetOwnershipsMap);
+    });
+  }
+
+  private EntityDtoOut entityDtoOutMapper(Entity entity, Map<String, EntitySummaryDto> summaries,
+      Map<String, List<RelationAsTargetSummary>> relationsAsTargetMap) {
+    return EntityDtoOut.builder().templateIdentifier(entity.templateIdentifier())
+        .name(entity.name()).identifier(entity.identifier()).properties(Collections.emptyMap())
+        .relations(mapRelationsDto(entity, summaries))
+        .relationsAsTarget(mapRelationsAsTargetDto(entity, relationsAsTargetMap)).build();
+  }
+
   /// Maps paginated domain entities to API DTOs with optimized bulk operations.
   ///
   /// **Performance optimization:** Batches template resolution and relationship

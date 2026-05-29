@@ -18,7 +18,6 @@ import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.method.annotation.HandlerMethodValidationException;
 
-import com.decathlon.idp_core.domain.exception.InvalidQueryDslException;
 import com.decathlon.idp_core.domain.exception.entity.EntityAlreadyExistsException;
 import com.decathlon.idp_core.domain.exception.entity.EntityNotFoundException;
 import com.decathlon.idp_core.domain.exception.entity.EntityValidationException;
@@ -33,6 +32,8 @@ import com.decathlon.idp_core.domain.exception.entity_template.RelationCannotTar
 import com.decathlon.idp_core.domain.exception.entity_template.RelationNameAlreadyExistsException;
 import com.decathlon.idp_core.domain.exception.entity_template.RelationTargetTemplateChangeException;
 import com.decathlon.idp_core.domain.exception.entity_template.TargetTemplateNotFoundException;
+import com.decathlon.idp_core.domain.exception.filter.InvalidFilterDslException;
+import com.decathlon.idp_core.domain.exception.search.InvalidSearchQueryException;
 
 import lombok.AllArgsConstructor;
 import lombok.Getter;
@@ -73,14 +74,28 @@ public class ApiExceptionHandler {
     return ResponseEntity.status(NOT_FOUND).body(errorResponse);
   }
 
-  /// Handles domain exception for malformed filter query strings.
+  /// Handles domain exception for malformed filter query strings (`q=` DSL).
   ///
-  /// **HTTP mapping:** Maps domain [InvalidQueryDslException] to HTTP 400 Bad
+  /// **HTTP mapping:** Maps domain [InvalidFilterDslException] to HTTP 400 Bad
   /// Request
   /// so API consumers receive clear feedback about invalid `q` parameter syntax.
-  @ExceptionHandler(InvalidQueryDslException.class)
-  public ResponseEntity<ErrorResponse> handleInvalidQueryDslException(InvalidQueryDslException ex) {
+  @ExceptionHandler(InvalidFilterDslException.class)
+  public ResponseEntity<ErrorResponse> handleInvalidFilterDslException(
+      InvalidFilterDslException ex) {
     log.warn("Invalid filter query: {}", ex.getMessage());
+    return createErrorResponse(HttpStatus.BAD_REQUEST, ex.getMessage());
+  }
+
+  /// Handles domain exception for malformed search filter trees or free-text
+  /// query strings.
+  ///
+  /// **HTTP mapping:** Maps domain [InvalidSearchQueryException] to HTTP 400 Bad
+  /// Request
+  /// so API consumers receive clear feedback about invalid search request syntax.
+  @ExceptionHandler(InvalidSearchQueryException.class)
+  public ResponseEntity<ErrorResponse> handleInvalidSearchQueryException(
+      InvalidSearchQueryException ex) {
+    log.warn("Invalid search query: {}", ex.getMessage());
     return createErrorResponse(HttpStatus.BAD_REQUEST, ex.getMessage());
   }
 
