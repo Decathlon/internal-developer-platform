@@ -163,15 +163,14 @@ public interface JpaEntityRepository
 
   @Modifying(clearAutomatically = true, flushAutomatically = true)
   @Query("""
-      DELETE FROM PropertyJpaEntity p
-      WHERE p IN (
-        SELECT p2 FROM EntityJpaEntity e JOIN e.properties p2
+      DELETE FROM RelationJpaEntity r
+      WHERE r IN (
+        SELECT r2 FROM EntityJpaEntity e JOIN e.relations r2
         WHERE e.templateIdentifier = :templateIdentifier
-        AND p2.name IN :propertyNames
+        AND r2.name IN :relationNames
       )
       """)
-
-      void deleteRelationsByTemplateIdentifierAndRelationName(
+  void deleteRelationsByTemplateIdentifierAndRelationName(
       @Param("templateIdentifier") String templateIdentifier,
       @Param("relationNames") Collection<String> relationNames);
 }
