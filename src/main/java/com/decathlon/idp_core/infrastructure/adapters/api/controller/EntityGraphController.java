@@ -85,8 +85,8 @@ public class EntityGraphController {
     Set<String> propertyFilter = properties != null ? Set.copyOf(properties) : Set.of();
 
     EntityGraphNode graphNode = entityGraphService.getEntityGraph(templateIdentifier,
-        entityIdentifier, depth, includeData);
+        entityIdentifier, depth, includeData, relationFilter, propertyFilter);
 
-    return EntityGraphFlatDtoOutMapper.toFlatDto(graphNode, relationFilter, propertyFilter);
+    return EntityGraphFlatDtoOutMapper.toFlatDto(graphNode);
   }
 }

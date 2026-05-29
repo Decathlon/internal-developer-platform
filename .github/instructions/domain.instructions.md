@@ -195,8 +195,7 @@ domain/
 ├── exception/           # Domain-specific exceptions
 │   ├── entity/          # Entity-related exceptions
 │   ├── entity_template/ # Template-related exceptions
-│   ├── property/        # Property-related exceptions
-│   └── webhook/         # Webhook-related exceptions
+│   └── property/        # Property-related exceptions│
 ├── model/
 │   ├── entity/          # Core business records
 │   ├── entity_template/ # Template records

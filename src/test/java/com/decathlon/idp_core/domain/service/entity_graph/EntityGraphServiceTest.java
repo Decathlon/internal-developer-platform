@@ -12,6 +12,7 @@ import static org.mockito.Mockito.when;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 
 import org.junit.jupiter.api.DisplayName;
@@ -25,11 +26,13 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import com.decathlon.idp_core.domain.exception.entity.EntityNotFoundException;
 import com.decathlon.idp_core.domain.model.entity.Entity;
 import com.decathlon.idp_core.domain.model.entity.EntityCompositeKey;
+import com.decathlon.idp_core.domain.model.entity.Property;
 import com.decathlon.idp_core.domain.model.entity.Relation;
 import com.decathlon.idp_core.domain.model.entity_graph.EntityGraphNode;
 import com.decathlon.idp_core.domain.model.entity_graph.EntityGraphRelation;
 import com.decathlon.idp_core.domain.port.EntityGraphRepositoryPort;
 import com.decathlon.idp_core.domain.port.EntityRepositoryPort;
+import com.decathlon.idp_core.domain.service.entity_template.EntityTemplateValidationService;
 
 @ExtendWith(MockitoExtension.class)
 @DisplayName("EntityGraphService Tests")
@@ -40,6 +43,9 @@ class EntityGraphServiceTest {
 
   @Mock
   private EntityGraphRepositoryPort entityGraphRepositoryPort;
+
+  @Mock
+  private EntityTemplateValidationService entityTemplateValidationService;
 
   @InjectMocks
   private EntityGraphService entityGraphService;
@@ -86,8 +92,8 @@ class EntityGraphServiceTest {
       when(entityRepositoryPort.findByTemplateIdentifierAndIdentifier(TEMPLATE, "missing"))
           .thenReturn(Optional.empty());
 
-      assertThatThrownBy(() -> entityGraphService.getEntityGraph(TEMPLATE, "missing", 1, false))
-          .isInstanceOf(EntityNotFoundException.class);
+      assertThatThrownBy(() -> entityGraphService.getEntityGraph(TEMPLATE, "missing", 1, false,
+          Set.of(), Set.of())).isInstanceOf(EntityNotFoundException.class);
 
       verify(entityGraphRepositoryPort, never()).findEntityGraph(anyString(), anyString(), anyInt(),
           anyBoolean());
@@ -107,7 +113,8 @@ class EntityGraphServiceTest {
           .thenReturn(Optional.of(api));
       stubGraph(Map.of(key(TEMPLATE, "api"), api));
 
-      EntityGraphNode result = entityGraphService.getEntityGraph(TEMPLATE, "api", 1, false);
+      EntityGraphNode result = entityGraphService.getEntityGraph(TEMPLATE, "api", 1, false,
+          Set.of(), Set.of());
 
       assertThat(result.identifier()).isEqualTo("api");
       assertThat(result.name()).isEqualTo("API Service");
@@ -132,7 +139,8 @@ class EntityGraphServiceTest {
           .thenReturn(Optional.of(api));
       stubGraph(Map.of(key(TEMPLATE, "api"), api, key("database", "postgres"), postgres));
 
-      EntityGraphNode result = entityGraphService.getEntityGraph(TEMPLATE, "api", 1, false);
+      EntityGraphNode result = entityGraphService.getEntityGraph(TEMPLATE, "api", 1, false,
+          Set.of(), Set.of());
 
       assertThat(result.relations()).hasSize(1);
       assertThat(result.relations().get(0).name()).isEqualTo("uses-db");
@@ -150,7 +158,8 @@ class EntityGraphServiceTest {
           .thenReturn(Optional.of(api));
       stubGraph(Map.of(key(TEMPLATE, "api"), api));
 
-      EntityGraphNode result = entityGraphService.getEntityGraph(TEMPLATE, "api", 1, false);
+      EntityGraphNode result = entityGraphService.getEntityGraph(TEMPLATE, "api", 1, false,
+          Set.of(), Set.of());
 
       assertThat(result.relations()).hasSize(1);
       EntityGraphNode fallback = result.relations().get(0).targets().get(0);
@@ -174,7 +183,8 @@ class EntityGraphServiceTest {
           .thenReturn(Optional.of(api));
       stubGraph(Map.of(key(TEMPLATE, "api"), api, key(TEMPLATE, "consumer"), consumer));
 
-      EntityGraphNode result = entityGraphService.getEntityGraph(TEMPLATE, "api", 1, false);
+      EntityGraphNode result = entityGraphService.getEntityGraph(TEMPLATE, "api", 1, false,
+          Set.of(), Set.of());
 
       assertThat(result.relationsAsTarget()).hasSize(1);
       assertThat(result.relationsAsTarget().get(0).name()).isEqualTo("depends-on");
@@ -196,7 +206,7 @@ class EntityGraphServiceTest {
           .thenReturn(Optional.of(api));
       stubGraph(Map.of(key(TEMPLATE, "api"), api));
 
-      entityGraphService.getEntityGraph(TEMPLATE, "api", 0, false);
+      entityGraphService.getEntityGraph(TEMPLATE, "api", 0, false, Set.of(), Set.of());
 
       verify(entityGraphRepositoryPort).findEntityGraph(TEMPLATE, "api", 1, false);
     }
@@ -209,7 +219,7 @@ class EntityGraphServiceTest {
           .thenReturn(Optional.of(api));
       stubGraph(Map.of(key(TEMPLATE, "api"), api));
 
-      entityGraphService.getEntityGraph(TEMPLATE, "api", 99, false);
+      entityGraphService.getEntityGraph(TEMPLATE, "api", 99, false, Set.of(), Set.of());
 
       verify(entityGraphRepositoryPort).findEntityGraph(TEMPLATE, "api", 10, false);
     }
@@ -234,7 +244,8 @@ class EntityGraphServiceTest {
       stubGraph(Map.of(key(TEMPLATE, "api"), api, key("database", "postgres"), postgres,
           key("infra", "server-1"), server));
 
-      EntityGraphNode result = entityGraphService.getEntityGraph(TEMPLATE, "api", 1, false);
+      EntityGraphNode result = entityGraphService.getEntityGraph(TEMPLATE, "api", 1, false,
+          Set.of(), Set.of());
 
       EntityGraphNode postgresNode = result.relations().get(0).targets().get(0);
       assertThat(postgresNode.identifier()).isEqualTo("postgres");
@@ -262,7 +273,8 @@ class EntityGraphServiceTest {
       stubGraph(Map.of(key(TEMPLATE, "api"), api, key("database", "postgres"), postgres,
           key(TEMPLATE, "auth"), auth));
 
-      EntityGraphNode result = entityGraphService.getEntityGraph(TEMPLATE, "api", 1, false);
+      EntityGraphNode result = entityGraphService.getEntityGraph(TEMPLATE, "api", 1, false,
+          Set.of(), Set.of());
 
       assertThat(result.relations()).hasSize(2);
       assertThat(result.relations().stream().map(EntityGraphRelation::name))
@@ -272,37 +284,133 @@ class EntityGraphServiceTest {
 
   // ========================
   @Nested
-  @DisplayName("Full Graph Returned — Filtering Is a Mapper Concern")
-  class FullGraphReturned {
+  @DisplayName("Relation Filtering")
+  class RelationFiltering {
 
     @Test
-    @DisplayName("Should return all edges regardless of relation type (no filtering in service)")
-    void shouldReturnAllEdgesWithoutFiltering() {
-      // A --(depends-on)--> B --(owns)--> C
-      // The service must return both edges — the mapper will filter them.
+    @DisplayName("Should include only relations matching the relation filter")
+    void shouldFilterRelationsByName() {
+      // A --(depends-on)--> B, A --(owns)--> C; filter keeps only 'depends-on'
       Entity a = entityWithRelations(TEMPLATE, "a", "A",
-          List.of(relation("depends-on", TEMPLATE, "b")));
-      Entity b = entityWithRelations(TEMPLATE, "b", "B", List.of(relation("owns", TEMPLATE, "c")));
+          List.of(relation("depends-on", TEMPLATE, "b"), relation("owns", TEMPLATE, "c")));
+      Entity b = entity(TEMPLATE, "b", "B");
       Entity c = entity(TEMPLATE, "c", "C");
 
       when(entityRepositoryPort.findByTemplateIdentifierAndIdentifier(TEMPLATE, "a"))
           .thenReturn(Optional.of(a));
       stubGraph(Map.of(key(TEMPLATE, "a"), a, key(TEMPLATE, "b"), b, key(TEMPLATE, "c"), c));
 
-      EntityGraphNode result = entityGraphService.getEntityGraph(TEMPLATE, "a", 2, false);
+      EntityGraphNode result = entityGraphService.getEntityGraph(TEMPLATE, "a", 2, false,
+          Set.of("depends-on"), Set.of());
 
-      // Root A has one outbound "depends-on" edge → B
       assertThat(result.relations()).hasSize(1);
       assertThat(result.relations().get(0).name()).isEqualTo("depends-on");
+    }
 
-      // B (at depth 1) has one outbound "owns" edge → C
-      EntityGraphNode nodeB = result.relations().get(0).targets().get(0);
-      assertThat(nodeB.identifier()).isEqualTo("b");
-      assertThat(nodeB.relations()).hasSize(1);
-      assertThat(nodeB.relations().get(0).name()).isEqualTo("owns");
-      assertThat(nodeB.relations().get(0).targets().get(0).identifier()).isEqualTo("c");
+    @Test
+    @DisplayName("Should return all relations when relation filter is empty")
+    void shouldReturnAllRelationsWhenFilterIsEmpty() {
+      Entity a = entityWithRelations(TEMPLATE, "a", "A",
+          List.of(relation("depends-on", TEMPLATE, "b"), relation("owns", TEMPLATE, "c")));
+      Entity b = entity(TEMPLATE, "b", "B");
+      Entity c = entity(TEMPLATE, "c", "C");
 
-      verify(entityGraphRepositoryPort).findEntityGraph(TEMPLATE, "a", 2, false);
+      when(entityRepositoryPort.findByTemplateIdentifierAndIdentifier(TEMPLATE, "a"))
+          .thenReturn(Optional.of(a));
+      stubGraph(Map.of(key(TEMPLATE, "a"), a, key(TEMPLATE, "b"), b, key(TEMPLATE, "c"), c));
+
+      EntityGraphNode result = entityGraphService.getEntityGraph(TEMPLATE, "a", 2, false, Set.of(),
+          Set.of());
+
+      assertThat(result.relations()).hasSize(2);
+      assertThat(result.relations().stream().map(EntityGraphRelation::name))
+          .containsExactlyInAnyOrder("depends-on", "owns");
+    }
+
+    @Test
+    @DisplayName("Should filter inbound relations by name")
+    void shouldFilterInboundRelationsByName() {
+      Entity api = entity(TEMPLATE, "api", "API Service");
+      Entity consumer = entityWithRelations(TEMPLATE, "consumer", "Consumer",
+          List.of(relation("depends-on", TEMPLATE, "api")));
+      Entity unrelated = entityWithRelations(TEMPLATE, "unrelated", "Unrelated",
+          List.of(relation("owns", TEMPLATE, "api")));
+
+      when(entityRepositoryPort.findByTemplateIdentifierAndIdentifier(TEMPLATE, "api"))
+          .thenReturn(Optional.of(api));
+      stubGraph(Map.of(key(TEMPLATE, "api"), api, key(TEMPLATE, "consumer"), consumer,
+          key(TEMPLATE, "unrelated"), unrelated));
+
+      EntityGraphNode result = entityGraphService.getEntityGraph(TEMPLATE, "api", 1, false,
+          Set.of("depends-on"), Set.of());
+
+      assertThat(result.relationsAsTarget()).hasSize(1);
+      assertThat(result.relationsAsTarget().get(0).name()).isEqualTo("depends-on");
+    }
+  }
+
+  // ========================
+  @Nested
+  @DisplayName("Property Filtering")
+  class PropertyFiltering {
+
+    private Entity entityWithProperties(String templateIdentifier, String identifier, String name,
+        List<Property> properties) {
+      return new Entity(UUID.randomUUID(), templateIdentifier, name, identifier, properties,
+          List.of());
+    }
+
+    @Test
+    @DisplayName("Should include only properties matching the property filter")
+    void shouldFilterPropertiesByName() {
+      var propEnv = new Property(UUID.randomUUID(), "env", "prod");
+      var propOwner = new Property(UUID.randomUUID(), "owner", "team-a");
+      Entity api = entityWithProperties(TEMPLATE, "api", "API Service",
+          List.of(propEnv, propOwner));
+
+      when(entityRepositoryPort.findByTemplateIdentifierAndIdentifier(TEMPLATE, "api"))
+          .thenReturn(Optional.of(api));
+      stubGraph(Map.of(key(TEMPLATE, "api"), api));
+
+      EntityGraphNode result = entityGraphService.getEntityGraph(TEMPLATE, "api", 1, true, Set.of(),
+          Set.of("env"));
+
+      assertThat(result.properties()).hasSize(1);
+      assertThat(result.properties().get(0).name()).isEqualTo("env");
+    }
+
+    @Test
+    @DisplayName("Should return all properties when property filter is empty")
+    void shouldReturnAllPropertiesWhenFilterIsEmpty() {
+      var propEnv = new Property(UUID.randomUUID(), "env", "prod");
+      var propOwner = new Property(UUID.randomUUID(), "owner", "team-a");
+      Entity api = entityWithProperties(TEMPLATE, "api", "API Service",
+          List.of(propEnv, propOwner));
+
+      when(entityRepositoryPort.findByTemplateIdentifierAndIdentifier(TEMPLATE, "api"))
+          .thenReturn(Optional.of(api));
+      stubGraph(Map.of(key(TEMPLATE, "api"), api));
+
+      EntityGraphNode result = entityGraphService.getEntityGraph(TEMPLATE, "api", 1, true, Set.of(),
+          Set.of());
+
+      assertThat(result.properties()).hasSize(2);
+    }
+
+    @Test
+    @DisplayName("Should return empty properties when includeProperties is false regardless of filter")
+    void shouldReturnEmptyPropertiesWhenIncludePropertiesIsFalse() {
+      var propEnv = new Property(UUID.randomUUID(), "env", "prod");
+      Entity api = entityWithProperties(TEMPLATE, "api", "API Service", List.of(propEnv));
+
+      when(entityRepositoryPort.findByTemplateIdentifierAndIdentifier(TEMPLATE, "api"))
+          .thenReturn(Optional.of(api));
+      stubGraph(Map.of(key(TEMPLATE, "api"), api));
+
+      EntityGraphNode result = entityGraphService.getEntityGraph(TEMPLATE, "api", 1, false,
+          Set.of(), Set.of("env"));
+
+      assertThat(result.properties()).isEmpty();
     }
   }
 
@@ -327,7 +435,8 @@ class EntityGraphServiceTest {
 
       // Must complete instantly — any OOM or StackOverflow here means the guard is
       // missing.
-      EntityGraphNode result = entityGraphService.getEntityGraph(TEMPLATE, "a", 10, false);
+      EntityGraphNode result = entityGraphService.getEntityGraph(TEMPLATE, "a", 10, false, Set.of(),
+          Set.of());
 
       assertThat(result.identifier()).isEqualTo("a");
       assertThat(result.relations()).hasSize(1);
@@ -344,7 +453,8 @@ class EntityGraphServiceTest {
           .thenReturn(Optional.of(a));
       stubGraph(Map.of(key(TEMPLATE, "a"), a, key(TEMPLATE, "b"), b));
 
-      EntityGraphNode result = entityGraphService.getEntityGraph(TEMPLATE, "a", 5, false);
+      EntityGraphNode result = entityGraphService.getEntityGraph(TEMPLATE, "a", 5, false, Set.of(),
+          Set.of());
 
       // A → B is resolved
       assertThat(result.relations()).hasSize(1);

@@ -12,6 +12,7 @@ import java.util.stream.Collectors;
 
 import com.decathlon.idp_core.domain.model.entity_graph.EntityGraphNode;
 import com.decathlon.idp_core.domain.model.entity_graph.EntityGraphRelation;
+import com.decathlon.idp_core.domain.service.entity_graph.EntityGraphService;
 import com.decathlon.idp_core.infrastructure.adapters.api.dto.out.entity.EntityGraphEdgeDtoOut;
 import com.decathlon.idp_core.infrastructure.adapters.api.dto.out.entity.EntityGraphFlatDtoOut;
 import com.decathlon.idp_core.infrastructure.adapters.api.dto.out.entity.EntityGraphNodeFlatDtoOut;
@@ -30,6 +31,8 @@ import com.decathlon.idp_core.infrastructure.adapters.api.dto.out.entity.EntityG
 /// - A `SequencedSet` of visited node IDs prevents infinite loops in cyclic graphs.
 /// - A `Set` of edge signatures (`source|target|label`) deduplicates edges that would
 ///   otherwise be emitted twice when both sides of a relation are traversed.
+/// - Filtering (relation names, property names) is a domain concern handled upstream by
+///   [EntityGraphService]; this mapper only flattens the tree it receives.
 public final class EntityGraphFlatDtoOutMapper {
 
   private EntityGraphFlatDtoOutMapper() {
@@ -46,18 +49,12 @@ public final class EntityGraphFlatDtoOutMapper {
 
   /// Maps a domain graph node tree to a flat [EntityGraphFlatDtoOut].
   ///
+  /// The domain graph passed here is already filtered by the service layer;
+  /// this method only performs structural flattening.
+  ///
   /// @param root the root [EntityGraphNode] returned by the domain service
-  /// @param relationFilter when non-empty, only edges whose type is in this set
-  /// are emitted,
-  /// and nodes not referenced by any remaining edge are pruned;
-  /// an empty set means no filter — all edge types and nodes are emitted
-  /// @param propertyFilter when non-empty, only properties whose name is in this
-  /// set appear
-  /// in each node's `data` field;
-  /// an empty set means no filter — all properties are included
   /// @return flat DTO with deduplicated nodes and directed edges
-  public static EntityGraphFlatDtoOut toFlatDto(EntityGraphNode root, Set<String> relationFilter,
-      Set<String> propertyFilter) {
+  public static EntityGraphFlatDtoOut toFlatDto(EntityGraphNode root) {
     if (root == null) {
       return new EntityGraphFlatDtoOut(List.of(), List.of());
     }
@@ -68,32 +65,12 @@ public final class EntityGraphFlatDtoOutMapper {
         new HashSet<>(), // emittedEdgeSignatures — prevents duplicate edges
         new AtomicInteger(0)); // edgeCounter
 
-    traverse(root, state, relationFilter, propertyFilter);
+    traverse(root, state);
 
-    // When a relation filter is active, prune nodes that are not connected to any
-    // remaining edge. Without this step, nodes reachable via non-filtered edges
-    // would
-    // appear in the node list despite having no visible edges.
-    List<EntityGraphNodeFlatDtoOut> finalNodes;
-    if (relationFilter.isEmpty()) {
-      finalNodes = List.copyOf(state.nodes());
-    } else {
-      // Collect all node IDs referenced by the filtered edges only.
-      // The root receives no special treatment: if it has no matching edges
-      // it is pruned just like any other disconnected node.
-      Set<String> referencedNodeIds = new HashSet<>();
-      for (var edge : state.edges()) {
-        referencedNodeIds.add(edge.source());
-        referencedNodeIds.add(edge.target());
-      }
-      finalNodes = state.nodes().stream().filter(n -> referencedNodeIds.contains(n.id())).toList();
-    }
-
-    return new EntityGraphFlatDtoOut(finalNodes, List.copyOf(state.edges()));
+    return new EntityGraphFlatDtoOut(List.copyOf(state.nodes()), List.copyOf(state.edges()));
   }
 
-  private static void traverse(EntityGraphNode node, TraversalState state,
-      Set<String> relationFilter, Set<String> propertyFilter) {
+  private static void traverse(EntityGraphNode node, TraversalState state) {
 
     var nodeId = nodeId(node.templateIdentifier(), node.identifier());
 
@@ -103,20 +80,14 @@ public final class EntityGraphFlatDtoOutMapper {
     }
 
     state.nodes().add(new EntityGraphNodeFlatDtoOut(nodeId, node.name(), node.templateIdentifier(),
-        node.identifier(), toDataMap(node, propertyFilter)));
+        node.identifier(), toDataMap(node)));
 
-    // Traverse outbound relations: emit edge from currentNode → target only when
-    // the
-    // relation type matches the filter (or no filter is active). Nodes are always
-    // traversed so that deeper nodes remain reachable regardless of edge
-    // visibility.
+    // Traverse outbound relations: emit edge from currentNode → target.
     for (EntityGraphRelation relation : node.relations()) {
       for (EntityGraphNode target : relation.targets()) {
         var targetId = nodeId(target.templateIdentifier(), target.identifier());
-        if (relationFilter.isEmpty() || relationFilter.contains(relation.name())) {
-          addEdge(state, nodeId, targetId, relation.name());
-        }
-        traverse(target, state, relationFilter, propertyFilter);
+        addEdge(state, nodeId, targetId, relation.name());
+        traverse(target, state);
       }
     }
 
@@ -127,10 +98,8 @@ public final class EntityGraphFlatDtoOutMapper {
     for (EntityGraphRelation relation : node.relationsAsTarget()) {
       for (EntityGraphNode source : relation.targets()) {
         var sourceId = nodeId(source.templateIdentifier(), source.identifier());
-        if (relationFilter.isEmpty() || relationFilter.contains(relation.name())) {
-          addEdge(state, sourceId, nodeId, relation.name());
-        }
-        traverse(source, state, relationFilter, propertyFilter);
+        addEdge(state, sourceId, nodeId, relation.name());
+        traverse(source, state);
       }
     }
   }
@@ -159,23 +128,14 @@ public final class EntityGraphFlatDtoOutMapper {
 
   /// Converts a node's property list to a name→value map for the `data` field.
   ///
-  /// When [propertyFilter] is non-empty, only entries whose name is contained in
-  /// the
-  /// filter are included. Returns an empty map when there are no matching
-  /// properties;
-  /// the DTO's @JsonInclude(NON_EMPTY) annotation ensures an empty map is omitted
-  /// from
-  /// the JSON output.
+  /// The domain service has already applied any property filter; this method
+  /// simply converts whatever properties the node carries into the map format
+  /// expected by the DTO.
   ///
-  /// @param node the graph node whose properties are converted
-  /// @param propertyFilter when non-empty, restricts which properties appear in
-  /// the map;
-  /// an empty set means all properties are included
-  private static Map<String, Object> toDataMap(EntityGraphNode node, Set<String> propertyFilter) {
-    var stream = node.properties().stream();
-    if (!propertyFilter.isEmpty()) {
-      stream = stream.filter(p -> propertyFilter.contains(p.name()));
-    }
-    return stream.collect(Collectors.toMap(p -> p.name(), p -> p.value()));
+  /// Returns an empty map when there are no properties; the DTO's
+  /// @JsonInclude(NON_EMPTY) annotation ensures an empty map is omitted from the
+  /// JSON output.
+  private static Map<String, Object> toDataMap(EntityGraphNode node) {
+    return node.properties().stream().collect(Collectors.toMap(p -> p.name(), p -> p.value()));
   }
 }

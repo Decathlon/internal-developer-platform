@@ -40,8 +40,9 @@ import lombok.RequiredArgsConstructor;
 /// - A per-request `visitedNodeIds` set prevents exponential recursion: without it,
 ///   inbound relation scanning would re-expand already-visited nodes at every depth
 ///   level, producing O(2^depth) calls even for small graphs (OOM at depth ≥ 10).
-/// - The service always returns the full unfiltered graph tree. Relation name filtering
-///   is a presentation concern applied by the mapper layer.
+/// - Relation and property filtering are domain concerns applied during graph construction,
+///   so that callers (e.g. the REST controller) receive a graph that already respects
+///   the requested scope instead of carrying unnecessary data to the Infrastructure layer.
 @Service
 @RequiredArgsConstructor
 public class EntityGraphService {
@@ -54,16 +55,28 @@ public class EntityGraphService {
 
   /// Builds the relationship graph for an entity starting from its composite key.
   ///
+  /// Relation and property filtering are applied here in the domain layer so that
+  /// callers receive a correctly scoped graph without needing to know about
+  /// filtering
+  /// logic.
+  ///
   /// @param templateIdentifier the template identifier of the root entity
   /// @param entityIdentifier the business identifier of the root entity
   /// @param depth the maximum traversal depth (clamped to [1, MAX_DEPTH])
   /// @param includeProperties when true, each graph node carries the entity's
-  /// full property list
-  /// @return the root graph node with all resolved relations
+  /// full property list (subject to propertyFilter)
+  /// @param relationFilter when non-empty, only relations whose name is in this
+  /// set are included in the graph; an empty set means no filter — all relations
+  /// are included
+  /// @param propertyFilter when non-empty, each node's property list is
+  /// restricted to properties whose name is in this set; an empty set means no
+  /// filter — all properties are included
+  /// @return the root graph node with all resolved (and filtered) relations
   /// @throws EntityNotFoundException when no entity matches the given identifiers
   @Transactional(readOnly = true)
   public EntityGraphNode getEntityGraph(String templateIdentifier, String entityIdentifier,
-      int depth, boolean includeProperties) {
+      int depth, boolean includeProperties, Set<String> relationFilter,
+      Set<String> propertyFilter) {
     int effectiveDepth = Math.clamp(depth, 1, MAX_DEPTH);
 
     entityTemplateValidationService.validateTemplateExists(templateIdentifier);
@@ -83,7 +96,8 @@ public class EntityGraphService {
     // preventing O(2^depth) recursion from mutual outbound/inbound re-expansion.
     Set<String> visitedNodeIds = new HashSet<>();
 
-    return buildGraphNode(rootKey, entityMap, effectiveDepth, includeProperties, visitedNodeIds);
+    return buildGraphNode(rootKey, entityMap, effectiveDepth, includeProperties, relationFilter,
+        propertyFilter, visitedNodeIds);
   }
 
   /// Builds a graph node from a pre-loaded entity map (no database calls).
@@ -97,7 +111,7 @@ public class EntityGraphService {
   /// inbound scanning re-expanding the same nodes at every depth level.
   private EntityGraphNode buildGraphNode(EntityCompositeKey key,
       Map<EntityCompositeKey, Entity> entityMap, int remainingDepth, boolean includeProperties,
-      Set<String> visitedNodeIds) {
+      Set<String> relationFilter, Set<String> propertyFilter, Set<String> visitedNodeIds) {
     Entity entity = entityMap.get(key);
     if (entity == null) {
       return new EntityGraphNode(key.templateIdentifier(), key.identifier(), key.identifier(),
@@ -111,7 +125,7 @@ public class EntityGraphService {
     // nodes.
     var nodeId = entity.templateIdentifier() + ":" + entity.identifier();
     if (!visitedNodeIds.add(nodeId)) {
-      List<Property> stubProperties = includeProperties ? entity.properties() : List.of();
+      List<Property> stubProperties = resolveProperties(entity, includeProperties, propertyFilter);
       return new EntityGraphNode(entity.templateIdentifier(), entity.identifier(), entity.name(),
           stubProperties, List.of(), List.of());
     }
@@ -119,22 +133,26 @@ public class EntityGraphService {
     // Depth exhausted — return a leaf with no relations but still carry properties
     // so the deepest reachable entities expose their data when include_data=true.
     if (remainingDepth <= 0) {
-      List<Property> leafProperties = includeProperties ? entity.properties() : List.of();
+      List<Property> leafProperties = resolveProperties(entity, includeProperties, propertyFilter);
       return new EntityGraphNode(entity.templateIdentifier(), entity.identifier(), entity.name(),
           leafProperties, List.of(), List.of());
     }
 
     List<EntityGraphRelation> outboundRelations = entity.relations().stream()
-        .map(relation -> new EntityGraphRelation(relation.name(), relation.targetEntityIdentifiers()
-            .stream().map(targetId -> buildGraphNode(findKeyByIdentifier(targetId, entityMap),
-                entityMap, remainingDepth - 1, includeProperties, visitedNodeIds))
-            .toList()))
+        .filter(relation -> relationFilter.isEmpty() || relationFilter.contains(relation.name()))
+        .map(relation -> new EntityGraphRelation(relation.name(),
+            relation.targetEntityIdentifiers().stream()
+                .map(targetId -> buildGraphNode(findKeyByIdentifier(targetId, entityMap), entityMap,
+                    remainingDepth - 1, includeProperties, relationFilter, propertyFilter,
+                    visitedNodeIds))
+                .toList()))
         .toList();
 
     List<EntityGraphRelation> inboundRelations = buildRelationsAsTargetFromMap(entity.identifier(),
-        entityMap, remainingDepth - 1, includeProperties, visitedNodeIds);
+        entityMap, remainingDepth - 1, includeProperties, relationFilter, propertyFilter,
+        visitedNodeIds);
 
-    List<Property> properties = includeProperties ? entity.properties() : List.of();
+    List<Property> properties = resolveProperties(entity, includeProperties, propertyFilter);
     return new EntityGraphNode(entity.templateIdentifier(), entity.identifier(), entity.name(),
         properties, outboundRelations, inboundRelations);
   }
@@ -155,13 +173,14 @@ public class EntityGraphService {
   /// depths.
   private List<EntityGraphRelation> buildRelationsAsTargetFromMap(String targetIdentifier,
       Map<EntityCompositeKey, Entity> entityMap, int remainingDepth, boolean includeProperties,
-      Set<String> visitedNodeIds) {
+      Set<String> relationFilter, Set<String> propertyFilter, Set<String> visitedNodeIds) {
     Map<String, List<EntityCompositeKey>> sourcesByRelationName = new HashMap<>();
 
     for (Map.Entry<EntityCompositeKey, Entity> entry : entityMap.entrySet()) {
       Entity sourceEntity = entry.getValue();
       for (Relation relation : sourceEntity.relations()) {
-        if (relation.targetEntityIdentifiers().contains(targetIdentifier)) {
+        if (relation.targetEntityIdentifiers().contains(targetIdentifier)
+            && (relationFilter.isEmpty() || relationFilter.contains(relation.name()))) {
           sourcesByRelationName.computeIfAbsent(relation.name(), k -> new ArrayList<>())
               .add(entry.getKey());
         }
@@ -170,8 +189,23 @@ public class EntityGraphService {
 
     return sourcesByRelationName.entrySet().stream()
         .map(e -> new EntityGraphRelation(e.getKey(),
-            e.getValue().stream().map(sourceKey -> buildGraphNode(sourceKey, entityMap,
-                remainingDepth, includeProperties, visitedNodeIds)).toList()))
+            e.getValue().stream()
+                .map(sourceKey -> buildGraphNode(sourceKey, entityMap, remainingDepth,
+                    includeProperties, relationFilter, propertyFilter, visitedNodeIds))
+                .toList()))
         .toList();
+  }
+
+  /// Returns the entity's properties filtered by [propertyFilter] when active,
+  /// or an empty list when [includeProperties] is false.
+  private List<Property> resolveProperties(Entity entity, boolean includeProperties,
+      Set<String> propertyFilter) {
+    if (!includeProperties) {
+      return List.of();
+    }
+    if (propertyFilter.isEmpty()) {
+      return entity.properties();
+    }
+    return entity.properties().stream().filter(p -> propertyFilter.contains(p.name())).toList();
   }
 }
