@@ -89,16 +89,16 @@ public class PostgresEntityAdapter implements EntityRepositoryPort {
         relationNames);
   }
 
+  @Override
+  public List<Entity> findEntitiesRelated(String targetIdentifier) {
+    return jpaEntityRepository.findEntitiesRelated(targetIdentifier).stream().map(mapper::toDomain)
+        .toList();
+  }
 
-    @Override
-    public List<Entity> findEntitiesRelated(String targetIdentifier) {
-        return jpaEntityRepository.findEntitiesRelated(targetIdentifier).stream()
-                .map(mapper::toDomain)
-                .toList();
-    }
-
-    @Override
-    public void deleteByTemplateIdentifierAndIdentifier(final String templateIdentifier, final String entityIdentifier) {
-        jpaEntityRepository.deleteByTemplateIdentifierAndIdentifier(templateIdentifier, entityIdentifier);
-    }
+  @Override
+  public void deleteByTemplateIdentifierAndIdentifier(final String templateIdentifier,
+      final String entityIdentifier) {
+    jpaEntityRepository.deleteByTemplateIdentifierAndIdentifier(templateIdentifier,
+        entityIdentifier);
+  }
 }

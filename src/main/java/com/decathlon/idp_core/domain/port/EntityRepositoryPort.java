@@ -57,5 +57,4 @@ public interface EntityRepositoryPort {
 
   void deleteByTemplateIdentifierAndIdentifier(String templateIdentifier, String entityIdentifier);
 
-
 }
