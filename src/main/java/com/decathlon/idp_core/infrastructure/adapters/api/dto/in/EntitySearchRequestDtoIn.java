@@ -1,5 +1,7 @@
 package com.decathlon.idp_core.infrastructure.adapters.api.dto.in;
 
+import com.decathlon.idp_core.infrastructure.adapters.api.configuration.SwaggerDescription;
+
 import io.swagger.v3.oas.annotations.media.Schema;
 
 /// Request body for the `POST /api/v1/entities/search` endpoint.
@@ -29,23 +31,23 @@ import io.swagger.v3.oas.annotations.media.Schema;
 ///   "sort": "identifier:asc"
 /// }
 /// ```
-@Schema(description = "Request body for the POST /api/v1/entities/search endpoint")
+@Schema(description = SwaggerDescription.SCHEMA_ENTITY_SEARCH_REQUEST_IN)
 public record EntitySearchRequestDtoIn(
 
-    @Schema(description = "Free-text search string. When present, returns entities whose identifier, name, templateIdentifier, or any property value contains this string (case-insensitive). Can be combined with filter.", example = "checkout") String query,
+    @Schema(description = SwaggerDescription.FIELD_SEARCH_QUERY, example = "checkout") String query,
 
-    @Schema(description = "Root node of the search filter tree. May be omitted or null to return all entities.") FilterNodeDtoIn filter,
+    @Schema(description = SwaggerDescription.FIELD_SEARCH_FILTER) FilterNodeDtoIn filter,
 
-    @Schema(description = "Zero-based page index. Defaults to 0.", defaultValue = "0", example = "0") Integer page,
+    @Schema(description = SwaggerDescription.PARAM_PAGE_DESCRIPTION, defaultValue = "0", example = "0") Integer page,
 
-    @Schema(description = "Number of entities per page. Defaults to 20.", defaultValue = "20", example = "20") Integer size,
+    @Schema(description = SwaggerDescription.PARAM_SIZE_DESCRIPTION, defaultValue = "20", example = "20") Integer size,
 
-    @Schema(description = "Sort expression in the form field:asc|desc, e.g. identifier:asc.", example = "identifier:asc") String sort) {
+    @Schema(description = SwaggerDescription.PARAM_SORT_DESCRIPTION, example = "identifier:asc") String sort) {
   public EntitySearchRequestDtoIn {
-    if (size == null || size <= 0) {
+    if (size == null) {
       size = 20;
     }
-    if (page == null || page < 0) {
+    if (page == null) {
       page = 0;
     }
     if (query != null) {

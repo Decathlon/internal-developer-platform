@@ -5,10 +5,14 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.stream.Stream;
 
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
 
 import com.decathlon.idp_core.domain.constant.SearchConstraints;
 import com.decathlon.idp_core.domain.exception.search.InvalidSearchQueryException;
@@ -140,22 +144,14 @@ class SearchFilterParserTest {
       assertThat(group.connector()).isEqualTo(LogicalConnector.OR);
     }
 
-    @Test
-    @DisplayName("'IN' connector is rejected")
-    void inConnector_rejected() {
+    @ParameterizedTest
+    @MethodSource("invalidConnectors")
+    @DisplayName("invalid connectors are rejected")
+    void invalidConnector_rejected(String connector, String expectedMessage) {
       var child = new RawSearchFilterNode.Criterion("template", "EQ", "microservice");
-      var raw = new RawSearchFilterNode.Group("IN", List.of(child));
+      var raw = new RawSearchFilterNode.Group(connector, List.of(child));
       assertThatThrownBy(() -> parser.parse(raw)).isInstanceOf(InvalidSearchQueryException.class)
-          .hasMessageContaining("IN");
-    }
-
-    @Test
-    @DisplayName("throws for missing connector in group")
-    void missingConnector_throws() {
-      var child = new RawSearchFilterNode.Criterion("template", "EQ", "microservice");
-      var raw = new RawSearchFilterNode.Group(null, List.of(child));
-      assertThatThrownBy(() -> parser.parse(raw)).isInstanceOf(InvalidSearchQueryException.class)
-          .hasMessageContaining("connector");
+          .hasMessageContaining(expectedMessage);
     }
 
     @Test
@@ -166,13 +162,9 @@ class SearchFilterParserTest {
           .hasMessageContaining("criteria");
     }
 
-    @Test
-    @DisplayName("throws for invalid connector string")
-    void invalidConnector_throws() {
-      var child = new RawSearchFilterNode.Criterion("template", "EQ", "microservice");
-      var raw = new RawSearchFilterNode.Group("NAND", List.of(child));
-      assertThatThrownBy(() -> parser.parse(raw)).isInstanceOf(InvalidSearchQueryException.class)
-          .hasMessageContaining("NAND");
+    static Stream<Arguments> invalidConnectors() {
+      return Stream.of(Arguments.of("IN", "IN"), Arguments.of(null, "connector"),
+          Arguments.of("NAND", "NAND"));
     }
   }
 

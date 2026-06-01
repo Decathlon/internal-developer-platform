@@ -107,6 +107,8 @@ public class SwaggerDescription {
   public static final String SCHEMA_ENTITY_CREATE_IN = "Input DTO for creating an entity";
   public static final String SCHEMA_ENTITY_UPDATE_IN = "Input DTO for updating an entity";
   public static final String SCHEMA_ENTITY_RELATION_IN = "Input DTO for an entity relation instance";
+  public static final String SCHEMA_ENTITY_SEARCH_REQUEST_IN = "Request body for the POST /api/v1/entities/search endpoint";
+  public static final String SCHEMA_FILTER_NODE = "A node in the search filter tree. Either a logical group (connector + criteria) or a leaf criterion (field + operation + value).";
 
   // --- Field descriptions (shared) ---
   public static final String FIELD_TEMPLATE_ID = "Unique generated identifier of the entity template";
@@ -147,6 +149,15 @@ public class SwaggerDescription {
   public static final String FIELD_RELATION_REQUIRED = "Whether this relation is required";
   public static final String FIELD_RELATION_TO_MANY = "Whether this relation can have multiple targets";
 
+  public static final String FIELD_SEARCH_QUERY = "Free-text search string. When present, returns entities whose identifier, name, templateIdentifier, or any property value contains this string (case-insensitive). Can be combined with filter.";
+  public static final String FIELD_SEARCH_FILTER = "Root node of the search filter tree. May be omitted or null to return all entities.";
+
+  public static final String FIELD_FILTER_CONNECTOR = "Logical connector for a group node. One of: AND, OR. Required for group nodes.";
+  public static final String FIELD_FILTER_CRITERIA = "Child filter nodes for a group node. Required for group nodes (must be non-empty).";
+  public static final String FIELD_FILTER_FIELD = "Field to filter on for a criterion node. Required for leaf nodes. Examples: template, identifier, name, relation, property.language, relation.api-link, relation.api-link.identifier, relations_as_target.api-link.name";
+  public static final String FIELD_FILTER_OPERATION = "Filter operation for a criterion node. One of: EQ, NEQ, CONTAINS, NOT_CONTAINS, STARTS_WITH, ENDS_WITH, GT, GTE, LT, LTE. Required for leaf nodes.";
+  public static final String FIELD_FILTER_VALUE = "Value to compare against for a criterion node. Required for leaf nodes.";
+
   // --- Pagination and sorting parameter descriptions ---
   public static final String PARAM_PAGE_DESCRIPTION = "Page number for pagination. Defaults to 0.";
   public static final String PARAM_SIZE_DESCRIPTION = "Number of items per page. Defaults to 20.";
@@ -160,7 +171,7 @@ public class SwaggerDescription {
   public static final String ENDPOINT_POST_SEARCH_SUMMARY = "Search entities";
   public static final String ENDPOINT_POST_SEARCH_DESCRIPTION = """
       Search for entities across all templates using nested filter queries. \
-      Supports complex logical compositions (AND / OR / IN) of filter criteria on \
+      Supports complex logical compositions (AND / OR) of filter criteria on \
       template, identifier, name, properties, relations, and reverse relations.""";
   public static final String RESPONSE_SEARCH_SUCCESS = "Entities retrieved successfully";
   public static final String RESPONSE_INVALID_SEARCH_QUERY = "Invalid search filter";

@@ -42,6 +42,7 @@ public class SearchFilterValidationService {
       SearchOperator.GTE, SearchOperator.LT, SearchOperator.LTE);
   private static final Set<String> SIMPLE_FIELDS = Set.of(TEMPLATE_FIELD, "identifier", "name",
       "relation", "relations_as_target");
+  private static final Set<String> RELATION_PROPERTY_NAMES = Set.of("identifier", "name");
 
   private final EntityTemplateRepositoryPort entityTemplateRepository;
 
@@ -80,6 +81,7 @@ public class SearchFilterValidationService {
       return;
     }
     if (field.startsWith(RELATION_PREFIX) && field.length() > RELATION_PREFIX.length()) {
+      validateRelationField(field);
       return;
     }
     throw new InvalidSearchQueryException(ValidationMessages.SEARCH_INVALID_FIELD.formatted(field));
@@ -89,6 +91,32 @@ public class SearchFilterValidationService {
     String rest = field.substring(RELATIONS_AS_TARGET_PREFIX.length());
     int dot = rest.indexOf('.');
     if (dot <= 0 || dot == rest.length() - 1) {
+      throw new InvalidSearchQueryException(
+          ValidationMessages.SEARCH_INVALID_FIELD.formatted(field));
+    }
+    String property = rest.substring(dot + 1);
+    if (!RELATION_PROPERTY_NAMES.contains(property)) {
+      throw new InvalidSearchQueryException(
+          ValidationMessages.SEARCH_INVALID_FIELD.formatted(field));
+    }
+  }
+
+  private void validateRelationField(String field) {
+    String rest = field.substring(RELATION_PREFIX.length());
+    int dot = rest.indexOf('.');
+    if (dot < 0) {
+      if (rest.isBlank()) {
+        throw new InvalidSearchQueryException(
+            ValidationMessages.SEARCH_INVALID_FIELD.formatted(field));
+      }
+      return;
+    }
+    if (dot == 0 || dot == rest.length() - 1) {
+      throw new InvalidSearchQueryException(
+          ValidationMessages.SEARCH_INVALID_FIELD.formatted(field));
+    }
+    String property = rest.substring(dot + 1);
+    if (!RELATION_PROPERTY_NAMES.contains(property)) {
       throw new InvalidSearchQueryException(
           ValidationMessages.SEARCH_INVALID_FIELD.formatted(field));
     }

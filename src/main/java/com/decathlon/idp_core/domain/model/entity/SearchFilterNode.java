@@ -9,7 +9,7 @@ import com.decathlon.idp_core.domain.model.enums.SearchOperator;
 ///
 /// **Business semantics:** A filter tree is composed of two types of nodes:
 /// - [Group] — a logical group that combines child nodes with a [LogicalConnector]
-///   (AND / OR / IN). Children may themselves be groups or leaf criteria, allowing
+///   (AND / OR). Children may themselves be groups or leaf criteria, allowing
 ///   arbitrarily deep nesting.
 /// - [Criterion] — a leaf predicate: field <operator> value.
 ///

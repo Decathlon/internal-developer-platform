@@ -160,17 +160,15 @@ class SearchFilterValidationServiceTest {
     @Test
     @DisplayName("unknown field throws")
     void unknownField_throws() {
-      assertThatThrownBy(
-          () -> service.validate(criterion("badField", SearchOperator.EQ, "val"), null))
-              .isInstanceOf(InvalidSearchQueryException.class).hasMessageContaining("badField");
+      var crit = criterion("badField", SearchOperator.EQ, "val");
+      assertValidationThrows(crit, "badField");
     }
 
     @Test
     @DisplayName("'relations_as_target' without subfield throws")
     void relationsAsTarget_missingSubfield_throws() {
-      assertThatThrownBy(() -> service
-          .validate(criterion("relations_as_target.api-link", SearchOperator.EQ, "val"), null))
-              .isInstanceOf(InvalidSearchQueryException.class);
+      var crit = criterion("relations_as_target.api-link", SearchOperator.EQ, "val");
+      assertValidationThrows(crit);
     }
 
     @Test
@@ -211,34 +209,29 @@ class SearchFilterValidationServiceTest {
     @Test
     @DisplayName("GT on 'template' field throws — numeric ops only on property.{name}")
     void gt_onTemplateField_throws() {
-      assertThatThrownBy(
-          () -> service.validate(criterion("template", SearchOperator.GT, "5"), null))
-              .isInstanceOf(InvalidSearchQueryException.class).hasMessageContaining("GT");
+      var crit = criterion("template", SearchOperator.GT, "5");
+      assertValidationThrows(crit, "GT");
     }
 
     @Test
     @DisplayName("LT on 'identifier' field throws — numeric ops only on property.{name}")
     void lt_onIdentifierField_throws() {
-      assertThatThrownBy(
-          () -> service.validate(criterion("identifier", SearchOperator.LT, "5"), null))
-              .isInstanceOf(InvalidSearchQueryException.class).hasMessageContaining("LT");
+      var crit = criterion("identifier", SearchOperator.LT, "5");
+      assertValidationThrows(crit, "LT");
     }
 
     @Test
     @DisplayName("GT on property.{name} with a non-numeric value throws")
     void gt_nonNumericValue_throws() {
-      assertThatThrownBy(
-          () -> service.validate(criterion("property.port", SearchOperator.GT, "abc"), null))
-              .isInstanceOf(InvalidSearchQueryException.class).hasMessageContaining("abc")
-              .hasMessageContaining("GT");
+      var crit = criterion("property.port", SearchOperator.GT, "abc");
+      assertValidationThrows(crit, "abc", "GT");
     }
 
     @Test
     @DisplayName("LTE on property.{name} with alphanumeric non-numeric value throws")
     void lte_nonNumericValue_throws() {
-      assertThatThrownBy(
-          () -> service.validate(criterion("property.size", SearchOperator.LTE, "10MB"), null))
-              .isInstanceOf(InvalidSearchQueryException.class).hasMessageContaining("10MB");
+      var crit = criterion("property.size", SearchOperator.LTE, "10MB");
+      assertValidationThrows(crit, "10MB");
     }
   }
 
@@ -396,5 +389,14 @@ class SearchFilterValidationServiceTest {
   private static SearchFilterNode.Criterion criterion(String field, SearchOperator op,
       String value) {
     return new SearchFilterNode.Criterion(field, op, value);
+  }
+
+  private void assertValidationThrows(SearchFilterNode.Criterion crit,
+      String... expectedFragments) {
+    var assertion = assertThatThrownBy(() -> service.validate(crit, null))
+        .isInstanceOf(InvalidSearchQueryException.class);
+    for (String frag : expectedFragments) {
+      assertion.hasMessageContaining(frag);
+    }
   }
 }

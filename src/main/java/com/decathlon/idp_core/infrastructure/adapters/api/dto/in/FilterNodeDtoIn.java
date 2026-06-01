@@ -2,6 +2,8 @@ package com.decathlon.idp_core.infrastructure.adapters.api.dto.in;
 
 import java.util.List;
 
+import com.decathlon.idp_core.infrastructure.adapters.api.configuration.SwaggerDescription;
+
 import io.swagger.v3.oas.annotations.media.Schema;
 
 /// A node in the search filter tree, used in the request body of
@@ -12,16 +14,16 @@ import io.swagger.v3.oas.annotations.media.Schema;
 /// A **criterion** must have a `field`, an `operation`, and a `value`.
 ///
 /// Both types share the same JSON object shape; unused fields should be omitted or set to null.
-@Schema(description = "A node in the search filter tree. Either a logical group (connector + criteria) or a leaf criterion (field + operation + value).")
+@Schema(description = SwaggerDescription.SCHEMA_FILTER_NODE)
 public record FilterNodeDtoIn(
 
-    @Schema(description = "Logical connector for a group node. One of: AND, OR. Required for group nodes.", example = "AND") String connector,
+    @Schema(description = SwaggerDescription.FIELD_FILTER_CONNECTOR, example = "AND") String connector,
 
-    @Schema(description = "Child filter nodes for a group node. Required for group nodes (must be non-empty).") List<FilterNodeDtoIn> criteria,
+    @Schema(description = SwaggerDescription.FIELD_FILTER_CRITERIA) List<FilterNodeDtoIn> criteria,
 
-    @Schema(description = "Field to filter on for a criterion node. Required for leaf nodes. Examples: template, identifier, name, relation, property.language, relation.api-link, relation.api-link.identifier, relations_as_target.api-link.name", example = "template") String field,
+    @Schema(description = SwaggerDescription.FIELD_FILTER_FIELD, example = "template") String field,
 
-    @Schema(description = "Filter operation for a criterion node. One of: EQ, NEQ, CONTAINS, NOT_CONTAINS, STARTS_WITH, ENDS_WITH, GT, GTE, LT, LTE. Required for leaf nodes.", example = "EQ") String operation,
+    @Schema(description = SwaggerDescription.FIELD_FILTER_OPERATION, example = "EQ") String operation,
 
-    @Schema(description = "Value to compare against for a criterion node. Required for leaf nodes.", example = "microservice") String value) {
+    @Schema(description = SwaggerDescription.FIELD_FILTER_VALUE, example = "microservice") String value) {
 }
