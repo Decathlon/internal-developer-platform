@@ -1,5 +1,6 @@
 package com.decathlon.idp_core.domain.service.entity;
 
+import java.util.ArrayList;
 import java.util.List;
 
 import jakarta.transaction.Transactional;
@@ -17,7 +18,9 @@ import com.decathlon.idp_core.domain.exception.entity_template.EntityTemplateNot
 import com.decathlon.idp_core.domain.model.entity.Entity;
 import com.decathlon.idp_core.domain.model.entity.EntityFilter;
 import com.decathlon.idp_core.domain.model.entity.EntitySummary;
+import com.decathlon.idp_core.domain.model.entity.Relation;
 import com.decathlon.idp_core.domain.model.entity_template.EntityTemplate;
+import com.decathlon.idp_core.domain.model.entity_template.RelationDefinition;
 import com.decathlon.idp_core.domain.port.EntityRepositoryPort;
 import com.decathlon.idp_core.domain.service.EntityQueryParserService;
 import com.decathlon.idp_core.domain.service.entity_template.EntityTemplateService;
@@ -100,9 +103,7 @@ public class EntityService {
   public Entity getEntityByTemplateIdentifierAndIdentifier(String templateIdentifier,
       String entityIdentifier) {
     entityTemplateValidationService.validateTemplateExists(templateIdentifier);
-    return entityRepository
-        .findByTemplateIdentifierAndIdentifier(templateIdentifier, entityIdentifier)
-        .orElseThrow(() -> new EntityNotFoundException(templateIdentifier, entityIdentifier));
+    return retrieveEntity(templateIdentifier, entityIdentifier);
   }
 
   /// Creates and persists a new entity with business validation.
@@ -148,9 +149,7 @@ public class EntityService {
       @Valid Entity entity) {
     EntityTemplate template = entityTemplateService
         .getEntityTemplateByIdentifier(templateIdentifier);
-    Entity existingEntity = entityRepository
-        .findByTemplateIdentifierAndIdentifier(templateIdentifier, entityIdentifier)
-        .orElseThrow(() -> new EntityNotFoundException(templateIdentifier, entityIdentifier));
+    Entity existingEntity = retrieveEntity(templateIdentifier, entityIdentifier);
 
     Entity entityToSave = new Entity(existingEntity.id(), templateIdentifier, entity.name(),
         entityIdentifier, entity.properties(), entity.relations());
@@ -159,4 +158,138 @@ public class EntityService {
     return entityRepository.save(entityToSave);
   }
 
+  /// Deletes an existing entity identified by template and entity identifiers.
+  ///
+  /// **Contract:** Validates the template exists, ensures the entity is not
+  /// referenced by any other entity (referential integrity), and then removes it.
+  ///
+  /// @param templateIdentifier template identifier from the request path
+  /// @param entityIdentifier entity identifier from the request path
+  /// @throws EntityTemplateNotFoundException when template doesn't exist
+  /// @throws EntityNotFoundException when target entity doesn't exist
+  @Transactional
+  public void deleteEntity(String templateIdentifier, String entityIdentifier) {
+    entityTemplateValidationService.validateTemplateExists(templateIdentifier);
+    retrieveEntity(templateIdentifier, entityIdentifier);
+    removedRelationRelated(entityIdentifier);
+    entityRepository.deleteByTemplateIdentifierAndIdentifier(templateIdentifier, entityIdentifier);
+  }
+
+  /// Cleans up relations in parent entities that reference the deleted entity to
+  /// maintain referential integrity.
+  ///
+  /// **Contract:** Finds all entities that have relations targeting the deleted
+  /// entity and removes those relations
+  /// to prevent dangling references. This is necessary to maintain data integrity
+  /// after an entity is deleted.
+  ///
+  /// @param entityIdentifier the identifier of the entity that was deleted, used
+  /// to find and clean up related entities
+  private void removedRelationRelated(final String entityIdentifier) {
+    List<Entity> parentEntities = entityRepository.findEntitiesRelated(entityIdentifier);
+    for (Entity parent : parentEntities) {
+      EntityTemplate parentTemplate = entityTemplateService
+          .getEntityTemplateByIdentifier(parent.templateIdentifier());
+      Entity cleanedParent = cleanUpRelations(parent, parentTemplate, entityIdentifier);
+      if (!cleanedParent.relations().equals(parent.relations())) {
+        entityRepository.save(cleanedParent);
+      }
+    }
+  }
+
+  /// Removes the specified entity identifier from the relations of the parent
+  /// entity, ensuring that required single-target relations are not left empty.
+  ///
+  /// **Contract:** Iterates through the relations of the parent entity, removing
+  /// the target identifier from any relation
+  /// that contains it. If a relation becomes empty as a result, checks the
+  /// relation definition to determine if it is required and single-target;
+  /// if so, the relation is not removed to avoid leaving the parent entity in an
+  /// invalid state.
+  /// @param parent the entity whose relations are being cleaned up
+  /// @param parentTemplate the template of the parent entity, used to check
+  /// relation definitions
+  /// @param entityIdentifierToRemove the identifier of the entity being deleted,
+  /// which should be removed from the relations of the parent entity
+  /// @return a new Entity instance with updated relations, reflecting the removal
+  /// of the specified entity identifier
+  /// **Note:** This method assumes that the parent entity and its template are
+  /// valid and exist, as it is called in the context of cleaning up after a known
+  /// entity deletion.
+  /// It focuses solely on relation cleanup and does not perform additional
+  /// validations or checks beyond what is necessary for maintaining referential
+  /// integrity.
+  private Entity cleanUpRelations(final Entity parent, final EntityTemplate parentTemplate,
+      final String entityIdentifierToRemove) {
+    List<Relation> updatedRelations = new ArrayList<>();
+    List<Relation> currentRelations = parent.relations() != null ? parent.relations() : List.of();
+    currentRelations
+        .forEach(relation -> retrieveAndCleanTargetEntitiesAgainstRelation(parentTemplate,
+            entityIdentifierToRemove, relation, updatedRelations));
+
+    return new Entity(parent.id(), parent.templateIdentifier(), parent.name(), parent.identifier(),
+        parent.properties(), updatedRelations);
+  }
+
+  private void retrieveAndCleanTargetEntitiesAgainstRelation(final EntityTemplate parentTemplate,
+      final String entityIdentifierToRemove, final Relation relation,
+      final List<Relation> updatedRelations) {
+    List<String> currentTargets = relation.targetEntityIdentifiers() != null
+        ? relation.targetEntityIdentifiers()
+        : List.of();
+
+    if (!currentTargets.contains(entityIdentifierToRemove)) {
+      updatedRelations.add(relation);
+      return;
+    }
+
+    cleanLinkedRelation(parentTemplate, entityIdentifierToRemove, relation, currentTargets,
+        updatedRelations);
+  }
+
+  private void cleanLinkedRelation(final EntityTemplate parentTemplate,
+      final String entityIdentifierToRemove, final Relation relation,
+      final List<String> currentTargets, final List<Relation> updatedRelations) {
+    List<String> updatedTargets = currentTargets.stream()
+        .filter(target -> !entityIdentifierToRemove.equals(target)).toList();
+    if (updatedTargets.isEmpty()) {
+      RelationDefinition definition = getRelationDefinition(parentTemplate, relation.name());
+      if (definition != null && definition.required() && !definition.toMany()) {
+        return;
+      }
+    }
+    updatedRelations.add(new Relation(relation.id(), relation.name(),
+        relation.targetTemplateIdentifier(), updatedTargets));
+  }
+
+  private RelationDefinition getRelationDefinition(final EntityTemplate template,
+      final String relationName) {
+    if (template.relationsDefinitions() == null) {
+      return null;
+    }
+    return template.relationsDefinitions().stream()
+        .filter(definition -> relationName.equals(definition.name())).findFirst().orElse(null);
+  }
+
+  /// Validates that an entity with the specified template and identifier exists,
+  /// throwing an exception if not found.
+  ///
+  /// **Contract:** Checks the existence of the entity using the repository. If
+  /// the entity is
+  /// not found, throws an EntityNotFoundException with the relevant template and
+  /// entity identifiers for error reporting.
+  /// @param templateIdentifier the identifier of the template to which the entity
+  /// belongs, used for lookup and error reporting
+  /// @param entityIdentifier the unique identifier of the entity within the
+  /// template, used for lookup and error reporting
+  /// @throws EntityNotFoundException if no entity matching the template and
+  /// entity identifiers is found in the repository, indicating that the entity
+  /// does not exist
+  /// @return the Entity instance that matches the specified template and entity
+  /// identifiers, if found.
+  private Entity retrieveEntity(final String templateIdentifier, final String entityIdentifier) {
+    return entityRepository
+        .findByTemplateIdentifierAndIdentifier(templateIdentifier, entityIdentifier)
+        .orElseThrow(() -> new EntityNotFoundException(templateIdentifier, entityIdentifier));
+  }
 }
