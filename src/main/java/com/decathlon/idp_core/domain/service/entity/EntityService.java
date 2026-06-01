@@ -103,9 +103,7 @@ public class EntityService {
   public Entity getEntityByTemplateIdentifierAndIdentifier(String templateIdentifier,
       String entityIdentifier) {
     entityTemplateValidationService.validateTemplateExists(templateIdentifier);
-    return entityRepository
-        .findByTemplateIdentifierAndIdentifier(templateIdentifier, entityIdentifier)
-        .orElseThrow(() -> new EntityNotFoundException(templateIdentifier, entityIdentifier));
+    return retrieveEntity(templateIdentifier, entityIdentifier);
   }
 
   /// Creates and persists a new entity with business validation.
@@ -151,9 +149,7 @@ public class EntityService {
       @Valid Entity entity) {
     EntityTemplate template = entityTemplateService
         .getEntityTemplateByIdentifier(templateIdentifier);
-    Entity existingEntity = entityRepository
-        .findByTemplateIdentifierAndIdentifier(templateIdentifier, entityIdentifier)
-        .orElseThrow(() -> new EntityNotFoundException(templateIdentifier, entityIdentifier));
+    Entity existingEntity = retrieveEntity(templateIdentifier, entityIdentifier);
 
     Entity entityToSave = new Entity(existingEntity.id(), templateIdentifier, entity.name(),
         entityIdentifier, entity.properties(), entity.relations());
@@ -227,31 +223,43 @@ public class EntityService {
       final String entityIdentifierToRemove) {
     List<Relation> updatedRelations = new ArrayList<>();
     List<Relation> currentRelations = parent.relations() != null ? parent.relations() : List.of();
-
-    for (Relation relation : currentRelations) {
-      List<String> currentTargets = relation.targetEntityIdentifiers() != null
-          ? relation.targetEntityIdentifiers()
-          : List.of();
-
-      if (!currentTargets.contains(entityIdentifierToRemove)) {
-        updatedRelations.add(relation);
-        continue;
-      }
-      List<String> updatedTargets = currentTargets.stream()
-          .filter(target -> !entityIdentifierToRemove.equals(target)).toList();
-
-      if (updatedTargets.isEmpty()) {
-        RelationDefinition definition = getRelationDefinition(parentTemplate, relation.name());
-        if (definition != null && definition.required() && !definition.toMany()) {
-          continue;
-        }
-      }
-      updatedRelations.add(new Relation(relation.id(), relation.name(),
-          relation.targetTemplateIdentifier(), updatedTargets));
-    }
+    currentRelations
+        .forEach(relation -> retrieveAndCleanTargetEntitiesAgainstRelation(parentTemplate,
+            entityIdentifierToRemove, relation, updatedRelations));
 
     return new Entity(parent.id(), parent.templateIdentifier(), parent.name(), parent.identifier(),
         parent.properties(), updatedRelations);
+  }
+
+  private void retrieveAndCleanTargetEntitiesAgainstRelation(final EntityTemplate parentTemplate,
+      final String entityIdentifierToRemove, final Relation relation,
+      final List<Relation> updatedRelations) {
+    List<String> currentTargets = relation.targetEntityIdentifiers() != null
+        ? relation.targetEntityIdentifiers()
+        : List.of();
+
+    if (!currentTargets.contains(entityIdentifierToRemove)) {
+      updatedRelations.add(relation);
+      return;
+    }
+
+    cleanLinkedRelation(parentTemplate, entityIdentifierToRemove, relation, currentTargets,
+        updatedRelations);
+  }
+
+  private void cleanLinkedRelation(final EntityTemplate parentTemplate,
+      final String entityIdentifierToRemove, final Relation relation,
+      final List<String> currentTargets, final List<Relation> updatedRelations) {
+    List<String> updatedTargets = currentTargets.stream()
+        .filter(target -> !entityIdentifierToRemove.equals(target)).toList();
+    if (updatedTargets.isEmpty()) {
+      RelationDefinition definition = getRelationDefinition(parentTemplate, relation.name());
+      if (definition != null && definition.required() && !definition.toMany()) {
+        return;
+      }
+    }
+    updatedRelations.add(new Relation(relation.id(), relation.name(),
+        relation.targetTemplateIdentifier(), updatedTargets));
   }
 
   private RelationDefinition getRelationDefinition(final EntityTemplate template,
