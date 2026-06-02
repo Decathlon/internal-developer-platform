@@ -67,7 +67,7 @@ public interface JpaEntityRepository
           JOIN entity_relations er ON er.entity_id = e.id
           JOIN relation r ON r.id = er.relation_id
           JOIN relation_target_entities rte ON rte.relation_id = r.id
-          JOIN entity e2 ON e2.identifier = rte.target_entity_identifier
+          JOIN entity e2 ON e2.identifier = rte.target_entity_identifier AND e2.template_identifier = r.target_template_identifier
           WHERE og.depth < :depth
       ),
       -- Traverse inbound relations (sources -> this entity as target)
@@ -83,7 +83,7 @@ public interface JpaEntityRepository
           FROM inbound_graph ig
           JOIN entity e ON e.identifier = ig.identifier AND e.template_identifier = ig.template_identifier
           JOIN relation_target_entities rte ON rte.target_entity_identifier = e.identifier
-          JOIN relation r ON r.id = rte.relation_id
+          JOIN relation r ON r.id = rte.relation_id AND r.target_template_identifier = e.template_identifier
           JOIN entity_relations er ON er.relation_id = r.id
           JOIN entity e2 ON e2.id = er.entity_id
           WHERE ig.depth < :depth
@@ -117,7 +117,7 @@ public interface JpaEntityRepository
           JOIN entity_relations er ON er.entity_id = e.id
           JOIN relation r ON r.id = er.relation_id
           JOIN relation_target_entities rte ON rte.relation_id = r.id
-          JOIN entity e2 ON e2.identifier = rte.target_entity_identifier
+          JOIN entity e2 ON e2.identifier = rte.target_entity_identifier AND e2.template_identifier = r.target_template_identifier
           WHERE og.depth < :depth
             AND r.name IN :relationNames
       ),
@@ -133,7 +133,7 @@ public interface JpaEntityRepository
           FROM inbound_graph ig
           JOIN entity e ON e.identifier = ig.identifier AND e.template_identifier = ig.template_identifier
           JOIN relation_target_entities rte ON rte.target_entity_identifier = e.identifier
-          JOIN relation r ON r.id = rte.relation_id
+          JOIN relation r ON r.id = rte.relation_id AND r.target_template_identifier = e.template_identifier
           JOIN entity_relations er ON er.relation_id = r.id
           JOIN entity e2 ON e2.id = er.entity_id
           WHERE ig.depth < :depth

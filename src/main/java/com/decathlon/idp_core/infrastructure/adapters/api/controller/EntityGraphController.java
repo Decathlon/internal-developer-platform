@@ -17,6 +17,7 @@ import java.util.Set;
 
 import jakarta.validation.constraints.NotBlank;
 
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -46,6 +47,7 @@ import lombok.RequiredArgsConstructor;
 @RestController
 @RequestMapping("/api/v1/entities")
 @RequiredArgsConstructor
+@Validated
 @Tag(name = "Entity Graph", description = "Entity relationship graph operations")
 public class EntityGraphController {
 

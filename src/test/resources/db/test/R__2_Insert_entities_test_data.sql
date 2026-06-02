@@ -20,9 +20,6 @@ VALUES
   ('550e8400-e29b-41d4-a716-446655440113', 'monitoring-service-5', 'Monitoring Service 5', 'monitoring-service'),
   ('550e8400-e29b-41d4-a716-446655440114', 'monitoring-service-6', 'Monitoring Service 6', 'monitoring-service');
 
-
--- Add to end of R__1_Insert_test_data.sql
-
 -- -----------------------------------------------------------------------
 -- Properties for query filter tests (web-api-1 and web-api-2)
 -- -----------------------------------------------------------------------
@@ -86,6 +83,8 @@ VALUES ('bb000000-0000-0000-0000-000000000003', 'microservice-1');
 
 INSERT INTO entity_relations (entity_id, relation_id)
 VALUES ('550e8400-e29b-41d4-a716-446655440100', 'bb000000-0000-0000-0000-000000000003');
+
+
 -- -----------------------------------------------------------------------
 -- Graph test data: 3-level chain of entities connected via two relation
 -- types ("uses" and "monitors") for integration testing of the graph API.

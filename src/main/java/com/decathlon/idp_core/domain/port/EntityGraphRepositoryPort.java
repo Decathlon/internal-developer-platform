@@ -34,11 +34,6 @@ public interface EntityGraphRepositoryPort {
   /// its template
   /// @param depth the maximum traversal depth (1-10)
   /// @param includeProperties when true, entity properties are loaded along with
-  /// relations;
-  /// when false, only relations are fetched for a leaner query
-  /// @param relationNames when non-empty, only edges whose relation name is in
-  /// this set are
-  /// traversed; when empty, all relation types are followed
   /// @return map of [EntityCompositeKey] to [Entity] for O(1) lookup; empty if
   /// root not found
   /// Relation name filtering is intentionally NOT pushed into this port.
