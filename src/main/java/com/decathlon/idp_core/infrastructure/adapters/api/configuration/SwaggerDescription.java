@@ -85,6 +85,7 @@ public class SwaggerDescription {
   public static final String RESPONSE_INVALID_PAGINATION = "Invalid pagination parameters";
   public static final String RESPONSE_TEMPLATE_CONFLICT = "Template with this identifier already exists";
   public static final String RESPONSE_ENTITY_CONFLICT = "Entity already exists in this template";
+  public static final String RESPONSE_ENTITY_RELATION_CONFLICT = "Target entity has required relations";
   public static final String RESPONSE_ENTITIES_PAGINATED_SUCCESS = "Paginated entities retrieved successfully";
   public static final String RESPONSE_ENTITY_FOUND = "Entity found";
   public static final String RESPONSE_ENTITY_NOT_FOUND_IDENTIFIER = "Entity not found with the provided identifier";

@@ -66,8 +66,8 @@ public interface JpaEntityRepository
       SELECT entity
       FROM EntityJpaEntity entity
       JOIN entity.relations relation
-      JOIN relation.targetEntityIdentifiers templateIdentifier
-      WHERE templateIdentifier = :targetIdentifier
+      JOIN relation.targetEntityIdentifiers targetEntityIdentifier
+      WHERE targetEntityIdentifier = :targetIdentifier
       """)
   List<EntityJpaEntity> findEntitiesRelated(@Param("targetIdentifier") String targetIdentifier);
 

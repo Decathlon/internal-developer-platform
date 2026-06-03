@@ -973,7 +973,7 @@ public class EntityControllerTest extends AbstractIntegrationTest {
 
     @Test
     @WithMockUser()
-    @DisplayName("Should idempotently succeed on repeated deletion attempts (first succeeds, second fails)")
+    @DisplayName("Should return 404 on repeated deletion attempts (first 204, second 404)")
     void deleteEntity_repeated_deletion() throws Exception {
       var entityIdentifier = "idempotent-test";
 
@@ -989,6 +989,86 @@ public class EntityControllerTest extends AbstractIntegrationTest {
 
       mockMvc.perform(delete(ENTITIES_BY_IDENTIFIER_PATH, TEMPLATE_IDENTIFIER, entityIdentifier)
           .accept(APPLICATION_JSON).with(csrf())).andExpect(status().isNotFound());
+    }
+
+    @Test
+    @WithMockUser()
+    @DisplayName("Should return 409 Conflict when entity deletion is blocked by required relations")
+    void deleteEntity_409_blocked_by_required_relations() throws Exception {
+      var teamIdentifier = "test-team-required-delete";
+      var supportIdentifier = "test-support-with-required-team-delete";
+
+      // Create team entity first
+      var teamPayload = """
+          {
+            "name": "Test Team Required",
+            "identifier": "%s",
+            "properties": {
+              "applicationName": "test-app",
+              "ownerEmail": "owner@example.com",
+              "environment": "DEV"
+            }
+          }
+          """.formatted(teamIdentifier);
+
+      mockMvc.perform(MockMvcRequestBuilders.post(ENTITIES_BY_TEMPLATE_IDENTIFIER_PATH, "team")
+          .contentType(APPLICATION_JSON).accept(APPLICATION_JSON).with(csrf()).content(teamPayload))
+          .andExpect(status().isCreated());
+
+      // Create support entity with required relation to team
+      var supportPayload = """
+          {
+            "name": "Test Support With Required Team",
+            "identifier": "%s",
+            "properties": {
+              "applicationName": "support-app",
+              "ownerEmail": "support@example.com",
+              "environment": "PROD",
+              "version": "1.0.0",
+              "teamName": "support-team"
+            },
+            "relations": [
+              {
+                "name": "required_team",
+                "target_entity_identifiers": ["%s"]
+              }
+            ]
+          }
+          """.formatted(supportIdentifier, teamIdentifier);
+
+      mockMvc.perform(MockMvcRequestBuilders.post(ENTITIES_BY_TEMPLATE_IDENTIFIER_PATH, "support")
+          .contentType(APPLICATION_JSON).accept(APPLICATION_JSON).with(csrf())
+          .content(supportPayload)).andExpect(status().isCreated());
+
+      // Verify team entity was created
+      mockMvc
+          .perform(
+              get(ENTITIES_BY_IDENTIFIER_PATH, "team", teamIdentifier).accept(APPLICATION_JSON))
+          .andExpect(status().isOk());
+
+      // Attempt to delete team entity (should fail with 409)
+      mockMvc
+          .perform(delete(ENTITIES_BY_IDENTIFIER_PATH, "team", teamIdentifier)
+              .accept(APPLICATION_JSON).with(csrf()))
+          .andExpect(status().isConflict()).andExpect(jsonPath("$.error").value("CONFLICT"))
+          .andExpect(jsonPath("$.error_description").value(org.hamcrest.Matchers.allOf(
+              org.hamcrest.Matchers.containsString("Cannot delete entity"),
+              org.hamcrest.Matchers.containsString(teamIdentifier),
+              org.hamcrest.Matchers.containsString("required relations"),
+              org.hamcrest.Matchers.containsString(supportIdentifier))));
+
+      // Verify team entity still exists after failed deletion
+      mockMvc
+          .perform(
+              get(ENTITIES_BY_IDENTIFIER_PATH, "team", teamIdentifier).accept(APPLICATION_JSON))
+          .andExpect(status().isOk());
+
+      // Clean up: delete support first, then team should be deletable
+      mockMvc.perform(delete(ENTITIES_BY_IDENTIFIER_PATH, "support", supportIdentifier)
+          .accept(APPLICATION_JSON).with(csrf())).andExpect(status().isNoContent());
+
+      mockMvc.perform(delete(ENTITIES_BY_IDENTIFIER_PATH, "team", teamIdentifier)
+          .accept(APPLICATION_JSON).with(csrf())).andExpect(status().isNoContent());
     }
   }
 }

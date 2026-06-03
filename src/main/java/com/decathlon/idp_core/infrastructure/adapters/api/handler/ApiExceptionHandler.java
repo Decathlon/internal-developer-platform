@@ -20,6 +20,7 @@ import org.springframework.web.method.annotation.HandlerMethodValidationExceptio
 
 import com.decathlon.idp_core.domain.exception.InvalidQueryDslException;
 import com.decathlon.idp_core.domain.exception.entity.EntityAlreadyExistsException;
+import com.decathlon.idp_core.domain.exception.entity.EntityDeletionBlockedException;
 import com.decathlon.idp_core.domain.exception.entity.EntityNotFoundException;
 import com.decathlon.idp_core.domain.exception.entity.EntityValidationException;
 import com.decathlon.idp_core.domain.exception.entity_template.EntityTemplateAlreadyExistsException;
@@ -300,6 +301,21 @@ public class ApiExceptionHandler {
     ErrorResponse errorResponse = new ErrorResponse(NOT_FOUND.name(), ex.getMessage());
     return ResponseEntity.status(NOT_FOUND).body(errorResponse);
   }
+
+  /// Handles domain exception when entity deletion is blocked by required
+  /// relations.
+  ///
+  /// **HTTP mapping:** Maps domain EntityDeletionBlockedException to HTTP 409
+  /// status indicating business rule conflict where required relations prevent
+  /// deletion.
+  @ExceptionHandler(EntityDeletionBlockedException.class)
+  public ResponseEntity<ErrorResponse> handleEntityDeletionBlockedException(
+      EntityDeletionBlockedException ex) {
+    log.warn("Entity deletion blocked: {}", ex.getMessage());
+    ErrorResponse errorResponse = new ErrorResponse(HttpStatus.CONFLICT.name(), ex.getMessage());
+    return ResponseEntity.status(HttpStatus.CONFLICT).body(errorResponse);
+  }
+
   private String parseHttpMessageNotReadableError(String originalMessage) {
     if (originalMessage == null) {
       return "Invalid request body format";

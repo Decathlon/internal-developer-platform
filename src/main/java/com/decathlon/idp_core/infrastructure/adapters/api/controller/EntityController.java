@@ -28,6 +28,7 @@ import static com.decathlon.idp_core.infrastructure.adapters.api.configuration.S
 import static com.decathlon.idp_core.infrastructure.adapters.api.configuration.SwaggerDescription.RESPONSE_ENTITY_DELETED;
 import static com.decathlon.idp_core.infrastructure.adapters.api.configuration.SwaggerDescription.RESPONSE_ENTITY_FOUND;
 import static com.decathlon.idp_core.infrastructure.adapters.api.configuration.SwaggerDescription.RESPONSE_ENTITY_NOT_FOUND_IDENTIFIER;
+import static com.decathlon.idp_core.infrastructure.adapters.api.configuration.SwaggerDescription.RESPONSE_ENTITY_RELATION_CONFLICT;
 import static com.decathlon.idp_core.infrastructure.adapters.api.configuration.SwaggerDescription.RESPONSE_ENTITY_UPDATED;
 import static com.decathlon.idp_core.infrastructure.adapters.api.configuration.SwaggerDescription.RESPONSE_INSUFFICIENT_RIGHTS;
 import static com.decathlon.idp_core.infrastructure.adapters.api.configuration.SwaggerDescription.RESPONSE_INVALID_ENTITY_DATA;
@@ -238,8 +239,9 @@ public class EntityController {
 
   /// Deletes an existing entity identified by template and entity identifiers.
   ///
-  /// **API contract:** Validates the template exists, ensures the entity is not
-  /// referenced by any other entities, then deletes the entity.
+  /// **API contract:** Validates the template and entity exist, cleans up
+  /// relations in parent
+  /// entities that reference the deleted entity, then deletes the entity.
   /// Returns HTTP 204 on successful deletion, HTTP 404 if entity doesn't exist,
   /// HTTP 400 if deletion is not allowed due to existing references.
   ///
@@ -253,12 +255,14 @@ public class EntityController {
   @ApiResponse(responseCode = FORBIDDEN_CODE, description = RESPONSE_INSUFFICIENT_RIGHTS, content = @Content)
   @ApiResponse(responseCode = NOT_FOUND_CODE, description = RESPONSE_ENTITY_NOT_FOUND_IDENTIFIER, content = {
       @Content(schema = @Schema(implementation = ErrorResponse.class))})
+  @ApiResponse(responseCode = CONFLICT_CODE, description = RESPONSE_ENTITY_RELATION_CONFLICT, content = {
+      @Content(schema = @Schema(implementation = ErrorResponse.class))})
   @ApiResponse(responseCode = INTERNAL_SERVER_ERROR_CODE, description = RESPONSE_UNEXPECTED_SERVER_ERROR, content = {
       @Content(schema = @Schema(implementation = ErrorResponse.class))})
   @DeleteMapping("/{templateIdentifier}/{entityIdentifier}")
   @ResponseStatus(NO_CONTENT)
-  public void deleteEntity(@PathVariable String templateIdentifier,
-      @PathVariable String entityIdentifier) {
+  public void deleteEntity(@NotBlank @PathVariable String templateIdentifier,
+      @NotBlank @PathVariable String entityIdentifier) {
     entityService.deleteEntity(templateIdentifier, entityIdentifier);
   }
 }

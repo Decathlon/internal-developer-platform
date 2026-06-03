@@ -2,6 +2,9 @@ package com.decathlon.idp_core.domain.service.entity;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.stream.Collectors;
 
 import jakarta.transaction.Transactional;
 import jakarta.validation.Valid;
@@ -12,6 +15,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.validation.annotation.Validated;
 
 import com.decathlon.idp_core.domain.exception.entity.EntityAlreadyExistsException;
+import com.decathlon.idp_core.domain.exception.entity.EntityDeletionBlockedException;
 import com.decathlon.idp_core.domain.exception.entity.EntityNotFoundException;
 import com.decathlon.idp_core.domain.exception.entity.EntityValidationException;
 import com.decathlon.idp_core.domain.exception.entity_template.EntityTemplateNotFoundException;
@@ -160,8 +164,10 @@ public class EntityService {
 
   /// Deletes an existing entity identified by template and entity identifiers.
   ///
-  /// **Contract:** Validates the template exists, ensures the entity is not
-  /// referenced by any other entity (referential integrity), and then removes it.
+  /// **Contract:** Validates the template and entity exist, cleans up relations
+  /// in parent
+  /// entities that reference the deleted entity (to prevent dangling references),
+  /// and then removes it.
   ///
   /// @param templateIdentifier template identifier from the request path
   /// @param entityIdentifier entity identifier from the request path
@@ -170,8 +176,8 @@ public class EntityService {
   @Transactional
   public void deleteEntity(String templateIdentifier, String entityIdentifier) {
     entityTemplateValidationService.validateTemplateExists(templateIdentifier);
-    retrieveEntity(templateIdentifier, entityIdentifier);
-    removedRelationRelated(entityIdentifier);
+    Entity entityToDelete = retrieveEntity(templateIdentifier, entityIdentifier);
+    removedRelationRelated(entityToDelete);
     entityRepository.deleteByTemplateIdentifierAndIdentifier(templateIdentifier, entityIdentifier);
   }
 
@@ -179,22 +185,105 @@ public class EntityService {
   /// maintain referential integrity.
   ///
   /// **Contract:** Finds all entities that have relations targeting the deleted
-  /// entity and removes those relations
+  /// entity. First validates that no required single-target relations would be
+  /// violated,
+  /// throwing EntityDeletionBlockedException if any are found. Then removes those
+  /// relations
   /// to prevent dangling references. This is necessary to maintain data integrity
   /// after an entity is deleted.
   ///
-  /// @param entityIdentifier the identifier of the entity that was deleted, used
+  /// @param entityToDelete the identifier of the entity that was deleted, used
   /// to find and clean up related entities
-  private void removedRelationRelated(final String entityIdentifier) {
-    List<Entity> parentEntities = entityRepository.findEntitiesRelated(entityIdentifier);
-    for (Entity parent : parentEntities) {
-      EntityTemplate parentTemplate = entityTemplateService
-          .getEntityTemplateByIdentifier(parent.templateIdentifier());
-      Entity cleanedParent = cleanUpRelations(parent, parentTemplate, entityIdentifier);
+  /// @throws EntityDeletionBlockedException if the entity is referenced by
+  /// required relations
+  private void removedRelationRelated(final Entity entityToDelete) {
+    List<Entity> parentEntities = entityRepository.findEntitiesRelated(entityToDelete.identifier());
+
+    Map<String, EntityTemplate> parentTemplates = parentEntities.stream()
+        .map(Entity::templateIdentifier).distinct()
+        .collect(Collectors.toMap(id -> id, entityTemplateService::getEntityTemplateByIdentifier));
+
+    hasBlockingEntities(entityToDelete, parentEntities, parentTemplates);
+
+    parentEntities.forEach(parent -> {
+      EntityTemplate parentTemplate = parentTemplates.get(parent.templateIdentifier());
+      Entity cleanedParent = cleanUpRelations(parent, parentTemplate, entityToDelete.identifier());
       if (!cleanedParent.relations().equals(parent.relations())) {
         entityRepository.save(cleanedParent);
       }
+    });
+  }
+
+  /// Validates that no parent entities have required relations to the entity
+  /// being deleted.
+  ///
+  /// **Contract:** Iterates through the parent entities and their templates to
+  /// check if any
+  /// relations would be left empty and are defined as required and single-target.
+  /// If such blocking relations are found,
+  /// an EntityDeletionBlockedException is thrown with details about the blocking
+  /// entities and relations.
+  /// This ensures that entities with required dependencies cannot be deleted
+  /// without first addressing those dependencies, maintaining referential
+  /// integrity
+  /// and preventing invalid states in the domain model.
+  ///
+  /// @param entityToDelete the entity that is being deleted, used for context in
+  /// error messages
+  /// @param parentEntities the list of entities that have relations targeting the
+  /// entity being deleted
+  /// @param parentTemplates a map of template identifiers to their corresponding
+  /// EntityTemplate instances for the parent entities, used to check relation
+  /// definitions
+  /// @throws EntityDeletionBlockedException if any parent entities have required
+  /// relations to the entity being deleted, providing details about the blocking
+  /// entities and relations
+  private void hasBlockingEntities(final Entity entityToDelete, final List<Entity> parentEntities,
+      final Map<String, EntityTemplate> parentTemplates) {
+    List<String> blockingEntities = parentEntities.stream().map(parent -> {
+      EntityTemplate parentTemplate = parentTemplates.get(parent.templateIdentifier());
+      String blockingNames = getBlockingRelationNames(parent, parentTemplate,
+          entityToDelete.identifier());
+
+      if (!blockingNames.isEmpty()) {
+        return String.format("'%s' (template: '%s', relation(s): %s)", parent.identifier(),
+            parent.templateIdentifier(), blockingNames);
+      }
+      return null;
+    }).filter(Objects::nonNull).collect(Collectors.toList());
+
+    if (!blockingEntities.isEmpty()) {
+      throw new EntityDeletionBlockedException(entityToDelete.templateIdentifier(),
+          entityToDelete.identifier(), blockingEntities);
     }
+  }
+
+  /// Gets the names of all relations that would block deletion.
+  ///
+  /// @param linkedEntity the entity whose relations are being checked
+  /// @param parentTemplate the template of the parent entity
+  /// @param entityIdentifierToRemove the identifier being removed
+  /// @return comma-separated list of blocking relation names
+  private String getBlockingRelationNames(final Entity linkedEntity,
+      final EntityTemplate parentTemplate, final String entityIdentifierToRemove) {
+
+    return linkedEntity.relations().stream()
+        .filter(relation -> isBlockingRelation(relation, parentTemplate, entityIdentifierToRemove))
+        .map(relation -> "'" + relation.name() + "'").collect(Collectors.joining(", "));
+  }
+
+  private boolean isBlockingRelation(final Relation relation, final EntityTemplate parentTemplate,
+      final String idToRemove) {
+    var targets = relation.targetEntityIdentifiers();
+    if (targets == null || !targets.contains(idToRemove)) {
+      return false;
+    }
+    boolean becomesEmpty = targets.stream().allMatch(idToRemove::equals);
+    if (!becomesEmpty) {
+      return false;
+    }
+    var definition = getRelationDefinition(parentTemplate, relation.name());
+    return definition != null && definition.required() && !definition.toMany();
   }
 
   /// Removes the specified entity identifier from the relations of the parent
@@ -206,6 +295,7 @@ public class EntityService {
   /// relation definition to determine if it is required and single-target;
   /// if so, the relation is not removed to avoid leaving the parent entity in an
   /// invalid state.
+  ///
   /// @param parent the entity whose relations are being cleaned up
   /// @param parentTemplate the template of the parent entity, used to check
   /// relation definitions
@@ -278,15 +368,16 @@ public class EntityService {
   /// the entity is
   /// not found, throws an EntityNotFoundException with the relevant template and
   /// entity identifiers for error reporting.
+  ///
   /// @param templateIdentifier the identifier of the template to which the entity
   /// belongs, used for lookup and error reporting
   /// @param entityIdentifier the unique identifier of the entity within the
   /// template, used for lookup and error reporting
+  /// @return the Entity instance that matches the specified template and entity
+  /// identifiers, if found.
   /// @throws EntityNotFoundException if no entity matching the template and
   /// entity identifiers is found in the repository, indicating that the entity
   /// does not exist
-  /// @return the Entity instance that matches the specified template and entity
-  /// identifiers, if found.
   private Entity retrieveEntity(final String templateIdentifier, final String entityIdentifier) {
     return entityRepository
         .findByTemplateIdentifierAndIdentifier(templateIdentifier, entityIdentifier)
