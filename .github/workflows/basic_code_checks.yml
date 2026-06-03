@@ -77,18 +77,16 @@ jobs:
           distribution: temurin
           java-version: 25
 
-      - name: Build Maven project
-        run: mvn clean verify
-
-      - name: Run SonarCloud Analysis
+      - name: Build Maven project and Sonar analysis
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          mvn sonar:sonar \
+          mvn clean verify org.sonarsource.scanner.maven:sonar-maven-plugin:sonar \
             -Dsonar.organization=Decathlon \
             -Dsonar.projectKey=Decathlon_internal-developer-platform \
             -Dsonar.coverage.jacoco.xmlReportPaths=target/site/jacoco/jacoco.xml \
+            -Dsonar.host.url=https://sonarcloud.io
             -B
 
       - name: Convert JaCoCo report to Cobertura format
