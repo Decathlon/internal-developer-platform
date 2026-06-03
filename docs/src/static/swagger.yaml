@@ -422,11 +422,13 @@ paths:
           in: path
           required: true
           schema:
+            minLength: 1
             type: string
         - name: entityIdentifier
           in: path
           required: true
           schema:
+            minLength: 1
             type: string
       responses:
         '204':
