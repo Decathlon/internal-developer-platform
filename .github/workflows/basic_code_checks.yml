@@ -57,6 +57,7 @@ jobs:
     needs: license_compliance
     permissions:
       contents: write
+      code-quality: write
 
     steps:
       - name: Checkout repository
@@ -78,6 +79,29 @@ jobs:
 
       - name: Build Maven project
         run: mvn clean verify
+
+      - name: Run SonarCloud Analysis
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          mvn sonar:sonar \
+            -Dsonar.organization=Decathlon \
+            -Dsonar.projectKey=Decathlon_internal-developer-platform \
+            -Dsonar.coverage.jacoco.xmlReportPaths=target/site/jacoco/jacoco.xml \
+            -B
+
+      - name: Convert JaCoCo report to Cobertura format
+        run: |
+          pip install cover2cover --quiet
+          cover2cover target/site/jacoco/jacoco.xml src/main/java > cobertura.xml
+
+      - name: Upload code coverage to GitHub
+        uses: actions/upload-code-coverage@abb5995db9e0199b0e2bb9dbd136fce4cb1ec4d3  # v1
+        with:
+          file: cobertura.xml
+          language: Java
+          label: code-coverage/jacoco
 
       - name: Upload built jar
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a  # v7.0.1
