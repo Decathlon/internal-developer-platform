@@ -1,5 +1,7 @@
 package com.decathlon.idp_core.domain.service.entity;
 
+import static java.util.stream.Collectors.*;
+
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -201,7 +203,7 @@ public class EntityService {
 
     Map<String, EntityTemplate> parentTemplates = parentEntities.stream()
         .map(Entity::templateIdentifier).distinct()
-        .collect(Collectors.toMap(id -> id, entityTemplateService::getEntityTemplateByIdentifier));
+        .collect(toMap(id -> id, entityTemplateService::getEntityTemplateByIdentifier));
 
     hasBlockingEntities(entityToDelete, parentEntities, parentTemplates);
 
@@ -250,7 +252,7 @@ public class EntityService {
             parent.templateIdentifier(), blockingNames);
       }
       return null;
-    }).filter(Objects::nonNull).collect(Collectors.toList());
+    }).filter(Objects::nonNull).toList();
 
     if (!blockingEntities.isEmpty()) {
       throw new EntityDeletionBlockedException(entityToDelete.templateIdentifier(),
@@ -269,7 +271,7 @@ public class EntityService {
 
     return linkedEntity.relations().stream()
         .filter(relation -> isBlockingRelation(relation, parentTemplate, entityIdentifierToRemove))
-        .map(relation -> "'" + relation.name() + "'").collect(Collectors.joining(", "));
+        .map(relation -> "'" + relation.name() + "'").collect(joining(", "));
   }
 
   private boolean isBlockingRelation(final Relation relation, final EntityTemplate parentTemplate,
