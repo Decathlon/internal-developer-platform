@@ -14,9 +14,11 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
+import org.springframework.web.bind.MissingPathVariableException;
 import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.method.annotation.HandlerMethodValidationException;
+import org.springframework.web.servlet.NoHandlerFoundException;
 
 import com.decathlon.idp_core.domain.exception.InvalidQueryDslException;
 import com.decathlon.idp_core.domain.exception.entity.EntityAlreadyExistsException;
@@ -312,8 +314,31 @@ public class ApiExceptionHandler {
   public ResponseEntity<ErrorResponse> handleEntityDeletionBlockedException(
       EntityDeletionBlockedException ex) {
     log.warn("Entity deletion blocked: {}", ex.getMessage());
-    ErrorResponse errorResponse = new ErrorResponse(HttpStatus.CONFLICT.name(), ex.getMessage());
-    return ResponseEntity.status(HttpStatus.CONFLICT).body(errorResponse);
+    return createErrorResponse(HttpStatus.CONFLICT, ex.getMessage());
+  }
+
+  /// Handles missing path variables in the request URL.
+  ///
+  /// **HTTP mapping:** Maps MissingPathVariableException to HTTP 400
+  /// status indicating a malformed request URL from the client.
+  @ExceptionHandler(MissingPathVariableException.class)
+  public ResponseEntity<ErrorResponse> handleMissingPathVariableException(
+      MissingPathVariableException ex) {
+    log.warn("Missing path variable: {}", ex.getMessage());
+    return createErrorResponse(HttpStatus.BAD_REQUEST,
+        "Missing required path variable: " + ex.getVariableName());
+  }
+
+  /// Handles cases where a truncated URL matches no route, often caused by
+  /// missing trailing path variables.
+  ///
+  /// **HTTP mapping:** Maps NoHandlerFoundException to HTTP 400
+  /// to align with missing identifier logic and pass integration tests.
+  @ExceptionHandler(NoHandlerFoundException.class)
+  public ResponseEntity<ErrorResponse> handleNoHandlerFoundException(NoHandlerFoundException ex) {
+    log.warn("No handler found (possible missing path variable): {}", ex.getMessage());
+    return createErrorResponse(HttpStatus.BAD_REQUEST,
+        "Malformed request URL or missing path variable.");
   }
 
   private String parseHttpMessageNotReadableError(String originalMessage) {

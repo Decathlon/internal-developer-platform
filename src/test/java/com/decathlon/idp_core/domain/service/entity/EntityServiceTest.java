@@ -389,6 +389,31 @@ class EntityServiceTest {
     verify(entityRepository).deleteByTemplateIdentifierAndIdentifier("service", "catalog");
   }
 
+  @Test
+  @DisplayName("Should throw EntityDeletionBlockedException when target entity is the last one in a required toMany relation")
+  void shouldThrowExceptionWhenTargetIsLastInRequiredToManyRelation() {
+    var relationId = UUID.randomUUID();
+    var parent = new Entity(UUID.randomUUID(), "cluster", "Production Cluster", "prod-cluster",
+        List.of(), List.of(new Relation(relationId, "nodes", "server", List.of("server-1"))));
+
+    var parentTemplate = new EntityTemplate(UUID.randomUUID(), "cluster", "Cluster", "desc",
+        List.of(),
+        List.of(new RelationDefinition(UUID.randomUUID(), "nodes", "server", true, true)));
+
+    when(entityRepository.findByTemplateIdentifierAndIdentifier("server", "server-1"))
+        .thenReturn(Optional.of(
+            new Entity(UUID.randomUUID(), "server", "server-1", "server-1", List.of(), List.of())));
+    when(entityRepository.findEntitiesRelated("server-1")).thenReturn(List.of(parent));
+    when(entityTemplateService.getEntityTemplateByIdentifier("cluster")).thenReturn(parentTemplate);
+
+    assertThrows(EntityDeletionBlockedException.class,
+        () -> entityService.deleteEntity("server", "server-1"));
+    verify(entityTemplateValidationService).validateTemplateExists("server");
+    verify(entityRepository, never()).save(any());
+    verify(entityRepository, never()).deleteByTemplateIdentifierAndIdentifier(anyString(),
+        anyString());
+  }
+
   private Entity entity(String templateIdentifier, String identifier, String name) {
     return new Entity(UUID.randomUUID(), templateIdentifier, name, identifier, List.of(),
         List.of());

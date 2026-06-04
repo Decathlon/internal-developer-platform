@@ -933,18 +933,18 @@ public class EntityControllerTest extends AbstractIntegrationTest {
 
     @Test
     @WithMockUser()
-    @DisplayName("Should return 500 when entity identifier path segment is blank")
-    void deleteEntity_404_with_blank_entity_identifier() throws Exception {
+    @DisplayName("Should return 400 when entity identifier path segment is blank")
+    void deleteEntity_400_with_blank_entity_identifier() throws Exception {
       mockMvc
           .perform(delete("/api/v1/entities/{template-identifier}/{entity-identifier}",
               TEMPLATE_IDENTIFIER, "").accept(APPLICATION_JSON).with(csrf()))
-          .andExpect(status().isInternalServerError());
+          .andExpect(status().isBadRequest());
     }
 
     @Test
     @WithMockUser()
     @DisplayName("Should return 400 when template identifier path segment is blank")
-    void deleteEntity_404_with_blank_template_identifier() throws Exception {
+    void deleteEntity_400_with_blank_template_identifier() throws Exception {
       mockMvc
           .perform(delete("/api/v1/entities/{template-identifier}/{entity-identifier}", "",
               ENTITY_IDENTIFIER).accept(APPLICATION_JSON).with(csrf()))

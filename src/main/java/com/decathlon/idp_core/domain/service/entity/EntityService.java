@@ -285,7 +285,7 @@ public class EntityService {
       return false;
     }
     var definition = getRelationDefinition(parentTemplate, relation.name());
-    return definition != null && definition.required() && !definition.toMany();
+    return definition != null && definition.required();
   }
 
   /// Removes the specified entity identifier from the relations of the parent
@@ -346,7 +346,7 @@ public class EntityService {
         .filter(target -> !entityIdentifierToRemove.equals(target)).toList();
     if (updatedTargets.isEmpty()) {
       RelationDefinition definition = getRelationDefinition(parentTemplate, relation.name());
-      if (definition != null && definition.required() && !definition.toMany()) {
+      if (definition != null && definition.required()) {
         return;
       }
     }
