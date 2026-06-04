@@ -938,7 +938,7 @@ public class EntityControllerTest extends AbstractIntegrationTest {
       mockMvc
           .perform(delete("/api/v1/entities/{template-identifier}/{entity-identifier}",
               TEMPLATE_IDENTIFIER, "").accept(APPLICATION_JSON).with(csrf()))
-          .andExpect(status().isBadRequest());
+          .andExpect(status().isNotFound());
     }
 
     @Test
