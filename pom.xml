@@ -328,6 +328,20 @@
               </includes>
               <stylesheet>${project.basedir}/.github/scripts/jacoco-to-cobertura.xsl</stylesheet>
               <outputDir>${project.build.directory}</outputDir>
+              <parameters>
+                <parameter>
+                  <name>http://apache.org/xml/features/nonvalidating/load-external-dtd</name>
+                  <value>false</value>
+                </parameter>
+                <parameter>
+                  <name>http://xml.org/sax/features/external-general-entities</name>
+                  <value>false</value>
+                </parameter>
+                <parameter>
+                  <name>http://xml.org/sax/features/external-parameter-entities</name>
+                  <value>false</value>
+                </parameter>
+              </parameters>
               <fileMappers>
                 <fileMapper implementation="org.codehaus.plexus.components.io.filemappers.MergeFileMapper">
                   <targetName>cobertura.xml</targetName>
