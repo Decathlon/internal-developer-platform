@@ -316,13 +316,35 @@
       </plugin>
 
       <plugin>
+        <groupId>com.google.code.maven-replacer-plugin</groupId>
+        <artifactId>maven-replacer-plugin</artifactId>
+        <version>1.4.1</version>
+        <executions>
+          <execution>
+            <id>remove-dtd-from-jacoco</id>
+            <phase>verify</phase>
+            <goals>
+              <goal>replace</goal>
+            </goals>
+            <configuration>
+              <file>${project.build.directory}/site/jacoco/jacoco.xml</file>
+              <regex>true</regex>
+              <replacements>
+                <replacement>
+                  <token>&lt;!DOCTYPE[^&gt;]*&gt;</token>
+                  <value></value>
+                </replacement>
+              </replacements>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
+
+      <plugin>
         <groupId>org.codehaus.mojo</groupId>
         <artifactId>xml-maven-plugin</artifactId>
         <version>${xml-maven-plugin.version}</version>
         <configuration>
-          <indentingXsltTransformer>
-            <indentAmount>2</indentAmount>
-          </indentingXsltTransformer>
           <transformationSets>
             <transformationSet>
               <dir>${project.build.directory}/site/jacoco</dir>
@@ -339,13 +361,6 @@
             </transformationSet>
           </transformationSets>
         </configuration>
-        <dependencies>
-          <dependency>
-            <groupId>net.sf.saxon</groupId>
-            <artifactId>Saxon-HE</artifactId>
-            <version>12.4</version>
-          </dependency>
-        </dependencies>
         <executions>
           <execution>
             <id>jacoco-to-cobertura</id>
