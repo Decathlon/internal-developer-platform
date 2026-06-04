@@ -48,12 +48,12 @@ jobs:
       - name: Install dependencies
         working-directory: docs
         run: |
-          uv sync
+          uv sync --no-build --frozen
 
       - name: Build documentation
         working-directory: docs
         run: |
-          uv run zensical build
+          uv run --no-build --frozen zensical build
 
       - name: Check navigation links
         run: |

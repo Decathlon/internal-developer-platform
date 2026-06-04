@@ -24,6 +24,7 @@
     <testcontainers.version>1.21.4</testcontainers.version>
     <maven-compiler.version>3.15.0</maven-compiler.version>
     <jacoco-maven.version>0.8.14</jacoco-maven.version>
+    <xml-maven-plugin.version>1.1.0</xml-maven-plugin.version>
     <mapstruct.version>1.5.5.Final</mapstruct.version>
   </properties>
 
@@ -312,6 +313,29 @@
             </configuration>
           </execution>
         </executions>
+      </plugin>
+
+      <plugin>
+        <groupId>org.codehaus.mojo</groupId>
+        <artifactId>xml-maven-plugin</artifactId>
+        <version>${xml-maven-plugin.version}</version>
+        <configuration>
+          <transformationSets>
+            <transformationSet>
+              <dir>${project.build.directory}/site/jacoco</dir>
+              <includes>
+                <include>jacoco.xml</include>
+              </includes>
+              <stylesheet>${project.basedir}/.github/scripts/jacoco-to-cobertura.xsl</stylesheet>
+              <outputDir>${project.build.directory}</outputDir>
+              <fileMappers>
+                <fileMapper implementation="org.codehaus.plexus.components.io.filemappers.MergeFileMapper">
+                  <targetName>cobertura.xml</targetName>
+                </fileMapper>
+              </fileMappers>
+            </transformationSet>
+          </transformationSets>
+        </configuration>
       </plugin>
 
       <plugin>

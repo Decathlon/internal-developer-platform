@@ -90,14 +90,12 @@ jobs:
             -B
 
       - name: Convert JaCoCo report to Cobertura format
-        run: |
-          pip install jacoco2cobertura --quiet
-          jacoco2cobertura target/site/jacoco/jacoco.xml > cobertura.xml
+        run: mvn org.codehaus.mojo:xml-maven-plugin:transform -B
 
       - name: Upload code coverage to GitHub
         uses: actions/upload-code-coverage@abb5995db9e0199b0e2bb9dbd136fce4cb1ec4d3  # v1
         with:
-          file: cobertura.xml
+          file: target/cobertura.xml
           language: Java
           label: code-coverage/jacoco
 
