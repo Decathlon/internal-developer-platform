@@ -91,8 +91,8 @@ jobs:
 
       - name: Convert JaCoCo report to Cobertura format
         run: |
-          pip install cover2cover --quiet
-          cover2cover target/site/jacoco/jacoco.xml src/main/java > cobertura.xml
+          pip install jacoco2cobertura --quiet
+          jacoco2cobertura target/site/jacoco/jacoco.xml > cobertura.xml
 
       - name: Upload code coverage to GitHub
         uses: actions/upload-code-coverage@abb5995db9e0199b0e2bb9dbd136fce4cb1ec4d3  # v1
