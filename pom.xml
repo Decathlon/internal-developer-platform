@@ -320,6 +320,9 @@
         <artifactId>xml-maven-plugin</artifactId>
         <version>${xml-maven-plugin.version}</version>
         <configuration>
+          <indentingXsltTransformer>
+            <indentAmount>2</indentAmount>
+          </indentingXsltTransformer>
           <transformationSets>
             <transformationSet>
               <dir>${project.build.directory}/site/jacoco</dir>
@@ -328,20 +331,6 @@
               </includes>
               <stylesheet>${project.basedir}/.github/scripts/jacoco-to-cobertura.xsl</stylesheet>
               <outputDir>${project.build.directory}</outputDir>
-              <parameters>
-                <parameter>
-                  <name>http://apache.org/xml/features/nonvalidating/load-external-dtd</name>
-                  <value>false</value>
-                </parameter>
-                <parameter>
-                  <name>http://xml.org/sax/features/external-general-entities</name>
-                  <value>false</value>
-                </parameter>
-                <parameter>
-                  <name>http://xml.org/sax/features/external-parameter-entities</name>
-                  <value>false</value>
-                </parameter>
-              </parameters>
               <fileMappers>
                 <fileMapper implementation="org.codehaus.plexus.components.io.filemappers.MergeFileMapper">
                   <targetName>cobertura.xml</targetName>
@@ -350,8 +339,16 @@
             </transformationSet>
           </transformationSets>
         </configuration>
+        <dependencies>
+          <dependency>
+            <groupId>net.sf.saxon</groupId>
+            <artifactId>Saxon-HE</artifactId>
+            <version>12.4</version>
+          </dependency>
+        </dependencies>
         <executions>
           <execution>
+            <id>jacoco-to-cobertura</id>
             <goals>
               <goal>transform</goal>
             </goals>
