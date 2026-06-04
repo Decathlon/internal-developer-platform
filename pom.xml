@@ -327,7 +327,7 @@
             </goals>
             <phase>verify</phase>
             <configuration>
-              <file>${project.build.directory}/site/jacoco/jacoco.xml</file>
+              <file>target/site/jacoco/jacoco.xml</file>
               <regex>true</regex>
               <replacements>
                 <replacement>
