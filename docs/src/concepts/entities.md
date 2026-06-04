@@ -430,6 +430,7 @@ curl -X DELETE http://localhost:8084/api/v1/entities/web-service/my-web-service 
 | `401` | Missing or invalid authentication token                |
 | `403` | Insufficient permissions                               |
 | `404` | Template or entity not found for the given identifier  |
+| `409` | Target entity has required relations                   |
 | `500` | Unexpected server error                                |
 
 ### Delete Behavior

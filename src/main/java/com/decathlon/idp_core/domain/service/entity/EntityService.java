@@ -178,7 +178,7 @@ public class EntityService {
   public void deleteEntity(String templateIdentifier, String entityIdentifier) {
     entityTemplateValidationService.validateTemplateExists(templateIdentifier);
     Entity entityToDelete = retrieveEntity(templateIdentifier, entityIdentifier);
-    removedRelationRelated(entityToDelete);
+    removeRelatedRelations(entityToDelete);
     entityRepository.deleteByTemplateIdentifierAndIdentifier(templateIdentifier, entityIdentifier);
   }
 
@@ -197,7 +197,7 @@ public class EntityService {
   /// to find and clean up related entities
   /// @throws EntityDeletionBlockedException if the entity is referenced by
   /// required relations
-  private void removedRelationRelated(final Entity entityToDelete) {
+  private void removeRelatedRelations(final Entity entityToDelete) {
     List<Entity> parentEntities = entityRepository.findEntitiesRelated(entityToDelete.identifier());
 
     Map<String, EntityTemplate> parentTemplates = parentEntities.stream()
