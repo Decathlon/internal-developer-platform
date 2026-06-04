@@ -322,17 +322,17 @@
         <executions>
           <execution>
             <id>remove-dtd-from-jacoco</id>
-            <phase>verify</phase>
             <goals>
               <goal>replace</goal>
             </goals>
+            <phase>verify</phase>
             <configuration>
               <file>${project.build.directory}/site/jacoco/jacoco.xml</file>
               <regex>true</regex>
               <replacements>
                 <replacement>
                   <token>&lt;!DOCTYPE[^&gt;]*&gt;</token>
-                  <value></value>
+                  <value/>
                 </replacement>
               </replacements>
             </configuration>
