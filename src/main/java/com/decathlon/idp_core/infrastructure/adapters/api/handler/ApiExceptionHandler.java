@@ -337,8 +337,7 @@ public class ApiExceptionHandler {
   @ExceptionHandler(NoHandlerFoundException.class)
   public ResponseEntity<ErrorResponse> handleNoHandlerFoundException(NoHandlerFoundException ex) {
     log.warn("No handler found (possible missing path variable): {}", ex.getMessage());
-    return createErrorResponse(NOT_FOUND,
-        "Malformed request URL or missing path variable.");
+    return createErrorResponse(NOT_FOUND, "Malformed request URL or missing path variable.");
   }
 
   private String parseHttpMessageNotReadableError(String originalMessage) {
