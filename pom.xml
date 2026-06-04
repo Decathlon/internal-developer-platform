@@ -319,14 +319,6 @@
         <groupId>org.codehaus.mojo</groupId>
         <artifactId>xml-maven-plugin</artifactId>
         <version>${xml-maven-plugin.version}</version>
-        <executions>
-          <execution>
-            <phase>verify</phase>
-            <goals>
-              <goal>transform</goal>
-            </goals>
-          </execution>
-        </executions>
         <configuration>
           <transformationSets>
             <transformationSet>
@@ -358,6 +350,14 @@
             </transformationSet>
           </transformationSets>
         </configuration>
+        <executions>
+          <execution>
+            <goals>
+              <goal>transform</goal>
+            </goals>
+            <phase>verify</phase>
+          </execution>
+        </executions>
       </plugin>
 
       <plugin>
