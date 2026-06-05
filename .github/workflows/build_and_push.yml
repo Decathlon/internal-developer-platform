@@ -9,15 +9,14 @@ on: # yamllint disable-line rule:truthy
         description: 'Tag name for the release (e.g., v1.0.0)'
         required: true
 
-permissions:
-  contents: read
-  id-token: write
-
 jobs:
   build-and-push:
     runs-on: ubuntu-latest
     name: Build and Push Docker Image
     timeout-minutes: 20
+    permissions:
+      contents: read
+      id-token: write
     steps:
       - name: Checkout repository
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  #  v6.0.2
