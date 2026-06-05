@@ -16,10 +16,10 @@ import org.junit.jupiter.params.provider.MethodSource;
 
 import com.decathlon.idp_core.domain.constant.SearchConstraints;
 import com.decathlon.idp_core.domain.exception.search.InvalidSearchQueryException;
-import com.decathlon.idp_core.domain.model.entity.RawSearchFilterNode;
-import com.decathlon.idp_core.domain.model.entity.SearchFilterNode;
-import com.decathlon.idp_core.domain.model.enums.LogicalConnector;
-import com.decathlon.idp_core.domain.model.enums.SearchOperator;
+import com.decathlon.idp_core.domain.model.search.LogicalConnector;
+import com.decathlon.idp_core.domain.model.search.RawSearchFilterNode;
+import com.decathlon.idp_core.domain.model.search.SearchFilterNode;
+import com.decathlon.idp_core.domain.model.search.SearchOperator;
 
 /// Unit tests for [SearchFilterParser].
 ///

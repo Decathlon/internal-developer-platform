@@ -10,9 +10,9 @@ import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.springframework.data.jpa.domain.Specification;
 
-import com.decathlon.idp_core.domain.model.entity.SearchFilterNode;
-import com.decathlon.idp_core.domain.model.enums.LogicalConnector;
-import com.decathlon.idp_core.domain.model.enums.SearchOperator;
+import com.decathlon.idp_core.domain.model.search.LogicalConnector;
+import com.decathlon.idp_core.domain.model.search.SearchFilterNode;
+import com.decathlon.idp_core.domain.model.search.SearchOperator;
 import com.decathlon.idp_core.infrastructure.adapters.persistence.model.entity.EntityJpaEntity;
 
 /// Unit tests for [EntitySearchSpecification].

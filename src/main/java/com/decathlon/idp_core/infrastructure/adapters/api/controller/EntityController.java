@@ -40,10 +40,13 @@ import static com.decathlon.idp_core.infrastructure.adapters.api.configuration.S
 import static org.springframework.http.HttpStatus.CREATED;
 import static org.springframework.http.HttpStatus.OK;
 
+import java.util.List;
+
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.validation.annotation.Validated;
@@ -59,8 +62,10 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.decathlon.idp_core.domain.model.entity.Entity;
 import com.decathlon.idp_core.domain.model.entity.EntityFilter;
-import com.decathlon.idp_core.domain.model.entity.RawSearchFilterNode;
-import com.decathlon.idp_core.domain.model.entity.SearchFilterNode;
+import com.decathlon.idp_core.domain.model.search.PaginatedResult;
+import com.decathlon.idp_core.domain.model.search.PaginationCriteria;
+import com.decathlon.idp_core.domain.model.search.RawSearchFilterNode;
+import com.decathlon.idp_core.domain.model.search.SearchFilterNode;
 import com.decathlon.idp_core.domain.service.entity.EntityService;
 import com.decathlon.idp_core.domain.service.filter.EntityFilterDslParser;
 import com.decathlon.idp_core.domain.service.search.SearchFilterParser;
@@ -262,8 +267,18 @@ public class EntityController {
   public Page<EntityDtoOut> searchEntities(@RequestBody EntitySearchRequestDtoIn searchRequest) {
     RawSearchFilterNode rawFilter = searchFilterMapper.toRaw(searchRequest.filter());
     SearchFilterNode filter = searchFilterParser.parse(rawFilter);
-    Page<Entity> entities = entityService.searchEntities(filter, searchRequest.query(),
-        searchRequest.page(), searchRequest.size(), searchRequest.sort());
-    return entityDtoOutMapper.fromEntitiesSearchPageToDtoPage(entities);
+    PaginationCriteria paginationCriteria = new PaginationCriteria(searchRequest.page(),
+        searchRequest.size(), searchRequest.sort());
+
+    PaginatedResult<Entity> result = entityService.searchEntities(filter, searchRequest.query(),
+        paginationCriteria);
+    List<EntityDtoOut> dtoOutList = entityDtoOutMapper.toDtoList(result.content());
+    return toPageResponse(dtoOutList, paginationCriteria, result.totalElements());
+  }
+
+  private <T> Page<T> toPageResponse(List<T> content, PaginationCriteria criteria,
+      long totalElements) {
+    Pageable pageable = PageRequest.of(criteria.page(), criteria.size());
+    return new PageImpl<>(content, pageable, totalElements);
   }
 }

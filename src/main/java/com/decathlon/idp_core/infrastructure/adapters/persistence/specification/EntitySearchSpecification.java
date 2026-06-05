@@ -12,8 +12,8 @@ import jakarta.persistence.criteria.Subquery;
 import org.hibernate.query.criteria.HibernateCriteriaBuilder;
 import org.springframework.data.jpa.domain.Specification;
 
-import com.decathlon.idp_core.domain.model.entity.SearchFilterNode;
-import com.decathlon.idp_core.domain.model.enums.SearchOperator;
+import com.decathlon.idp_core.domain.model.search.SearchFilterNode;
+import com.decathlon.idp_core.domain.model.search.SearchOperator;
 import com.decathlon.idp_core.infrastructure.adapters.persistence.model.entity.EntityJpaEntity;
 import com.decathlon.idp_core.infrastructure.adapters.persistence.model.entity.RelationJpaEntity;
 
@@ -41,14 +41,15 @@ import lombok.NoArgsConstructor;
 ///
 /// **Security:** LIKE-based operators ([SearchOperator#CONTAINS], [SearchOperator#NOT_CONTAINS],
 /// [SearchOperator#STARTS_WITH], [SearchOperator#ENDS_WITH]) use PostgreSQL `ILIKE` for
-/// case-insensitive matching, allowing GIN trigram indexes (V3_5) to be leveraged.
+/// case-insensitive matching, allowing GIN trigram indexes to be leveraged.
 /// SQL wildcards (`%` and `_`) in user-supplied values are escaped to prevent unintended
-/// pattern matching. EQ and NEQ use `LOWER()` with functional btree indexes (V3_4).
+/// pattern matching. EQ and NEQ use `LOWER()` with functional btree indexes.
 @NoArgsConstructor(access = AccessLevel.PRIVATE)
 public final class EntitySearchSpecification {
 
   private static final String TEMPLATE_IDENTIFIER = "templateIdentifier";
   private static final String IDENTIFIER = "identifier";
+  private static final String TEMPLATE = "template";
   private static final String NAME = "name";
   private static final String RELATION = "relation";
   private static final String RELATIONS = "relations";
@@ -134,33 +135,17 @@ public final class EntitySearchSpecification {
 
   private static Specification<EntityJpaEntity> buildCriterion(SearchFilterNode.Criterion c) {
     var field = c.field();
-    if ("template".equals(field)) {
-      return (root, query, cb) -> buildPredicate(cb, root.get(TEMPLATE_IDENTIFIER), c.operation(),
-          c.value());
-    }
-    if (IDENTIFIER.equals(field)) {
-      return (root, query, cb) -> buildPredicate(cb, root.get(IDENTIFIER), c.operation(),
-          c.value());
-    }
-    if (NAME.equals(field)) {
-      return (root, query, cb) -> buildPredicate(cb, root.get(NAME), c.operation(), c.value());
-    }
-    if (field.startsWith(PROPERTY_PREFIX)) {
-      return propertySpec(c, field.substring(PROPERTY_PREFIX.length()));
-    }
-    if (field.startsWith(RELATIONS_AS_TARGET_PREFIX)) {
-      return relationsAsTargetSpec(c, field.substring(RELATIONS_AS_TARGET_PREFIX.length()));
-    }
-    if (RELATIONS_AS_TARGET.equals(field)) {
-      return relationsAsTargetNameSpec(c);
-    }
-    if (RELATION.equals(field)) {
-      return relationNameSpec(c);
-    }
-    if (field.startsWith(RELATION_PREFIX)) {
-      return relationSpec(c, field.substring(RELATION_PREFIX.length()));
-    }
-    throw new IllegalArgumentException("Unknown search field: " + field);
+    return switch (field) {
+      case TEMPLATE -> (root, query, cb) -> buildPredicate(cb, root.get(TEMPLATE_IDENTIFIER), c.operation(), c.value());
+      case String f when f.equals(IDENTIFIER) -> (root, query, cb) -> buildPredicate(cb, root.get(IDENTIFIER), c.operation(), c.value());
+      case String f when f.equals(NAME) -> (root, query, cb) -> buildPredicate(cb, root.get(NAME), c.operation(), c.value());
+      case String f when f.startsWith(PROPERTY_PREFIX) -> propertySpec(c, f.substring(PROPERTY_PREFIX.length()));
+      case String f when f.startsWith(RELATIONS_AS_TARGET_PREFIX) -> relationsAsTargetSpec(c, f.substring(RELATIONS_AS_TARGET_PREFIX.length()));
+      case String f when f.equals(RELATIONS_AS_TARGET) -> relationsAsTargetNameSpec(c);
+      case String f when f.equals(RELATION) -> relationNameSpec(c);
+      case String f when f.startsWith(RELATION_PREFIX) -> relationSpec(c, f.substring(RELATION_PREFIX.length()));
+      default -> throw new IllegalArgumentException("Unknown search field: " + field);
+    };
   }
 
   // --- Property spec ---

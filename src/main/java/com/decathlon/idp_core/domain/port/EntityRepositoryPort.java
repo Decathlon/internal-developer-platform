@@ -11,7 +11,9 @@ import org.springframework.data.domain.Pageable;
 import com.decathlon.idp_core.domain.model.entity.Entity;
 import com.decathlon.idp_core.domain.model.entity.EntityFilter;
 import com.decathlon.idp_core.domain.model.entity.EntitySummary;
-import com.decathlon.idp_core.domain.model.entity.SearchFilterNode;
+import com.decathlon.idp_core.domain.model.search.PaginatedResult;
+import com.decathlon.idp_core.domain.model.search.PaginationCriteria;
+import com.decathlon.idp_core.domain.model.search.SearchFilterNode;
 
 /// Driven port defining the contract for [Entity] persistence operations.
 ///
@@ -55,5 +57,6 @@ public interface EntityRepositoryPort {
   void deleteRelationsByTemplateIdentifierAndRelationName(String templateIdentifier,
       Collection<String> relationNames);
 
-  Page<Entity> search(SearchFilterNode filter, String query, Pageable pageable);
+  PaginatedResult<Entity> search(SearchFilterNode filter, String query,
+      PaginationCriteria paginationCriteria);
 }

@@ -2,14 +2,12 @@ package com.decathlon.idp_core.domain.service.entity;
 
 import java.util.List;
 
-import jakarta.transaction.Transactional;
 import jakarta.validation.Valid;
 
 import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
-import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.validation.annotation.Validated;
 
 import com.decathlon.idp_core.domain.constant.SearchConstraints;
@@ -22,8 +20,10 @@ import com.decathlon.idp_core.domain.exception.search.InvalidSearchQueryExceptio
 import com.decathlon.idp_core.domain.model.entity.Entity;
 import com.decathlon.idp_core.domain.model.entity.EntityFilter;
 import com.decathlon.idp_core.domain.model.entity.EntitySummary;
-import com.decathlon.idp_core.domain.model.entity.SearchFilterNode;
 import com.decathlon.idp_core.domain.model.entity_template.EntityTemplate;
+import com.decathlon.idp_core.domain.model.search.PaginatedResult;
+import com.decathlon.idp_core.domain.model.search.PaginationCriteria;
+import com.decathlon.idp_core.domain.model.search.SearchFilterNode;
 import com.decathlon.idp_core.domain.port.EntityRepositoryPort;
 import com.decathlon.idp_core.domain.service.entity_template.EntityTemplateService;
 import com.decathlon.idp_core.domain.service.entity_template.EntityTemplateValidationService;
@@ -52,7 +52,7 @@ public class EntityService {
   private final EntityValidationService entityValidationService;
   private final EntityTemplateValidationService entityTemplateValidationService;
   private final EntityTemplateService entityTemplateService;
-  private final EntityFilterDslParser entityQueryParserService;
+  private final EntityFilterDslParser entityFilterDslParser;
   private final SearchFilterValidationService searchFilterValidationService;
 
   /// Retrieves entities filtered by template with optional query filter.
@@ -75,7 +75,7 @@ public class EntityService {
     EntityTemplate template = entityTemplateService
         .getEntityTemplateByIdentifier(templateIdentifier);
     EntityFilter filter = entityFilter != null ? entityFilter : EntityFilter.empty();
-    entityQueryParserService.validateFilterPropertyTypes(filter, template);
+    entityFilterDslParser.validateFilterPropertyTypes(filter, template);
     return entityRepository.findByTemplateIdentifierWithFilter(templateIdentifier, filter,
         pageable);
   }
@@ -173,48 +173,45 @@ public class EntityService {
   /// **Contract:** Executes a global entity search using the provided filter tree
   /// and optional text query.
   /// Not scoped to a single template; include a template criterion in the filter
-  /// to scope the result to a specific template. Validates and builds pagination
-  /// internally.
+  /// to scope the result to a specific template. Validates pagination criteria
+  /// and delegates to the repository for execution.
   ///
   /// @param filter root node of the search filter tree; an empty group returns
   /// all entities
   /// @param query optional free-text string searched across identifier, name,
   /// templateIdentifier,
   /// and all property values; null means no text restriction
-  /// @param page zero-based page index; must be 0 or greater
-  /// @param size number of items per page; must be between 1 and
-  /// [SearchConstraints#MAX_PAGE_SIZE]
-  /// @param sort optional sort expression in the form `field` or `field:asc|desc;
-  /// null or blank means default ordering
+  /// @param paginationCriteria contains page (zero-based), size (1 to
+  /// MAX_PAGE_SIZE),
+  /// and optional sort expression (`field` or `field:asc|desc`)
   /// @return paginated entities matching the filter and query
-  /// @throws InvalidSearchQueryException when page, size, or sort parameters are
-  /// invalid
-  @Transactional
-  public Page<Entity> searchEntities(SearchFilterNode filter, String query, int page, int size,
-      String sort) {
+  /// @throws InvalidSearchQueryException when pagination parameters are invalid
+  @Transactional(readOnly = true)
+  public PaginatedResult<Entity> searchEntities(SearchFilterNode filter, String query,
+      PaginationCriteria paginationCriteria) {
     searchFilterValidationService.validate(filter, query);
-    Pageable pageable = buildPageable(page, size, sort);
-    return entityRepository.search(filter, query, pageable);
+    validatePaginationCriteria(paginationCriteria);
+    return entityRepository.search(filter, query, paginationCriteria);
   }
 
-  private Pageable buildPageable(int page, int size, String sort) {
-    if (page < 0) {
+  private void validatePaginationCriteria(PaginationCriteria criteria) {
+    if (criteria.page() < 0) {
       throw new InvalidSearchQueryException(ValidationMessages.SEARCH_PAGE_INVALID);
     }
-    if (size <= 0) {
+    if (criteria.size() <= 0) {
       throw new InvalidSearchQueryException(ValidationMessages.SEARCH_SIZE_INVALID);
     }
-    if (size > SearchConstraints.MAX_PAGE_SIZE) {
+    if (criteria.size() > SearchConstraints.MAX_PAGE_SIZE) {
       throw new InvalidSearchQueryException(
           ValidationMessages.SEARCH_PAGE_SIZE_TOO_LARGE.formatted(SearchConstraints.MAX_PAGE_SIZE));
     }
-    if (sort == null || sort.isBlank()) {
-      return PageRequest.of(page, size);
+    String sort = criteria.sort();
+    if (sort != null && !sort.isBlank()) {
+      validateSortExpression(sort);
     }
-    return PageRequest.of(page, size, parseSortExpression(sort));
   }
 
-  private Sort parseSortExpression(String sortExpression) {
+  private void validateSortExpression(String sortExpression) {
     String[] parts = sortExpression.split(":");
     if (parts.length > 2) {
       throw new InvalidSearchQueryException(
@@ -225,16 +222,13 @@ public class EntityService {
       throw new InvalidSearchQueryException(
           ValidationMessages.SEARCH_INVALID_SORT_FIELD.formatted(property));
     }
-    if (parts.length == 1) {
-      return Sort.by(Sort.Direction.ASC, property);
+    if (parts.length == 2) {
+      String direction = parts[1].trim().toLowerCase();
+      if (!direction.equals("asc") && !direction.equals("desc")) {
+        throw new InvalidSearchQueryException(
+            ValidationMessages.SEARCH_INVALID_SORT_FORMAT.formatted(sortExpression));
+      }
     }
-    String direction = parts[1].trim().toLowerCase();
-    return switch (direction) {
-      case "asc" -> Sort.by(Sort.Direction.ASC, property);
-      case "desc" -> Sort.by(Sort.Direction.DESC, property);
-      default -> throw new InvalidSearchQueryException(
-          ValidationMessages.SEARCH_INVALID_SORT_FORMAT.formatted(sortExpression));
-    };
   }
 
 }

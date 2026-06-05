@@ -1,4 +1,4 @@
-package com.decathlon.idp_core.domain.model.enums;
+package com.decathlon.idp_core.domain.model.search;
 
 /// Logical connectors for combining multiple filter nodes in a search query.
 ///

@@ -14,7 +14,7 @@ import org.springframework.data.jpa.domain.Specification;
 import com.decathlon.idp_core.domain.model.entity.EntityFilter;
 import com.decathlon.idp_core.domain.model.entity.FilterCriterion;
 import com.decathlon.idp_core.domain.model.enums.FilterOperator;
-import com.decathlon.idp_core.domain.model.enums.SearchOperator;
+import com.decathlon.idp_core.domain.model.search.SearchOperator;
 import com.decathlon.idp_core.infrastructure.adapters.persistence.model.entity.EntityJpaEntity;
 import com.decathlon.idp_core.infrastructure.adapters.persistence.model.entity.PropertyJpaEntity;
 import com.decathlon.idp_core.infrastructure.adapters.persistence.model.entity.RelationJpaEntity;

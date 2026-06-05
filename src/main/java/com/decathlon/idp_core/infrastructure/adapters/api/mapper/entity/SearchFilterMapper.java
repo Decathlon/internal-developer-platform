@@ -4,7 +4,7 @@ import java.util.List;
 
 import org.springframework.stereotype.Component;
 
-import com.decathlon.idp_core.domain.model.entity.RawSearchFilterNode;
+import com.decathlon.idp_core.domain.model.search.RawSearchFilterNode;
 import com.decathlon.idp_core.infrastructure.adapters.api.dto.in.FilterNodeDtoIn;
 
 /// Converts a [FilterNodeDtoIn] tree into a [RawSearchFilterNode] tree.

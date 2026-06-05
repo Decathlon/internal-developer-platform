@@ -1,4 +1,4 @@
-package com.decathlon.idp_core.domain.model.enums;
+package com.decathlon.idp_core.domain.model.search;
 
 /// Operators supported by the entity search query DSL.
 ///

@@ -1,9 +1,6 @@
-package com.decathlon.idp_core.domain.model.entity;
+package com.decathlon.idp_core.domain.model.search;
 
 import java.util.List;
-
-import com.decathlon.idp_core.domain.model.enums.LogicalConnector;
-import com.decathlon.idp_core.domain.model.enums.SearchOperator;
 
 /// A node in the search filter tree for entity search queries.
 ///

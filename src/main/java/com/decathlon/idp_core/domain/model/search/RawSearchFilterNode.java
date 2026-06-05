@@ -1,4 +1,4 @@
-package com.decathlon.idp_core.domain.model.entity;
+package com.decathlon.idp_core.domain.model.search;
 
 import java.util.List;
 

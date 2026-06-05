@@ -6,14 +6,19 @@ import java.util.Optional;
 import java.util.UUID;
 
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.domain.Sort.Direction;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Component;
 
 import com.decathlon.idp_core.domain.model.entity.Entity;
 import com.decathlon.idp_core.domain.model.entity.EntityFilter;
 import com.decathlon.idp_core.domain.model.entity.EntitySummary;
-import com.decathlon.idp_core.domain.model.entity.SearchFilterNode;
+import com.decathlon.idp_core.domain.model.search.PaginatedResult;
+import com.decathlon.idp_core.domain.model.search.PaginationCriteria;
+import com.decathlon.idp_core.domain.model.search.SearchFilterNode;
 import com.decathlon.idp_core.domain.port.EntityRepositoryPort;
 import com.decathlon.idp_core.infrastructure.adapters.persistence.mapper.EntityPersistenceMapper;
 import com.decathlon.idp_core.infrastructure.adapters.persistence.model.entity.EntityJpaEntity;
@@ -92,11 +97,41 @@ public class PostgresEntityAdapter implements EntityRepositoryPort {
   }
 
   @Override
-  public Page<Entity> search(SearchFilterNode filter, String query, Pageable pageable) {
+  public PaginatedResult<Entity> search(SearchFilterNode filter, String query,
+      PaginationCriteria paginationCriteria) {
     Specification<EntityJpaEntity> spec = EntitySearchSpecification.of(filter);
     if (query != null && !query.isBlank()) {
       spec = spec.and(EntitySearchSpecification.globalTextSearch(query));
     }
-    return jpaEntityRepository.findAll(spec, pageable).map(mapper::toDomain);
+    Pageable pageable = buildPageable(paginationCriteria);
+    Page<EntityJpaEntity> page = jpaEntityRepository.findAll(spec, pageable);
+
+    return new PaginatedResult<>(page.getContent().stream().map(mapper::toDomain).toList(),
+        page.getTotalElements(), page.getTotalPages(), page.getNumber());
+  }
+
+  private Pageable buildPageable(PaginationCriteria criteria) {
+    if (criteria.sort() == null || criteria.sort().isBlank()) {
+      return PageRequest.of(criteria.page(), criteria.size());
+    }
+
+    Sort sort = parseSortExpression(criteria.sort());
+    return PageRequest.of(criteria.page(), criteria.size(), sort);
+  }
+
+  private Sort parseSortExpression(String sortExpression) {
+    String[] parts = sortExpression.split(":");
+    String property = parts[0].trim();
+
+    if (parts.length == 1) {
+      return Sort.by(Direction.ASC, property);
+    }
+
+    String direction = parts[1].trim().toLowerCase();
+    return switch (direction) {
+      case "asc" -> Sort.by(Direction.ASC, property);
+      case "desc" -> Sort.by(Direction.DESC, property);
+      default -> Sort.by(Direction.ASC, property);
+    };
   }
 }

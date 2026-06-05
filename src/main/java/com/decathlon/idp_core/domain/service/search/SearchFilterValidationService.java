@@ -10,10 +10,10 @@ import org.springframework.stereotype.Service;
 import com.decathlon.idp_core.domain.constant.SearchConstraints;
 import com.decathlon.idp_core.domain.constant.ValidationMessages;
 import com.decathlon.idp_core.domain.exception.search.InvalidSearchQueryException;
-import com.decathlon.idp_core.domain.model.entity.SearchFilterNode;
 import com.decathlon.idp_core.domain.model.entity_template.EntityTemplate;
 import com.decathlon.idp_core.domain.model.enums.PropertyType;
-import com.decathlon.idp_core.domain.model.enums.SearchOperator;
+import com.decathlon.idp_core.domain.model.search.SearchFilterNode;
+import com.decathlon.idp_core.domain.model.search.SearchOperator;
 import com.decathlon.idp_core.domain.port.EntityTemplateRepositoryPort;
 
 import lombok.AllArgsConstructor;

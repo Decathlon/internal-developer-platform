@@ -8,7 +8,7 @@ import jakarta.persistence.criteria.Predicate;
 
 import org.hibernate.query.criteria.HibernateCriteriaBuilder;
 
-import com.decathlon.idp_core.domain.model.enums.SearchOperator;
+import com.decathlon.idp_core.domain.model.search.SearchOperator;
 
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
