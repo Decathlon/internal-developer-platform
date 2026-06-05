@@ -97,9 +97,11 @@ public class PostgresEntityGraphAdapter implements EntityGraphRepositoryPort {
     // Step 4: map to domain and key by composite key for O(1) lookup
     log.debug("[EntityGraphAdapter] Mapping JPA entities to domain models...");
     final long tStartMap = System.nanoTime();
+
     Map<UUID, Entity> result = jpaEntities.stream().map(mapper::toDomain)
         .collect(Collectors.toMap(Entity::id, Function.identity()));
     final long tAfterMap = System.nanoTime();
+
     log.debug("[EntityGraphAdapter] Mapping completed, returning {} domain entities (elapsed={}ms)",
         result.size(), (tAfterMap - tStartMap) / 1_000_000);
 

@@ -16,12 +16,12 @@ public interface JpaRelationRepository extends JpaRepository<RelationJpaEntity, 
 
   @Query("""
       SELECT new com.decathlon.idp_core.domain.model.entity.RelationAsTargetSummary(
-          tei, r.name, e.identifier, e.name
+          te.targetEntityIdentifier, r.name, e.identifier, e.name
       )
       FROM EntityJpaEntity e
       JOIN e.relations r
-      JOIN r.targetEntityIdentifiers tei
-      WHERE tei IN :targetEntityIdentifiers
+      JOIN r.targetEntities te
+      WHERE te.targetEntityIdentifier IN :targetEntityIdentifiers
       """)
   List<RelationAsTargetSummary> findRelationsSummariesByTargetEntityIdentifiers(
       @Param("targetEntityIdentifiers") List<String> targetEntityIdentifiers);

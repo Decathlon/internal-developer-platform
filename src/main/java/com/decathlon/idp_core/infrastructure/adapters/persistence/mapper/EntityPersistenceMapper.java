@@ -2,7 +2,6 @@ package com.decathlon.idp_core.infrastructure.adapters.persistence.mapper;
 
 import java.util.List;
 import java.util.Objects;
-import java.util.UUID;
 
 import org.springframework.stereotype.Component;
 
@@ -12,6 +11,7 @@ import com.decathlon.idp_core.domain.model.entity.Relation;
 import com.decathlon.idp_core.infrastructure.adapters.persistence.model.entity.EntityJpaEntity;
 import com.decathlon.idp_core.infrastructure.adapters.persistence.model.entity.PropertyJpaEntity;
 import com.decathlon.idp_core.infrastructure.adapters.persistence.model.entity.RelationJpaEntity;
+import com.decathlon.idp_core.infrastructure.adapters.persistence.model.entity.RelationTargetJpaEntity;
 import com.decathlon.idp_core.infrastructure.adapters.persistence.repository.JpaEntityRepository;
 
 import lombok.RequiredArgsConstructor;
@@ -92,49 +92,52 @@ public class EntityPersistenceMapper {
   // Relation Mapping (with identifier ↔ UUID conversion)
   // =========================================================================
 
-  /// Converts JPA relation to domain model.
-  /// Resolves UUIDs back to business identifiers by querying the entity
-  /// repository.
   public Relation toDomain(RelationJpaEntity jpa) {
     if (jpa == null) {
       return null;
     }
 
-    // Convert UUIDs back to business identifiers
-    List<String> targetIdentifiers = jpa.getTargetEntityIds() != null
-        ? jpa.getTargetEntityIds().stream().map(uuidString -> {
-          try {
-            UUID uuid = uuidString;
-            return entityRepository.findById(uuid).map(EntityJpaEntity::getIdentifier).orElse(null);
-          } catch (IllegalArgumentException _) {
-            // Invalid UUID format, skip
-            return null;
-          }
-        }).filter(Objects::nonNull).toList()
+    // Pure in-memory transformation from the unified JPA row down to your string
+    // list
+    List<String> targetIdentifiers = jpa.getTargetEntities() != null
+        ? jpa.getTargetEntities().stream().map(RelationTargetJpaEntity::getTargetEntityIdentifier) // Extract
+                                                                                                   // the
+                                                                                                   // cached
+                                                                                                   // text
+                                                                                                   // string
+            .filter(Objects::nonNull).toList()
         : List.of();
 
     return new Relation(jpa.getId(), jpa.getName(), jpa.getTargetTemplateIdentifier(),
-        targetIdentifiers);
+        targetIdentifiers); // Matches your current domain model signature perfectly!
   }
 
-  /// Converts domain relation to JPA entity.
-  /// Resolves business identifiers to UUIDs by querying the entity repository.
-  /// The JPA entity stores only UUIDs; identifiers are not persisted in the
-  /// infrastructure layer.
+  /// Converts domain relation to JPA entity. Resolves business identifiers to
+  /// UUIDs by querying the entity repository. The JPA entity stores only UUIDs;
+  /// identifiers are not persisted in the infrastructure layer.
   public RelationJpaEntity toJpa(Relation domain) {
     if (domain == null) {
       return null;
     }
 
-    // Convert business identifiers to UUIDs for storage
-    List<UUID> targetUuids = domain.targetEntityIdentifiers() != null
+    // Look up matching entities to bind both fields concurrently into single table
+    // rows
+    List<RelationTargetJpaEntity> targetEntities = domain.targetEntityIdentifiers() != null
         ? domain.targetEntityIdentifiers().stream().map(identifier -> entityRepository
             .findByTemplateIdentifierAndIdentifier(domain.targetTemplateIdentifier(), identifier)
-            .map(EntityJpaEntity::getId).orElse(null)).filter(Objects::nonNull).toList()
+            .map(entity -> new RelationTargetJpaEntity(entity.getId(), // The binary UUID used for
+                                                                       // Graph CTE crawls
+                entity.getIdentifier() // The immutable string cached for Java mapping
+            )).orElse(null)).filter(Objects::nonNull).toList()
         : List.of();
 
+    // Return the unified entity mapping to prevent column nullability errors
     return RelationJpaEntity.builder().id(domain.id()).name(domain.name())
-        .targetTemplateIdentifier(domain.targetTemplateIdentifier()).targetEntityIds(targetUuids)
+        .targetTemplateIdentifier(domain.targetTemplateIdentifier()).targetEntities(targetEntities) // The
+                                                                                                    // single
+                                                                                                    // unified
+                                                                                                    // collection
+                                                                                                    // table
         .build();
   }
 }

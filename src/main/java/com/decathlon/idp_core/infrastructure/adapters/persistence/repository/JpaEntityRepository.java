@@ -40,9 +40,13 @@ public interface JpaEntityRepository
   /// properties. Uses two separate queries to avoid Hibernate's
   /// MultipleBagFetchException. First fetches entities with relations, then
   /// fetches properties separately.
-  @Query("SELECT DISTINCT e FROM EntityJpaEntity e LEFT JOIN FETCH e.relations WHERE e.id IN :identifiers")
-  List<EntityJpaEntity> findAllByIdentifierInWithRelations(
-      @Param("identifiers") Collection<UUID> ids);
+  @Query("""
+      SELECT DISTINCT e
+      FROM EntityJpaEntity e
+      LEFT JOIN FETCH e.relations r
+      WHERE e.id IN :ids
+      """)
+  List<EntityJpaEntity> findAllByIdentifierInWithRelations(@Param("ids") Collection<UUID> ids);
 
   /// Fetch properties for entities that were already loaded. This is called after
   /// findAllByIdentifierInWithRelations to complete the entity graph.

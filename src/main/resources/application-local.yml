@@ -19,6 +19,8 @@ spring:
   jpa:
     hibernate:
       ddl-auto: none  # Disable JPA schema auto-generation, use Flyway instead
+      generate_statistics: true
+      format_sql: true
       show-sql: false
 app:
   full-refresh-at-startup: true
@@ -31,3 +33,6 @@ logging:
     org.springframework.context.support: WARN
     # Suppresses a specific repetitive bean registration delegate log line.
     org.springframework.context.support.PostProcessorRegistrationDelegate: ERROR
+    org.hibernate.SQL: DEBUG
+    org.hibernate.stat: DEBUG
+    org.hibernate.type.descriptor.sql.BasicBinder: TRACE
