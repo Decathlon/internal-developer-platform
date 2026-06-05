@@ -42,4 +42,4 @@ jobs:
       - name: Install dependencies
         working-directory: docs
         run: |
-          uv sync
+          uv sync --no-build --frozen

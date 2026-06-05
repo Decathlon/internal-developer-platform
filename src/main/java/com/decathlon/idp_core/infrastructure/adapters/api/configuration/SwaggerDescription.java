@@ -68,6 +68,8 @@ public class SwaggerDescription {
   public static final String ENDPOINT_POST_ENTITY_DESCRIPTION = "Create a new entity in the system with the provided information";
   public static final String ENDPOINT_PUT_ENTITY_SUMMARY = "Update an existing entity";
   public static final String ENDPOINT_PUT_ENTITY_DESCRIPTION = "Update an existing entity in the system with the provided information";
+  public static final String ENDPOINT_DELETE_ENTITY_SUMMARY = "Delete an existing entity";
+  public static final String ENDPOINT_DELETE_ENTITY_DESCRIPTION = "Delete an entity from the system using its template and entity identifiers. This operation removes the entity and automatically cleans up any relations from other entities that reference it.";
 
   /// API response description constants
   public static final String RESPONSE_TEMPLATES_PAGINATED_SUCCESS = "Paginated templates retrieved successfully";
@@ -83,11 +85,13 @@ public class SwaggerDescription {
   public static final String RESPONSE_INVALID_PAGINATION = "Invalid pagination parameters";
   public static final String RESPONSE_TEMPLATE_CONFLICT = "Template with this identifier already exists";
   public static final String RESPONSE_ENTITY_CONFLICT = "Entity already exists in this template";
+  public static final String RESPONSE_ENTITY_RELATION_CONFLICT = "Target entity has required relations";
   public static final String RESPONSE_ENTITIES_PAGINATED_SUCCESS = "Paginated entities retrieved successfully";
   public static final String RESPONSE_ENTITY_FOUND = "Entity found";
   public static final String RESPONSE_ENTITY_NOT_FOUND_IDENTIFIER = "Entity not found with the provided identifier";
   public static final String RESPONSE_ENTITY_CREATED = "Entity created successfully";
   public static final String RESPONSE_ENTITY_UPDATED = "Entity updated successfully";
+  public static final String RESPONSE_ENTITY_DELETED = "Entity deleted successfully";
   public static final String RESPONSE_INVALID_ENTITY_DATA = "Invalid entity data provided";
   public static final String RESPONSE_UNEXPECTED_SERVER_ERROR = "Unexpected server-side failure";
   public static final String RESPONSE_INSUFFICIENT_RIGHTS = "Insufficient rights";

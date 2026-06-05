@@ -59,4 +59,9 @@ public interface EntityRepositoryPort {
 
   PaginatedResult<Entity> search(SearchFilterNode filter, String query,
       PaginationCriteria paginationCriteria);
+
+  List<Entity> findEntitiesRelated(String targetIdentifier);
+
+  void deleteByTemplateIdentifierAndIdentifier(String templateIdentifier, String entityIdentifier);
+
 }

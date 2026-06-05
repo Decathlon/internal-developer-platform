@@ -10,14 +10,13 @@ on:  # yamllint disable-line rule:truthy
       - edited
       - synchronize
 
-permissions:
-  pull-requests: write
-  statuses: write
-
 jobs:
   lint-title:
     name: Lint PR title
     runs-on: ubuntu-latest
+    permissions:
+      pull-requests: write
+      statuses: write
     steps:
 
       - name: Check PR title convention

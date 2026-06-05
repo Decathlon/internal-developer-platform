@@ -27,6 +27,7 @@ import com.decathlon.idp_core.infrastructure.adapters.api.dto.out.entity.EntityD
 import com.decathlon.idp_core.infrastructure.adapters.api.dto.out.entity.EntitySummaryDto;
 
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 
 /// Adapter mapper for converting domain [Entity] objects to API DTOs.
 ///
@@ -46,6 +47,7 @@ import lombok.RequiredArgsConstructor;
 /// - Integrates with Jackson for JSON serialization patterns
 /// - Stateless design ensures thread safety in web containers
 @Component
+@Slf4j
 @RequiredArgsConstructor
 public class EntityDtoOutMapper {
 
@@ -66,14 +68,6 @@ public class EntityDtoOutMapper {
     EntityTemplate entityTemplate = entityTemplateService
         .getEntityTemplateByIdentifier(entity.templateIdentifier());
     return fromEntityUsingEntityTemplate(entity, entityTemplate);
-  }
-
-  /// Maps a list of domain entities to API DTOs.
-  ///
-  /// @param entities domain entities to convert for API response
-  /// @return mapped DTO list
-  public List<EntityDtoOut> toDtoList(List<Entity> entities) {
-    return entities.stream().map(this::fromEntity).toList();
   }
 
   /// Maps paginated domain entities to API DTOs with optimized bulk operations.
@@ -310,6 +304,48 @@ public class EntityDtoOutMapper {
         : entityService.getEntitiesSummariesByIdentifiers(targetIdentifiers).stream()
             .collect(Collectors.toMap(EntitySummary::identifier,
                 es -> new EntitySummaryDto(es.identifier(), es.name())));
+  }
+
+  /// Maps paginated search results to API DTOs with optimized bulk operations.
+  ///
+  /// **Performance optimization:** Batches template resolution across all
+  /// templates
+  /// referenced in the page — unlike [#fromEntitiesPageToDtoPage] which is scoped
+  /// to a single template, this method handles multi-template result sets.
+  ///
+  /// @param entities paginated domain entities, possibly spanning several
+  /// templates
+  /// @return paginated API DTOs with complete relationship data
+  public Page<EntityDtoOut> fromEntitiesSearchPageToDtoPage(Page<Entity> entities) {
+    if (entities.isEmpty()) {
+      return entities.map(entity -> entityDtoOutMapper(entity, Map.of(), Map.of()));
+    }
+
+    Map<String, EntitySummaryDto> pageEntitiesSummaries = buildRelatedEntitiesSummaryMapByPage(
+        entities);
+    Map<String, List<RelationAsTargetSummary>> relationTargetOwnershipsMap = buildRelationsAsTargetSummaryMapByPage(
+        entities);
+
+    Map<String, EntityTemplate> templatesByIdentifier = entities.stream()
+        .map(Entity::templateIdentifier).filter(Objects::nonNull).distinct().collect(Collectors
+            .toMap(Function.identity(), entityTemplateService::getEntityTemplateByIdentifier));
+
+    return entities.map(entity -> {
+      EntityTemplate template = templatesByIdentifier.get(entity.templateIdentifier());
+      if (template == null) {
+        return entityDtoOutMapper(entity, pageEntitiesSummaries, relationTargetOwnershipsMap);
+      }
+      return fromEntityUsingEntityTemplateAndSummaryMap(entity, template, pageEntitiesSummaries,
+          relationTargetOwnershipsMap);
+    });
+  }
+
+  private EntityDtoOut entityDtoOutMapper(Entity entity, Map<String, EntitySummaryDto> summaries,
+      Map<String, List<RelationAsTargetSummary>> relationsAsTargetMap) {
+    return EntityDtoOut.builder().templateIdentifier(entity.templateIdentifier())
+        .name(entity.name()).identifier(entity.identifier()).properties(Collections.emptyMap())
+        .relations(mapRelationsDto(entity, summaries))
+        .relationsAsTarget(mapRelationsAsTargetDto(entity, relationsAsTargetMap)).build();
   }
 
 }
