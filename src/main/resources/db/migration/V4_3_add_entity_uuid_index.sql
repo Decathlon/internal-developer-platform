@@ -1,0 +1,2 @@
+CREATE INDEX idx_rte_target_uuid_binary 
+ON relation_target_entities (target_entity_uuid);

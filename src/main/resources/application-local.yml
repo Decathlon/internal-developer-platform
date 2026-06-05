@@ -23,3 +23,11 @@ spring:
 app:
   full-refresh-at-startup: true
   idp-core-prefix-url: http://localhost:8084
+logging:
+  level:
+    # Application log level, defaults to INFO. Override per environment via LOG_LEVEL env var.
+    com.decathlon: ${LOG_LEVEL:DEBUG}
+    # Suppresses noisy Spring context startup logs at WARN level.
+    org.springframework.context.support: WARN
+    # Suppresses a specific repetitive bean registration delegate log line.
+    org.springframework.context.support.PostProcessorRegistrationDelegate: ERROR

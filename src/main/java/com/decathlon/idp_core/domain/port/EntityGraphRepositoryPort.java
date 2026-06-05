@@ -1,6 +1,8 @@
 package com.decathlon.idp_core.domain.port;
 
+import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 
 import com.decathlon.idp_core.domain.model.entity.Entity;
 import com.decathlon.idp_core.domain.model.entity.EntityCompositeKey;
@@ -40,6 +42,5 @@ public interface EntityGraphRepositoryPort {
   /// The CTE always traverses all relation types so that nodes reachable via
   /// any path are loaded. Edge filtering is applied in the service layer so
   /// that "filter owns" still returns B and C when A→(depends-on)→B→(owns)→C.
-  Map<EntityCompositeKey, Entity> findEntityGraph(String templateIdentifier,
-      String entityIdentifier, int depth, boolean includeProperties);
+  Map<UUID, Entity> findEntityGraph(UUID entityId, int depth, boolean includeProperties);
 }

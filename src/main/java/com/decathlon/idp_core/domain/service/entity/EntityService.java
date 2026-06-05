@@ -17,7 +17,9 @@ import com.decathlon.idp_core.domain.exception.entity_template.EntityTemplateNot
 import com.decathlon.idp_core.domain.model.entity.Entity;
 import com.decathlon.idp_core.domain.model.entity.EntityFilter;
 import com.decathlon.idp_core.domain.model.entity.EntitySummary;
+import com.decathlon.idp_core.domain.model.entity.Relation;
 import com.decathlon.idp_core.domain.model.entity_template.EntityTemplate;
+import com.decathlon.idp_core.domain.model.entity_template.RelationDefinition;
 import com.decathlon.idp_core.domain.port.EntityRepositoryPort;
 import com.decathlon.idp_core.domain.service.EntityQueryParserService;
 import com.decathlon.idp_core.domain.service.entity_template.EntityTemplateService;
@@ -57,8 +59,8 @@ public class EntityService {
   ///
   /// @param pageable pagination configuration for large entity sets
   /// @param templateIdentifier business identifier of the entity template
-  /// @param entityFilter the parsed query filter; null or [EntityFilter#empty()]
-  /// for no filtering
+  /// @param entityFilter the parsed query filter; null or
+  /// [EntityFilter#empty()] for no filtering
   /// @return paginated entities matching the template and all filter criteria
   /// @throws EntityTemplateNotFoundException when template doesn't exist
   @Transactional
@@ -125,16 +127,20 @@ public class EntityService {
   public Entity createEntity(@Valid Entity entity) {
     EntityTemplate template = entityTemplateService
         .getEntityTemplateByIdentifier(entity.templateIdentifier());
-    entityValidationService.validateForCreation(entity, template);
-    return entityRepository.save(entity);
+
+    // Enrich relations with target template identifiers from template definition
+    Entity enrichedEntity = enrichRelationsWithTargetTemplates(entity, template);
+
+    entityValidationService.validateForCreation(enrichedEntity, template);
+
+    return entityRepository.save(enrichedEntity);
   }
 
   /// Updates an existing entity identified by template and entity identifiers.
   ///
   /// **Contract:** Validates template existence, then entity existence within the
   /// template scope. Validates updated entity data against the template
-  /// constraints
-  /// before persisting changes.
+  /// constraints before persisting changes.
   ///
   /// @param templateIdentifier template identifier from the request path
   /// @param entityIdentifier entity identifier from the request path
@@ -142,7 +148,8 @@ public class EntityService {
   /// @return persisted updated entity
   /// @throws EntityTemplateNotFoundException when template doesn't exist
   /// @throws EntityNotFoundException when target entity doesn't exist
-  /// @throws EntityValidationException when payload violates template constraints
+  /// @throws EntityValidationException when payload violates
+  /// template constraints
   @Transactional
   public Entity updateEntity(String templateIdentifier, String entityIdentifier,
       @Valid Entity entity) {
@@ -155,8 +162,48 @@ public class EntityService {
     Entity entityToSave = new Entity(existingEntity.id(), templateIdentifier, entity.name(),
         entityIdentifier, entity.properties(), entity.relations());
 
-    entityValidationService.validateForUpdate(entityToSave, template);
-    return entityRepository.save(entityToSave);
+    // Enrich relations with target template identifiers from template definition
+    Entity enrichedEntity = enrichRelationsWithTargetTemplates(entityToSave, template);
+
+    entityValidationService.validateForUpdate(enrichedEntity, template);
+    return entityRepository.save(enrichedEntity);
+  }
+
+  /// Enriches entity relations with target template identifiers from template
+  /// definition.
+  ///
+  /// **Business purpose:** Resolves target template identifiers for each relation
+  /// based on the relation name defined in the entity template. This allows the
+  /// API layer to accept minimalistic relation payloads (relation name + target
+  /// entity identifiers) while maintaining referential integrity at the domain
+  /// level.
+  ///
+  /// **Contract:** For each relation in the entity, looks up the corresponding
+  /// relation definition in the template and replaces the target template
+  /// identifier with the one specified in the template. Relations without
+  /// matching
+  /// definitions are left unchanged (validation will catch these later).
+  ///
+  /// @param entity the entity with relations to enrich
+  /// @param template the template containing relation definitions
+  /// @return new entity with enriched relations containing correct target
+  /// template identifiers
+  private Entity enrichRelationsWithTargetTemplates(Entity entity, EntityTemplate template) {
+    List<Relation> enrichedRelations = entity.relations().stream().map(relation -> {
+      // Look up relation definition in template
+      RelationDefinition definition = template.relationsDefinitions().stream()
+          .filter(def -> def.name().equals(relation.name())).findFirst().orElse(null);
+      if (definition == null) {
+        // Leave unchanged - validation will catch undefined relations
+        return relation;
+      }
+      // Replace target template identifier with the one from template definition
+      return new Relation(relation.id(), relation.name(), definition.targetTemplateIdentifier(),
+          relation.targetEntityIdentifiers());
+    }).toList();
+
+    return new Entity(entity.id(), entity.templateIdentifier(), entity.name(), entity.identifier(),
+        entity.properties(), enrichedRelations);
   }
 
 }

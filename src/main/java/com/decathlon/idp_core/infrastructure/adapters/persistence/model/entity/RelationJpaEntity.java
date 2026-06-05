@@ -41,4 +41,9 @@ public class RelationJpaEntity {
   @CollectionTable(name = "relation_target_entities", joinColumns = @JoinColumn(name = "relation_id"), indexes = @Index(columnList = "relation_id"))
   @Column(name = "target_entity_identifier")
   private List<String> targetEntityIdentifiers;
+
+  @ElementCollection
+  @CollectionTable(name = "relation_target_entities", joinColumns = @JoinColumn(name = "relation_id"), indexes = @Index(columnList = "relation_id"))
+  @Column(name = "target_entity_uuid")
+  private List<UUID> targetEntityIds;
 }

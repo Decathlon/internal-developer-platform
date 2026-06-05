@@ -58,8 +58,8 @@ VALUES
 INSERT INTO relation (id, name, target_template_identifier)
 VALUES ('bb000000-0000-0000-0000-000000000001', 'database', 'database-service');
 
-INSERT INTO relation_target_entities (relation_id, target_entity_identifier)
-VALUES ('bb000000-0000-0000-0000-000000000001', 'database-service-1');
+INSERT INTO relation_target_entities (relation_id, target_entity_uuid)
+VALUES ('bb000000-0000-0000-0000-000000000001', '550e8400-e29b-41d4-a716-446655440107');
 
 INSERT INTO entity_relations (entity_id, relation_id)
 VALUES ('550e8400-e29b-41d4-a716-446655440100', 'bb000000-0000-0000-0000-000000000001');
@@ -68,8 +68,8 @@ VALUES ('550e8400-e29b-41d4-a716-446655440100', 'bb000000-0000-0000-0000-0000000
 INSERT INTO relation (id, name, target_template_identifier)
 VALUES ('bb000000-0000-0000-0000-000000000002', 'database', 'cache-service');
 
-INSERT INTO relation_target_entities (relation_id, target_entity_identifier)
-VALUES ('bb000000-0000-0000-0000-000000000002', 'cache-service-1');
+INSERT INTO relation_target_entities (relation_id, target_entity_uuid)
+VALUES ('bb000000-0000-0000-0000-000000000002', '550e8400-e29b-41d4-a716-446655440108');
 
 INSERT INTO entity_relations (entity_id, relation_id)
 VALUES ('550e8400-e29b-41d4-a716-446655440101', 'bb000000-0000-0000-0000-000000000002');
@@ -78,8 +78,8 @@ VALUES ('550e8400-e29b-41d4-a716-446655440101', 'bb000000-0000-0000-0000-0000000
 INSERT INTO relation (id, name, target_template_identifier)
 VALUES ('bb000000-0000-0000-0000-000000000003', 'api-link', 'microservice');
 
-INSERT INTO relation_target_entities (relation_id, target_entity_identifier)
-VALUES ('bb000000-0000-0000-0000-000000000003', 'microservice-1');
+INSERT INTO relation_target_entities (relation_id, target_entity_uuid)
+VALUES ('bb000000-0000-0000-0000-000000000003', '550e8400-e29b-41d4-a716-446655440102');
 
 INSERT INTO entity_relations (entity_id, relation_id)
 VALUES ('550e8400-e29b-41d4-a716-446655440100', 'bb000000-0000-0000-0000-000000000003');
@@ -118,11 +118,11 @@ VALUES
   ('bb000002-0000-0000-0000-000000000001', 'uses', 'web-service');
 
 -- Target entity identifiers for each relation
-INSERT INTO relation_target_entities (relation_id, target_entity_identifier)
+INSERT INTO relation_target_entities (relation_id, target_entity_uuid)
 VALUES
-  ('bb000001-0000-0000-0000-000000000001', 'graph-svc-b'),  -- a -[uses]-> b
-  ('bb000001-0000-0000-0000-000000000002', 'graph-svc-b'),  -- a -[monitors]-> b
-  ('bb000002-0000-0000-0000-000000000001', 'graph-svc-c');  -- b -[uses]-> c
+  ('bb000001-0000-0000-0000-000000000001', 'aa000001-0000-0000-0000-000000000002'),  -- a -[uses]-> b
+  ('bb000001-0000-0000-0000-000000000002', 'aa000001-0000-0000-0000-000000000002'),  -- a -[monitors]-> b
+  ('bb000002-0000-0000-0000-000000000001', 'aa000001-0000-0000-0000-000000000003');  -- b -[uses]-> c
 
 -- Link relations to their owner entities
 INSERT INTO entity_relations (entity_id, relation_id)

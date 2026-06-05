@@ -40,113 +40,112 @@ public interface JpaEntityRepository
   /// properties. Uses two separate queries to avoid Hibernate's
   /// MultipleBagFetchException. First fetches entities with relations, then
   /// fetches properties separately.
-  @Query("SELECT DISTINCT e FROM EntityJpaEntity e LEFT JOIN FETCH e.relations WHERE e.identifier IN :identifiers")
+  @Query("SELECT DISTINCT e FROM EntityJpaEntity e LEFT JOIN FETCH e.relations WHERE e.id IN :identifiers")
   List<EntityJpaEntity> findAllByIdentifierInWithRelations(
-      @Param("identifiers") Collection<String> identifiers);
+      @Param("identifiers") Collection<UUID> ids);
 
   /// Fetch properties for entities that were already loaded. This is called after
   /// findAllByIdentifierInWithRelations to complete the entity graph.
-  @Query("SELECT DISTINCT e FROM EntityJpaEntity e LEFT JOIN FETCH e.properties WHERE e.identifier IN :identifiers")
+  @Query("SELECT DISTINCT e FROM EntityJpaEntity e LEFT JOIN FETCH e.properties WHERE e.id IN :identifiers")
   List<EntityJpaEntity> findAllByIdentifierInWithProperties(
-      @Param("identifiers") Collection<String> identifiers);
+      @Param("identifiers") Collection<UUID> ids);
 
   @Query(value = """
-      WITH RECURSIVE
-      -- Traverse outbound relations (this entity -> targets)
-      outbound_graph(identifier, template_identifier, depth) AS (
-          SELECT e.identifier, e.template_identifier, 0
-          FROM entity e
-          WHERE e.identifier = :entityIdentifier
-            AND e.template_identifier = :templateIdentifier
+      WITH RECURSIVE entity_graph(id, depth) AS (
+          -- 1. ANCHOR MEMBER: Start with your specific root entity UUID
+          SELECT CAST(:entityId AS UUID), 0
 
-          UNION ALL
+          UNION -- Frontier propagation: automatically eliminates path duplicates at each step
 
-          SELECT e2.identifier, e2.template_identifier, og.depth + 1
-          FROM outbound_graph og
-          JOIN entity e ON e.identifier = og.identifier AND e.template_identifier = og.template_identifier
-          JOIN entity_relations er ON er.entity_id = e.id
-          JOIN relation r ON r.id = er.relation_id
-          JOIN relation_target_entities rte ON rte.relation_id = r.id
-          JOIN entity e2 ON e2.identifier = rte.target_entity_identifier AND e2.template_identifier = r.target_template_identifier
-          WHERE og.depth < :depth
-      ),
-      -- Traverse inbound relations (sources -> this entity as target)
-      inbound_graph(identifier, template_identifier, depth) AS (
-          SELECT e.identifier, e.template_identifier, 0
-          FROM entity e
-          WHERE e.identifier = :entityIdentifier
-            AND e.template_identifier = :templateIdentifier
+          -- 2. RECURSIVE MEMBER: Scan indexed schema tables via direct binary matches
+          SELECT neighbor.id, eg.depth + 1
+          FROM entity_graph eg
+          CROSS JOIN LATERAL (
+              -- Track A: Outbound direction (this entity -> targets)
+              SELECT rte.target_entity_uuid AS id
+              FROM idp_core.entity_relations er
+              JOIN idp_core.relation_target_entities rte ON rte.relation_id = er.relation_id
+              WHERE er.entity_id = eg.id
+                AND rte.target_entity_uuid IS NOT NULL
 
-          UNION ALL
+              UNION ALL
 
-          SELECT e2.identifier, e2.template_identifier, ig.depth + 1
-          FROM inbound_graph ig
-          JOIN entity e ON e.identifier = ig.identifier AND e.template_identifier = ig.template_identifier
-          JOIN relation_target_entities rte ON rte.target_entity_identifier = e.identifier
-          JOIN relation r ON r.id = rte.relation_id AND r.target_template_identifier = e.template_identifier
-          JOIN entity_relations er ON er.relation_id = r.id
-          JOIN entity e2 ON e2.id = er.entity_id
-          WHERE ig.depth < :depth
+              -- Track B: Inbound direction (sources -> this entity as target)
+              SELECT er.entity_id AS id
+              FROM idp_core.relation_target_entities rte
+              JOIN idp_core.entity_relations er ON er.relation_id = rte.relation_id
+              WHERE rte.target_entity_uuid = eg.id
+          ) neighbor
+          -- Keeps the depth bounded entirely at the database layer
+          WHERE eg.depth < :depth
       )
-      SELECT DISTINCT identifier, template_identifier FROM outbound_graph
-      UNION
-      SELECT DISTINCT identifier, template_identifier FROM inbound_graph
-      """, nativeQuery = true)
-  List<Object[]> findEntityGraphIdentifiers(@Param("templateIdentifier") String templateIdentifier,
-      @Param("entityIdentifier") String entityIdentifier, @Param("depth") int depth);
+      -- 3. LEAN RETURN: Extract only the unique raw UUIDs discovered in the network skeleton
+      SELECT DISTINCT id FROM entity_graph;
+                                    """, nativeQuery = true)
+  // List<Object[]> findEntityGraphIdentifiers(@Param("templateIdentifier") String
+  // templateIdentifier,
+  // @Param("entityIdentifier") String entityIdentifier, @Param("depth") int
+  // depth
 
-  /// Variant of [findEntityGraphIdentifiers] that restricts traversal to the
-  /// given relation names. When the list is empty, all relation names are
-  /// followed
-  /// (no filter). The filter is applied inside both the outbound and inbound
-  /// recursive CTE steps so that only entities reachable through the specified
-  /// relations are returned, keeping the result set lean.
-  @Query(value = """
-      WITH RECURSIVE
-      outbound_graph(identifier, template_identifier, depth) AS (
-          SELECT e.identifier, e.template_identifier, 0
-          FROM entity e
-          WHERE e.identifier = :entityIdentifier
-            AND e.template_identifier = :templateIdentifier
+  List<UUID> findEntityGraphIdentifiers(@Param("entityId") UUID entityId,
+      @Param("depth") int depth);
 
-          UNION ALL
+  // /// Variant of [findEntityGraphIdentifiers] that restricts traversal to the
+  // /// given relation names. When the list is empty, all relation names are
+  // /// followed
+  // /// (no filter). The filter is applied inside both the outbound and inbound
+  // /// recursive CTE steps so that only entities reachable through the specified
+  // /// relations are returned, keeping the result set lean.
+  // @Query(value = """
+  // WITH RECURSIVE
+  // outbound_graph(identifier, template_identifier, depth) AS (
+  // SELECT e.identifier, e.template_identifier, 0
+  // FROM entity e
+  // WHERE e.identifier = :entityIdentifier
+  // AND e.template_identifier = :templateIdentifier
 
-          SELECT e2.identifier, e2.template_identifier, og.depth + 1
-          FROM outbound_graph og
-          JOIN entity e ON e.identifier = og.identifier AND e.template_identifier = og.template_identifier
-          JOIN entity_relations er ON er.entity_id = e.id
-          JOIN relation r ON r.id = er.relation_id
-          JOIN relation_target_entities rte ON rte.relation_id = r.id
-          JOIN entity e2 ON e2.identifier = rte.target_entity_identifier AND e2.template_identifier = r.target_template_identifier
-          WHERE og.depth < :depth
-            AND r.name IN :relationNames
-      ),
-      inbound_graph(identifier, template_identifier, depth) AS (
-          SELECT e.identifier, e.template_identifier, 0
-          FROM entity e
-          WHERE e.identifier = :entityIdentifier
-            AND e.template_identifier = :templateIdentifier
+  // UNION ALL
 
-          UNION ALL
+  // SELECT e2.identifier, e2.template_identifier, og.depth + 1
+  // FROM outbound_graph og
+  // JOIN entity e ON e.identifier = og.identifier AND e.template_identifier =
+  // og.template_identifier
+  // JOIN entity_relations er ON er.entity_id = e.id
+  // JOIN relation r ON r.id = er.relation_id
+  // JOIN relation_target_entities rte ON rte.relation_id = r.id
+  // JOIN entity e2 ON e2.identifier = rte.target_entity_identifier
+  // WHERE og.depth < :depth
+  // AND r.name IN :relationNames
+  // ),
+  // inbound_graph(identifier, template_identifier, depth) AS (
+  // SELECT e.identifier, e.template_identifier, 0
+  // FROM entity e
+  // WHERE e.identifier = :entityIdentifier
+  // AND e.template_identifier = :templateIdentifier
 
-          SELECT e2.identifier, e2.template_identifier, ig.depth + 1
-          FROM inbound_graph ig
-          JOIN entity e ON e.identifier = ig.identifier AND e.template_identifier = ig.template_identifier
-          JOIN relation_target_entities rte ON rte.target_entity_identifier = e.identifier
-          JOIN relation r ON r.id = rte.relation_id AND r.target_template_identifier = e.template_identifier
-          JOIN entity_relations er ON er.relation_id = r.id
-          JOIN entity e2 ON e2.id = er.entity_id
-          WHERE ig.depth < :depth
-            AND r.name IN :relationNames
-      )
-      SELECT DISTINCT identifier, template_identifier FROM outbound_graph
-      UNION
-      SELECT DISTINCT identifier, template_identifier FROM inbound_graph
-      """, nativeQuery = true)
-  List<Object[]> findEntityGraphIdentifiersFilteredByRelations(
-      @Param("templateIdentifier") String templateIdentifier,
-      @Param("entityIdentifier") String entityIdentifier, @Param("depth") int depth,
-      @Param("relationNames") Collection<String> relationNames);
+  // UNION ALL
+
+  // SELECT e2.identifier, e2.template_identifier, ig.depth + 1
+  // FROM inbound_graph ig
+  // JOIN entity e ON e.identifier = ig.identifier AND e.template_identifier =
+  // ig.template_identifier
+  // JOIN relation_target_entities rte ON rte.target_entity_identifier =
+  // e.identifier
+  // JOIN relation r ON r.id = rte.relation_id
+  // JOIN entity_relations er ON er.relation_id = r.id
+  // JOIN entity e2 ON e2.id = er.entity_id
+  // WHERE ig.depth < :depth
+  // AND r.name IN :relationNames
+  // )
+  // SELECT DISTINCT identifier, template_identifier FROM outbound_graph
+  // UNION
+  // SELECT DISTINCT identifier, template_identifier FROM inbound_graph
+  // """, nativeQuery = true)
+  // List<Object[]> findEntityGraphIdentifiersFilteredByRelations(
+  // @Param("templateIdentifier") String templateIdentifier,
+  // @Param("entityIdentifier") String entityIdentifier, @Param("depth") int
+  // depth,
+  // @Param("relationNames") Collection<String> relationNames);
 
   @Modifying(clearAutomatically = true, flushAutomatically = true)
   @Query("""
