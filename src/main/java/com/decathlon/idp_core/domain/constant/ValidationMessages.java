@@ -66,6 +66,7 @@ public class ValidationMessages {
   public static final String ENTITY_NOT_FOUND = "Entity not found with template identifier %s and entity identifier '%s'";
   public static final String ENTITY_ALREADY_EXISTS = "Entity with name '%s' already exists for template '%s'";
   public static final String ENTITY_VALIDATION_FAILED = "Entity validation failed: ";
+  public static final String ENTITY_DELETION_BLOCKED = "Cannot delete entity '%s' (template: '%s') because it is referenced by required relations in the following entities: %s. Please update the relation definitions to make them optional or remove the required constraint before deleting this entity.";
 
   // Helper method to construct rules incompatibility message
   public static String rulesAreIncompatible(String rule1, String rule2) {

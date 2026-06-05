@@ -61,4 +61,18 @@ public interface JpaEntityRepository
   void deleteRelationsByTemplateIdentifierAndRelationName(
       @Param("templateIdentifier") String templateIdentifier,
       @Param("relationNames") Collection<String> relationNames);
+
+  @Query("""
+      SELECT entity
+      FROM EntityJpaEntity entity
+      JOIN entity.relations relation
+      JOIN relation.targetEntityIdentifiers targetEntityIdentifier
+      WHERE targetEntityIdentifier = :targetIdentifier
+      """)
+  List<EntityJpaEntity> findEntitiesRelated(@Param("targetIdentifier") String targetIdentifier);
+
+  void deleteByTemplateIdentifierAndIdentifier(
+      @Param("templateIdentifier") String templateIdentifier,
+      @Param("entityIdentifier") String entityIdentifier);
+
 }

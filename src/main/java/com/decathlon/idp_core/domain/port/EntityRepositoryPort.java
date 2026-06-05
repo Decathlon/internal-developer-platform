@@ -52,4 +52,9 @@ public interface EntityRepositoryPort {
 
   void deleteRelationsByTemplateIdentifierAndRelationName(String templateIdentifier,
       Collection<String> relationNames);
+
+  List<Entity> findEntitiesRelated(String targetIdentifier);
+
+  void deleteByTemplateIdentifierAndIdentifier(String templateIdentifier, String entityIdentifier);
+
 }

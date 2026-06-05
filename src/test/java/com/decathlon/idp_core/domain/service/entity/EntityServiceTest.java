@@ -3,8 +3,11 @@ package com.decathlon.idp_core.domain.service.entity;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.inOrder;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.verifyNoMoreInteractions;
@@ -26,13 +29,16 @@ import org.springframework.data.domain.Pageable;
 
 import com.decathlon.idp_core.domain.constant.ValidationMessages;
 import com.decathlon.idp_core.domain.exception.entity.EntityAlreadyExistsException;
+import com.decathlon.idp_core.domain.exception.entity.EntityDeletionBlockedException;
 import com.decathlon.idp_core.domain.exception.entity.EntityNotFoundException;
 import com.decathlon.idp_core.domain.exception.entity.EntityValidationException;
 import com.decathlon.idp_core.domain.exception.entity_template.EntityTemplateNotFoundException;
 import com.decathlon.idp_core.domain.model.entity.Entity;
 import com.decathlon.idp_core.domain.model.entity.EntityFilter;
 import com.decathlon.idp_core.domain.model.entity.EntitySummary;
+import com.decathlon.idp_core.domain.model.entity.Relation;
 import com.decathlon.idp_core.domain.model.entity_template.EntityTemplate;
+import com.decathlon.idp_core.domain.model.entity_template.RelationDefinition;
 import com.decathlon.idp_core.domain.port.EntityRepositoryPort;
 import com.decathlon.idp_core.domain.service.EntityQueryParserService;
 import com.decathlon.idp_core.domain.service.entity_template.EntityTemplateService;
@@ -250,6 +256,162 @@ class EntityServiceTest {
     verify(entityValidationService).validateForUpdate(expectedToValidate, template);
     verify(entityRepository).findByTemplateIdentifierAndIdentifier("web-service", "web-api-2");
     verifyNoMoreInteractions(entityRepository);
+  }
+
+  @Test
+  @DisplayName("Should successfully delete entity and remove its reference from parent entity relations")
+  void shouldDeleteEntityAndRemoveReferenceFromParent() {
+    // 1. Arrange
+    String targetTemplateId = "service";
+    String targetEntityId = "payment-api";
+    var targetEntity = new Entity(UUID.randomUUID(), targetTemplateId, "Payment API",
+        targetEntityId, List.of(), List.of());
+
+    String parentTemplateId = "application";
+    String parentEntityId = "e-commerce-app";
+    UUID relationId = UUID.randomUUID();
+
+    // Parent currently has a relation targeting BOTH "payment-api" and "auth-api"
+    var parentEntity = new Entity(UUID.randomUUID(), parentTemplateId, "E-Commerce App",
+        parentEntityId, List.of(), List.of(new Relation(relationId, "dependencies",
+            targetTemplateId, List.of(targetEntityId, "auth-api"))));
+
+    // Parent template allows multiple dependencies (not a blocking required 1-to-1
+    // relation)
+    var parentTemplate = new EntityTemplate(UUID.randomUUID(), parentTemplateId, "Application",
+        "desc", List.of(), List.of(new RelationDefinition(UUID.randomUUID(), "dependencies",
+            targetTemplateId, false, true)));
+
+    // Expected parent after cleanup: the relation only contains "auth-api"
+    var expectedParentAfterCleanup = new Entity(parentEntity.id(), parentTemplateId,
+        parentEntity.name(), parentEntityId, List.of(),
+        List.of(new Relation(relationId, "dependencies", targetTemplateId, List.of("auth-api"))));
+
+    // Setup Mocks
+    when(entityRepository.findByTemplateIdentifierAndIdentifier(targetTemplateId, targetEntityId))
+        .thenReturn(Optional.of(targetEntity));
+    when(entityRepository.findEntitiesRelated(targetEntityId)).thenReturn(List.of(parentEntity));
+    when(entityTemplateService.getEntityTemplateByIdentifier(parentTemplateId))
+        .thenReturn(parentTemplate);
+
+    // 2. Act
+    entityService.deleteEntity(targetTemplateId, targetEntityId);
+
+    // 3. Assert using InOrder to guarantee the exact sequence of business
+    // operations
+    InOrder inOrder = inOrder(entityTemplateValidationService, entityRepository,
+        entityTemplateService);
+
+    // Validates target template exists
+    inOrder.verify(entityTemplateValidationService).validateTemplateExists(targetTemplateId);
+
+    // Retrieves target entity to delete
+    inOrder.verify(entityRepository).findByTemplateIdentifierAndIdentifier(targetTemplateId,
+        targetEntityId);
+
+    // Finds parent entities pointing to target entity
+    inOrder.verify(entityRepository).findEntitiesRelated(targetEntityId);
+
+    // Retrieves parent template to evaluate relation constraints safely
+    inOrder.verify(entityTemplateService).getEntityTemplateByIdentifier(parentTemplateId);
+
+    // Saves the parent with the target ID cleanly removed from its relations
+    inOrder.verify(entityRepository).save(expectedParentAfterCleanup);
+
+    // Finally deletes the target entity
+    inOrder.verify(entityRepository).deleteByTemplateIdentifierAndIdentifier(targetTemplateId,
+        targetEntityId);
+  }
+
+  @Test
+  @DisplayName("Should throw EntityDeletionBlockedException when target entity is referenced by a required relation")
+  void shouldThrowExceptionWhenTargetEntityReferencedByRequiredRelation() {
+    var relationId = UUID.randomUUID();
+    var parent = new Entity(UUID.randomUUID(), "application", "Application A", "app-a", List.of(),
+        List.of(new Relation(relationId, "owner", "team", List.of("team-a"))));
+
+    var parentTemplate = new EntityTemplate(UUID.randomUUID(), "application", "Application", "desc",
+        List.of(),
+        List.of(new RelationDefinition(UUID.randomUUID(), "owner", "team", true, false)));
+
+    when(entityRepository.findByTemplateIdentifierAndIdentifier("team", "team-a"))
+        .thenReturn(Optional
+            .of(new Entity(UUID.randomUUID(), "team", "team-a", "team-a", List.of(), List.of())));
+
+    when(entityRepository.findEntitiesRelated("team-a")).thenReturn(List.of(parent));
+
+    // The fixed service will now ask for the PARENT's template
+    when(entityTemplateService.getEntityTemplateByIdentifier("application"))
+        .thenReturn(parentTemplate);
+
+    assertThrows(EntityDeletionBlockedException.class,
+        () -> entityService.deleteEntity("team", "team-a"));
+
+    // Verify deletion is completely blocked
+    verify(entityTemplateValidationService).validateTemplateExists("team");
+    verify(entityRepository, never()).save(any());
+    verify(entityRepository, never()).deleteByTemplateIdentifierAndIdentifier(anyString(),
+        anyString());
+  }
+
+  @Test
+  @DisplayName("Should keep relation and remove only deleted target when relation still has targets")
+  void shouldKeepRelationAndRemoveOnlyDeletedTargetWhenRelationStillHasTargets() {
+    var relationId = UUID.randomUUID();
+    var parent = new Entity(UUID.randomUUID(), "application", "Application A", "app-a", List.of(),
+        List.of(
+            new Relation(relationId, "dependencies", "service", List.of("catalog", "billing"))));
+
+    var parentTemplate = new EntityTemplate(UUID.randomUUID(), "application", "Application", "desc",
+        List.of(),
+        List.of(new RelationDefinition(UUID.randomUUID(), "dependencies", "service", false, true)));
+
+    // Fixed typo: "catalog" is a "service", so we mock and delete ("service",
+    // "catalog")
+    when(entityRepository.findByTemplateIdentifierAndIdentifier("service", "catalog"))
+        .thenReturn(Optional.of(
+            new Entity(UUID.randomUUID(), "service", "catalog", "catalog", List.of(), List.of())));
+
+    // The entity we are deleting is "catalog"
+    when(entityRepository.findEntitiesRelated("catalog")).thenReturn(List.of(parent));
+    when(entityTemplateService.getEntityTemplateByIdentifier("application"))
+        .thenReturn(parentTemplate);
+
+    // Call service with correct parameters
+    entityService.deleteEntity("service", "catalog");
+
+    var expectedParentAfterCleanup = new Entity(parent.id(), parent.templateIdentifier(),
+        parent.name(), parent.identifier(), parent.properties(),
+        List.of(new Relation(relationId, "dependencies", "service", List.of("billing"))));
+
+    verify(entityTemplateValidationService).validateTemplateExists("service");
+    verify(entityRepository).save(expectedParentAfterCleanup);
+    verify(entityRepository).deleteByTemplateIdentifierAndIdentifier("service", "catalog");
+  }
+
+  @Test
+  @DisplayName("Should throw EntityDeletionBlockedException when target entity is the last one in a required toMany relation")
+  void shouldThrowExceptionWhenTargetIsLastInRequiredToManyRelation() {
+    var relationId = UUID.randomUUID();
+    var parent = new Entity(UUID.randomUUID(), "cluster", "Production Cluster", "prod-cluster",
+        List.of(), List.of(new Relation(relationId, "nodes", "server", List.of("server-1"))));
+
+    var parentTemplate = new EntityTemplate(UUID.randomUUID(), "cluster", "Cluster", "desc",
+        List.of(),
+        List.of(new RelationDefinition(UUID.randomUUID(), "nodes", "server", true, true)));
+
+    when(entityRepository.findByTemplateIdentifierAndIdentifier("server", "server-1"))
+        .thenReturn(Optional.of(
+            new Entity(UUID.randomUUID(), "server", "server-1", "server-1", List.of(), List.of())));
+    when(entityRepository.findEntitiesRelated("server-1")).thenReturn(List.of(parent));
+    when(entityTemplateService.getEntityTemplateByIdentifier("cluster")).thenReturn(parentTemplate);
+
+    assertThrows(EntityDeletionBlockedException.class,
+        () -> entityService.deleteEntity("server", "server-1"));
+    verify(entityTemplateValidationService).validateTemplateExists("server");
+    verify(entityRepository, never()).save(any());
+    verify(entityRepository, never()).deleteByTemplateIdentifierAndIdentifier(anyString(),
+        anyString());
   }
 
   private Entity entity(String templateIdentifier, String identifier, String name) {

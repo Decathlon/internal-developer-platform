@@ -2,6 +2,7 @@ package com.decathlon.idp_core.infrastructure.adapters.api.controller;
 
 import static org.springframework.http.MediaType.APPLICATION_JSON;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
@@ -759,4 +760,315 @@ public class EntityControllerTest extends AbstractIntegrationTest {
     }
   }
 
+  @Nested
+  @DisplayName("DELETE /api/v1/entities/{template-identifier}/{entity-identifier} - Delete Entity")
+  class DeleteEntityTests {
+
+    private String createWebServicePayload(String name, String identifier) {
+      return """
+          {
+            "name": "%s",
+            "identifier": "%s",
+            "properties": {
+              "applicationName": "catalog-api",
+              "ownerEmail": "owner@example.com",
+              "port": "8080",
+              "environment": "DEV",
+              "version": "1.2.3",
+              "teamName": "platform-team",
+              "baseUrl": "https://catalog.example.com",
+              "protocol": "HTTP",
+              "programmingLanguage": "JAVA"
+            }
+          }
+          """.formatted(name, identifier);
+    }
+
+    private String createWebServicePayloadWithRelation(String name, String identifier,
+        String targetEntityIdentifier) {
+      return """
+          {
+            "name": "%s",
+            "identifier": "%s",
+            "properties": {
+              "applicationName": "catalog-api",
+              "ownerEmail": "owner@example.com",
+              "port": "8080",
+              "environment": "DEV",
+              "version": "1.2.3",
+              "teamName": "platform-team",
+              "baseUrl": "https://catalog.example.com",
+              "protocol": "HTTP",
+              "programmingLanguage": "JAVA"
+            },
+            "relations": [
+              {
+                "name": "%s",
+                "target_entity_identifiers": ["%s"]
+              }
+            ]
+          }
+          """.formatted(name, identifier, "database", targetEntityIdentifier);
+    }
+
+    @Test
+    @WithMockUser()
+    @DisplayName("Should delete entity and return 204 No Content")
+    void deleteEntity_204_success() throws Exception {
+      var entityIdentifier = "delete-success-entity";
+      mockMvc
+          .perform(
+              MockMvcRequestBuilders.post(ENTITIES_BY_TEMPLATE_IDENTIFIER_PATH, TEMPLATE_IDENTIFIER)
+                  .contentType(APPLICATION_JSON).accept(APPLICATION_JSON).with(csrf())
+                  .content(createWebServicePayload("Delete Success Entity", entityIdentifier)))
+          .andExpect(status().isCreated());
+
+      mockMvc.perform(delete(ENTITIES_BY_IDENTIFIER_PATH, TEMPLATE_IDENTIFIER, entityIdentifier)
+          .accept(APPLICATION_JSON).with(csrf())).andExpect(status().isNoContent());
+
+      mockMvc.perform(get(ENTITIES_BY_IDENTIFIER_PATH, TEMPLATE_IDENTIFIER, entityIdentifier)
+          .accept(APPLICATION_JSON)).andExpect(status().isNotFound());
+    }
+
+    @Test
+    @WithMockUser()
+    @DisplayName("Should return 404 when deleting non-existent entity")
+    void deleteEntity_404_non_existent_entity() throws Exception {
+      mockMvc
+          .perform(delete(ENTITIES_BY_IDENTIFIER_PATH, TEMPLATE_IDENTIFIER, "non-existent-entity")
+              .accept(APPLICATION_JSON).with(csrf()))
+          .andExpect(status().isNotFound());
+    }
+
+    @Test
+    @WithMockUser()
+    @DisplayName("Should return 404 when template does not exist")
+    void deleteEntity_404_non_existent_template() throws Exception {
+      mockMvc
+          .perform(delete(ENTITIES_BY_IDENTIFIER_PATH, "non-existent-template", ENTITY_IDENTIFIER)
+              .accept(APPLICATION_JSON).with(csrf()))
+          .andExpect(status().isNotFound());
+    }
+
+    @Test
+    @DisplayName("Should return 401 when deleting without authentication")
+    void deleteEntity_401_without_user_token() throws Exception {
+      mockMvc.perform(delete(ENTITIES_BY_IDENTIFIER_PATH, TEMPLATE_IDENTIFIER, ENTITY_IDENTIFIER)
+          .accept(APPLICATION_JSON).with(csrf())).andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    @WithMockUser
+    @DisplayName("Should return 403 when deleting without CSRF token")
+    void deleteEntity_403_without_csrf() throws Exception {
+      mockMvc.perform(delete(ENTITIES_BY_IDENTIFIER_PATH, TEMPLATE_IDENTIFIER, ENTITY_IDENTIFIER)
+          .accept(APPLICATION_JSON)).andExpect(status().isForbidden());
+    }
+
+    @Test
+    @WithMockUser()
+    @DisplayName("Should clean up relations from parent entities when entity is deleted")
+    void deleteEntity_204_with_relation_cleanup() throws Exception {
+      var targetEntityIdentifier = "relation-target-entity";
+      var sourceEntityIdentifier = "relation-source-entity";
+
+      mockMvc
+          .perform(
+              MockMvcRequestBuilders.post(ENTITIES_BY_TEMPLATE_IDENTIFIER_PATH, TEMPLATE_IDENTIFIER)
+                  .contentType(APPLICATION_JSON).accept(APPLICATION_JSON).with(csrf()).content(
+                      createWebServicePayload("Relation Target Entity", targetEntityIdentifier)))
+          .andExpect(status().isCreated());
+
+      mockMvc
+          .perform(
+              MockMvcRequestBuilders.post(ENTITIES_BY_TEMPLATE_IDENTIFIER_PATH, TEMPLATE_IDENTIFIER)
+                  .contentType(APPLICATION_JSON).accept(APPLICATION_JSON).with(csrf())
+                  .content(createWebServicePayloadWithRelation("Relation Source Entity",
+                      sourceEntityIdentifier, targetEntityIdentifier)))
+          .andExpect(status().isCreated());
+
+      mockMvc.perform(get(ENTITIES_BY_IDENTIFIER_PATH, TEMPLATE_IDENTIFIER, targetEntityIdentifier)
+          .accept(APPLICATION_JSON)).andExpect(status().isOk());
+
+      mockMvc
+          .perform(delete(ENTITIES_BY_IDENTIFIER_PATH, TEMPLATE_IDENTIFIER, targetEntityIdentifier)
+              .accept(APPLICATION_JSON).with(csrf()))
+          .andExpect(status().isNoContent());
+
+      mockMvc.perform(get(ENTITIES_BY_IDENTIFIER_PATH, TEMPLATE_IDENTIFIER, targetEntityIdentifier)
+          .accept(APPLICATION_JSON)).andExpect(status().isNotFound());
+
+      mockMvc
+          .perform(get(ENTITIES_BY_IDENTIFIER_PATH, TEMPLATE_IDENTIFIER, sourceEntityIdentifier)
+              .accept(APPLICATION_JSON))
+          .andExpect(status().isOk())
+          .andExpect(content().string(org.hamcrest.Matchers.not(org.hamcrest.Matchers
+              .containsString("\"identifier\":\"" + targetEntityIdentifier + "\""))));
+
+      mockMvc
+          .perform(delete(ENTITIES_BY_IDENTIFIER_PATH, TEMPLATE_IDENTIFIER, sourceEntityIdentifier)
+              .accept(APPLICATION_JSON).with(csrf()))
+          .andExpect(status().isNoContent());
+    }
+
+    @Test
+    @WithMockUser()
+    @DisplayName("Should handle deletion of entity with no incoming relations")
+    void deleteEntity_204_no_incoming_relations() throws Exception {
+      var entityIdentifier = "isolated-entity";
+
+      mockMvc
+          .perform(
+              MockMvcRequestBuilders.post(ENTITIES_BY_TEMPLATE_IDENTIFIER_PATH, TEMPLATE_IDENTIFIER)
+                  .contentType(APPLICATION_JSON).accept(APPLICATION_JSON).with(csrf())
+                  .content(createWebServicePayload("Isolated Entity", entityIdentifier)))
+          .andExpect(status().isCreated());
+
+      mockMvc.perform(delete(ENTITIES_BY_IDENTIFIER_PATH, TEMPLATE_IDENTIFIER, entityIdentifier)
+          .accept(APPLICATION_JSON).with(csrf())).andExpect(status().isNoContent());
+
+      mockMvc.perform(get(ENTITIES_BY_IDENTIFIER_PATH, TEMPLATE_IDENTIFIER, entityIdentifier)
+          .accept(APPLICATION_JSON)).andExpect(status().isNotFound());
+    }
+
+    @Test
+    @WithMockUser()
+    @DisplayName("Should return 404 when entity identifier path segment is blank")
+    void deleteEntity_404_with_blank_entity_identifier() throws Exception {
+      mockMvc
+          .perform(delete("/api/v1/entities/{template-identifier}/{entity-identifier}",
+              TEMPLATE_IDENTIFIER, "").accept(APPLICATION_JSON).with(csrf()))
+          .andExpect(status().isNotFound());
+    }
+
+    @Test
+    @WithMockUser()
+    @DisplayName("Should return 400 when template identifier path segment is blank")
+    void deleteEntity_400_with_blank_template_identifier() throws Exception {
+      mockMvc
+          .perform(delete("/api/v1/entities/{template-identifier}/{entity-identifier}", "",
+              ENTITY_IDENTIFIER).accept(APPLICATION_JSON).with(csrf()))
+          .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    @WithMockUser()
+    @DisplayName("Should delete entity with properties and relations")
+    void deleteEntity_204_with_properties_and_relations() throws Exception {
+      var entityIdentifier = "test-entity-with-relations";
+
+      mockMvc.perform(
+          MockMvcRequestBuilders.post(ENTITIES_BY_TEMPLATE_IDENTIFIER_PATH, TEMPLATE_IDENTIFIER)
+              .contentType(APPLICATION_JSON).accept(APPLICATION_JSON).with(csrf())
+              .content(createWebServicePayloadWithRelation("Test Entity With Relations",
+                  entityIdentifier, "database-service-1")))
+          .andExpect(status().isCreated());
+
+      mockMvc.perform(delete(ENTITIES_BY_IDENTIFIER_PATH, TEMPLATE_IDENTIFIER, entityIdentifier)
+          .accept(APPLICATION_JSON).with(csrf())).andExpect(status().isNoContent());
+
+      mockMvc.perform(get(ENTITIES_BY_IDENTIFIER_PATH, TEMPLATE_IDENTIFIER, entityIdentifier)
+          .accept(APPLICATION_JSON)).andExpect(status().isNotFound());
+    }
+
+    @Test
+    @WithMockUser()
+    @DisplayName("Should return 404 on repeated deletion attempts (first 204, second 404)")
+    void deleteEntity_repeated_deletion() throws Exception {
+      var entityIdentifier = "idempotent-test";
+
+      mockMvc
+          .perform(
+              MockMvcRequestBuilders.post(ENTITIES_BY_TEMPLATE_IDENTIFIER_PATH, TEMPLATE_IDENTIFIER)
+                  .contentType(APPLICATION_JSON).accept(APPLICATION_JSON).with(csrf())
+                  .content(createWebServicePayload("Idempotent Test", entityIdentifier)))
+          .andExpect(status().isCreated());
+
+      mockMvc.perform(delete(ENTITIES_BY_IDENTIFIER_PATH, TEMPLATE_IDENTIFIER, entityIdentifier)
+          .accept(APPLICATION_JSON).with(csrf())).andExpect(status().isNoContent());
+
+      mockMvc.perform(delete(ENTITIES_BY_IDENTIFIER_PATH, TEMPLATE_IDENTIFIER, entityIdentifier)
+          .accept(APPLICATION_JSON).with(csrf())).andExpect(status().isNotFound());
+    }
+
+    @Test
+    @WithMockUser()
+    @DisplayName("Should return 409 Conflict when entity deletion is blocked by required relations")
+    void deleteEntity_409_blocked_by_required_relations() throws Exception {
+      var teamIdentifier = "test-team-required-delete";
+      var supportIdentifier = "test-support-with-required-team-delete";
+
+      // Create team entity first
+      var teamPayload = """
+          {
+            "name": "Test Team Required",
+            "identifier": "%s",
+            "properties": {
+              "applicationName": "test-app",
+              "ownerEmail": "owner@example.com",
+              "environment": "DEV"
+            }
+          }
+          """.formatted(teamIdentifier);
+
+      mockMvc.perform(MockMvcRequestBuilders.post(ENTITIES_BY_TEMPLATE_IDENTIFIER_PATH, "team")
+          .contentType(APPLICATION_JSON).accept(APPLICATION_JSON).with(csrf()).content(teamPayload))
+          .andExpect(status().isCreated());
+
+      // Create support entity with required relation to team
+      var supportPayload = """
+          {
+            "name": "Test Support With Required Team",
+            "identifier": "%s",
+            "properties": {
+              "applicationName": "support-app",
+              "ownerEmail": "support@example.com",
+              "environment": "PROD",
+              "version": "1.0.0",
+              "teamName": "support-team"
+            },
+            "relations": [
+              {
+                "name": "required_team",
+                "target_entity_identifiers": ["%s"]
+              }
+            ]
+          }
+          """.formatted(supportIdentifier, teamIdentifier);
+
+      mockMvc.perform(MockMvcRequestBuilders.post(ENTITIES_BY_TEMPLATE_IDENTIFIER_PATH, "support")
+          .contentType(APPLICATION_JSON).accept(APPLICATION_JSON).with(csrf())
+          .content(supportPayload)).andExpect(status().isCreated());
+
+      // Verify team entity was created
+      mockMvc
+          .perform(
+              get(ENTITIES_BY_IDENTIFIER_PATH, "team", teamIdentifier).accept(APPLICATION_JSON))
+          .andExpect(status().isOk());
+
+      // Attempt to delete team entity (should fail with 409)
+      mockMvc
+          .perform(delete(ENTITIES_BY_IDENTIFIER_PATH, "team", teamIdentifier)
+              .accept(APPLICATION_JSON).with(csrf()))
+          .andExpect(status().isConflict()).andExpect(jsonPath("$.error").value("CONFLICT"))
+          .andExpect(jsonPath("$.error_description").value(org.hamcrest.Matchers.allOf(
+              org.hamcrest.Matchers.containsString("Cannot delete entity"),
+              org.hamcrest.Matchers.containsString(teamIdentifier),
+              org.hamcrest.Matchers.containsString("required relations"),
+              org.hamcrest.Matchers.containsString(supportIdentifier))));
+
+      // Verify team entity still exists after failed deletion
+      mockMvc
+          .perform(
+              get(ENTITIES_BY_IDENTIFIER_PATH, "team", teamIdentifier).accept(APPLICATION_JSON))
+          .andExpect(status().isOk());
+
+      // Clean up: delete support first, then team should be deletable
+      mockMvc.perform(delete(ENTITIES_BY_IDENTIFIER_PATH, "support", supportIdentifier)
+          .accept(APPLICATION_JSON).with(csrf())).andExpect(status().isNoContent());
+
+      mockMvc.perform(delete(ENTITIES_BY_IDENTIFIER_PATH, "team", teamIdentifier)
+          .accept(APPLICATION_JSON).with(csrf())).andExpect(status().isNoContent());
+    }
+  }
 }
