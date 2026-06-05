@@ -336,7 +336,7 @@ public class ApiExceptionHandler {
   /// to align with missing identifier logic and pass integration tests.
   @ExceptionHandler(NoHandlerFoundException.class)
   public ResponseEntity<ErrorResponse> handleNoHandlerFoundException(NoHandlerFoundException ex) {
-    log.warn("No handler found (possible missing path variable): {}", ex.getMessage());
+    log.warn("No handler found or missing path variable: {}", ex.getMessage());
     return createErrorResponse(NOT_FOUND, "Malformed request URL or missing path variable.");
   }
 
