@@ -12,6 +12,7 @@ applyTo: '**/*.java'
 - Focus on readability, maintainability, and performance when refactoring identified issues.
 - Use IDE and code editor warnings and suggestions to catch common patterns early in development.
 - Add JavaDoc comments for all public classes and methods to enhance code understandability.
+- Use Markdown syntax in JavaDoc instead of HTML tags.
 - Follow the Java Language Specification and standard conventions for code style and formatting.
 
 ## Best practices

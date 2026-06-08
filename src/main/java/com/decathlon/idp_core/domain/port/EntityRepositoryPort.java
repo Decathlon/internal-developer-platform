@@ -11,6 +11,9 @@ import org.springframework.data.domain.Pageable;
 import com.decathlon.idp_core.domain.model.entity.Entity;
 import com.decathlon.idp_core.domain.model.entity.EntityFilter;
 import com.decathlon.idp_core.domain.model.entity.EntitySummary;
+import com.decathlon.idp_core.domain.model.search.PaginatedResult;
+import com.decathlon.idp_core.domain.model.search.PaginationCriteria;
+import com.decathlon.idp_core.domain.model.search.SearchFilterNode;
 
 /// Driven port defining the contract for [Entity] persistence operations.
 ///
@@ -24,6 +27,7 @@ import com.decathlon.idp_core.domain.model.entity.EntitySummary;
 /// - `findByRelationIdIn()` enables reverse relationship navigation
 /// - `deletePropertiesByTemplateIdentifierAndPropertyName()` must remove all property instances matching the given names for entities of the specified template
 /// - `deleteRelationsByTemplateIdentifierAndRelationName()` must remove all relation instances matching the given names for entities of the specified template
+/// - `search()` searches for entities across all templates using a nested filter tree and optional free-text query.
 ///
 /// **Transaction behavior:** Implementations should handle transaction boundaries
 /// appropriately for the underlying persistence technology.
@@ -52,6 +56,9 @@ public interface EntityRepositoryPort {
 
   void deleteRelationsByTemplateIdentifierAndRelationName(String templateIdentifier,
       Collection<String> relationNames);
+
+  PaginatedResult<Entity> search(SearchFilterNode filter, String query,
+      PaginationCriteria paginationCriteria);
 
   List<Entity> findEntitiesRelated(String targetIdentifier);
 

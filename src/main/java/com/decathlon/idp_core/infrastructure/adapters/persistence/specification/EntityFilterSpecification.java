@@ -14,6 +14,7 @@ import org.springframework.data.jpa.domain.Specification;
 import com.decathlon.idp_core.domain.model.entity.EntityFilter;
 import com.decathlon.idp_core.domain.model.entity.FilterCriterion;
 import com.decathlon.idp_core.domain.model.enums.FilterOperator;
+import com.decathlon.idp_core.domain.model.search.SearchOperator;
 import com.decathlon.idp_core.infrastructure.adapters.persistence.model.entity.EntityJpaEntity;
 import com.decathlon.idp_core.infrastructure.adapters.persistence.model.entity.PropertyJpaEntity;
 import com.decathlon.idp_core.infrastructure.adapters.persistence.model.entity.RelationJpaEntity;
@@ -39,9 +40,8 @@ import lombok.NoArgsConstructor;
 /// **Security:** The CONTAINS operator escapes SQL LIKE wildcards (`%`, `_`) in
 /// user-supplied values to prevent unintended pattern matching.
 @NoArgsConstructor(access = AccessLevel.PRIVATE)
-public final class EntitySpecification {
+public final class EntityFilterSpecification {
 
-  private static final char LIKE_ESCAPE_CHAR = '\\';
   private static final String NAME = "name";
   private static final String IDENTIFIER = "identifier";
   private static final String RELATIONS = "relations";
@@ -56,7 +56,7 @@ public final class EntitySpecification {
   /// @return a composed [Specification] combining template scope and all filter
   /// criteria
   public static Specification<EntityJpaEntity> of(String templateIdentifier, EntityFilter filter) {
-    var criteriaSpecs = filter.criteria().stream().map(EntitySpecification::fromCriterion);
+    var criteriaSpecs = filter.criteria().stream().map(EntityFilterSpecification::fromCriterion);
 
     return Stream.concat(Stream.of(hasTemplateIdentifier(templateIdentifier)), criteriaSpecs)
         .reduce(Specification::and).orElse(hasTemplateIdentifier(templateIdentifier));
@@ -139,15 +139,14 @@ public final class EntitySpecification {
 
   private static Predicate buildPredicate(CriteriaBuilder cb, Expression<?> field,
       FilterOperator operator, String value) {
-    Expression<String> stringField = field.as(String.class);
     return switch (operator) {
-      case EQUALS -> cb.equal(cb.lower(stringField), value.toLowerCase());
-      case CONTAINS -> {
-        String escaped = escapeLikeWildcards(value.toLowerCase());
-        yield cb.like(cb.lower(stringField), "%" + escaped + "%", LIKE_ESCAPE_CHAR);
-      }
-      case LESS_THAN -> cb.lessThan(stringField, value);
-      case GREATER_THAN -> cb.greaterThan(stringField, value);
+      case EQUALS -> JpaPredicateBuilder.buildPredicate(cb, field, SearchOperator.EQ, value);
+      case CONTAINS -> JpaPredicateBuilder.buildPredicate(cb, field, SearchOperator.CONTAINS,
+          value);
+      // LESS_THAN / GREATER_THAN keep lexicographic string comparison (System A
+      // semantics).
+      case LESS_THAN -> cb.lessThan(field.as(String.class), value);
+      case GREATER_THAN -> cb.greaterThan(field.as(String.class), value);
     };
   }
 
@@ -206,12 +205,4 @@ public final class EntitySpecification {
     };
   }
 
-  /// Escapes SQL LIKE wildcards (`%` and `_`) in the given value so they are
-  /// treated as literal characters rather than pattern metacharacters.
-  static String escapeLikeWildcards(String value) {
-    return value
-        .replace(String.valueOf(LIKE_ESCAPE_CHAR),
-            LIKE_ESCAPE_CHAR + String.valueOf(LIKE_ESCAPE_CHAR))
-        .replace("%", LIKE_ESCAPE_CHAR + "%").replace("_", LIKE_ESCAPE_CHAR + "_");
-  }
 }

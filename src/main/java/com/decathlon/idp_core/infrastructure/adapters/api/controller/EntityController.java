@@ -11,6 +11,8 @@ import static com.decathlon.idp_core.infrastructure.adapters.api.configuration.S
 import static com.decathlon.idp_core.infrastructure.adapters.api.configuration.SwaggerDescription.ENDPOINT_GET_ENTITY_BY_IDENTIFIER_SUMMARY;
 import static com.decathlon.idp_core.infrastructure.adapters.api.configuration.SwaggerDescription.ENDPOINT_POST_ENTITY_DESCRIPTION;
 import static com.decathlon.idp_core.infrastructure.adapters.api.configuration.SwaggerDescription.ENDPOINT_POST_ENTITY_SUMMARY;
+import static com.decathlon.idp_core.infrastructure.adapters.api.configuration.SwaggerDescription.ENDPOINT_POST_SEARCH_DESCRIPTION;
+import static com.decathlon.idp_core.infrastructure.adapters.api.configuration.SwaggerDescription.ENDPOINT_POST_SEARCH_SUMMARY;
 import static com.decathlon.idp_core.infrastructure.adapters.api.configuration.SwaggerDescription.ENDPOINT_PUT_ENTITY_DESCRIPTION;
 import static com.decathlon.idp_core.infrastructure.adapters.api.configuration.SwaggerDescription.ENDPOINT_PUT_ENTITY_SUMMARY;
 import static com.decathlon.idp_core.infrastructure.adapters.api.configuration.SwaggerDescription.FORBIDDEN_CODE;
@@ -34,6 +36,8 @@ import static com.decathlon.idp_core.infrastructure.adapters.api.configuration.S
 import static com.decathlon.idp_core.infrastructure.adapters.api.configuration.SwaggerDescription.RESPONSE_INVALID_ENTITY_DATA;
 import static com.decathlon.idp_core.infrastructure.adapters.api.configuration.SwaggerDescription.RESPONSE_INVALID_PAGINATION;
 import static com.decathlon.idp_core.infrastructure.adapters.api.configuration.SwaggerDescription.RESPONSE_INVALID_QUERY;
+import static com.decathlon.idp_core.infrastructure.adapters.api.configuration.SwaggerDescription.RESPONSE_INVALID_SEARCH_QUERY;
+import static com.decathlon.idp_core.infrastructure.adapters.api.configuration.SwaggerDescription.RESPONSE_SEARCH_SUCCESS;
 import static com.decathlon.idp_core.infrastructure.adapters.api.configuration.SwaggerDescription.RESPONSE_TEMPLATE_NOT_FOUND_IDENTIFIER;
 import static com.decathlon.idp_core.infrastructure.adapters.api.configuration.SwaggerDescription.RESPONSE_UNAUTHORIZED;
 import static com.decathlon.idp_core.infrastructure.adapters.api.configuration.SwaggerDescription.RESPONSE_UNEXPECTED_SERVER_ERROR;
@@ -42,10 +46,13 @@ import static org.springframework.http.HttpStatus.CREATED;
 import static org.springframework.http.HttpStatus.NO_CONTENT;
 import static org.springframework.http.HttpStatus.OK;
 
+import java.util.List;
+
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.validation.annotation.Validated;
@@ -62,16 +69,23 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.decathlon.idp_core.domain.model.entity.Entity;
 import com.decathlon.idp_core.domain.model.entity.EntityFilter;
-import com.decathlon.idp_core.domain.service.EntityQueryParserService;
+import com.decathlon.idp_core.domain.model.search.PaginatedResult;
+import com.decathlon.idp_core.domain.model.search.PaginationCriteria;
+import com.decathlon.idp_core.domain.model.search.RawSearchFilterNode;
+import com.decathlon.idp_core.domain.model.search.SearchFilterNode;
 import com.decathlon.idp_core.domain.service.entity.EntityService;
+import com.decathlon.idp_core.domain.service.filter.EntityFilterDslParser;
+import com.decathlon.idp_core.domain.service.search.SearchFilterParser;
 import com.decathlon.idp_core.infrastructure.adapters.api.configuration.SwaggerConfiguration.EntityPageResponse;
 import com.decathlon.idp_core.infrastructure.adapters.api.dto.in.EntityCreateDtoIn;
+import com.decathlon.idp_core.infrastructure.adapters.api.dto.in.EntitySearchRequestDtoIn;
 import com.decathlon.idp_core.infrastructure.adapters.api.dto.in.EntityUpdateDtoIn;
 import com.decathlon.idp_core.infrastructure.adapters.api.dto.out.entity.EntityDtoOut;
 import com.decathlon.idp_core.infrastructure.adapters.api.handler.ApiExceptionHandler;
 import com.decathlon.idp_core.infrastructure.adapters.api.handler.ApiExceptionHandler.ErrorResponse;
 import com.decathlon.idp_core.infrastructure.adapters.api.mapper.entity.EntityDtoInMapper;
 import com.decathlon.idp_core.infrastructure.adapters.api.mapper.entity.EntityDtoOutMapper;
+import com.decathlon.idp_core.infrastructure.adapters.api.mapper.entity.SearchFilterMapper;
 
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -100,7 +114,9 @@ public class EntityController {
   private final EntityService entityService;
   private final EntityDtoOutMapper entityDtoOutMapper;
   private final EntityDtoInMapper entityDtoInMapper;
-  private final EntityQueryParserService entityQueryParserService;
+  private final EntityFilterDslParser entityFilterDslParser;
+  private final SearchFilterMapper searchFilterMapper;
+  private final SearchFilterParser searchFilterParser;
 
   /// Returns paginated entities filtered by template with HTTP pagination
   /// support.
@@ -133,7 +149,7 @@ public class EntityController {
       @RequestParam(defaultValue = "20") int size, @PathVariable String templateIdentifier,
       @RequestParam(required = false) String q) {
     Pageable pageable = PageRequest.of(page, size);
-    EntityFilter filter = entityQueryParserService.parse(q);
+    EntityFilter filter = entityFilterDslParser.parse(q);
     Page<Entity> entities = entityService.getEntitiesByTemplateIdentifier(pageable,
         templateIdentifier, filter);
     return entityDtoOutMapper.fromEntitiesPageToDtoPage(entities, templateIdentifier);
@@ -264,5 +280,42 @@ public class EntityController {
   public void deleteEntity(@NotBlank @PathVariable String templateIdentifier,
       @NotBlank @PathVariable String entityIdentifier) {
     entityService.deleteEntity(templateIdentifier, entityIdentifier);
+  }
+
+  /// Searches for entities across all templates using a nested filter query.
+  ///
+  /// **API contract:** Accepts a JSON body with a nested filter tree, pagination,
+  /// and
+  /// sorting parameters. Returns a paginated list of entities matching the
+  /// filter.
+  /// No template scoping is applied by default; include a template criterion
+  /// in the filter to scope results to a specific template.
+  ///
+  /// @param searchRequest the search request body with filter, page, size, and
+  /// sort
+  /// @return paginated entity DTOs matching the filter
+  @Operation(summary = ENDPOINT_POST_SEARCH_SUMMARY, description = ENDPOINT_POST_SEARCH_DESCRIPTION)
+  @ApiResponse(responseCode = OK_CODE, description = RESPONSE_SEARCH_SUCCESS, content = @Content(schema = @Schema(implementation = EntityPageResponse.class)))
+  @ApiResponse(responseCode = BAD_REQUEST_CODE, description = RESPONSE_INVALID_SEARCH_QUERY, content = {
+      @Content(schema = @Schema(implementation = ErrorResponse.class))})
+  @PostMapping("/search")
+  @ResponseStatus(OK)
+  public Page<EntityDtoOut> searchEntities(@RequestBody EntitySearchRequestDtoIn searchRequest) {
+    RawSearchFilterNode rawFilter = searchFilterMapper.toRaw(searchRequest.filter());
+    SearchFilterNode filter = searchFilterParser.parse(rawFilter);
+    PaginationCriteria paginationCriteria = new PaginationCriteria(searchRequest.page(),
+        searchRequest.size(), searchRequest.sort());
+
+    PaginatedResult<Entity> result = entityService.searchEntities(filter, searchRequest.query(),
+        paginationCriteria);
+    Page<Entity> page = toPageResponse(result.content(), paginationCriteria,
+        result.totalElements());
+    return entityDtoOutMapper.fromEntitiesSearchPageToDtoPage(page);
+  }
+
+  private <T> Page<T> toPageResponse(List<T> content, PaginationCriteria criteria,
+      long totalElements) {
+    Pageable pageable = PageRequest.of(criteria.page(), criteria.size());
+    return new PageImpl<>(content, pageable, totalElements);
   }
 }
