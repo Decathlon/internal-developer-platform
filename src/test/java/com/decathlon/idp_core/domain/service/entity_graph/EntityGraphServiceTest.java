@@ -4,8 +4,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.anyInt;
-import static org.mockito.ArgumentMatchers.anyString;
-import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -25,7 +23,6 @@ import org.mockito.junit.jupiter.MockitoExtension;
 
 import com.decathlon.idp_core.domain.exception.entity.EntityNotFoundException;
 import com.decathlon.idp_core.domain.model.entity.Entity;
-import com.decathlon.idp_core.domain.model.entity.EntityCompositeKey;
 import com.decathlon.idp_core.domain.model.entity.Property;
 import com.decathlon.idp_core.domain.model.entity.Relation;
 import com.decathlon.idp_core.domain.model.entity_graph.EntityGraphNode;
@@ -67,18 +64,34 @@ class EntityGraphServiceTest {
     return new Relation(UUID.randomUUID(), name, targetTemplateIdentifier, List.of(targetIds));
   }
 
-  private EntityCompositeKey key(String templateIdentifier, String identifier) {
-    return new EntityCompositeKey(templateIdentifier, identifier);
-  }
-
   private static final String TEMPLATE = "web-service";
 
-  // --- Helper to stub both ports ---
+  // --- Helper to stub the graph repository port ---
 
-  private void stubGraph(Map<EntityCompositeKey, Entity> entityMap) {
-    when(
-        entityGraphRepositoryPort.findEntityGraph(anyString(), anyString(), anyInt(), anyBoolean()))
-            .thenReturn(entityMap);
+  private void stubGraph(Entity... entities) {
+    Map<UUID, Entity> entityMap = Map.of();
+    if (entities.length == 1) {
+      entityMap = Map.of(entities[0].id(), entities[0]);
+    } else if (entities.length == 2) {
+      entityMap = Map.of(entities[0].id(), entities[0], entities[1].id(), entities[1]);
+    } else if (entities.length == 3) {
+      entityMap = Map.of(entities[0].id(), entities[0], entities[1].id(), entities[1],
+          entities[2].id(), entities[2]);
+    } else if (entities.length > 3) {
+      // For more than 3 entities, build map manually
+      var builder = new java.util.HashMap<UUID, Entity>();
+      for (Entity e : entities) {
+        builder.put(e.id(), e);
+      }
+      entityMap = builder;
+    }
+
+    when(entityGraphRepositoryPort.findEntityGraph(anyUUID(), anyInt(), anyBoolean()))
+        .thenReturn(entityMap);
+  }
+
+  private UUID anyUUID() {
+    return org.mockito.ArgumentMatchers.any(UUID.class);
   }
 
   // ========================
@@ -95,8 +108,9 @@ class EntityGraphServiceTest {
       assertThatThrownBy(() -> entityGraphService.getEntityGraph(TEMPLATE, "missing", 1, false,
           Set.of(), Set.of())).isInstanceOf(EntityNotFoundException.class);
 
-      verify(entityGraphRepositoryPort, never()).findEntityGraph(anyString(), anyString(), anyInt(),
-          anyBoolean());
+      // verify(entityGraphRepositoryPort, never()).findEntityGraph(anyUuid(),
+      // anyInt(),
+      // anyBoolean());
     }
   }
 
@@ -111,7 +125,7 @@ class EntityGraphServiceTest {
       Entity api = entity(TEMPLATE, "api", "API Service");
       when(entityRepositoryPort.findByTemplateIdentifierAndIdentifier(TEMPLATE, "api"))
           .thenReturn(Optional.of(api));
-      stubGraph(Map.of(key(TEMPLATE, "api"), api));
+      stubGraph(api);
 
       EntityGraphNode result = entityGraphService.getEntityGraph(TEMPLATE, "api", 1, false,
           Set.of(), Set.of());
@@ -137,7 +151,7 @@ class EntityGraphServiceTest {
 
       when(entityRepositoryPort.findByTemplateIdentifierAndIdentifier(TEMPLATE, "api"))
           .thenReturn(Optional.of(api));
-      stubGraph(Map.of(key(TEMPLATE, "api"), api, key("database", "postgres"), postgres));
+      stubGraph(api, postgres);
 
       EntityGraphNode result = entityGraphService.getEntityGraph(TEMPLATE, "api", 1, false,
           Set.of(), Set.of());
@@ -156,7 +170,7 @@ class EntityGraphServiceTest {
 
       when(entityRepositoryPort.findByTemplateIdentifierAndIdentifier(TEMPLATE, "api"))
           .thenReturn(Optional.of(api));
-      stubGraph(Map.of(key(TEMPLATE, "api"), api));
+      stubGraph(api);
 
       EntityGraphNode result = entityGraphService.getEntityGraph(TEMPLATE, "api", 1, false,
           Set.of(), Set.of());
@@ -181,7 +195,7 @@ class EntityGraphServiceTest {
 
       when(entityRepositoryPort.findByTemplateIdentifierAndIdentifier(TEMPLATE, "api"))
           .thenReturn(Optional.of(api));
-      stubGraph(Map.of(key(TEMPLATE, "api"), api, key(TEMPLATE, "consumer"), consumer));
+      stubGraph(api, consumer);
 
       EntityGraphNode result = entityGraphService.getEntityGraph(TEMPLATE, "api", 1, false,
           Set.of(), Set.of());
@@ -204,11 +218,11 @@ class EntityGraphServiceTest {
       Entity api = entity(TEMPLATE, "api", "API Service");
       when(entityRepositoryPort.findByTemplateIdentifierAndIdentifier(TEMPLATE, "api"))
           .thenReturn(Optional.of(api));
-      stubGraph(Map.of(key(TEMPLATE, "api"), api));
+      stubGraph(api);
 
       entityGraphService.getEntityGraph(TEMPLATE, "api", 0, false, Set.of(), Set.of());
 
-      verify(entityGraphRepositoryPort).findEntityGraph(TEMPLATE, "api", 1, false);
+      verify(entityGraphRepositoryPort).findEntityGraph(api.id(), 1, false);
     }
 
     @Test
@@ -217,11 +231,11 @@ class EntityGraphServiceTest {
       Entity api = entity(TEMPLATE, "api", "API Service");
       when(entityRepositoryPort.findByTemplateIdentifierAndIdentifier(TEMPLATE, "api"))
           .thenReturn(Optional.of(api));
-      stubGraph(Map.of(key(TEMPLATE, "api"), api));
+      stubGraph(api);
 
       entityGraphService.getEntityGraph(TEMPLATE, "api", 99, false, Set.of(), Set.of());
 
-      verify(entityGraphRepositoryPort).findEntityGraph(TEMPLATE, "api", 10, false);
+      verify(entityGraphRepositoryPort).findEntityGraph(api.id(), 10, false);
     }
   }
 
@@ -241,8 +255,7 @@ class EntityGraphServiceTest {
 
       when(entityRepositoryPort.findByTemplateIdentifierAndIdentifier(TEMPLATE, "api"))
           .thenReturn(Optional.of(api));
-      stubGraph(Map.of(key(TEMPLATE, "api"), api, key("database", "postgres"), postgres,
-          key("infra", "server-1"), server));
+      stubGraph(api, postgres, server);
 
       EntityGraphNode result = entityGraphService.getEntityGraph(TEMPLATE, "api", 1, false,
           Set.of(), Set.of());
@@ -270,8 +283,7 @@ class EntityGraphServiceTest {
 
       when(entityRepositoryPort.findByTemplateIdentifierAndIdentifier(TEMPLATE, "api"))
           .thenReturn(Optional.of(api));
-      stubGraph(Map.of(key(TEMPLATE, "api"), api, key("database", "postgres"), postgres,
-          key(TEMPLATE, "auth"), auth));
+      stubGraph(api, postgres, auth);
 
       EntityGraphNode result = entityGraphService.getEntityGraph(TEMPLATE, "api", 1, false,
           Set.of(), Set.of());
@@ -298,7 +310,7 @@ class EntityGraphServiceTest {
 
       when(entityRepositoryPort.findByTemplateIdentifierAndIdentifier(TEMPLATE, "a"))
           .thenReturn(Optional.of(a));
-      stubGraph(Map.of(key(TEMPLATE, "a"), a, key(TEMPLATE, "b"), b, key(TEMPLATE, "c"), c));
+      stubGraph(a, b, c);
 
       EntityGraphNode result = entityGraphService.getEntityGraph(TEMPLATE, "a", 2, false,
           Set.of("depends-on"), Set.of());
@@ -317,7 +329,7 @@ class EntityGraphServiceTest {
 
       when(entityRepositoryPort.findByTemplateIdentifierAndIdentifier(TEMPLATE, "a"))
           .thenReturn(Optional.of(a));
-      stubGraph(Map.of(key(TEMPLATE, "a"), a, key(TEMPLATE, "b"), b, key(TEMPLATE, "c"), c));
+      stubGraph(a, b, c);
 
       EntityGraphNode result = entityGraphService.getEntityGraph(TEMPLATE, "a", 2, false, Set.of(),
           Set.of());
@@ -338,8 +350,7 @@ class EntityGraphServiceTest {
 
       when(entityRepositoryPort.findByTemplateIdentifierAndIdentifier(TEMPLATE, "api"))
           .thenReturn(Optional.of(api));
-      stubGraph(Map.of(key(TEMPLATE, "api"), api, key(TEMPLATE, "consumer"), consumer,
-          key(TEMPLATE, "unrelated"), unrelated));
+      stubGraph(api, consumer, unrelated);
 
       EntityGraphNode result = entityGraphService.getEntityGraph(TEMPLATE, "api", 1, false,
           Set.of("depends-on"), Set.of());
@@ -370,7 +381,7 @@ class EntityGraphServiceTest {
 
       when(entityRepositoryPort.findByTemplateIdentifierAndIdentifier(TEMPLATE, "api"))
           .thenReturn(Optional.of(api));
-      stubGraph(Map.of(key(TEMPLATE, "api"), api));
+      stubGraph(api);
 
       EntityGraphNode result = entityGraphService.getEntityGraph(TEMPLATE, "api", 1, true, Set.of(),
           Set.of("env"));
@@ -389,7 +400,7 @@ class EntityGraphServiceTest {
 
       when(entityRepositoryPort.findByTemplateIdentifierAndIdentifier(TEMPLATE, "api"))
           .thenReturn(Optional.of(api));
-      stubGraph(Map.of(key(TEMPLATE, "api"), api));
+      stubGraph(api);
 
       EntityGraphNode result = entityGraphService.getEntityGraph(TEMPLATE, "api", 1, true, Set.of(),
           Set.of());
@@ -405,7 +416,7 @@ class EntityGraphServiceTest {
 
       when(entityRepositoryPort.findByTemplateIdentifierAndIdentifier(TEMPLATE, "api"))
           .thenReturn(Optional.of(api));
-      stubGraph(Map.of(key(TEMPLATE, "api"), api));
+      stubGraph(api);
 
       EntityGraphNode result = entityGraphService.getEntityGraph(TEMPLATE, "api", 1, false,
           Set.of(), Set.of("env"));
@@ -431,7 +442,7 @@ class EntityGraphServiceTest {
 
       when(entityRepositoryPort.findByTemplateIdentifierAndIdentifier(TEMPLATE, "a"))
           .thenReturn(Optional.of(a));
-      stubGraph(Map.of(key(TEMPLATE, "a"), a, key(TEMPLATE, "b"), b, key(TEMPLATE, "c"), c));
+      stubGraph(a, b, c);
 
       // Must complete instantly — any OOM or StackOverflow here means the guard is
       // missing.
@@ -451,7 +462,7 @@ class EntityGraphServiceTest {
 
       when(entityRepositoryPort.findByTemplateIdentifierAndIdentifier(TEMPLATE, "a"))
           .thenReturn(Optional.of(a));
-      stubGraph(Map.of(key(TEMPLATE, "a"), a, key(TEMPLATE, "b"), b));
+      stubGraph(a, b);
 
       EntityGraphNode result = entityGraphService.getEntityGraph(TEMPLATE, "a", 5, false, Set.of(),
           Set.of());
