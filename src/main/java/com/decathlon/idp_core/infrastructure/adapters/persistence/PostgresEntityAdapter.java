@@ -97,10 +97,12 @@ public class PostgresEntityAdapter implements EntityRepositoryPort {
   }
 
   // @Override
-  // public List<EntityJpaEntity> findAllByTemplateIdentifierAndIdentifierIn(String templateIdentifier,
-  //     List<String> identifiers) {
-  //   return jpaEntityRepository.findAllByTemplateIdentifierAndIdentifierIn(templateIdentifier,
-  //       identifiers);
+  // public List<EntityJpaEntity>
+  // findAllByTemplateIdentifierAndIdentifierIn(String templateIdentifier,
+  // List<String> identifiers) {
+  // return
+  // jpaEntityRepository.findAllByTemplateIdentifierAndIdentifierIn(templateIdentifier,
+  // identifiers);
   // }
 
   public PaginatedResult<Entity> search(SearchFilterNode filter, String query,

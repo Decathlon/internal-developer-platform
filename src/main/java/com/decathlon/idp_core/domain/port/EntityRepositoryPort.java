@@ -47,9 +47,6 @@ public interface EntityRepositoryPort {
   Page<Entity> findByTemplateIdentifierWithFilter(String templateIdentifier, EntityFilter filter,
       Pageable pageable);
 
-//   List<EntityJpaEntity> findAllByTemplateIdentifierAndIdentifierIn(String templateIdentifier,
-//       List<String> identifiers);
-
   List<EntitySummary> findByIdentifierIn(List<String> identifiers);
 
   List<EntitySummary> findByRelationIdIn(List<UUID> relationIds);

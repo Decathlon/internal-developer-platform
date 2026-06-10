@@ -23,12 +23,6 @@ VALUES
   ('550e8400-e29b-41d4-a716-446655440113', 'monitoring-service-5', 'Monitoring Service 5', 'monitoring-service'),
   ('550e8400-e29b-41d4-a716-446655440114', 'monitoring-service-6', 'Monitoring Service 6', 'monitoring-service');
 
--- -----------------------------------------------------------------------
--- Properties for query filter tests (web-api-1 and web-api-2)
--- -----------------------------------------------------------------------
-
--- Properties for web-api-1 (programmingLanguage=JAVA, environment=PROD, port=8080)
-INSERT INTO property (id, name, value)
 -- Properties for default-team entity
 INSERT INTO idp_core.property (id, name, value)
 VALUES
@@ -76,59 +70,76 @@ VALUES
   ('aa000000-0000-0000-0000-000000000002', 'environment', 'PROD'),
   ('aa000000-0000-0000-0000-000000000005', 'port', '8080');
 
-INSERT INTO entity_properties (entity_id, property_id)
+INSERT INTO idp_core.entity_properties (entity_id, property_id)
 VALUES
   ('550e8400-e29b-41d4-a716-446655440100', 'aa000000-0000-0000-0000-000000000001'),
   ('550e8400-e29b-41d4-a716-446655440100', 'aa000000-0000-0000-0000-000000000002'),
   ('550e8400-e29b-41d4-a716-446655440100', 'aa000000-0000-0000-0000-000000000005');
 
--- Properties for web-api-2 (programmingLanguage=PYTHON, environment=DEV, port=9090)
-INSERT INTO property (id, name, value)
+-- Properties for web-api-2 (language=PYTHON, environment=DEV)
+INSERT INTO idp_core.property (id, name, value)
 VALUES
   ('aa000000-0000-0000-0000-000000000003', 'programmingLanguage', 'PYTHON'),
   ('aa000000-0000-0000-0000-000000000004', 'environment', 'DEV'),
   ('aa000000-0000-0000-0000-000000000006', 'port', '9090');
 
-INSERT INTO entity_properties (entity_id, property_id)
+INSERT INTO idp_core.entity_properties (entity_id, property_id)
 VALUES
   ('550e8400-e29b-41d4-a716-446655440101', 'aa000000-0000-0000-0000-000000000003'),
   ('550e8400-e29b-41d4-a716-446655440101', 'aa000000-0000-0000-0000-000000000004'),
   ('550e8400-e29b-41d4-a716-446655440101', 'aa000000-0000-0000-0000-000000000006');
 
--- -----------------------------------------------------------------------
--- Relations for query filter tests (web-api-1 and web-api-2)
--- -----------------------------------------------------------------------
+-- Relations for web-api-1 (database -> database-service, targetTemplateIdentifier = database-service)
+INSERT INTO idp_core.relation (id, name, target_template_identifier)
+VALUES
+  ('bb000000-0000-0000-0000-000000000001', 'database', 'database-service');
 
--- database relation for web-api-1 → database-service-1
-INSERT INTO relation (id, name, target_template_identifier)
-VALUES ('bb000000-0000-0000-0000-000000000001', 'database', 'database-service');
+INSERT INTO idp_core.relation_target_entities (relation_id, target_entity_identifier)
+VALUES
+  ('bb000000-0000-0000-0000-000000000001', 'database-service-1');
 
-INSERT INTO relation_target_entities (relation_id, target_entity_uuid)
-VALUES ('bb000000-0000-0000-0000-000000000001', '550e8400-e29b-41d4-a716-446655440107');
+INSERT INTO idp_core.entity_relations (entity_id, relation_id)
+VALUES
+  ('550e8400-e29b-41d4-a716-446655440100', 'bb000000-0000-0000-0000-000000000001');
 
-INSERT INTO entity_relations (entity_id, relation_id)
-VALUES ('550e8400-e29b-41d4-a716-446655440100', 'bb000000-0000-0000-0000-000000000001');
+-- Relations for web-api-2 (database -> cache-service, targetTemplateIdentifier = cache-service)
+INSERT INTO idp_core.relation (id, name, target_template_identifier)
+VALUES
+  ('bb000000-0000-0000-0000-000000000002', 'database', 'cache-service');
 
--- database relation for web-api-2 → cache-service-1
-INSERT INTO relation (id, name, target_template_identifier)
-VALUES ('bb000000-0000-0000-0000-000000000002', 'database', 'cache-service');
+INSERT INTO idp_core.relation_target_entities (relation_id, target_entity_identifier)
+VALUES
+  ('bb000000-0000-0000-0000-000000000002', 'cache-service-1');
 
-INSERT INTO relation_target_entities (relation_id, target_entity_uuid)
-VALUES ('bb000000-0000-0000-0000-000000000002', '550e8400-e29b-41d4-a716-446655440108');
+INSERT INTO idp_core.entity_relations (entity_id, relation_id)
+VALUES
+  ('550e8400-e29b-41d4-a716-446655440101', 'bb000000-0000-0000-0000-000000000002');
 
-INSERT INTO entity_relations (entity_id, relation_id)
-VALUES ('550e8400-e29b-41d4-a716-446655440101', 'bb000000-0000-0000-0000-000000000002');
+-- api-link relation for web-api-1 targeting microservice-1 (supports q=relation=api-link;relation.api-link.name:microservice)
+INSERT INTO idp_core.relation (id, name, target_template_identifier)
+VALUES
+  ('bb000000-0000-0000-0000-000000000003', 'api-link', 'microservice');
 
--- api-link relation for web-api-1 → microservice-1
-INSERT INTO relation (id, name, target_template_identifier)
-VALUES ('bb000000-0000-0000-0000-000000000003', 'api-link', 'microservice');
+INSERT INTO idp_core.relation_target_entities (relation_id, target_entity_identifier)
+VALUES
+  ('bb000000-0000-0000-0000-000000000003', 'microservice-1');
 
-INSERT INTO relation_target_entities (relation_id, target_entity_uuid)
-VALUES ('bb000000-0000-0000-0000-000000000003', '550e8400-e29b-41d4-a716-446655440102');
+INSERT INTO idp_core.entity_relations (entity_id, relation_id)
+VALUES
+  ('550e8400-e29b-41d4-a716-446655440100', 'bb000000-0000-0000-0000-000000000003');
 
-INSERT INTO entity_relations (entity_id, relation_id)
-VALUES ('550e8400-e29b-41d4-a716-446655440100', 'bb000000-0000-0000-0000-000000000003');
+-- required_team relation for test-support-with-required-team targeting test-team-required
+INSERT INTO idp_core.relation (id, name, target_template_identifier)
+VALUES
+  ('bb000000-0000-0000-0000-000000000006', 'required_team', 'team');
 
+INSERT INTO idp_core.relation_target_entities (relation_id, target_entity_identifier)
+VALUES
+  ('bb000000-0000-0000-0000-000000000006', 'test-team-required');
+
+INSERT INTO idp_core.entity_relations (entity_id, relation_id)
+VALUES
+  ('550e8400-e29b-41d4-a716-446655440117', 'bb000000-0000-0000-0000-000000000006');
 
 -- -----------------------------------------------------------------------
 -- Graph test data: 3-level chain of entities connected via two relation
@@ -163,11 +174,11 @@ VALUES
   ('bb000002-0000-0000-0000-000000000001', 'uses', 'web-service');
 
 -- Target entity identifiers for each relation
-INSERT INTO relation_target_entities (relation_id, target_entity_uuid)
+INSERT INTO relation_target_entities (relation_id, target_entity_identifier, target_entity_uuid)
 VALUES
-  ('bb000001-0000-0000-0000-000000000001', 'aa000001-0000-0000-0000-000000000002'),  -- a -[uses]-> b
-  ('bb000001-0000-0000-0000-000000000002', 'aa000001-0000-0000-0000-000000000002'),  -- a -[monitors]-> b
-  ('bb000002-0000-0000-0000-000000000001', 'aa000001-0000-0000-0000-000000000003');  -- b -[uses]-> c
+  ('bb000001-0000-0000-0000-000000000001', 'graph-svc-b', 'aa000001-0000-0000-0000-000000000002'),  -- a -[uses]-> b
+  ('bb000001-0000-0000-0000-000000000002', 'graph-svc-b', 'aa000001-0000-0000-0000-000000000002'),  -- a -[monitors]-> b
+  ('bb000002-0000-0000-0000-000000000001', 'graph-svc-c', 'aa000001-0000-0000-0000-000000000003');  -- b -[uses]-> c
 
 -- Link relations to their owner entities
 INSERT INTO entity_relations (entity_id, relation_id)
@@ -207,15 +218,3 @@ VALUES
   ('aa000001-0000-0000-0000-000000000002', 'cc000001-0000-0000-0000-000000000004'), -- b.version
   ('aa000001-0000-0000-0000-000000000003', 'cc000001-0000-0000-0000-000000000005'), -- c.tier
   ('aa000001-0000-0000-0000-000000000003', 'cc000001-0000-0000-0000-000000000006'); -- c.version
-  ('550e8400-e29b-41d4-a716-446655440100', 'bb000000-0000-0000-0000-000000000003');
-
--- required_team relation for test-support-with-required-team targeting test-team-required
-INSERT INTO idp_core.relation (id, name, target_template_identifier)
-VALUES
-  ('bb000000-0000-0000-0000-000000000006', 'required_team', 'team');
-INSERT INTO idp_core.relation_target_entities (relation_id, target_entity_identifier)
-VALUES
-  ('bb000000-0000-0000-0000-000000000006', 'test-team-required');
-INSERT INTO idp_core.entity_relations (entity_id, relation_id)
-VALUES
-  ('550e8400-e29b-41d4-a716-446655440117', 'bb000000-0000-0000-0000-000000000006');

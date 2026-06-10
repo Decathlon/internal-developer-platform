@@ -14,15 +14,27 @@ import com.decathlon.idp_core.infrastructure.adapters.persistence.model.entity.R
 @Repository
 public interface JpaRelationRepository extends JpaRepository<RelationJpaEntity, UUID> {
 
-  @Query("""
-      SELECT new com.decathlon.idp_core.domain.model.entity.RelationAsTargetSummary(
-          te.targetEntityIdentifier, r.name, e.identifier, e.name
-      )
-      FROM EntityJpaEntity e
-      JOIN e.relations r
-      JOIN r.targetEntities te
-      WHERE te.targetEntityIdentifier IN :targetEntityIdentifiers
-      """)
+  /**
+   * Find relation summaries where the given entity identifiers are targets. Uses
+   * a native query to efficiently join through the relation_target_entities
+   * table.
+   *
+   * @param targetEntityIdentifiers
+   *          List of entity identifiers to search for
+   * @return List of relation summaries where these entities are targets
+   */
+  @Query(value = """
+      SELECT
+          rte.target_entity_identifier AS targetIdentifier,
+          r.name AS relationName,
+          e.identifier AS sourceIdentifier,
+          e.name AS sourceName
+      FROM idp_core.entity e
+      JOIN idp_core.entity_relations er ON er.entity_id = e.id
+      JOIN idp_core.relation r ON r.id = er.relation_id
+      JOIN idp_core.relation_target_entities rte ON rte.relation_id = r.id
+      WHERE rte.target_entity_identifier IN :targetEntityIdentifiers
+      """, nativeQuery = true)
   List<RelationAsTargetSummary> findRelationsSummariesByTargetEntityIdentifiers(
       @Param("targetEntityIdentifiers") List<String> targetEntityIdentifiers);
 }

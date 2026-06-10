@@ -323,7 +323,7 @@ public class ApiExceptionHandler {
     String errorMessage = ex.getConstraintViolations().stream().map(ConstraintViolation::getMessage)
         .collect(Collectors.joining(", "));
     return createErrorResponse(HttpStatus.BAD_REQUEST, errorMessage);
-  } 
+  }
   /// Handles domain exception when entity deletion is blocked by required
   /// relations.
   ///
