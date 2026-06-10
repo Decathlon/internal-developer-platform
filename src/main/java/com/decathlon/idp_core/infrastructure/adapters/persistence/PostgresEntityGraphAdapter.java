@@ -26,9 +26,11 @@ import lombok.RequiredArgsConstructor;
 /// following the Interface Segregation Principle.
 ///
 /// **Query strategy:**
-/// 1. One recursive CTE query to collect all (identifier, template_identifier) pairs in the graph.
+/// 1. One recursive CTE query to collect all (identifier, template_identifier)
+///    pairs in the graph.
 /// 2. One batch query to load entities with their relations (avoids N+1).
-/// 3. One batch query to load properties separately (avoids MultipleBagFetchException).
+/// 3. One batch query to load properties separately
+///    (avoids MultipleBagFetchException).
 @Component
 @RequiredArgsConstructor
 public class PostgresEntityGraphAdapter implements EntityGraphRepositoryPort {
@@ -53,7 +55,7 @@ public class PostgresEntityGraphAdapter implements EntityGraphRepositoryPort {
     // so nodes reachable via any path are included even if the filter only matches
     // edges at deeper levels (e.g. filtering "owns" still returns B→C when A→B→C).
     final long tStartCte = System.nanoTime();
-    List<UUID> graphPairs = jpaEntityRepository.findEntityGraphIdentifiers(entityId, depth);
+    List<UUID> graphPairs = jpaEntityRepository.findEntityUuidsInGraph(entityId, depth);
     final long tAfterCte = System.nanoTime();
     log.debug("[EntityGraphAdapter] CTE returned {} identifiers (elapsed={}ms)",
         graphPairs == null ? 0 : graphPairs.size(), (tAfterCte - tStartCte) / 1_000_000);
@@ -111,26 +113,4 @@ public class PostgresEntityGraphAdapter implements EntityGraphRepositoryPort {
     return result;
   }
 
-  @Override
-  @Transactional(readOnly = true)
-  public Map<UUID, Entity> findEntityGraphBatch(List<UUID> rootIds, int depth,
-      boolean includeProperties) {
-    if (rootIds == null || rootIds.isEmpty())
-      return Map.of();
-
-    // Step 1: Bulk-scout all reachable node IDs across all 20 roots in 1 query
-    List<UUID> graphPairs = jpaEntityRepository.findEntityGraphIdentifiersBatch(rootIds, depth);
-    if (graphPairs == null || graphPairs.isEmpty())
-      return Map.of();
-
-    List<UUID> entitiesIds = graphPairs.stream().distinct().toList();
-
-    // Step 2: Bulk-hydrate all objects and their cached relation strings in 1 query
-    List<EntityJpaEntity> jpaEntities = jpaEntityRepository
-        .findAllByIdentifierInWithRelations(entitiesIds);
-
-    // Step 3: Pure O(N) in-memory domain mapping
-    return jpaEntities.stream().map(mapper::toDomain)
-        .collect(Collectors.toMap(Entity::id, Function.identity()));
-  }
 }

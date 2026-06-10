@@ -15,7 +15,6 @@ import static org.springframework.http.HttpStatus.OK;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.UUID;
 import java.util.stream.Collectors;
 
 import jakarta.validation.constraints.NotBlank;
@@ -96,64 +95,6 @@ public class EntityGraphController {
         entityIdentifier, depth, includeData, relationFilter, propertyFilter);
 
     return EntityGraphFlatDtoOutMapper.toFlatDto(graphNode);
-  }
-
-  @PostMapping("/{templateIdentifier}/graph/batch")
-  @ResponseStatus(OK)
-  @Operation(summary = "Get multiple entity graphs by business identifiers", description = "Pass a template identifier in the path and up to 20 unique business identifier strings in the body to receive independent graph trees.", responses = {
-      @ApiResponse(responseCode = OK_CODE, description = "Batch graph retrieval successful")})
-  public Map<String, EntityGraphFlatDtoOut> getBatchEntityGraphsByIdentifiers(
-      @PathVariable @NotBlank String templateIdentifier,
-      @RequestBody @NotEmpty List<String> identifiers, // Accept text business identifiers
-      @Parameter(description = PARAM_DEPTH_DESCRIPTION) @RequestParam(defaultValue = "1") int depth,
-      @Parameter(description = PARAM_INCLUDE_DATA_DESCRIPTION) @RequestParam(name = "include_data", defaultValue = "false") boolean includeData,
-      @Parameter(description = PARAM_RELATIONS_DESCRIPTION) @RequestParam(required = false) List<String> relations,
-      @Parameter(description = PARAM_PROPERTIES_DESCRIPTION) @RequestParam(required = false) List<String> properties) {
-
-    // 1. Guard rails for user-friendly UX protection
-    if (identifiers.size() > 25) {
-      throw new IllegalArgumentException(
-          "Batch size exceeds maximum allowed limit of 20 elements.");
-    }
-
-    Set<String> relationFilter = relations != null ? Set.copyOf(relations) : Set.of();
-    Set<String> propertyFilter = properties != null ? Set.copyOf(properties) : Set.of();
-
-    // 2. Execute service layer using string-based identifiers
-    Map<String, EntityGraphNode> batchGraphs = entityGraphService.getBatchEntityGraphsByIdentifiers(
-        templateIdentifier, identifiers, depth, includeData, relationFilter, propertyFilter);
-
-    // 3. Map the memory trees back to flat DTOs, keyed by the input identifier
-    // strings
-    return batchGraphs.entrySet().stream().collect(Collectors.toMap(Map.Entry::getKey,
-        entry -> EntityGraphFlatDtoOutMapper.toFlatDto(entry.getValue())));
-  }
-
-  @PostMapping("/{templateIdentifier}/graph/batch/raw")
-  @ResponseStatus(OK)
-  @Operation(summary = "Get multiple entity graphs by business identifiers", description = "Pass a template identifier in the path and up to 20 unique business identifier strings in the body to receive independent graph trees.", responses = {
-      @ApiResponse(responseCode = OK_CODE, description = "Batch graph retrieval successful")})
-  public Map<String, EntityGraphNode> getBatchEntityGraphsRawByIdentifiers(
-      @PathVariable @NotBlank String templateIdentifier,
-      @RequestBody @NotEmpty List<String> identifiers, // Accept text business identifiers
-      @Parameter(description = PARAM_DEPTH_DESCRIPTION) @RequestParam(defaultValue = "1") int depth,
-      @Parameter(description = PARAM_INCLUDE_DATA_DESCRIPTION) @RequestParam(name = "include_data", defaultValue = "false") boolean includeData,
-      @Parameter(description = PARAM_RELATIONS_DESCRIPTION) @RequestParam(required = false) List<String> relations,
-      @Parameter(description = PARAM_PROPERTIES_DESCRIPTION) @RequestParam(required = false) List<String> properties) {
-
-    // 1. Guard rails for user-friendly UX protection
-    if (identifiers.size() > 25) {
-      throw new IllegalArgumentException(
-          "Batch size exceeds maximum allowed limit of 20 elements.");
-    }
-
-    Set<String> relationFilter = relations != null ? Set.copyOf(relations) : Set.of();
-    Set<String> propertyFilter = properties != null ? Set.copyOf(properties) : Set.of();
-
-    // 2. Execute service layer using string-based identifiers
-    return entityGraphService.getBatchEntityGraphsByIdentifiers(templateIdentifier, identifiers,
-        depth, includeData, relationFilter, propertyFilter);
-
   }
 
 }

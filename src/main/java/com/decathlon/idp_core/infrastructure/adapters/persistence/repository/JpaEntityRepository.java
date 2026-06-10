@@ -56,7 +56,7 @@ public interface JpaEntityRepository
 
   @Query(value = """
       WITH RECURSIVE entity_graph(id, depth) AS (
-          -- 1. ANCHOR MEMBER: Start with your specific root entity UUID
+          -- 1. ANCHOR MEMBER: Start with the specific root entity UUID
           SELECT CAST(:entityId AS UUID), 0
 
           UNION -- Frontier propagation: automatically eliminates path duplicates at each step
@@ -86,43 +86,7 @@ public interface JpaEntityRepository
       -- 3. LEAN RETURN: Extract only the unique raw UUIDs discovered in the network skeleton
       SELECT DISTINCT id FROM entity_graph;
                                     """, nativeQuery = true)
-  List<UUID> findEntityGraphIdentifiers(@Param("entityId") UUID entityId,
-      @Param("depth") int depth);
-
-  @Query(value = """
-      WITH RECURSIVE entity_graph(id, depth) AS (
-          -- 1. BATCH ANCHOR MEMBER: Initialize the unique initial root IDs
-          SELECT DISTINCT e.id, 0
-          FROM idp_core.entity e
-          WHERE e.id IN (:rootIds)
-
-          UNION -- Handles distinct node/depth state filtering at each step
-
-          -- 2. RECURSIVE MEMBER: Upgraded from LATERAL loops to a Bulk Set-Based Join
-          SELECT combined.id, eg.depth + 1
-          FROM entity_graph eg
-          JOIN (
-              -- Bulk Outbound Adjacency Map
-              SELECT er.entity_id AS source_id, rte.target_entity_uuid AS id
-              FROM idp_core.entity_relations er
-              JOIN idp_core.relation_target_entities rte ON rte.relation_id = er.relation_id
-              WHERE rte.target_entity_uuid IS NOT NULL
-
-              UNION ALL
-
-              -- Bulk Inbound Adjacency Map
-              SELECT rte.target_entity_uuid AS source_id, er.entity_id AS id
-              FROM idp_core.relation_target_entities rte
-              JOIN idp_core.entity_relations er ON er.relation_id = rte.relation_id
-          ) combined ON combined.source_id = eg.id
-          -- Enforce the depth budget parameter cleanly
-          WHERE eg.depth < :depth
-      )
-      -- 3. LEAN RETURN: Extract unique raw UUIDs discovered across all universes
-      SELECT DISTINCT id FROM entity_graph;
-            """, nativeQuery = true)
-  List<UUID> findEntityGraphIdentifiersBatch(@Param("rootIds") List<UUID> rootIds,
-      @Param("depth") int depth);
+  List<UUID> findEntityUuidsInGraph(@Param("entityId") UUID entityId, @Param("depth") int depth);
 
   @Modifying(clearAutomatically = true, flushAutomatically = true)
   @Query("""
