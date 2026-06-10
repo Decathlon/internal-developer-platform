@@ -8,6 +8,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -23,6 +24,7 @@ import com.decathlon.idp_core.domain.model.entity_graph.EntityGraphRelation;
 import com.decathlon.idp_core.domain.port.EntityGraphRepositoryPort;
 import com.decathlon.idp_core.domain.port.EntityRepositoryPort;
 import com.decathlon.idp_core.domain.service.entity_template.EntityTemplateValidationService;
+import com.decathlon.idp_core.infrastructure.adapters.persistence.model.entity.EntityJpaEntity;
 
 import lombok.RequiredArgsConstructor;
 
@@ -64,303 +66,224 @@ public class EntityGraphService {
   public EntityGraphNode getEntityGraph(String templateIdentifier, String entityIdentifier,
       int depth, boolean includeProperties, Set<String> relationFilter,
       Set<String> propertyFilter) {
-    final long tStartTotal = System.nanoTime();
 
+    final long tStartTotal = System.nanoTime();
     int effectiveDepth = Math.clamp(depth, 1, MAX_DEPTH);
     entityTemplateValidationService.validateTemplateExists(templateIdentifier);
 
-    // Resolve root entity and measure time
+    // 1. Resolve root entity
     final long tStartResolve = System.nanoTime();
     Entity rootEntity = entityRepositoryPort
         .findByTemplateIdentifierAndIdentifier(templateIdentifier, entityIdentifier)
         .orElseThrow(() -> new EntityNotFoundException(templateIdentifier, entityIdentifier));
     final long tAfterResolve = System.nanoTime();
-    // log.debug("[EntityGraph] Resolved root entity: id='{}' identifier='{}'
-    // template='{}' (elapsed={}ms)", rootEntity.id(), rootEntity.identifier(),
-    // rootEntity.templateIdentifier(), (tAfterResolve - tStartResolve) /
-    // 1_000_000);
 
-    // Load entire graph chunk via optimized DB calls
+    // 2. Load the graph footprint via optimized DB calls (Takes ~150ms)
     final long tStartRepo = System.nanoTime();
     Map<UUID, Entity> entityMap = entityGraphRepositoryPort.findEntityGraph(rootEntity.id(),
         effectiveDepth, includeProperties);
     final long tAfterRepo = System.nanoTime();
 
     if (entityMap == null || entityMap.isEmpty()) {
-      log.debug(
-          "[EntityGraph] No entities returned from repository for root id='{}'. Returning single-node graph. (repoElapsed={}ms)",
-          rootEntity.id(), (tAfterRepo - tStartRepo) / 1_000_000);
-      final long tEndTotalEmpty = System.nanoTime();
-      log.debug("[EntityGraph] getEntityGraph end (single-node): totalElapsed={}ms",
-          (tEndTotalEmpty - tStartTotal) / 1_000_000);
       return new EntityGraphNode(rootEntity.id().toString(), rootEntity.identifier(),
           rootEntity.name(), List.of(), List.of(), List.of());
     }
 
-    log.debug(
-        "[EntityGraph] Repository returned {} entities for root id='{}' (includeProperties={}) repoElapsed={}ms",
-        entityMap.size(), rootEntity.id(), includeProperties,
-        (tAfterRepo - tStartRepo) / 1_000_000);
+    log.debug("[EntityGraph] Repository returned {} entities for root id='{}' repoElapsed={}ms",
+        entityMap.size(), rootEntity.id(), (tAfterRepo - tStartRepo) / 1_000_000);
 
-    // -------------------------------------------------------------------------
-    // BULK PRE-COMPUTATION LAYER (Normalized for absolute string resilience)
-    // -------------------------------------------------------------------------
+    // 3. Pre-computation Layer
     final long tStartIndex = System.nanoTime();
     IndexBundle indices = buildIndices(entityMap);
     final long tAfterIndex = System.nanoTime();
 
-    Map<EntityCompositeKey, UUID> textToUuidLookup = indices.textToUuidLookup();
-    Map<String, Map<String, List<UUID>>> inboundIndex = indices.inboundIndex();
-    int inboundEntries = inboundIndex.values().stream()
-        .mapToInt(m -> m.values().stream().mapToInt(List::size).sum()).sum();
-    // log.debug("[EntityGraph][Index] Built textToUuidLookup size={}
-    // inboundIndexRelations={} totalInboundSources={} (processed={})
-    // indexElapsed={}ms",
-    // textToUuidLookup.size(), inboundIndex.size(), inboundEntries,
-    // entityMap.size(), (tAfterIndex - tStartIndex) / 1_000_000);
+    // Context tracking for this execution tree
+    Set<String> activeStack = new HashSet<>();
+    Map<String, EntityGraphNode> memoCache = new HashMap<>();
 
-    // Depth-Aware Tracker to prevent premature branch starvation
-    Map<String, Integer> visitedDepths = new HashMap<>();
+    GraphTraversalContext ctx = new GraphTraversalContext(entityMap, indices.textToUuidLookup(),
+        indices.inboundIndex(), includeProperties, propertyFilter, relationFilter, activeStack,
+        memoCache);
 
-    // Create context object to avoid long parameter lists when traversing
-    GraphTraversalContext ctx = new GraphTraversalContext(entityMap, textToUuidLookup, inboundIndex,
-        includeProperties, propertyFilter, relationFilter, visitedDepths);
-
-    // Trigger recursion passing our resilient indices via context
-    // log.debug("[EntityGraph] Starting recursive graph build from root id='{}'
-    // with depthBudget={}'", rootEntity.id(), effectiveDepth);
+    // 4. Trigger recursive tree mapping (O(N) performance, heap-safe)
     final long tStartRecursion = System.nanoTime();
-    EntityGraphNode rootNode = buildGraphNode(rootEntity.id(), ctx, effectiveDepth);
+    EntityGraphNode rootNode = buildGraphNode(rootEntity.id(), ctx);
     final long tAfterRecursion = System.nanoTime();
-    // log.debug("[EntityGraph] Completed recursive graph build for root id='{}'.
-    // recursionElapsed={}ms Visited {} nodes.", rootEntity.id(), (tAfterRecursion -
-    // tStartRecursion) / 1_000_000, visitedDepths.size());
-
-    // Log unvisited entities for diagnostics
-    logUnvisitedEntities(entityMap, visitedDepths);
 
     final long tEndTotal = System.nanoTime();
     log.debug(
-        "[EntityGraph] getEntityGraph end: totalElapsed={}ms (resolve={}ms repo={}ms index={}ms recursion={}ms)",
+        "[EntityGraph] End: totalElapsed={}ms (resolve={}ms repo={}ms index={}ms recursion={}ms) CacheSize={}",
         (tEndTotal - tStartTotal) / 1_000_000, (tAfterResolve - tStartResolve) / 1_000_000,
         (tAfterRepo - tStartRepo) / 1_000_000, (tAfterIndex - tStartIndex) / 1_000_000,
-        (tAfterRecursion - tStartRecursion) / 1_000_000);
+        (tAfterRecursion - tStartRecursion) / 1_000_000, memoCache.size());
 
     return rootNode;
   }
 
-  /// Logs entities that were loaded but never visited during graph traversal.
-  /// This helps diagnose why the number of loaded entities exceeds the number of
-  /// output nodes.
-  private void logUnvisitedEntities(Map<UUID, Entity> entityMap,
-      Map<String, Integer> visitedDepths) {
-    Set<UUID> visitedUuids = new HashSet<>();
-    for (String uuidStr : visitedDepths.keySet()) {
-      try {
-        visitedUuids.add(UUID.fromString(uuidStr));
-      } catch (IllegalArgumentException _) {
-        // Invalid UUID format, skip
+  @Transactional(readOnly = true)
+  public Map<String, EntityGraphNode> getBatchEntityGraphsByIdentifiers(String templateIdentifier,
+      List<String> identifiers, int depth, boolean includeProperties, Set<String> relationFilter,
+      Set<String> propertyFilter) {
+
+    if (identifiers == null || identifiers.isEmpty()) {
+      return Map.of();
+    }
+
+    int effectiveDepth = Math.clamp(depth, 1, MAX_DEPTH);
+    entityTemplateValidationService.validateTemplateExists(templateIdentifier);
+
+    // 1. BULK INITIAL RESOLUTION: Fetch all matching root entities in 1 clean
+    // database query
+    // This resolves your text identifiers to their corresponding binary UUIDs
+    List<EntityJpaEntity> rootJpaEntities = entityRepositoryPort
+        .findAllByTemplateIdentifierAndIdentifierIn(templateIdentifier, identifiers);
+
+    if (rootJpaEntities.isEmpty()) {
+      return Map.of();
+    }
+
+    // Map UUIDs to their matching business identifier text for the final output
+    // step
+    Map<UUID, String> uuidToIdentifierMap = rootJpaEntities.stream()
+        .collect(Collectors.toMap(EntityJpaEntity::getId, EntityJpaEntity::getIdentifier));
+
+    List<UUID> rootIds = rootJpaEntities.stream().map(EntityJpaEntity::getId).toList();
+
+    // 2. BULK GRAPH FETCH: Execute your optimized set-based join CTE using the
+    // resolved UUIDs
+    Map<UUID, Entity> entityMap = entityGraphRepositoryPort.findEntityGraphBatch(rootIds,
+        effectiveDepth, includeProperties);
+
+    if (entityMap == null || entityMap.isEmpty()) {
+      return Map.of();
+    }
+
+    // 3. INDEX PRE-COMPUTATION: Build lookups once for the entire batch footprint
+    IndexBundle indices = buildIndices(entityMap);
+    Map<String, EntityGraphNode> batchResult = new HashMap<>();
+
+    // 4. SEPARATION LOOP: Construct independent memoized trees for each discovered
+    // root
+    for (UUID rootId : rootIds) {
+      Set<String> activeStack = new HashSet<>();
+      Map<String, EntityGraphNode> memoCache = new HashMap<>();
+
+      GraphTraversalContext ctx = new GraphTraversalContext(entityMap, indices.textToUuidLookup(),
+          indices.inboundIndex(), includeProperties, propertyFilter, relationFilter, activeStack,
+          memoCache);
+
+      // Resolve the graph structure using your memory-safe recursive builder
+      EntityGraphNode tree = buildGraphNode(rootId, ctx);
+
+      // Pull the matching business identifier string to key the final map entry
+      String businessIdentifier = uuidToIdentifierMap.get(rootId);
+      if (businessIdentifier != null) {
+        batchResult.put(businessIdentifier, tree);
       }
     }
 
-    List<Entity> unvisitedEntities = entityMap.entrySet().stream()
-        .filter(entry -> !visitedUuids.contains(entry.getKey())).map(Map.Entry::getValue)
-        .filter(Objects::nonNull).toList();
-
-    if (!unvisitedEntities.isEmpty()) {
-      // log.info("[EntityGraph] Loaded {} entities, visited {} entities, {} entities
-      // were unreachable",
-      // entityMap.size(), visitedUuids.size(), unvisitedEntities.size());
-
-      // Group by template for better readability
-      Map<String, List<String>> unvisitedByTemplate = new HashMap<>();
-      for (Entity entity : unvisitedEntities) {
-        unvisitedByTemplate.computeIfAbsent(entity.templateIdentifier(), k -> new ArrayList<>())
-            .add(entity.identifier());
-      }
-
-      // unvisitedByTemplate.forEach((template, identifiers) ->
-      // log.info(" Template '{}': {} entities - {}",
-      // template, identifiers.size(),
-      // identifiers.size() <= 10 ? identifiers : identifiers.subList(0, 10) + "... ("
-      // + (identifiers.size() - 10) + " more)" )
-      // );
-    } else {
-      log.info("[EntityGraph] All {} loaded entities were visited (100% reachability)",
-          entityMap.size());
-    }
+    return batchResult;
   }
 
-  private EntityGraphNode buildGraphNode(UUID entityUuid, Map<UUID, Entity> entityMap,
-      Map<EntityCompositeKey, UUID> textToUuidLookup,
-      Map<String, Map<String, List<UUID>>> inboundIndex, int remainingDepth,
-      boolean includeProperties, Set<String> propertyFilter, Set<String> relationFilter,
-      Map<String, Integer> visitedDepths) {
-    // Note: This method signature is replaced by the Context-based overload below
-    // during refactor.
-    // Kept for backward-compatibility for the insert edit tool to apply minimal
-    // changes.
-    Entity entity = entityMap.get(entityUuid);
+  private EntityGraphNode buildGraphNode(UUID entityUuid, GraphTraversalContext ctx) {
+    Entity entity = ctx.entityMap().get(entityUuid);
 
     var nodeIdDisplay = entityUuid != null ? entityUuid.toString() : "null-entity-";
     if (entity == null) {
-      log.trace("[EntityGraph][buildGraphNode] Missing entity for uuid='{}'. Returning empty node.",
-          nodeIdDisplay);
       return new EntityGraphNode(nodeIdDisplay, nodeIdDisplay, nodeIdDisplay, List.of(), List.of(),
           List.of());
     }
 
-    log.trace("[EntityGraph][buildGraphNode] Enter node='{}' identifier='{}' remainingDepth={}",
-        entity.id(), entity.identifier(), remainingDepth);
-
-    // Check depth budget exhaustion first
-    if (remainingDepth <= 0) {
-      log.trace(
-          "[EntityGraph][buildGraphNode] Depth exhausted at node='{}'. Resolving leaf properties only.",
-          entity.identifier());
-      List<Property> leafProperties = resolveProperties(entity, includeProperties, propertyFilter);
-      return new EntityGraphNode(entity.templateIdentifier(), entity.identifier(), entity.name(),
-          leafProperties, List.of(), List.of());
-    }
-
-    // Depth-Aware Cycle Breaking Guard
     var nodeId = entity.id().toString();
-    Integer previousMaxDepthBudget = visitedDepths.get(nodeId);
 
-    if (previousMaxDepthBudget != null && previousMaxDepthBudget >= remainingDepth) {
-      log.trace(
-          "[EntityGraph][buildGraphNode] Node '{}' already visited with equal or larger budget (prev={} curr={}). Returning stub.",
-          entity.identifier(), previousMaxDepthBudget, remainingDepth);
-      List<Property> stubProperties = resolveProperties(entity, includeProperties, propertyFilter);
+    // GUARD 1: If the node is currently in active processing up our current line,
+    // we hit a cyclic loop closure. Break instantly with a stub to prevent infinite
+    // stack overflow.
+    if (ctx.activeStack().contains(nodeId)) {
+      List<Property> stubProperties = resolveProperties(entity, ctx.includeProperties(),
+          ctx.propertyFilter());
       return new EntityGraphNode(entity.templateIdentifier(), entity.identifier(), entity.name(),
           stubProperties, List.of(), List.of());
     }
 
-    visitedDepths.put(nodeId, remainingDepth);
+    // GUARD 2: MEMOIZATION CHECK. If this node has already been built down an
+    // alternate path,
+    // return the pre-existing reference instantly. This prevents the exponential
+    // path explosion.
+    if (ctx.memoCache().containsKey(nodeId)) {
+      return ctx.memoCache().get(nodeId);
+    }
+
+    // Push to active processing stack
+    ctx.activeStack().add(nodeId);
 
     // Process outbound relationships
     List<EntityGraphRelation> outboundRelations = entity.relations().stream()
-        .filter(relation -> relationFilter.isEmpty() || relationFilter.contains(relation.name()))
+        .filter(relation -> ctx.relationFilter().isEmpty()
+            || ctx.relationFilter().contains(relation.name()))
         .map(relation -> new EntityGraphRelation(relation.name(),
             relation.targetEntityIdentifiers().stream().map(targetId -> {
-              // Look up using normalized coordinates
-              UUID targetUuid = textToUuidLookup
+              UUID targetUuid = ctx.textToUuidLookup()
                   .get(new EntityCompositeKey(relation.targetTemplateIdentifier(), targetId));
               if (targetUuid == null)
                 return null;
 
-              return buildGraphNode(targetUuid, entityMap, textToUuidLookup, inboundIndex,
-                  remainingDepth, includeProperties, propertyFilter, relationFilter, visitedDepths);
+              return buildGraphNode(targetUuid, ctx);
             }).filter(Objects::nonNull).toList()))
         .filter(rel -> !rel.targets().isEmpty()).toList();
 
-    log.trace("[EntityGraph][buildGraphNode] Node='{}' outboundRelations={} (after filtering)",
-        entity.identifier(), outboundRelations.size());
-
     // Process inbound relationships
-    // Use the new context-based method to build inbound relations
-    GraphTraversalContext ctx = new GraphTraversalContext(entityMap, textToUuidLookup, inboundIndex,
-        includeProperties, propertyFilter, relationFilter, visitedDepths);
     List<EntityGraphRelation> inboundRelations = buildRelationsAsTargetFromIndex(
-        entity.identifier(), ctx, remainingDepth);
+        entity.identifier(), ctx);
 
-    log.trace("[EntityGraph][buildGraphNode] Node='{}' inboundRelations={} (after index lookup)",
-        entity.identifier(), inboundRelations.size());
+    List<Property> properties = resolveProperties(entity, ctx.includeProperties(),
+        ctx.propertyFilter());
 
-    List<Property> properties = resolveProperties(entity, includeProperties, propertyFilter);
-    log.trace(
-        "[EntityGraph][buildGraphNode] Leaving node='{}' propertiesCount={} totalRelationsOut={} totalRelationsIn={}",
-        entity.identifier(), properties.size(), outboundRelations.size(), inboundRelations.size());
-    return new EntityGraphNode(entity.templateIdentifier(), entity.identifier(), entity.name(),
-        properties, outboundRelations, inboundRelations);
+    // Assemble the complete node object
+    EntityGraphNode completedNode = new EntityGraphNode(entity.templateIdentifier(),
+        entity.identifier(), entity.name(), properties, outboundRelations, inboundRelations);
+
+    // Save to Cache and pop from active stack before returning
+    ctx.memoCache().put(nodeId, completedNode);
+    ctx.activeStack().remove(nodeId);
+
+    return completedNode;
   }
 
   private List<EntityGraphRelation> buildRelationsAsTargetFromIndex(String targetIdentifier,
-      GraphTraversalContext ctx, int remainingDepth) {
-    Map<String, Map<String, List<UUID>>> inboundIndex = ctx.inboundIndex();
-    Set<String> relationFilter = ctx.relationFilter();
-
-    // Normalize the map query coordinate to guarantee matching across variations
+      GraphTraversalContext ctx) {
     String normalizedTargetIdentifier = targetIdentifier == null
         ? ""
         : targetIdentifier.trim().toLowerCase();
-    Map<String, List<UUID>> sourcesByRelationName = inboundIndex
+    Map<String, List<UUID>> sourcesByRelationName = ctx.inboundIndex()
         .getOrDefault(normalizedTargetIdentifier, Map.of());
 
     if (sourcesByRelationName.isEmpty()) {
-      log.trace(
-          "[EntityGraph][buildRelations] No inbound sources found for target='{}' (normalized='{}')",
-          targetIdentifier, normalizedTargetIdentifier);
       return List.of();
     }
-
-    log.trace("[EntityGraph][buildRelations] Found {} relation entries for target='{}'",
-        sourcesByRelationName.size(), targetIdentifier);
 
     return sourcesByRelationName.entrySet().stream()
-        .filter(e -> relationFilter.isEmpty() || relationFilter.contains(e.getKey())).map(e -> {
-          log.trace(
-              "[EntityGraph][buildRelations] Processing inbound relation='{}' with {} sources for target='{}'",
-              e.getKey(), e.getValue().size(), targetIdentifier);
+        .filter(e -> ctx.relationFilter().isEmpty() || ctx.relationFilter().contains(e.getKey()))
+        .map(e -> {
           List<EntityGraphNode> targets = e.getValue().stream()
-              .map(sourceUuid -> buildGraphNode(sourceUuid, ctx, remainingDepth - 1)).toList();
+              .map(sourceUuid -> buildGraphNode(sourceUuid, ctx)).toList();
           return new EntityGraphRelation(e.getKey(), targets);
         }).toList();
-  }
-
-  private List<Property> resolveProperties(Entity entity, boolean includeProperties,
-      Set<String> propertyFilter) {
-    if (!includeProperties) {
-      log.trace(
-          "[EntityGraph][properties] Skipping property resolution for entity='{}' (includeProperties=false)",
-          entity == null ? "null" : entity.identifier());
-      return List.of();
-    }
-    if (propertyFilter.isEmpty()) {
-      log.trace("[EntityGraph][properties] Including all properties for entity='{}' count={}",
-          entity.identifier(), entity.properties().size());
-      return entity.properties();
-    }
-    List<Property> resolved = entity.properties().stream()
-        .filter(p -> propertyFilter.contains(p.name())).toList();
-    log.trace(
-        "[EntityGraph][properties] Resolved {} properties from filter size={} for entity='{}'",
-        resolved.size(), propertyFilter.size(), entity.identifier());
-    return resolved;
-  }
-
-  // New context and index bundle records to reduce parameter passing and cluster
-  // related state
-  private static record IndexBundle(Map<EntityCompositeKey, UUID> textToUuidLookup,
-      Map<String, Map<String, List<UUID>>> inboundIndex) {
-  }
-
-  private static record GraphTraversalContext(Map<UUID, Entity> entityMap,
-      Map<EntityCompositeKey, UUID> textToUuidLookup,
-      Map<String, Map<String, List<UUID>>> inboundIndex, boolean includeProperties,
-      Set<String> propertyFilter, Set<String> relationFilter, Map<String, Integer> visitedDepths) {
   }
 
   private IndexBundle buildIndices(Map<UUID, Entity> entityMap) {
     Map<EntityCompositeKey, UUID> textToUuidLookup = new HashMap<>();
     Map<String, Map<String, List<UUID>>> inboundIndex = new HashMap<>();
-    int processedEntities = 0;
+
     for (Map.Entry<UUID, Entity> entry : entityMap.entrySet()) {
       UUID sourceUuid = entry.getKey();
       Entity entity = entry.getValue();
-      processedEntities++;
-      if (entity == null) {
-        log.trace("[EntityGraph][Index] Skipping null entity for uuid='{}'", sourceUuid);
+      if (entity == null)
         continue;
-      }
 
-      // Build Index 1 (Automated normalization happens inside the record constructor
-      // below)
       textToUuidLookup.put(new EntityCompositeKey(entity.templateIdentifier(), entity.identifier()),
           sourceUuid);
 
-      // Build Index 2 (Normalized to lowercase and trimmed to eliminate trailing
-      // space bugs)
       for (Relation relation : entity.relations()) {
         for (String targetId : relation.targetEntityIdentifiers()) {
           if (targetId == null)
@@ -369,30 +292,39 @@ public class EntityGraphService {
           inboundIndex.computeIfAbsent(normalizedTargetId, k -> new HashMap<>())
               .computeIfAbsent(relation.name(), k -> new ArrayList<>()).add(sourceUuid);
         }
-        log.trace("[EntityGraph][Index] Entity '{}' added relation '{}' with {} targets",
-            entity.identifier(), relation.name(), relation.targetEntityIdentifiers().size());
-      }
-
-      if (log.isTraceEnabled() && processedEntities % 500 == 0) {
-        log.trace("[EntityGraph][Index] Processed {} entities so far (current uuid='{}')",
-            processedEntities, sourceUuid);
       }
     }
-
     return new IndexBundle(textToUuidLookup, inboundIndex);
   }
 
-  // Context-based overload of buildGraphNode to reduce parameter count
-  private EntityGraphNode buildGraphNode(UUID entityUuid, GraphTraversalContext ctx,
-      int remainingDepth) {
-    return buildGraphNode(entityUuid, ctx.entityMap(), ctx.textToUuidLookup(), ctx.inboundIndex(),
-        remainingDepth, ctx.includeProperties(), ctx.propertyFilter(), ctx.relationFilter(),
-        ctx.visitedDepths());
+  private List<Property> resolveProperties(Entity entity, boolean includeProperties,
+      Set<String> propertyFilter) {
+    if (!includeProperties)
+      return List.of();
+    if (propertyFilter.isEmpty())
+      return entity.properties();
+    return entity.properties().stream().filter(p -> propertyFilter.contains(p.name())).toList();
+  }
+
+  private static record IndexBundle(Map<EntityCompositeKey, UUID> textToUuidLookup,
+      Map<String, Map<String, List<UUID>>> inboundIndex) {
+  }
+
+  private static record GraphTraversalContext(Map<UUID, Entity> entityMap,
+      Map<EntityCompositeKey, UUID> textToUuidLookup,
+      Map<String, Map<String, List<UUID>>> inboundIndex, boolean includeProperties,
+      Set<String> propertyFilter, Set<String> relationFilter, Set<String> activeStack, // Tracks
+                                                                                       // current
+                                                                                       // parent
+                                                                                       // line to
+                                                                                       // block
+                                                                                       // infinite
+                                                                                       // loops
+      Map<String, EntityGraphNode> memoCache // High-speed in-memory reuse cache
+  ) {
   }
 }
 
-// SOLUTION FIX: Enforced lowercase, trimmed normalization inside the
-// constructor
 record EntityCompositeKey(String templateIdentifier, String identifier) {
   public EntityCompositeKey {
     templateIdentifier = templateIdentifier == null ? "" : templateIdentifier.trim().toLowerCase();

@@ -88,4 +88,11 @@ public class PostgresEntityAdapter implements EntityRepositoryPort {
     jpaEntityRepository.deleteRelationsByTemplateIdentifierAndRelationName(templateIdentifier,
         relationNames);
   }
+
+  @Override
+  public List<EntityJpaEntity> findAllByTemplateIdentifierAndIdentifierIn(String templateIdentifier,
+      List<String> identifiers) {
+    return jpaEntityRepository.findAllByTemplateIdentifierAndIdentifierIn(templateIdentifier,
+        identifiers);
+  }
 }

@@ -110,4 +110,27 @@ public class PostgresEntityGraphAdapter implements EntityGraphRepositoryPort {
         (tEndTotal - tStartTotal) / 1_000_000);
     return result;
   }
+
+  @Override
+  @Transactional(readOnly = true)
+  public Map<UUID, Entity> findEntityGraphBatch(List<UUID> rootIds, int depth,
+      boolean includeProperties) {
+    if (rootIds == null || rootIds.isEmpty())
+      return Map.of();
+
+    // Step 1: Bulk-scout all reachable node IDs across all 20 roots in 1 query
+    List<UUID> graphPairs = jpaEntityRepository.findEntityGraphIdentifiersBatch(rootIds, depth);
+    if (graphPairs == null || graphPairs.isEmpty())
+      return Map.of();
+
+    List<UUID> entitiesIds = graphPairs.stream().distinct().toList();
+
+    // Step 2: Bulk-hydrate all objects and their cached relation strings in 1 query
+    List<EntityJpaEntity> jpaEntities = jpaEntityRepository
+        .findAllByIdentifierInWithRelations(entitiesIds);
+
+    // Step 3: Pure O(N) in-memory domain mapping
+    return jpaEntities.stream().map(mapper::toDomain)
+        .collect(Collectors.toMap(Entity::id, Function.identity()));
+  }
 }

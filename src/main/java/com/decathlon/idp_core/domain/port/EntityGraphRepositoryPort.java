@@ -43,4 +43,6 @@ public interface EntityGraphRepositoryPort {
   /// any path are loaded. Edge filtering is applied in the service layer so
   /// that "filter owns" still returns B and C when A→(depends-on)→B→(owns)→C.
   Map<UUID, Entity> findEntityGraph(UUID entityId, int depth, boolean includeProperties);
+
+  Map<UUID, Entity> findEntityGraphBatch(List<UUID> rootIds, int depth, boolean includeProperties);
 }

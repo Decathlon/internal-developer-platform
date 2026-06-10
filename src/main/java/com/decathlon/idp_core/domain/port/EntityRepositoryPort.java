@@ -11,6 +11,7 @@ import org.springframework.data.domain.Pageable;
 import com.decathlon.idp_core.domain.model.entity.Entity;
 import com.decathlon.idp_core.domain.model.entity.EntityFilter;
 import com.decathlon.idp_core.domain.model.entity.EntitySummary;
+import com.decathlon.idp_core.infrastructure.adapters.persistence.model.entity.EntityJpaEntity;
 
 /// Driven port defining the contract for [Entity] persistence operations.
 ///
@@ -42,6 +43,9 @@ public interface EntityRepositoryPort {
 
   Page<Entity> findByTemplateIdentifierWithFilter(String templateIdentifier, EntityFilter filter,
       Pageable pageable);
+
+  List<EntityJpaEntity> findAllByTemplateIdentifierAndIdentifierIn(String templateIdentifier,
+      List<String> identifiers);
 
   List<EntitySummary> findByIdentifierIn(List<String> identifiers);
 
