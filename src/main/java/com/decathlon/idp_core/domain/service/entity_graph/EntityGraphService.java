@@ -8,7 +8,6 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 import java.util.UUID;
-import java.util.stream.Collectors;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -24,7 +23,6 @@ import com.decathlon.idp_core.domain.model.entity_graph.EntityGraphRelation;
 import com.decathlon.idp_core.domain.port.EntityGraphRepositoryPort;
 import com.decathlon.idp_core.domain.port.EntityRepositoryPort;
 import com.decathlon.idp_core.domain.service.entity_template.EntityTemplateValidationService;
-import com.decathlon.idp_core.infrastructure.adapters.persistence.model.entity.EntityJpaEntity;
 
 import lombok.RequiredArgsConstructor;
 

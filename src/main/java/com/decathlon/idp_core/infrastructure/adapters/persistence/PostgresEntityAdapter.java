@@ -96,15 +96,6 @@ public class PostgresEntityAdapter implements EntityRepositoryPort {
         relationNames);
   }
 
-  // @Override
-  // public List<EntityJpaEntity>
-  // findAllByTemplateIdentifierAndIdentifierIn(String templateIdentifier,
-  // List<String> identifiers) {
-  // return
-  // jpaEntityRepository.findAllByTemplateIdentifierAndIdentifierIn(templateIdentifier,
-  // identifiers);
-  // }
-
   public PaginatedResult<Entity> search(SearchFilterNode filter, String query,
       PaginationCriteria paginationCriteria) {
     Specification<EntityJpaEntity> spec = EntitySearchSpecification.of(filter);
