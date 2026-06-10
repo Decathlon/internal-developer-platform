@@ -1,0 +1,33 @@
+{
+  "identifier": "github-dora-connector",
+  "title": "GitHub DORA Connector",
+  "description": "Collects deployment events from GitHub",
+  "enabled": true,
+  "mappings": [
+    {
+      "template": "microservice",
+      "filter": ".action == \"deployment\"",
+      "entity": {
+        "identifier": ".repository.name",
+        "title": ".repository.name",
+        "properties": {
+          "applicationName": ".repository.name",
+          "ownerEmail": ".sender.login + \"@example.com\"",
+          "environment": ".deployment.environment",
+          "version": ".deployment.sha",
+          "port": "8080",
+          "programmingLanguage": "\"Java\""
+        },
+        "relations": {}
+      }
+    }
+  ],
+  "security": {
+    "type": "HMAC_SHA256",
+    "config": {
+      "header_name": "X-Hub-Signature-256",
+      "secret_alias": "MY_WEBHOOK_SECRET",
+      "prefix": "sha256="
+    }
+  }
+}

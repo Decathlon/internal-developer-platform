@@ -24,19 +24,11 @@ import com.decathlon.idp_core.domain.exception.entity.EntityAlreadyExistsExcepti
 import com.decathlon.idp_core.domain.exception.entity.EntityDeletionBlockedException;
 import com.decathlon.idp_core.domain.exception.entity.EntityNotFoundException;
 import com.decathlon.idp_core.domain.exception.entity.EntityValidationException;
-import com.decathlon.idp_core.domain.exception.entity_template.EntityTemplateAlreadyExistsException;
-import com.decathlon.idp_core.domain.exception.entity_template.EntityTemplateIdentifierCannotChangeException;
-import com.decathlon.idp_core.domain.exception.entity_template.EntityTemplateNameAlreadyExistsException;
-import com.decathlon.idp_core.domain.exception.entity_template.EntityTemplateNotFoundException;
-import com.decathlon.idp_core.domain.exception.entity_template.PropertyDefinitionRulesConflictException;
-import com.decathlon.idp_core.domain.exception.entity_template.PropertyNameAlreadyExistsException;
-import com.decathlon.idp_core.domain.exception.entity_template.PropertyTypeChangeException;
-import com.decathlon.idp_core.domain.exception.entity_template.RelationCannotTargetItselfException;
-import com.decathlon.idp_core.domain.exception.entity_template.RelationNameAlreadyExistsException;
-import com.decathlon.idp_core.domain.exception.entity_template.RelationTargetTemplateChangeException;
-import com.decathlon.idp_core.domain.exception.entity_template.TargetTemplateNotFoundException;
+import com.decathlon.idp_core.domain.exception.entity_mapping.EntityDynamicMappingConfigurationException;
+import com.decathlon.idp_core.domain.exception.entity_template.*;
 import com.decathlon.idp_core.domain.exception.filter.InvalidFilterDslException;
 import com.decathlon.idp_core.domain.exception.search.InvalidSearchQueryException;
+import com.decathlon.idp_core.domain.exception.webhook.*;
 
 import lombok.AllArgsConstructor;
 import lombok.Getter;
@@ -62,19 +54,6 @@ import lombok.extern.slf4j.Slf4j;
 public class ApiExceptionHandler {
 
   private ApiExceptionHandler() {
-  }
-
-  /// Handles domain exception when entity templates are not found.
-  ///
-  /// **HTTP mapping:** Maps domain EntityTemplateNotFoundException to HTTP 404
-  /// status
-  /// with business-meaningful error message for API consumers.
-  @ExceptionHandler(EntityTemplateNotFoundException.class)
-  public ResponseEntity<ErrorResponse> handleTemplateNotFoundException(
-      EntityTemplateNotFoundException ex) {
-    log.warn("Template not found: {}", ex.getMessage());
-    ErrorResponse errorResponse = new ErrorResponse(NOT_FOUND.name(), ex.getMessage());
-    return ResponseEntity.status(NOT_FOUND).body(errorResponse);
   }
 
   /// Handles domain exception for malformed filter query strings (`q=` DSL).
@@ -309,6 +288,47 @@ public class ApiExceptionHandler {
     return createErrorResponse(HttpStatus.BAD_REQUEST, errorMessage);
   }
 
+  /// Handles invalid dynamic mapping expressions (JSLT) provided in webhook
+  /// configuration.
+  ///
+  /// **HTTP mapping:** Maps domain mapping configuration failures to HTTP 400,
+  /// because clients can fix these expressions and retry.
+  @ExceptionHandler(EntityDynamicMappingConfigurationException.class)
+  public ResponseEntity<ErrorResponse> handleEntityDynamicMappingConfigurationException(
+      EntityDynamicMappingConfigurationException ex) {
+    log.warn("Invalid entity dynamic mapping configuration: {}", ex.getMessage());
+    String errorMessage = "Invalid webhook mapping configuration: " + ex.getMessage();
+    return createErrorResponse(HttpStatus.BAD_REQUEST, errorMessage);
+  }
+
+  @ExceptionHandler(PropertyNameNotFoundEntityTemplatePropertiesException.class)
+  public ResponseEntity<ErrorResponse> handlePropertyNameNotFoundEntityTemplatePropertiesException(
+      PropertyNameNotFoundEntityTemplatePropertiesException ex) {
+    log.warn("Webhook mapping references unknown property: {}", ex.getMessage());
+    return createErrorResponse(HttpStatus.BAD_REQUEST, ex.getMessage());
+  }
+
+  @ExceptionHandler(RelationNameNotFoundEntityTemplateRelationsException.class)
+  public ResponseEntity<ErrorResponse> handleRelationNameNotFoundEntityTemplateRelationsException(
+      RelationNameNotFoundEntityTemplateRelationsException ex) {
+    log.warn("Webhook mapping references unknown relation: {}", ex.getMessage());
+    return createErrorResponse(HttpStatus.BAD_REQUEST, ex.getMessage());
+  }
+
+  @ExceptionHandler(WebhookTemplateHasNoPropertiesException.class)
+  public ResponseEntity<ErrorResponse> handleWebhookTemplateHasNoPropertiesException(
+      WebhookTemplateHasNoPropertiesException ex) {
+    log.warn("Webhook mapping invalid for template without properties: {}", ex.getMessage());
+    return createErrorResponse(HttpStatus.BAD_REQUEST, ex.getMessage());
+  }
+
+  @ExceptionHandler(WebhookSecurityConfigurationException.class)
+  public ResponseEntity<ErrorResponse> handleWebhookSecurityConfigurationException(
+      WebhookSecurityConfigurationException ex) {
+    log.warn("Invalid webhook security configuration: {}", ex.getMessage());
+    return createErrorResponse(HttpStatus.BAD_REQUEST, ex.getMessage());
+  }
+
   /// Handles domain exception when entities are not found.
   ///
   /// **HTTP mapping:** Maps domain EntityNotFoundException to HTTP 404 status
@@ -447,6 +467,68 @@ public class ApiExceptionHandler {
 
     String errorMessage = "An unexpected error occurred. Please try again later.";
     return createErrorResponse(HttpStatus.INTERNAL_SERVER_ERROR, errorMessage);
+  }
+
+  /// Handles webhook signature and credential validation failures.
+  ///
+  /// HTTP mapping: Maps WebhookAuthenticationException to HTTP 401 Unauthorized.
+  @ExceptionHandler(WebhookAuthenticationException.class)
+  public ResponseEntity<ErrorResponse> handleWebhookAuthenticationException(
+      WebhookAuthenticationException ex) {
+    log.warn("Webhook authentication failed: {}", ex.getMessage());
+    ErrorResponse errorResponse = new ErrorResponse(HttpStatus.UNAUTHORIZED.name(),
+        ex.getMessage());
+    return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(errorResponse);
+  }
+
+  /// Handles missing webhook connector configuration.
+  ///
+  /// HTTP mapping: Maps WebhookConnectorNotFoundException to HTTP 404 Not Found.
+  @ExceptionHandler(WebhookConnectorNotFoundException.class)
+  public ResponseEntity<ErrorResponse> handleWebhookConnectorNotFoundException(
+      WebhookConnectorNotFoundException ex) {
+    log.warn("Webhook connector not found: {}", ex.getMessage());
+    ErrorResponse errorResponse = new ErrorResponse(NOT_FOUND.name(), ex.getMessage());
+    return ResponseEntity.status(NOT_FOUND).body(errorResponse);
+  }
+
+  /// Handles webhook connector identifier duplication conflicts.
+  @ExceptionHandler(WebhookConnectorAlreadyExistException.class)
+  public ResponseEntity<ErrorResponse> handleWebhookConnectorAlreadyExistException(
+      WebhookConnectorAlreadyExistException ex) {
+    log.warn("Webhook connector identifier conflict: {}", ex.getMessage());
+    ErrorResponse errorResponse = new ErrorResponse(HttpStatus.CONFLICT.name(), ex.getMessage());
+    return ResponseEntity.status(HttpStatus.CONFLICT).body(errorResponse);
+  }
+
+  @ExceptionHandler(EntityTemplateInUseByWebhookMappingException.class)
+  public ResponseEntity<ErrorResponse> handleTemplateAlreadyMappedInWebhookConfiguration(
+      EntityTemplateInUseByWebhookMappingException ex) {
+    log.warn("Entity template in use by webhook mapping conflict: {}", ex.getMessage());
+    ErrorResponse errorResponse = new ErrorResponse(HttpStatus.CONFLICT.name(), ex.getMessage());
+    return ResponseEntity.status(HttpStatus.CONFLICT).body(errorResponse);
+  }
+
+  /// Handles webhook connector title duplication conflicts.
+  @ExceptionHandler(WebhookConnectorTitleAlreadyExistsException.class)
+  public ResponseEntity<ErrorResponse> handleWebhookConnectorTitleAlreadyExistsException(
+      WebhookConnectorTitleAlreadyExistsException ex) {
+    log.warn("Webhook connector title conflict: {}", ex.getMessage());
+    ErrorResponse errorResponse = new ErrorResponse(HttpStatus.CONFLICT.name(), ex.getMessage());
+    return ResponseEntity.status(HttpStatus.CONFLICT).body(errorResponse);
+  }
+
+  /// Handles domain exception when entity templates are not found.
+  ///
+  /// **HTTP mapping:** Maps domain EntityTemplateNotFoundException to HTTP 404
+  /// status
+  /// with business-meaningful error message for API consumers.
+  @ExceptionHandler(EntityTemplateNotFoundException.class)
+  public ResponseEntity<ErrorResponse> handleTemplateNotFoundException(
+      EntityTemplateNotFoundException ex) {
+    log.warn("Template not found: {}", ex.getMessage());
+    ErrorResponse errorResponse = new ErrorResponse(NOT_FOUND.name(), ex.getMessage());
+    return ResponseEntity.status(NOT_FOUND).body(errorResponse);
   }
 
   private static ResponseEntity<ErrorResponse> createErrorResponse(HttpStatus httpStatus,

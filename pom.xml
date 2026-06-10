@@ -225,6 +225,14 @@
       <version>3.20.0</version>
     </dependency>
 
+    <!-- JSLT: JVM-native JSON transformation language used as the DSL engine for dynamic mappings -->
+    <!-- ADR 0004: JSLT chosen over JQ for performance, robust syntax checking and JVM-native execution -->
+    <dependency>
+      <groupId>com.schibsted.spt.data</groupId>
+      <artifactId>jslt</artifactId>
+      <version>0.1.14</version>
+    </dependency>
+
     <dependency>
       <groupId>org.springframework.boot</groupId>
       <artifactId>spring-boot-starter-actuator</artifactId>

@@ -66,10 +66,23 @@ public class SwaggerDescription {
 
   public static final String ENDPOINT_POST_ENTITY_SUMMARY = "Create a new entity";
   public static final String ENDPOINT_POST_ENTITY_DESCRIPTION = "Create a new entity in the system with the provided information";
+
   public static final String ENDPOINT_PUT_ENTITY_SUMMARY = "Update an existing entity";
   public static final String ENDPOINT_PUT_ENTITY_DESCRIPTION = "Update an existing entity in the system with the provided information";
   public static final String ENDPOINT_DELETE_ENTITY_SUMMARY = "Delete an existing entity";
   public static final String ENDPOINT_DELETE_ENTITY_DESCRIPTION = "Delete an entity from the system using its template and entity identifiers. This operation removes the entity and automatically cleans up any relations from other entities that reference it.";
+
+  public static final String ENDPOINT_GET_WEBHOOK_CONNECTOR_PAGINATED_SUMMARY = "Get paginated Webhook connectors";
+  public static final String ENDPOINT_GET_WEBHOOK_CONNECTOR_PAGINATED_DESCRIPTION = "Retrieve a paginated list of webhook connectors with optional sorting";
+
+  public static final String ENDPOINT_DELETE_WEBHOOK_CONNECTOR_SUMMARY = "Delete a webhook connector by identifier";
+  public static final String ENDPOINT_DELETE_WEBHOOK_CONNECTOR_DESCRIPTION = "Remove a webhook connector from the system using its unique identifier";
+
+  public static final String ENDPOINT_GET_WEBHOOK_CONNECTOR_BY_IDENTIFIER_SUMMARY = "Get a webhook connector by identifier";
+  public static final String ENDPOINT_GET_WEBHOOK_CONNECTOR_BY_IDENTIFIER_DESCRIPTION = "Retrieve a specific webhook connector using its string identifier";
+
+  public static final String ENDPOINT_PUT_WEBHOOK_CONNECTOR_SUMMARY = "Update an existing webhook connector by identifier";
+  public static final String ENDPOINT_PUT_WEBHOOK_CONNECTOR_DESCRIPTION = "Update the details of an existing webhook connector identified by its unique string identifier";
 
   /// API response description constants
   public static final String RESPONSE_TEMPLATES_PAGINATED_SUCCESS = "Paginated templates retrieved successfully";
@@ -96,6 +109,11 @@ public class SwaggerDescription {
   public static final String RESPONSE_UNEXPECTED_SERVER_ERROR = "Unexpected server-side failure";
   public static final String RESPONSE_INSUFFICIENT_RIGHTS = "Insufficient rights";
   public static final String RESPONSE_UNAUTHORIZED = "Unauthorized - Missing or invalid token";
+  public static final String RESPONSE_WEBHOOK_CONNECTOR_PAGINATED_SUCCESS = "Paginated webhook connector retrieved successfully";
+  public static final String RESPONSE_WEBHOOK_CONNECTOR_DELETED = "Webhook connector deleted successfully";
+  public static final String RESPONSE_WEBHOOK_CONNECTOR_NOT_FOUND_IDENTIFIER = "Webhook connector not found with the provided identifier";
+  public static final String RESPONSE_WEBHOOK_CONNECTOR_FOUND = "Webhook connector found";
+  public static final String RESPONSE_WEBHOOK_CONNECTOR_UPDATED = "Webhook connector updated successfully";
 
   // --- Schema (class) descriptions ---
   public static final String SCHEMA_ENTITY_TEMPLATE_CREATE_IN = "Input DTO for creating an entity template";

@@ -49,6 +49,11 @@ graph TB
 
     Connections between entities forming a knowledge graph.
 
+- 🌐 **[Webhooks](webhooks.md)**
+
+    ---
+
+    Runtime-configurable connectors that authenticate external events and map payloads to your data model.
 - 🔍 **[Filtering Entities](entity-filtering.md)**
 
     ---
@@ -130,3 +135,4 @@ Dive deeper into each concept:
 - **[Entity Templates](entity-templates.md)** - Learn how to design your data model
 - **[Properties](properties.md)** - Understand property types and validation
 - **[Relations](relations.md)** - Connect your entities into a graph
+- **[Webhooks](webhooks.md)** - Configure inbound integrations and security strategies

@@ -1,22 +1,18 @@
 package com.decathlon.idp_core.domain.service.entity_template;
 
+import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 
 import org.springframework.stereotype.Service;
 
-import com.decathlon.idp_core.domain.exception.entity_template.EntityTemplateAlreadyExistsException;
-import com.decathlon.idp_core.domain.exception.entity_template.EntityTemplateIdentifierCannotChangeException;
-import com.decathlon.idp_core.domain.exception.entity_template.EntityTemplateNameAlreadyExistsException;
-import com.decathlon.idp_core.domain.exception.entity_template.EntityTemplateNotFoundException;
-import com.decathlon.idp_core.domain.exception.entity_template.PropertyDefinitionRulesConflictException;
-import com.decathlon.idp_core.domain.exception.entity_template.PropertyNameAlreadyExistsException;
-import com.decathlon.idp_core.domain.exception.entity_template.RelationCannotTargetItselfException;
-import com.decathlon.idp_core.domain.exception.entity_template.RelationNameAlreadyExistsException;
-import com.decathlon.idp_core.domain.exception.entity_template.RelationTargetTemplateChangeException;
-import com.decathlon.idp_core.domain.exception.entity_template.TargetTemplateNotFoundException;
+import com.decathlon.idp_core.domain.exception.entity_template.*;
+import com.decathlon.idp_core.domain.exception.webhook.WebhookTemplateHasNoPropertiesException;
 import com.decathlon.idp_core.domain.model.entity_template.EntityTemplate;
 import com.decathlon.idp_core.domain.model.entity_template.PropertyDefinition;
+import com.decathlon.idp_core.domain.model.entity_template.RelationDefinition;
 import com.decathlon.idp_core.domain.port.EntityTemplateRepositoryPort;
+import com.decathlon.idp_core.domain.service.webhook.WebhookTemplateMappingService;
 
 import lombok.RequiredArgsConstructor;
 
@@ -34,6 +30,7 @@ public class EntityTemplateValidationService {
   private final EntityTemplateRepositoryPort entityTemplateRepositoryPort;
   private final PropertyDefinitionValidationService propertyDefinitionValidationService;
   private final RelationDefinitionValidationService relationDefinitionValidationService;
+  private final WebhookTemplateMappingService webhookTemplateMappingService;
 
   /// Validates all business rules before creating a new entity template.
   ///
@@ -139,6 +136,9 @@ public class EntityTemplateValidationService {
       throw new EntityTemplateNotFoundException("identifier", "null");
     }
     validateTemplateExists(identifier);
+    EntityTemplate template = entityTemplateRepositoryPort.findByIdentifier(identifier)
+        .orElseThrow(() -> new EntityTemplateNotFoundException("identifier", identifier));
+    webhookTemplateMappingService.validateTemplateNotInUseMapping(template.id());
   }
 
   /// Checks that the entity template exists.
@@ -191,6 +191,29 @@ public class EntityTemplateValidationService {
     }
   }
 
+  public void validatePropertiesExistInTemplate(Map<String, String> mappingProperties,
+      List<PropertyDefinition> templateProperties) {
+
+    if (!mappingProperties.isEmpty() && templateProperties.isEmpty()) {
+      throw new WebhookTemplateHasNoPropertiesException(
+          "The mapping defines properties but the target template has no property definitions");
+    }
+
+    mappingProperties.keySet()
+        .forEach(propertyName -> validatePropertyNameAlreadyExistInTemplate(templateProperties,
+            propertyName));
+  }
+
+  public void validateRelationNameAlreadyExistInTemplate(
+      Map<String, String> webhookMappingRelations, EntityTemplate entityTemplate) {
+    if (webhookMappingRelations == null || webhookMappingRelations.isEmpty()) {
+      return;
+    }
+    webhookMappingRelations.keySet()
+        .forEach(relationName -> validateRelationNameAlreadyExistInTemplate(
+            entityTemplate.relationsDefinitions(), relationName));
+  }
+
   /// Validates all relation definitions within the template for structural and
   /// referential integrity.
   ///
@@ -211,6 +234,34 @@ public class EntityTemplateValidationService {
         entityTemplate.relationsDefinitions());
     relationDefinitionValidationService
         .validateTargetTemplatesExist(entityTemplate.relationsDefinitions());
+  }
+
+  public void validatePropertyNameAlreadyExistInTemplate(List<PropertyDefinition> properties,
+      String propertyName) {
+    if (!isPropertyNameIsOwnedByEntityTemplate(properties, propertyName)) {
+      throw new PropertyNameNotFoundEntityTemplatePropertiesException(
+          String.format("Property name %s not found in entity template properties", propertyName));
+    }
+  }
+
+  public void validateRelationNameAlreadyExistInTemplate(List<RelationDefinition> relations,
+      String relationName) {
+    if (!isRelationIsOwnedByEntityTemplate(relations, relationName)) {
+      throw new RelationNameNotFoundEntityTemplateRelationsException(
+          String.format("Relation name %s not found in entity template relations", relationName));
+    }
+  }
+
+  private boolean isPropertyNameIsOwnedByEntityTemplate(List<PropertyDefinition> properties,
+      String propertyName) {
+    return properties != null && properties.stream()
+        .anyMatch(entityTemplateProperty -> entityTemplateProperty.name().equals(propertyName));
+  }
+
+  private boolean isRelationIsOwnedByEntityTemplate(List<RelationDefinition> relations,
+      String relationName) {
+    return relations != null && relations.stream()
+        .anyMatch(entityTemplateRelation -> entityTemplateRelation.name().equals(relationName));
   }
 
 }

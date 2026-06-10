@@ -15,6 +15,7 @@ public class ValidationMessages {
   public static final String TEMPLATE_NAME_MANDATORY = "Entity template name is mandatory and cannot be blank";
   public static final String TEMPLATE_NAME_MAX_SIZE = "Entity template name must not exceed 255 characters";
   public static final String TEMPLATE_NAME_FORMAT = "Entity template name must only use alphanumeric characters, spaces, hyphens or underscores";
+  public static final String TEMPLATE_ALREADY_MAPPED_WEBHOOK = "Cannot delete template because it is currently mapped to '%s' webhook connectors. Please remove the associated webhook mappings before deleting the template.";
 
   // Property Definition validation messages
   public static final String PROPERTY_NAME_MANDATORY = "Property name is mandatory and cannot be blank";
@@ -61,6 +62,12 @@ public class ValidationMessages {
   // Entity input validation messages
   public static final String ENTITY_NAME_MANDATORY = "Entity name is mandatory and cannot be blank";
   public static final String ENTITY_IDENTIFIER_MANDATORY = "Entity identifier is mandatory and cannot be blank";
+
+  // Webhook connector validation messages
+  public static final String WEBHOOK_CONNECTOR_ALREADY_EXIST = "Webhook Connector already exists with the same identifier";
+  public static final String WEBHOOK_CONNECTOR_IDENTIFIER_MANDATORY = "Webhook Connector identifier is mandatory and cannot be blank";
+  public static final String WEBHOOK_CONNECTOR_TITLE_ALREADY_EXIST = "Webhook Connector already exist with the same name";
+  public static final String WEBHOOK_IDENTIFIER_NOT_FOUND = "Target webhook with identifier '%s' does not exist";
 
   // Entity creation validation messages
   public static final String ENTITY_NOT_FOUND = "Entity not found with template identifier %s and entity identifier '%s'";

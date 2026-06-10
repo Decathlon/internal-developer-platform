@@ -14,7 +14,7 @@ The Internal Developer Platform provides flexible data integration, allowing you
 Data integration in the Internal Developer Platform follows a three-step pattern:
 
 1. **Configure a connector** - Set up a Webhook, Kafka consumer, or Pub/Sub subscription
-2. **Define mappings** - Use JQ expressions to transform incoming data
+2. **Define mappings** - Use JSLT expressions to transform incoming data
 3. **Ingest data** - Data flows automatically, creating and updating entities
 
 ```mermaid
@@ -55,6 +55,19 @@ flowchart LR
 
 Webhooks allow external systems to push data to IDP-Core via HTTP POST requests.
 
+### Methods
+
+| Method | Endpoint | Purpose |
+| ------ | -------- | ------- |
+| `POST` | `/webhooks/{configurationId}` | Receive an inbound event for the connector identified in the URL |
+| `POST` | `/api/v1/inbound-webhooks` | Create a webhook connector configuration |
+| `GET` | `/api/v1/inbound-webhooks` | List webhook connector configurations |
+| `GET` | `/api/v1/inbound-webhooks/{identifier}` | Read one webhook connector configuration |
+| `PUT` | `/api/v1/inbound-webhooks/{identifier}` | Update one webhook connector configuration |
+| `DELETE` | `/api/v1/inbound-webhooks/{identifier}` | Delete one webhook connector configuration |
+
+ These HTTP routes map to the `InboundWebhookManagementController` methods for connector management.
+
 ### Webhook Configuration
 
 ```json
@@ -83,33 +96,37 @@ Webhooks allow external systems to push data to IDP-Core via HTTP POST requests.
     }
   ],
   "security": {
-    "signature_header_name": "X-Sonar-Webhook-HMAC-SHA256",
-    "signature_value": "your-secret-token"
+    "type": "HMAC_SHA256",
+    "config": {
+      "header_name": "X-Sonar-Webhook-HMAC-SHA256",
+      "secret_alias": "SONAR_WEBHOOK_SECRET",
+      "prefix": "sha256="
+    }
   }
 }
 ```
 
 ### Configuration Fields
 
-| Field         | Description                  |
-| ------------- | ---------------------------- |
-| `identifier`  | Unique key for this webhook  |
-| `title`       | Human-readable name          |
-| `description` | Purpose of the webhook       |
-| `enabled`     | Toggle ingestion on/off      |
-| `mappings`    | Array of mapping rules       |
-| `security`    | Authentication configuration |
+| Field         | Description                                                     |
+|---------------|-----------------------------------------------------------------|
+| `identifier`  | Unique key for this webhook                                     |
+| `title`       | Human-readable name                                             |
+| `description` | Purpose of the webhook                                          |
+| `enabled`     | Toggle ingestion on/off                                         |
+| `mappings`    | Array of mapping rules                                          |
+| `security`    | Authentication configuration using a `type` + `config` contract |
 
 ### Mapping Structure
 
-| Field               | Description                                 |
-| ------------------- | ------------------------------------------- |
-| `template`          | Target Entity Template identifier           |
-| `filter`            | JQ expression to filter incoming payloads   |
-| `entity.identifier` | JQ expression to generate entity identifier |
-| `entity.title`      | JQ expression for entity title              |
-| `entity.properties` | Map of property names to JQ expressions     |
-| `entity.relations`  | Map of relation names to JQ expressions     |
+| Field               | Description                                   |
+|---------------------|-----------------------------------------------|
+| `template`          | Target Entity Template identifier             |
+| `filter`            | JSLT expression to filter incoming payloads   |
+| `entity.identifier` | JSLT expression to generate entity identifier |
+| `entity.title`      | JSLT expression for entity title              |
+| `entity.properties` | Map of property names to JSLT expressions     |
+| `entity.relations`  | Map of relation names to JSLT expressions     |
 
 ---
 
@@ -165,9 +182,9 @@ spring:
 
 ---
 
-## JQ Mapping Reference
+## JSLT Mapping Reference
 
-The Internal Developer Platform will use [JQ](https://jqlang.github.io/jq/) for data transformation. It will access to the entire JSON payload sent to the webhook or consumed from Kafka/Pub-Sub. Please refer to the JQ documentation for detailed usage.
+The Internal Developer Platform uses [JSLT](https://github.com/schibsted/jslt) for data transformation. It accesses the entire JSON payload sent to the webhook or consumed from Kafka/Pub-Sub. Refer to the JSLT documentation for detailed usage.
 
 ---
 
@@ -201,8 +218,12 @@ Configure a webhook to receive GitHub repository events:
     }
   ],
   "security": {
-    "signature_header_name": "X-Hub-Signature-256",
-    "signature_value": "sha256=your-webhook-secret"
+    "type": "HMAC_SHA256",
+    "config": {
+      "header_name": "X-Hub-Signature-256",
+      "secret_alias": "GITHUB_WEBHOOK_SECRET",
+      "prefix": "sha256="
+    }
   }
 }
 ```
@@ -218,8 +239,11 @@ Webhooks support signature-based authentication:
 ```json
 {
   "security": {
-    "signature_header_name": "X-Webhook-Signature",
-    "signature_value": "expected-secret-or-hmac"
+    "type": "STATIC_TOKEN",
+    "config": {
+      "header_name": "X-Webhook-Signature",
+      "secret_alias": "WEBHOOK_SHARED_TOKEN"
+    }
   }
 }
 ```
