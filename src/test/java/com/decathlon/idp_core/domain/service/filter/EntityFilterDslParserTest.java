@@ -1,4 +1,4 @@
-package com.decathlon.idp_core.domain.service;
+package com.decathlon.idp_core.domain.service.filter;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -13,18 +13,19 @@ import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 import org.junit.jupiter.params.provider.ValueSource;
 
+import com.decathlon.idp_core.domain.constant.FilterConstraints;
 import com.decathlon.idp_core.domain.constant.ValidationMessages;
-import com.decathlon.idp_core.domain.exception.InvalidQueryDslException;
+import com.decathlon.idp_core.domain.exception.filter.InvalidFilterDslException;
 import com.decathlon.idp_core.domain.model.entity.EntityFilter;
 import com.decathlon.idp_core.domain.model.entity.FilterCriterion;
 import com.decathlon.idp_core.domain.model.enums.FilterKeyType;
 import com.decathlon.idp_core.domain.model.enums.FilterOperator;
 
-@DisplayName("EntityQueryParserService")
+@DisplayName("EntityFilterDslParser")
 @SuppressWarnings("java:S2187")
-class EntityQueryParserServiceTest {
+class EntityFilterDslParserTest {
 
-  private final EntityQueryParserService parser = new EntityQueryParserService();
+  private final EntityFilterDslParser parser = new EntityFilterDslParser();
 
   private void assertSingleCriterion(EntityFilter result, FilterKeyType expectedKeyType,
       String expectedKeyName, FilterOperator expectedOperator, String expectedValue) {
@@ -162,10 +163,10 @@ class EntityQueryParserServiceTest {
     }
 
     @Test
-    @DisplayName("throws InvalidQueryDslException for unsupported property in relation (custom-prop is not identifier or name)")
+    @DisplayName("throws InvalidFilterDslException for unsupported property in relation (custom-prop is not identifier or name)")
     void parse_relationPropertyUnsupported_throwsException() {
       assertThatThrownBy(() -> parser.parse("relation.my-link.custom-prop=value"))
-          .isInstanceOf(InvalidQueryDslException.class).hasMessageContaining("custom-prop")
+          .isInstanceOf(InvalidFilterDslException.class).hasMessageContaining("custom-prop")
           .hasMessageContaining("identifier").hasMessageContaining("name");
     }
   }
@@ -210,7 +211,7 @@ class EntityQueryParserServiceTest {
     @DisplayName("throws exception for unsupported property in relations_as_target")
     void parse_relationsAsTargetInvalidProperty_throwsException() {
       assertThatThrownBy(() -> parser.parse("relations_as_target.api-link.language=JAVA"))
-          .isInstanceOf(InvalidQueryDslException.class)
+          .isInstanceOf(InvalidFilterDslException.class)
           .hasMessageContaining("only 'identifier' and 'name' are supported");
     }
 
@@ -218,7 +219,7 @@ class EntityQueryParserServiceTest {
     @DisplayName("throws exception for relations_as_target without property")
     void parse_relationsAsTargetWithoutProperty_throwsException() {
       assertThatThrownBy(() -> parser.parse("relations_as_target.api-link=web-api-1"))
-          .isInstanceOf(InvalidQueryDslException.class)
+          .isInstanceOf(InvalidFilterDslException.class)
           .hasMessageContaining("relations_as_target requires the form");
     }
   }
@@ -279,38 +280,38 @@ class EntityQueryParserServiceTest {
 
     @ParameterizedTest(name = "missing operator in: ''{0}''")
     @ValueSource(strings = {"noOperatorHere", "property.lang", "relation.db"})
-    @DisplayName("throws InvalidQueryDslException when operator is missing")
+    @DisplayName("throws InvalidFilterDslException when operator is missing")
     void parse_missingOperator_throwsException(String query) {
-      assertThatThrownBy(() -> parser.parse(query)).isInstanceOf(InvalidQueryDslException.class)
+      assertThatThrownBy(() -> parser.parse(query)).isInstanceOf(InvalidFilterDslException.class)
           .hasMessage(ValidationMessages.FILTER_INVALID_FORMAT);
     }
 
     @Test
-    @DisplayName("throws InvalidQueryDslException for unknown attribute")
+    @DisplayName("throws InvalidFilterDslException for unknown attribute")
     void parse_unknownAttribute_throwsException() {
       assertThatThrownBy(() -> parser.parse("unknownField=value"))
-          .isInstanceOf(InvalidQueryDslException.class).hasMessageContaining("Unknown attribute");
+          .isInstanceOf(InvalidFilterDslException.class).hasMessageContaining("Unknown attribute");
     }
 
     @Test
-    @DisplayName("throws InvalidQueryDslException for blank value")
+    @DisplayName("throws InvalidFilterDslException for blank value")
     void parse_blankValue_throwsException() {
-      assertThatThrownBy(() -> parser.parse("name=")).isInstanceOf(InvalidQueryDslException.class)
+      assertThatThrownBy(() -> parser.parse("name=")).isInstanceOf(InvalidFilterDslException.class)
           .hasMessageContaining("value must not be blank");
     }
 
     @Test
-    @DisplayName("throws InvalidQueryDslException for blank key")
+    @DisplayName("throws InvalidFilterDslException for blank key")
     void parse_blankKey_throwsException() {
-      assertThatThrownBy(() -> parser.parse("=value")).isInstanceOf(InvalidQueryDslException.class)
+      assertThatThrownBy(() -> parser.parse("=value")).isInstanceOf(InvalidFilterDslException.class)
           .hasMessageContaining("key must not be blank");
     }
 
     @Test
-    @DisplayName("throws InvalidQueryDslException for blank property name after prefix")
+    @DisplayName("throws InvalidFilterDslException for blank property name after prefix")
     void parse_blankPropertyName_throwsException() {
       assertThatThrownBy(() -> parser.parse("property.=JAVA"))
-          .isInstanceOf(InvalidQueryDslException.class)
+          .isInstanceOf(InvalidFilterDslException.class)
           .hasMessageContaining("key name must not be blank");
     }
   }
@@ -320,13 +321,12 @@ class EntityQueryParserServiceTest {
   class SecurityConstraintTests {
 
     @Test
-    @DisplayName("throws InvalidQueryDslException when criteria count exceeds limit")
+    @DisplayName("throws InvalidFilterDslException when criteria count exceeds limit")
     void parse_tooManyCriteria_throwsException() {
       var query = "property.a=1;property.b=2;property.c=3;property.d=4;property.e=5;"
           + "property.f=6;property.g=7;property.h=8;property.i=9;property.j=10;" + "property.k=11";
-      assertThatThrownBy(() -> parser.parse(query)).isInstanceOf(InvalidQueryDslException.class)
-          .hasMessageContaining(
-              "maximum of %d".formatted(EntityQueryParserService.MAX_CRITERIA_COUNT));
+      assertThatThrownBy(() -> parser.parse(query)).isInstanceOf(InvalidFilterDslException.class)
+          .hasMessageContaining("maximum of %d".formatted(FilterConstraints.MAX_CRITERIA_COUNT));
     }
 
     @Test
@@ -335,25 +335,25 @@ class EntityQueryParserServiceTest {
       var query = "property.a=1;property.b=2;property.c=3;property.d=4;property.e=5;"
           + "property.f=6;property.g=7;property.h=8;property.i=9;property.j=10";
       var result = parser.parse(query);
-      assertThat(result.criteria()).hasSize(EntityQueryParserService.MAX_CRITERIA_COUNT);
+      assertThat(result.criteria()).hasSize(FilterConstraints.MAX_CRITERIA_COUNT);
     }
 
     @Test
-    @DisplayName("throws InvalidQueryDslException when value exceeds max length")
+    @DisplayName("throws InvalidFilterDslException when value exceeds max length")
     void parse_valueTooLong_throwsException() {
-      var longValue = "a".repeat(EntityQueryParserService.MAX_KEY_VALUE_LENGTH + 1);
+      var longValue = "a".repeat(FilterConstraints.MAX_KEY_VALUE_LENGTH + 1);
       assertThatThrownBy(() -> parser.parse("name=" + longValue))
-          .isInstanceOf(InvalidQueryDslException.class).hasMessageContaining(
-              "must not exceed %d".formatted(EntityQueryParserService.MAX_KEY_VALUE_LENGTH));
+          .isInstanceOf(InvalidFilterDslException.class).hasMessageContaining(
+              "must not exceed %d".formatted(FilterConstraints.MAX_KEY_VALUE_LENGTH));
     }
 
     @Test
-    @DisplayName("throws InvalidQueryDslException when key exceeds max length")
+    @DisplayName("throws InvalidFilterDslException when key exceeds max length")
     void parse_keyTooLong_throwsException() {
-      var longKey = "property." + "a".repeat(EntityQueryParserService.MAX_KEY_VALUE_LENGTH);
+      var longKey = "property." + "a".repeat(FilterConstraints.MAX_KEY_VALUE_LENGTH);
       assertThatThrownBy(() -> parser.parse(longKey + "=value"))
-          .isInstanceOf(InvalidQueryDslException.class).hasMessageContaining(
-              "must not exceed %d".formatted(EntityQueryParserService.MAX_KEY_VALUE_LENGTH));
+          .isInstanceOf(InvalidFilterDslException.class).hasMessageContaining(
+              "must not exceed %d".formatted(FilterConstraints.MAX_KEY_VALUE_LENGTH));
     }
 
     @ParameterizedTest(name = "valid key name: ''{0}''")
@@ -375,9 +375,9 @@ class EntityQueryParserServiceTest {
     @ParameterizedTest(name = "duplicate criterion in: ''{0}''")
     @ValueSource(strings = {"name=A;name=B", "property.language=JAVA;property.language=PYTHON",
         "relation=api-link;relation=database"})
-    @DisplayName("throws InvalidQueryDslException for duplicate criteria")
+    @DisplayName("throws InvalidFilterDslException for duplicate criteria")
     void parse_duplicateCriterion_throwsException(String query) {
-      assertThatThrownBy(() -> parser.parse(query)).isInstanceOf(InvalidQueryDslException.class)
+      assertThatThrownBy(() -> parser.parse(query)).isInstanceOf(InvalidFilterDslException.class)
           .hasMessage(ValidationMessages.FILTER_DUPLICATE_CRITERION);
     }
 
@@ -402,60 +402,60 @@ class EntityQueryParserServiceTest {
 
     @ParameterizedTest(name = "comparison operator on: ''{0}''")
     @ValueSource(strings = {"relation<api-link", "relation>api-link"})
-    @DisplayName("throws InvalidQueryDslException for less/greater than on relation name")
+    @DisplayName("throws InvalidFilterDslException for less/greater than on relation name")
     void parse_comparisonOnRelationName_throwsException(String query) {
-      assertThatThrownBy(() -> parser.parse(query)).isInstanceOf(InvalidQueryDslException.class)
+      assertThatThrownBy(() -> parser.parse(query)).isInstanceOf(InvalidFilterDslException.class)
           .hasMessageContaining("is not applicable for field");
     }
 
     @ParameterizedTest(name = "comparison operator on: ''{0}''")
     @ValueSource(strings = {"relation.database<my-db", "relation.database>my-db"})
-    @DisplayName("throws InvalidQueryDslException for less/greater than on relation entity")
+    @DisplayName("throws InvalidFilterDslException for less/greater than on relation entity")
     void parse_comparisonOnRelationEntity_throwsException(String query) {
-      assertThatThrownBy(() -> parser.parse(query)).isInstanceOf(InvalidQueryDslException.class)
+      assertThatThrownBy(() -> parser.parse(query)).isInstanceOf(InvalidFilterDslException.class)
           .hasMessageContaining("is not applicable for field");
     }
 
     @ParameterizedTest(name = "comparison operator on: ''{0}''")
     @ValueSource(strings = {"relation.database.template<postgresql",
         "relation.database.template>postgresql"})
-    @DisplayName("throws InvalidQueryDslException for unsupported property on relation (template is not a valid relation property)")
+    @DisplayName("throws InvalidFilterDslException for unsupported property on relation (template is not a valid relation property)")
     void parse_comparisonOnRelationTemplate_throwsException(String query) {
-      assertThatThrownBy(() -> parser.parse(query)).isInstanceOf(InvalidQueryDslException.class)
+      assertThatThrownBy(() -> parser.parse(query)).isInstanceOf(InvalidFilterDslException.class)
           .hasMessageContaining("template");
     }
 
     @Test
-    @DisplayName("throws InvalidQueryDslException for unsupported property on relation with equals operator")
+    @DisplayName("throws InvalidFilterDslException for unsupported property on relation with equals operator")
     void parse_equalsOnRelationTemplate_throwsException() {
       assertThatThrownBy(() -> parser.parse("relation.database.template=postgresql"))
-          .isInstanceOf(InvalidQueryDslException.class).hasMessageContaining("template")
+          .isInstanceOf(InvalidFilterDslException.class).hasMessageContaining("template")
           .hasMessageContaining("identifier").hasMessageContaining("name");
     }
 
     @ParameterizedTest(name = "comparison operator on: ''{0}''")
     @ValueSource(strings = {"relation.api-link.identifier<microservice-1",
         "relation.api-link.identifier>microservice-1"})
-    @DisplayName("throws InvalidQueryDslException for less/greater than on relation property")
+    @DisplayName("throws InvalidFilterDslException for less/greater than on relation property")
     void parse_comparisonOnRelationProperty_throwsException(String query) {
-      assertThatThrownBy(() -> parser.parse(query)).isInstanceOf(InvalidQueryDslException.class)
+      assertThatThrownBy(() -> parser.parse(query)).isInstanceOf(InvalidFilterDslException.class)
           .hasMessageContaining("is not applicable for field");
     }
 
     @ParameterizedTest(name = "comparison operator on: ''{0}''")
     @ValueSource(strings = {"relations_as_target.api-link.name<microservice",
         "relations_as_target.api-link.name>microservice"})
-    @DisplayName("throws InvalidQueryDslException for less/greater than on relations_as_target property")
+    @DisplayName("throws InvalidFilterDslException for less/greater than on relations_as_target property")
     void parse_comparisonOnRelationsAsTargetProperty_throwsException(String query) {
-      assertThatThrownBy(() -> parser.parse(query)).isInstanceOf(InvalidQueryDslException.class)
+      assertThatThrownBy(() -> parser.parse(query)).isInstanceOf(InvalidFilterDslException.class)
           .hasMessageContaining("is not applicable for field");
     }
 
     @ParameterizedTest(name = "comparison operator on: ''{0}''")
     @ValueSource(strings = {"name<Z", "name>A", "identifier<z"})
-    @DisplayName("throws InvalidQueryDslException for less/greater than on attribute fields")
+    @DisplayName("throws InvalidFilterDslException for less/greater than on attribute fields")
     void parse_comparisonOnAttribute_throwsException(String query) {
-      assertThatThrownBy(() -> parser.parse(query)).isInstanceOf(InvalidQueryDslException.class)
+      assertThatThrownBy(() -> parser.parse(query)).isInstanceOf(InvalidFilterDslException.class)
           .hasMessageContaining("is not applicable for field");
     }
 

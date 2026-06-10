@@ -4,6 +4,9 @@
 
 INSERT INTO entity (id, identifier, name, template_identifier)
 VALUES
+  ('550e8400-e29b-41d4-a716-446655440115', 'default-team', 'Default Team', 'team'),
+  ('550e8400-e29b-41d4-a716-446655440116', 'test-team-required', 'Test Team Required', 'team'),
+  ('550e8400-e29b-41d4-a716-446655440117', 'test-support-with-required-team', 'Test Support With Required Team', 'support'),
   ('550e8400-e29b-41d4-a716-446655440100', 'web-api-1', 'Web API 1', 'web-service'),
   ('550e8400-e29b-41d4-a716-446655440101', 'web-api-2', 'Web API 2', 'web-service'),
   ('550e8400-e29b-41d4-a716-446655440102', 'microservice-1', 'Microservice 1', 'microservice'),
@@ -26,6 +29,48 @@ VALUES
 
 -- Properties for web-api-1 (programmingLanguage=JAVA, environment=PROD, port=8080)
 INSERT INTO property (id, name, value)
+-- Properties for default-team entity
+INSERT INTO idp_core.property (id, name, value)
+VALUES
+  ('aa000000-0000-0000-0000-000000000007', 'applicationName', 'test-app'),
+  ('aa000000-0000-0000-0000-000000000008', 'ownerEmail', 'team@example.com'),
+  ('aa000000-0000-0000-0000-000000000009', 'environment', 'DEV');
+INSERT INTO idp_core.entity_properties (entity_id, property_id)
+VALUES
+  ('550e8400-e29b-41d4-a716-446655440115', 'aa000000-0000-0000-0000-000000000007'),
+  ('550e8400-e29b-41d4-a716-446655440115', 'aa000000-0000-0000-0000-000000000008'),
+  ('550e8400-e29b-41d4-a716-446655440115', 'aa000000-0000-0000-0000-000000000009');
+
+-- Properties for test-team-required entity
+INSERT INTO idp_core.property (id, name, value)
+VALUES
+  ('aa000000-0000-0000-0000-000000000010', 'applicationName', 'test-team-app'),
+  ('aa000000-0000-0000-0000-000000000011', 'ownerEmail', 'testteam@example.com'),
+  ('aa000000-0000-0000-0000-000000000012', 'environment', 'PROD');
+INSERT INTO idp_core.entity_properties (entity_id, property_id)
+VALUES
+  ('550e8400-e29b-41d4-a716-446655440116', 'aa000000-0000-0000-0000-000000000010'),
+  ('550e8400-e29b-41d4-a716-446655440116', 'aa000000-0000-0000-0000-000000000011'),
+  ('550e8400-e29b-41d4-a716-446655440116', 'aa000000-0000-0000-0000-000000000012');
+
+-- Properties for test-support-with-required-team entity
+INSERT INTO idp_core.property (id, name, value)
+VALUES
+  ('aa000000-0000-0000-0000-000000000013', 'applicationName', 'support-app'),
+  ('aa000000-0000-0000-0000-000000000014', 'ownerEmail', 'support@example.com'),
+  ('aa000000-0000-0000-0000-000000000015', 'environment', 'PROD'),
+  ('aa000000-0000-0000-0000-000000000016', 'version', '1.0.0'),
+  ('aa000000-0000-0000-0000-000000000017', 'teamName', 'support-team');
+INSERT INTO idp_core.entity_properties (entity_id, property_id)
+VALUES
+  ('550e8400-e29b-41d4-a716-446655440117', 'aa000000-0000-0000-0000-000000000013'),
+  ('550e8400-e29b-41d4-a716-446655440117', 'aa000000-0000-0000-0000-000000000014'),
+  ('550e8400-e29b-41d4-a716-446655440117', 'aa000000-0000-0000-0000-000000000015'),
+  ('550e8400-e29b-41d4-a716-446655440117', 'aa000000-0000-0000-0000-000000000016'),
+  ('550e8400-e29b-41d4-a716-446655440117', 'aa000000-0000-0000-0000-000000000017');
+
+-- Properties for web-api-1 (language=JAVA, environment=PROD)
+INSERT INTO idp_core.property (id, name, value)
 VALUES
   ('aa000000-0000-0000-0000-000000000001', 'programmingLanguage', 'JAVA'),
   ('aa000000-0000-0000-0000-000000000002', 'environment', 'PROD'),
@@ -162,3 +207,15 @@ VALUES
   ('aa000001-0000-0000-0000-000000000002', 'cc000001-0000-0000-0000-000000000004'), -- b.version
   ('aa000001-0000-0000-0000-000000000003', 'cc000001-0000-0000-0000-000000000005'), -- c.tier
   ('aa000001-0000-0000-0000-000000000003', 'cc000001-0000-0000-0000-000000000006'); -- c.version
+  ('550e8400-e29b-41d4-a716-446655440100', 'bb000000-0000-0000-0000-000000000003');
+
+-- required_team relation for test-support-with-required-team targeting test-team-required
+INSERT INTO idp_core.relation (id, name, target_template_identifier)
+VALUES
+  ('bb000000-0000-0000-0000-000000000006', 'required_team', 'team');
+INSERT INTO idp_core.relation_target_entities (relation_id, target_entity_identifier)
+VALUES
+  ('bb000000-0000-0000-0000-000000000006', 'test-team-required');
+INSERT INTO idp_core.entity_relations (entity_id, relation_id)
+VALUES
+  ('550e8400-e29b-41d4-a716-446655440117', 'bb000000-0000-0000-0000-000000000006');

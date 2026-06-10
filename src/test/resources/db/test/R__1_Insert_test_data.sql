@@ -109,9 +109,12 @@ INSERT INTO relation_definition (id, name, target_template_identifier, required,
 
 -- External relationships
 ('550e8400-e29b-41d4-a716-446655440064', 'external_apis', 'external_api', false, true),
-('550e8400-e29b-41d4-a716-446655440065', 'file_storage', 'storage', false, false);
+('550e8400-e29b-41d4-a716-446655440065', 'file_storage', 'storage', false, false),
 
--- Insert 10 diverse entity templates
+-- Test relationship with required constraint
+('550e8400-e29b-41d4-a716-446655440066', 'required_team', 'team', true, false);
+
+-- Insert diverse entity templates
 INSERT INTO entity_template (id, identifier, name, description) VALUES
 ('550e8400-e29b-41d4-a716-446655440070', 'web-service', 'Web Service', 'Template for REST API web services'),
 ('550e8400-e29b-41d4-a716-446655440071', 'microservice', 'Microservice', 'Template for microservice applications'),
@@ -122,7 +125,9 @@ INSERT INTO entity_template (id, identifier, name, description) VALUES
 ('550e8400-e29b-41d4-a716-446655440076', 'api-gateway', 'API Gateway', 'Template for API gateway services'),
 ('550e8400-e29b-41d4-a716-446655440077', 'database-service', 'Database Service', 'Template for database services'),
 ('550e8400-e29b-41d4-a716-446655440078', 'cache-service', 'Cache Service', 'Template for caching services'),
-('550e8400-e29b-41d4-a716-446655440079', 'monitoring-service', 'Monitoring Service', 'Template for monitoring and observability services');
+('550e8400-e29b-41d4-a716-446655440079', 'monitoring-service', 'Monitoring Service', 'Template for monitoring and observability services'),
+('550e8400-e29b-41d4-a716-446655440080', 'team', 'Team', 'Template for team entities'),
+('550e8400-e29b-41d4-a716-446655440081', 'support', 'Support', 'Template for support entities with required team relation');
 
 -- Link web-service template (comprehensive web API)
 INSERT INTO entity_template_properties_definitions (entity_template_id, properties_definitions_id) VALUES
@@ -285,3 +290,20 @@ INSERT INTO entity_template_relations_definitions (entity_template_id, relations
 ('550e8400-e29b-41d4-a716-446655440079', '550e8400-e29b-41d4-a716-446655440053'), -- database
 ('550e8400-e29b-41d4-a716-446655440079', '550e8400-e29b-41d4-a716-446655440057'), -- networks
 ('550e8400-e29b-41d4-a716-446655440079', '550e8400-e29b-41d4-a716-446655440064'); -- external_apis
+
+-- Link team template
+INSERT INTO entity_template_properties_definitions (entity_template_id, properties_definitions_id) VALUES
+('550e8400-e29b-41d4-a716-446655440080', '550e8400-e29b-41d4-a716-446655440020'), -- applicationName
+('550e8400-e29b-41d4-a716-446655440080', '550e8400-e29b-41d4-a716-446655440021'), -- ownerEmail
+('550e8400-e29b-41d4-a716-446655440080', '550e8400-e29b-41d4-a716-446655440022'); -- environment
+
+-- Link support template (with required team relation for testing)
+INSERT INTO entity_template_properties_definitions (entity_template_id, properties_definitions_id) VALUES
+('550e8400-e29b-41d4-a716-446655440081', '550e8400-e29b-41d4-a716-446655440020'), -- applicationName
+('550e8400-e29b-41d4-a716-446655440081', '550e8400-e29b-41d4-a716-446655440021'), -- ownerEmail
+('550e8400-e29b-41d4-a716-446655440081', '550e8400-e29b-41d4-a716-446655440022'), -- environment
+('550e8400-e29b-41d4-a716-446655440081', '550e8400-e29b-41d4-a716-446655440023'), -- version
+('550e8400-e29b-41d4-a716-446655440081', '550e8400-e29b-41d4-a716-446655440024'); -- teamName
+
+INSERT INTO entity_template_relations_definitions (entity_template_id, relations_definitions_id) VALUES
+('550e8400-e29b-41d4-a716-446655440081', '550e8400-e29b-41d4-a716-446655440066'); -- required_team

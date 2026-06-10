@@ -1,7 +1,9 @@
 package com.decathlon.idp_core.infrastructure.adapters.api.controller;
 
+import static org.hamcrest.Matchers.hasItem;
 import static org.springframework.http.MediaType.APPLICATION_JSON;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
@@ -23,6 +25,7 @@ import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders;
 
 import com.decathlon.idp_core.AbstractIntegrationTest;
+import com.decathlon.idp_core.domain.constant.SearchConstraints;
 
 /// Integration tests for the EntityController REST API endpoints. These tests
 /// verify the behavior of entity retrieval endpoints, including pagination,
@@ -757,6 +760,1004 @@ public class EntityControllerTest extends AbstractIntegrationTest {
               .contentType(APPLICATION_JSON).accept(APPLICATION_JSON).content(VALID_UPDATE_PAYLOAD))
           .andExpect(status().isForbidden());
     }
+
   }
 
+  @Nested
+  @DisplayName("POST /api/v1/entities/search")
+  class SearchEntitiesTests {
+
+    private static final String SEARCH_PATH = "/api/v1/entities/search";
+
+    @Test
+    @DisplayName("Should return 401 without authentication")
+    void search_401_withoutAuth() throws Exception {
+      mockMvc.perform(MockMvcRequestBuilders.post(SEARCH_PATH).contentType(APPLICATION_JSON)
+          .accept(APPLICATION_JSON).with(csrf()).content("""
+              { "page": 0, "size": 20 }
+              """)).andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    @DisplayName("Should search entities by template AND property (EQ)")
+    @WithMockUser
+    void search_200_byTemplateAndProperty() throws Exception {
+      var result = mockMvc.perform(MockMvcRequestBuilders.post(SEARCH_PATH)
+          .contentType(APPLICATION_JSON).accept(APPLICATION_JSON).with(csrf()).content("""
+              {
+                "filter": {
+                  "connector": "AND",
+                  "criteria": [
+                    { "field": "template", "operation": "EQ", "value": "web-service" },
+                    { "field": "property.programmingLanguage", "operation": "EQ", "value": "JAVA" }
+                  ]
+                },
+                "page": 0, "size": 20, "sort": "identifier:asc"
+              }
+              """)).andExpect(status().isOk()).andReturn();
+      JSONAssert.assertEquals(
+          getJsonTestFileContent(
+              ENTITY_JSON_FILES_TEST_PATH + "searchEntities_200_byTemplateAndProperty.json"),
+          result.getResponse().getContentAsString(), JSONCompareMode.STRICT);
+    }
+
+    @Test
+    @DisplayName("Should search entities using OR connector across templates")
+    @WithMockUser
+    void search_200_orTemplates() throws Exception {
+      var result = mockMvc.perform(MockMvcRequestBuilders.post(SEARCH_PATH)
+          .contentType(APPLICATION_JSON).accept(APPLICATION_JSON).with(csrf()).content("""
+              {
+                "filter": {
+                  "connector": "OR",
+                  "criteria": [
+                    { "field": "template", "operation": "EQ", "value": "microservice" },
+                    { "field": "template", "operation": "EQ", "value": "batch-job" }
+                  ]
+                },
+                "page": 0, "size": 20, "sort": "identifier:asc"
+              }
+              """)).andExpect(status().isOk()).andReturn();
+      JSONAssert.assertEquals(
+          getJsonTestFileContent(
+              ENTITY_JSON_FILES_TEST_PATH + "searchEntities_200_orTemplates.json"),
+          result.getResponse().getContentAsString(), JSONCompareMode.STRICT);
+    }
+
+    @Test
+    @DisplayName("Should search entities by relations_as_target identifier")
+    @WithMockUser
+    void search_200_byRelationsAsTarget() throws Exception {
+      var result = mockMvc
+          .perform(MockMvcRequestBuilders.post(SEARCH_PATH).contentType(APPLICATION_JSON)
+              .accept(APPLICATION_JSON).with(csrf()).content(
+                  """
+                      {
+                        "filter": {
+                          "connector": "AND",
+                          "criteria": [
+                            { "field": "template", "operation": "EQ", "value": "microservice" },
+                            { "field": "relations_as_target.api-link.identifier", "operation": "EQ", "value": "web-api-1" }
+                          ]
+                        },
+                        "page": 0, "size": 20
+                      }
+                      """))
+          .andExpect(status().isOk()).andReturn();
+      JSONAssert.assertEquals(
+          getJsonTestFileContent(
+              ENTITY_JSON_FILES_TEST_PATH + "searchEntities_200_byRelationsAsTarget.json"),
+          result.getResponse().getContentAsString(), JSONCompareMode.STRICT);
+    }
+
+    @Test
+    @DisplayName("Should search entities by bare relations_as_target presence (EQ)")
+    @WithMockUser
+    void search_200_byRelationsAsTargetPresence() throws Exception {
+      var result = mockMvc.perform(MockMvcRequestBuilders.post(SEARCH_PATH)
+          .contentType(APPLICATION_JSON).accept(APPLICATION_JSON).with(csrf()).content("""
+              {
+                "filter": {
+                  "connector": "AND",
+                  "criteria": [
+                    { "field": "template", "operation": "EQ", "value": "microservice" },
+                    { "field": "relations_as_target", "operation": "EQ", "value": "api-link" }
+                  ]
+                },
+                "page": 0, "size": 20
+              }
+              """)).andExpect(status().isOk()).andReturn();
+      JSONAssert.assertEquals(
+          getJsonTestFileContent(
+              ENTITY_JSON_FILES_TEST_PATH + "searchEntities_200_byRelationsAsTargetPresence.json"),
+          result.getResponse().getContentAsString(), JSONCompareMode.STRICT);
+    }
+
+    @Test
+    @DisplayName("Should search entities by bare relations_as_target absence (NOT_CONTAINS)")
+    @WithMockUser
+    void search_200_byRelationsAsTargetAbsence() throws Exception {
+      // web-api-1 and web-api-2 are web-service entities not targeted by any 'uses'
+      // relation,
+      // so NOT_CONTAINS must include them in the results.
+      mockMvc.perform(MockMvcRequestBuilders.post(SEARCH_PATH).contentType(APPLICATION_JSON)
+          .accept(APPLICATION_JSON).with(csrf()).content("""
+              {
+                "filter": {
+                  "connector": "AND",
+                  "criteria": [
+                    { "field": "template", "operation": "EQ", "value": "web-service" },
+                    { "field": "relations_as_target", "operation": "NOT_CONTAINS", "value": "uses" }
+                  ]
+                },
+                "page": 0, "size": 20
+              }
+              """)).andExpect(status().isOk())
+          .andExpect(jsonPath("$.content[*].identifier", hasItem("web-api-1")))
+          .andExpect(jsonPath("$.content[*].identifier", hasItem("web-api-2")));
+    }
+
+    @Test
+    @DisplayName("Should search entities using STARTS_WITH operator")
+    @WithMockUser
+    void search_200_startsWith() throws Exception {
+      var result = mockMvc.perform(MockMvcRequestBuilders.post(SEARCH_PATH)
+          .contentType(APPLICATION_JSON).accept(APPLICATION_JSON).with(csrf()).content("""
+              {
+                "filter": {
+                  "connector": "AND",
+                  "criteria": [
+                    { "field": "template", "operation": "EQ", "value": "web-service" },
+                    { "field": "name", "operation": "STARTS_WITH", "value": "Web API 1" }
+                  ]
+                },
+                "page": 0, "size": 20
+              }
+              """)).andExpect(status().isOk()).andReturn();
+      JSONAssert.assertEquals(
+          getJsonTestFileContent(
+              ENTITY_JSON_FILES_TEST_PATH + "searchEntities_200_startsWith.json"),
+          result.getResponse().getContentAsString(), JSONCompareMode.STRICT);
+    }
+
+    @Test
+    @DisplayName("Should search entities using NEQ operator")
+    @WithMockUser
+    void search_200_neq() throws Exception {
+      var result = mockMvc.perform(MockMvcRequestBuilders.post(SEARCH_PATH)
+          .contentType(APPLICATION_JSON).accept(APPLICATION_JSON).with(csrf()).content("""
+              {
+                "filter": {
+                  "connector": "AND",
+                  "criteria": [
+                    { "field": "template", "operation": "EQ", "value": "web-service" },
+                    { "field": "identifier", "operation": "STARTS_WITH", "value": "web-api" },
+                    { "field": "identifier", "operation": "NEQ", "value": "web-api-1" }
+                  ]
+                },
+                "page": 0, "size": 20
+              }
+              """)).andExpect(status().isOk()).andReturn();
+      JSONAssert.assertEquals(
+          getJsonTestFileContent(ENTITY_JSON_FILES_TEST_PATH + "searchEntities_200_neq.json"),
+          result.getResponse().getContentAsString(), JSONCompareMode.STRICT);
+    }
+
+    @Test
+    @DisplayName("Should return empty content when no entities match")
+    @WithMockUser
+    void search_200_noMatch() throws Exception {
+      mockMvc
+          .perform(MockMvcRequestBuilders.post(SEARCH_PATH).contentType(APPLICATION_JSON)
+              .accept(APPLICATION_JSON).with(csrf()).content("""
+                  {
+                    "filter": {
+                      "field": "identifier",
+                      "operation": "EQ",
+                      "value": "non-existent-entity-xyz"
+                    },
+                    "page": 0,
+                    "size": 20
+                  }
+                  """))
+          .andExpect(status().isOk()).andExpect(jsonPath("$.content.length()").value(0))
+          .andExpect(jsonPath("$.page.total_elements").value(0));
+    }
+
+    @Test
+    @DisplayName("Should return all entities when no filter is applied")
+    @WithMockUser
+    void search_200_nullFilter() throws Exception {
+      mockMvc
+          .perform(MockMvcRequestBuilders.post(SEARCH_PATH).contentType(APPLICATION_JSON)
+              .accept(APPLICATION_JSON).with(csrf()).content("""
+                  {
+                    "page": 0,
+                    "size": 5
+                  }
+                  """))
+          .andExpect(status().isOk()).andExpect(jsonPath("$.content").isArray())
+          .andExpect(jsonPath("$.content.length()").value(5));
+    }
+
+    @Test
+    @DisplayName("Should return paginated results respecting size parameter")
+    @WithMockUser
+    void search_200_paginated() throws Exception {
+      mockMvc
+          .perform(MockMvcRequestBuilders.post(SEARCH_PATH).contentType(APPLICATION_JSON)
+              .accept(APPLICATION_JSON).with(csrf()).content("""
+                  {
+                    "filter": {
+                      "field": "template",
+                      "operation": "EQ",
+                      "value": "monitoring-service"
+                    },
+                    "page": 0,
+                    "size": 3
+                  }
+                  """))
+          .andExpect(status().isOk()).andExpect(jsonPath("$.content.length()").value(3))
+          .andExpect(jsonPath("$.page.size").value(3))
+          .andExpect(jsonPath("$.page.total_elements").value(6))
+          .andExpect(jsonPath("$.page.total_pages").value(2));
+    }
+
+    @Test
+    @DisplayName("Should return 400 for invalid connector value")
+    @WithMockUser
+    void search_400_invalidConnector() throws Exception {
+      mockMvc
+          .perform(MockMvcRequestBuilders.post(SEARCH_PATH).contentType(APPLICATION_JSON)
+              .accept(APPLICATION_JSON).with(csrf()).content("""
+                  {
+                    "filter": {
+                      "connector": "INVALID_CONNECTOR",
+                      "criteria": [
+                        { "field": "template", "operation": "EQ", "value": "microservice" }
+                      ]
+                    },
+                    "page": 0,
+                    "size": 20
+                  }
+                  """))
+          .andExpect(status().isBadRequest()).andExpect(jsonPath("$.error_description")
+              .value("Invalid connector 'INVALID_CONNECTOR'. Supported values: AND, OR"));
+    }
+
+    @Test
+    @DisplayName("Should return 400 for invalid operation value")
+    @WithMockUser
+    void search_400_invalidOperation() throws Exception {
+      mockMvc
+          .perform(MockMvcRequestBuilders.post(SEARCH_PATH).contentType(APPLICATION_JSON)
+              .accept(APPLICATION_JSON).with(csrf()).content("""
+                  {
+                    "filter": {
+                      "field": "identifier",
+                      "operation": "LIKE",
+                      "value": "api"
+                    },
+                    "page": 0,
+                    "size": 20
+                  }
+                  """))
+          .andExpect(status().isBadRequest()).andExpect(jsonPath("$.error_description").value(
+              "Invalid operation 'LIKE'. Supported values: EQ, NEQ, CONTAINS, NOT_CONTAINS, STARTS_WITH, ENDS_WITH, GT, GTE, LT, LTE"));
+    }
+
+    @Test
+    @DisplayName("Should return 400 for invalid field name")
+    @WithMockUser
+    void search_400_invalidField() throws Exception {
+      mockMvc.perform(MockMvcRequestBuilders.post(SEARCH_PATH).contentType(APPLICATION_JSON)
+          .accept(APPLICATION_JSON).with(csrf()).content("""
+              {
+                "filter": {
+                  "field": "unknownField",
+                  "operation": "EQ",
+                  "value": "value"
+                },
+                "page": 0,
+                "size": 20
+              }
+              """)).andExpect(status().isBadRequest());
+    }
+
+    @Test
+    @DisplayName("Should return 400 when criterion is missing field")
+    @WithMockUser
+    void search_400_missingField() throws Exception {
+      mockMvc
+          .perform(MockMvcRequestBuilders.post(SEARCH_PATH).contentType(APPLICATION_JSON)
+              .accept(APPLICATION_JSON).with(csrf()).content("""
+                  {
+                    "filter": {
+                      "operation": "EQ",
+                      "value": "microservice"
+                    },
+                    "page": 0,
+                    "size": 20
+                  }
+                  """))
+          .andExpect(status().isBadRequest()).andExpect(jsonPath("$.error_description")
+              .value("A criterion node must have a non-blank 'field'"));
+    }
+
+    @Test
+    @DisplayName("Should return 400 when group is missing criteria")
+    @WithMockUser
+    void search_400_groupMissingCriteria() throws Exception {
+      mockMvc
+          .perform(MockMvcRequestBuilders.post(SEARCH_PATH).contentType(APPLICATION_JSON)
+              .accept(APPLICATION_JSON).with(csrf()).content("""
+                  {
+                    "filter": {
+                      "connector": "AND"
+                    },
+                    "page": 0,
+                    "size": 20
+                  }
+                  """))
+          .andExpect(status().isBadRequest()).andExpect(jsonPath("$.error_description")
+              .value("A group node must have a non-empty 'criteria' list"));
+    }
+
+    @Test
+    @DisplayName("Should support sort parameter")
+    @WithMockUser
+    void search_200_withSort() throws Exception {
+      mockMvc
+          .perform(MockMvcRequestBuilders.post(SEARCH_PATH).contentType(APPLICATION_JSON)
+              .accept(APPLICATION_JSON).with(csrf()).content("""
+                  {
+                    "filter": {
+                      "field": "template",
+                      "operation": "EQ",
+                      "value": "monitoring-service"
+                    },
+                    "page": 0,
+                    "size": 6,
+                    "sort": "name:desc"
+                  }
+                  """))
+          .andExpect(status().isOk()).andExpect(jsonPath("$.content.length()").value(6))
+          .andExpect(jsonPath("$.content[0].name").value("Monitoring Service 6"));
+    }
+
+    @Test
+    @DisplayName("Should support nested AND/OR filter composition")
+    @WithMockUser
+    void search_200_nestedFilter() throws Exception {
+      mockMvc
+          .perform(MockMvcRequestBuilders.post(SEARCH_PATH).contentType(APPLICATION_JSON)
+              .accept(APPLICATION_JSON).with(csrf()).content("""
+                  {
+                    "filter": {
+                      "connector": "AND",
+                      "criteria": [
+                        {
+                          "connector": "OR",
+                          "criteria": [
+                            { "field": "template", "operation": "EQ", "value": "microservice" },
+                            { "field": "template", "operation": "EQ", "value": "batch-job" }
+                          ]
+                        },
+                        { "field": "identifier", "operation": "EQ", "value": "microservice-1" }
+                      ]
+                    },
+                    "page": 0,
+                    "size": 20
+                  }
+                  """))
+          .andExpect(status().isOk()).andExpect(jsonPath("$.content.length()").value(1))
+          .andExpect(jsonPath("$.content[0].identifier").value("microservice-1"));
+    }
+
+    @Test
+    @DisplayName("Should find entities by query matching identifier")
+    @WithMockUser
+    void search_200_queryByIdentifier() throws Exception {
+      mockMvc
+          .perform(MockMvcRequestBuilders.post(SEARCH_PATH).contentType(APPLICATION_JSON)
+              .accept(APPLICATION_JSON).with(csrf()).content("""
+                  { "query": "web-api", "page": 0, "size": 20 }
+                  """))
+          .andExpect(status().isOk()).andExpect(jsonPath("$.content.length()").value(2))
+          .andExpect(jsonPath("$.page.total_elements").value(2));
+    }
+
+    @Test
+    @DisplayName("Should find entities by query matching name (case-insensitive)")
+    @WithMockUser
+    void search_200_queryByName() throws Exception {
+      mockMvc
+          .perform(MockMvcRequestBuilders.post(SEARCH_PATH).contentType(APPLICATION_JSON)
+              .accept(APPLICATION_JSON).with(csrf()).content("""
+                  { "query": "Web API", "page": 0, "size": 20 }
+                  """))
+          .andExpect(status().isOk()).andExpect(jsonPath("$.content.length()").value(2))
+          .andExpect(jsonPath("$.page.total_elements").value(2));
+    }
+
+    @Test
+    @DisplayName("Should find entities by query matching a property value")
+    @WithMockUser
+    void search_200_queryByPropertyValue() throws Exception {
+      mockMvc
+          .perform(MockMvcRequestBuilders.post(SEARCH_PATH).contentType(APPLICATION_JSON)
+              .accept(APPLICATION_JSON).with(csrf()).content("""
+                  { "query": "JAVA", "page": 0, "size": 20 }
+                  """))
+          .andExpect(status().isOk()).andExpect(jsonPath("$.content.length()").value(3))
+          .andExpect(jsonPath("$.content[*].identifier", hasItem("web-api-1")))
+          .andExpect(jsonPath("$.content[*].identifier", hasItem("web-api-2")))
+          .andExpect(jsonPath("$.content[*].identifier", hasItem("web-service-valid-1")));
+    }
+
+    @Test
+    @DisplayName("Should combine query and filter with AND semantics")
+    @WithMockUser
+    void search_200_queryAndFilter() throws Exception {
+      mockMvc
+          .perform(MockMvcRequestBuilders.post(SEARCH_PATH).contentType(APPLICATION_JSON)
+              .accept(APPLICATION_JSON).with(csrf()).content("""
+                  {
+                    "query": "JAVA",
+                    "filter": {
+                      "field": "template",
+                      "operation": "EQ",
+                      "value": "web-service"
+                    },
+                    "page": 0,
+                    "size": 20
+                  }
+                  """))
+          .andExpect(status().isOk()).andExpect(jsonPath("$.content.length()").value(3))
+          .andExpect(jsonPath("$.content[*].identifier", hasItem("web-api-1")))
+          .andExpect(jsonPath("$.content[*].identifier", hasItem("web-api-2")))
+          .andExpect(jsonPath("$.content[*].identifier", hasItem("web-service-valid-1")));
+    }
+
+    @Test
+    @DisplayName("Should treat blank query as no-op and return all entities")
+    @WithMockUser
+    void search_200_blankQueryIsNoOp() throws Exception {
+      mockMvc
+          .perform(MockMvcRequestBuilders.post(SEARCH_PATH).contentType(APPLICATION_JSON)
+              .accept(APPLICATION_JSON).with(csrf()).content("""
+                  { "query": "   ", "page": 0, "size": 5 }
+                  """))
+          .andExpect(status().isOk()).andExpect(jsonPath("$.content.length()").value(5));
+    }
+
+    @Test
+    @DisplayName("Should return 400 when query exceeds maximum length")
+    @WithMockUser
+    void search_400_queryTooLong() throws Exception {
+      var tooLong = "x".repeat(256);
+      mockMvc
+          .perform(MockMvcRequestBuilders.post(SEARCH_PATH).contentType(APPLICATION_JSON)
+              .accept(APPLICATION_JSON).with(csrf()).content("""
+                  { "query": "%s", "page": 0, "size": 20 }
+                  """.formatted(tooLong)))
+          .andExpect(status().isBadRequest()).andExpect(
+              jsonPath("$.error_description").value("Search query must not exceed 255 characters"));
+    }
+
+    @Test
+    @WithMockUser
+    @DisplayName("Should return 400 when GT operator is used on a non-property field")
+    void search_400_numericOperator_onNonPropertyField() throws Exception {
+      mockMvc
+          .perform(MockMvcRequestBuilders.post(SEARCH_PATH).contentType(APPLICATION_JSON)
+              .accept(APPLICATION_JSON).with(csrf()).content("""
+                  {
+                    "filter": {
+                      "connector": "AND",
+                      "criteria": [
+                        { "field": "template", "operation": "GT", "value": "5" }
+                      ]
+                    },
+                    "page": 0, "size": 20
+                  }
+                  """))
+          .andExpect(status().isBadRequest()).andExpect(
+              jsonPath("$.error_description").value(org.hamcrest.Matchers.containsString("GT")));
+    }
+
+    @Test
+    @WithMockUser
+    @DisplayName("Should return 400 when GT operator is used with a non-numeric value")
+    void search_400_numericOperator_nonNumericValue() throws Exception {
+      mockMvc
+          .perform(MockMvcRequestBuilders.post(SEARCH_PATH).contentType(APPLICATION_JSON)
+              .accept(APPLICATION_JSON).with(csrf()).content("""
+                  {
+                    "filter": {
+                      "connector": "AND",
+                      "criteria": [
+                        { "field": "property.port", "operation": "GT", "value": "not-a-number" }
+                      ]
+                    },
+                    "page": 0, "size": 20
+                  }
+                  """))
+          .andExpect(status().isBadRequest()).andExpect(jsonPath("$.error_description")
+              .value(org.hamcrest.Matchers.containsString("not-a-number")));
+    }
+
+    @Test
+    @WithMockUser
+    @DisplayName("Should return 400 when GTE is used on a STRING-typed property with a known template")
+    void search_400_numericOperator_onStringProperty() throws Exception {
+      mockMvc
+          .perform(MockMvcRequestBuilders.post(SEARCH_PATH).contentType(APPLICATION_JSON)
+              .accept(APPLICATION_JSON).with(csrf()).content(
+                  """
+                      {
+                        "filter": {
+                          "connector": "AND",
+                          "criteria": [
+                            { "field": "template", "operation": "EQ", "value": "web-service" },
+                            { "field": "property.programmingLanguage", "operation": "GTE", "value": "5" }
+                          ]
+                        },
+                        "page": 0, "size": 20
+                      }
+                      """))
+          .andExpect(status().isBadRequest())
+          .andExpect(jsonPath("$.error_description").value(org.hamcrest.Matchers.allOf(
+              org.hamcrest.Matchers.containsString("programmingLanguage"),
+              org.hamcrest.Matchers.containsString("STRING"))));
+    }
+
+    @Test
+    @WithMockUser
+    @DisplayName("Should return 200 and match correct entities when GT used on a NUMBER property")
+    void search_200_numericGt_onNumberProperty() throws Exception {
+      // web-api-1 has port=8080, web-api-2 has port=9090; GT 8085 should return only
+      // web-api-2
+      mockMvc
+          .perform(MockMvcRequestBuilders.post(SEARCH_PATH).contentType(APPLICATION_JSON)
+              .accept(APPLICATION_JSON).with(csrf()).content("""
+                  {
+                    "filter": {
+                      "connector": "AND",
+                      "criteria": [
+                        { "field": "template", "operation": "EQ", "value": "web-service" },
+                        { "field": "property.port", "operation": "GT", "value": "8079" }
+                      ]
+                    },
+                    "page": 0, "size": 20
+                  }
+                  """))
+          .andExpect(status().isOk()).andExpect(jsonPath("$.page.total_elements").value(3))
+          .andExpect(jsonPath("$.content[0].identifier").value("web-api-1"))
+          .andExpect(jsonPath("$.content[1].identifier").value("web-service-valid-1"))
+          .andExpect(jsonPath("$.content[2].identifier").value("web-api-2"));
+    }
+
+    @Test
+    @WithMockUser
+    @DisplayName("Should return 200 and match all seeded entities when LTE used with upper bound covering all")
+    void search_200_numericLte_onNumberProperty_allMatch() throws Exception {
+      // Both web-api-1 (port=8080) and web-api-2 (port=9090) are <= 9999.
+      // Other test methods (e.g. postEntity_201) may create additional web-service
+      // entities
+      // in the same shared DB, so we only assert at-least-2 rather than an exact
+      // count.
+      mockMvc.perform(MockMvcRequestBuilders.post(SEARCH_PATH).contentType(APPLICATION_JSON)
+          .accept(APPLICATION_JSON).with(csrf()).content("""
+              {
+                "filter": {
+                  "connector": "AND",
+                  "criteria": [
+                    { "field": "template", "operation": "EQ", "value": "web-service" },
+                    { "field": "property.port", "operation": "LTE", "value": "9999" }
+                  ]
+                },
+                "page": 0, "size": 20
+              }
+              """)).andExpect(status().isOk()).andExpect(
+              jsonPath("$.page.total_elements", org.hamcrest.Matchers.greaterThanOrEqualTo(2)));
+    }
+
+    @Test
+    @WithMockUser
+    @DisplayName("Should return 200 when page and size are omitted from the request body")
+    void search_200_noPageOrSize_usesDefaults() throws Exception {
+      // Omitting page and size must not cause a 400 JSON parse error (primitive int
+      // vs null).
+      // The record defaults should kick in: page=0, size=20.
+      mockMvc
+          .perform(MockMvcRequestBuilders.post(SEARCH_PATH).contentType(APPLICATION_JSON)
+              .accept(APPLICATION_JSON).with(csrf()).content("""
+                  {
+                    "filter": {
+                      "connector": "AND",
+                      "criteria": [
+                        { "field": "template", "operation": "EQ", "value": "web-service" }
+                      ]
+                    }
+                  }
+                  """))
+          .andExpect(status().isOk()).andExpect(jsonPath("$.page.size").value(20))
+          .andExpect(jsonPath("$.page.number").value(0));
+    }
+
+    @Test
+    @WithMockUser
+    @DisplayName("Should return 400 when size exceeds the maximum allowed value")
+    void search_400_pageSizeTooLarge() throws Exception {
+      mockMvc
+          .perform(MockMvcRequestBuilders.post(SEARCH_PATH).contentType(APPLICATION_JSON)
+              .accept(APPLICATION_JSON).with(csrf()).content("""
+                  { "page": 0, "size": 501 }
+                  """))
+          .andExpect(status().isBadRequest()).andExpect(jsonPath("$.error_description")
+              .value("Page size must not exceed %d".formatted(SearchConstraints.MAX_PAGE_SIZE)));
+    }
+
+    @Test
+    @WithMockUser
+    @DisplayName("Should return 400 when sort field is not in the allowed list")
+    void search_400_invalidSortField() throws Exception {
+      mockMvc
+          .perform(MockMvcRequestBuilders.post(SEARCH_PATH).contentType(APPLICATION_JSON)
+              .accept(APPLICATION_JSON).with(csrf()).content("""
+                  { "page": 0, "size": 20, "sort": "badField:asc" }
+                  """))
+          .andExpect(status().isBadRequest()).andExpect(jsonPath("$.error_description").value(
+              "Invalid sort field 'badField'. Supported fields: identifier, name, templateIdentifier"));
+    }
+
+    @Test
+    @WithMockUser
+    @DisplayName("Should return entities that have a relation with an exact name match")
+    void search_200_byRelationNameEq() throws Exception {
+      // web-api-1 has relation "api-link"; web-api-2 does not
+      var result = mockMvc.perform(MockMvcRequestBuilders.post(SEARCH_PATH)
+          .contentType(APPLICATION_JSON).accept(APPLICATION_JSON).with(csrf()).content("""
+              {
+                "filter": { "field": "relation", "operation": "EQ", "value": "api-link" },
+                "page": 0, "size": 20
+              }
+              """)).andExpect(status().isOk()).andReturn();
+      JSONAssert.assertEquals(
+          getJsonTestFileContent(
+              ENTITY_JSON_FILES_TEST_PATH + "searchEntities_200_byRelationNameEq.json"),
+          result.getResponse().getContentAsString(), JSONCompareMode.STRICT);
+    }
+
+    @Test
+    @WithMockUser
+    @DisplayName("Should return entities that have a relation whose name contains the given value")
+    void search_200_byRelationNameContains() throws Exception {
+      // both web-api-1 and web-api-2 have a relation named "database"
+      var result = mockMvc.perform(MockMvcRequestBuilders.post(SEARCH_PATH)
+          .contentType(APPLICATION_JSON).accept(APPLICATION_JSON).with(csrf()).content("""
+              {
+                "filter": { "field": "relation", "operation": "CONTAINS", "value": "database" },
+                "page": 0, "size": 20, "sort": "identifier:asc"
+              }
+              """)).andExpect(status().isOk()).andReturn();
+      JSONAssert.assertEquals(
+          getJsonTestFileContent(
+              ENTITY_JSON_FILES_TEST_PATH + "searchEntities_200_byRelationNameContains.json"),
+          result.getResponse().getContentAsString(), JSONCompareMode.STRICT);
+    }
+  }
+
+  @Nested
+  @DisplayName("DELETE /api/v1/entities/{template-identifier}/{entity-identifier} - Delete Entity")
+  class DeleteEntityTests {
+
+    private String createWebServicePayload(String name, String identifier) {
+      return """
+          {
+            "name": "%s",
+            "identifier": "%s",
+            "properties": {
+              "applicationName": "catalog-api",
+              "ownerEmail": "owner@example.com",
+              "port": "8080",
+              "environment": "DEV",
+              "version": "1.2.3",
+              "teamName": "platform-team",
+              "baseUrl": "https://catalog.example.com",
+              "protocol": "HTTP",
+              "programmingLanguage": "JAVA"
+            }
+          }
+          """.formatted(name, identifier);
+    }
+
+    private String createWebServicePayloadWithRelation(String name, String identifier,
+        String targetEntityIdentifier) {
+      return """
+          {
+            "name": "%s",
+            "identifier": "%s",
+            "properties": {
+              "applicationName": "catalog-api",
+              "ownerEmail": "owner@example.com",
+              "port": "8080",
+              "environment": "DEV",
+              "version": "1.2.3",
+              "teamName": "platform-team",
+              "baseUrl": "https://catalog.example.com",
+              "protocol": "HTTP",
+              "programmingLanguage": "JAVA"
+            },
+            "relations": [
+              {
+                "name": "%s",
+                "target_entity_identifiers": ["%s"]
+              }
+            ]
+          }
+          """.formatted(name, identifier, "database", targetEntityIdentifier);
+    }
+
+    @Test
+    @WithMockUser()
+    @DisplayName("Should delete entity and return 204 No Content")
+    void deleteEntity_204_success() throws Exception {
+      var entityIdentifier = "delete-success-entity";
+      mockMvc
+          .perform(
+              MockMvcRequestBuilders.post(ENTITIES_BY_TEMPLATE_IDENTIFIER_PATH, TEMPLATE_IDENTIFIER)
+                  .contentType(APPLICATION_JSON).accept(APPLICATION_JSON).with(csrf())
+                  .content(createWebServicePayload("Delete Success Entity", entityIdentifier)))
+          .andExpect(status().isCreated());
+
+      mockMvc.perform(delete(ENTITIES_BY_IDENTIFIER_PATH, TEMPLATE_IDENTIFIER, entityIdentifier)
+          .accept(APPLICATION_JSON).with(csrf())).andExpect(status().isNoContent());
+
+      mockMvc.perform(get(ENTITIES_BY_IDENTIFIER_PATH, TEMPLATE_IDENTIFIER, entityIdentifier)
+          .accept(APPLICATION_JSON)).andExpect(status().isNotFound());
+    }
+
+    @Test
+    @WithMockUser()
+    @DisplayName("Should return 404 when deleting non-existent entity")
+    void deleteEntity_404_non_existent_entity() throws Exception {
+      mockMvc
+          .perform(delete(ENTITIES_BY_IDENTIFIER_PATH, TEMPLATE_IDENTIFIER, "non-existent-entity")
+              .accept(APPLICATION_JSON).with(csrf()))
+          .andExpect(status().isNotFound());
+    }
+
+    @Test
+    @WithMockUser()
+    @DisplayName("Should return 404 when template does not exist")
+    void deleteEntity_404_non_existent_template() throws Exception {
+      mockMvc
+          .perform(delete(ENTITIES_BY_IDENTIFIER_PATH, "non-existent-template", ENTITY_IDENTIFIER)
+              .accept(APPLICATION_JSON).with(csrf()))
+          .andExpect(status().isNotFound());
+    }
+
+    @Test
+    @DisplayName("Should return 401 when deleting without authentication")
+    void deleteEntity_401_without_user_token() throws Exception {
+      mockMvc.perform(delete(ENTITIES_BY_IDENTIFIER_PATH, TEMPLATE_IDENTIFIER, ENTITY_IDENTIFIER)
+          .accept(APPLICATION_JSON).with(csrf())).andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    @WithMockUser
+    @DisplayName("Should return 403 when deleting without CSRF token")
+    void deleteEntity_403_without_csrf() throws Exception {
+      mockMvc.perform(delete(ENTITIES_BY_IDENTIFIER_PATH, TEMPLATE_IDENTIFIER, ENTITY_IDENTIFIER)
+          .accept(APPLICATION_JSON)).andExpect(status().isForbidden());
+    }
+
+    @Test
+    @WithMockUser()
+    @DisplayName("Should clean up relations from parent entities when entity is deleted")
+    void deleteEntity_204_with_relation_cleanup() throws Exception {
+      var targetEntityIdentifier = "relation-target-entity";
+      var sourceEntityIdentifier = "relation-source-entity";
+
+      mockMvc
+          .perform(
+              MockMvcRequestBuilders.post(ENTITIES_BY_TEMPLATE_IDENTIFIER_PATH, TEMPLATE_IDENTIFIER)
+                  .contentType(APPLICATION_JSON).accept(APPLICATION_JSON).with(csrf()).content(
+                      createWebServicePayload("Relation Target Entity", targetEntityIdentifier)))
+          .andExpect(status().isCreated());
+
+      mockMvc
+          .perform(
+              MockMvcRequestBuilders.post(ENTITIES_BY_TEMPLATE_IDENTIFIER_PATH, TEMPLATE_IDENTIFIER)
+                  .contentType(APPLICATION_JSON).accept(APPLICATION_JSON).with(csrf())
+                  .content(createWebServicePayloadWithRelation("Relation Source Entity",
+                      sourceEntityIdentifier, targetEntityIdentifier)))
+          .andExpect(status().isCreated());
+
+      mockMvc.perform(get(ENTITIES_BY_IDENTIFIER_PATH, TEMPLATE_IDENTIFIER, targetEntityIdentifier)
+          .accept(APPLICATION_JSON)).andExpect(status().isOk());
+
+      mockMvc
+          .perform(delete(ENTITIES_BY_IDENTIFIER_PATH, TEMPLATE_IDENTIFIER, targetEntityIdentifier)
+              .accept(APPLICATION_JSON).with(csrf()))
+          .andExpect(status().isNoContent());
+
+      mockMvc.perform(get(ENTITIES_BY_IDENTIFIER_PATH, TEMPLATE_IDENTIFIER, targetEntityIdentifier)
+          .accept(APPLICATION_JSON)).andExpect(status().isNotFound());
+
+      mockMvc
+          .perform(get(ENTITIES_BY_IDENTIFIER_PATH, TEMPLATE_IDENTIFIER, sourceEntityIdentifier)
+              .accept(APPLICATION_JSON))
+          .andExpect(status().isOk())
+          .andExpect(content().string(org.hamcrest.Matchers.not(org.hamcrest.Matchers
+              .containsString("\"identifier\":\"" + targetEntityIdentifier + "\""))));
+
+      mockMvc
+          .perform(delete(ENTITIES_BY_IDENTIFIER_PATH, TEMPLATE_IDENTIFIER, sourceEntityIdentifier)
+              .accept(APPLICATION_JSON).with(csrf()))
+          .andExpect(status().isNoContent());
+    }
+
+    @Test
+    @WithMockUser()
+    @DisplayName("Should handle deletion of entity with no incoming relations")
+    void deleteEntity_204_no_incoming_relations() throws Exception {
+      var entityIdentifier = "isolated-entity";
+
+      mockMvc
+          .perform(
+              MockMvcRequestBuilders.post(ENTITIES_BY_TEMPLATE_IDENTIFIER_PATH, TEMPLATE_IDENTIFIER)
+                  .contentType(APPLICATION_JSON).accept(APPLICATION_JSON).with(csrf())
+                  .content(createWebServicePayload("Isolated Entity", entityIdentifier)))
+          .andExpect(status().isCreated());
+
+      mockMvc.perform(delete(ENTITIES_BY_IDENTIFIER_PATH, TEMPLATE_IDENTIFIER, entityIdentifier)
+          .accept(APPLICATION_JSON).with(csrf())).andExpect(status().isNoContent());
+
+      mockMvc.perform(get(ENTITIES_BY_IDENTIFIER_PATH, TEMPLATE_IDENTIFIER, entityIdentifier)
+          .accept(APPLICATION_JSON)).andExpect(status().isNotFound());
+    }
+
+    @Test
+    @WithMockUser()
+    @DisplayName("Should return 404 when entity identifier path segment is blank")
+    void deleteEntity_404_with_blank_entity_identifier() throws Exception {
+      mockMvc
+          .perform(delete("/api/v1/entities/{template-identifier}/{entity-identifier}",
+              TEMPLATE_IDENTIFIER, "").accept(APPLICATION_JSON).with(csrf()))
+          .andExpect(status().isNotFound());
+    }
+
+    @Test
+    @WithMockUser()
+    @DisplayName("Should return 400 when template identifier path segment is blank")
+    void deleteEntity_400_with_blank_template_identifier() throws Exception {
+      mockMvc
+          .perform(delete("/api/v1/entities/{template-identifier}/{entity-identifier}", "",
+              ENTITY_IDENTIFIER).accept(APPLICATION_JSON).with(csrf()))
+          .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    @WithMockUser()
+    @DisplayName("Should delete entity with properties and relations")
+    void deleteEntity_204_with_properties_and_relations() throws Exception {
+      var entityIdentifier = "test-entity-with-relations";
+
+      mockMvc.perform(
+          MockMvcRequestBuilders.post(ENTITIES_BY_TEMPLATE_IDENTIFIER_PATH, TEMPLATE_IDENTIFIER)
+              .contentType(APPLICATION_JSON).accept(APPLICATION_JSON).with(csrf())
+              .content(createWebServicePayloadWithRelation("Test Entity With Relations",
+                  entityIdentifier, "database-service-1")))
+          .andExpect(status().isCreated());
+
+      mockMvc.perform(delete(ENTITIES_BY_IDENTIFIER_PATH, TEMPLATE_IDENTIFIER, entityIdentifier)
+          .accept(APPLICATION_JSON).with(csrf())).andExpect(status().isNoContent());
+
+      mockMvc.perform(get(ENTITIES_BY_IDENTIFIER_PATH, TEMPLATE_IDENTIFIER, entityIdentifier)
+          .accept(APPLICATION_JSON)).andExpect(status().isNotFound());
+    }
+
+    @Test
+    @WithMockUser()
+    @DisplayName("Should return 404 on repeated deletion attempts (first 204, second 404)")
+    void deleteEntity_repeated_deletion() throws Exception {
+      var entityIdentifier = "idempotent-test";
+
+      mockMvc
+          .perform(
+              MockMvcRequestBuilders.post(ENTITIES_BY_TEMPLATE_IDENTIFIER_PATH, TEMPLATE_IDENTIFIER)
+                  .contentType(APPLICATION_JSON).accept(APPLICATION_JSON).with(csrf())
+                  .content(createWebServicePayload("Idempotent Test", entityIdentifier)))
+          .andExpect(status().isCreated());
+
+      mockMvc.perform(delete(ENTITIES_BY_IDENTIFIER_PATH, TEMPLATE_IDENTIFIER, entityIdentifier)
+          .accept(APPLICATION_JSON).with(csrf())).andExpect(status().isNoContent());
+
+      mockMvc.perform(delete(ENTITIES_BY_IDENTIFIER_PATH, TEMPLATE_IDENTIFIER, entityIdentifier)
+          .accept(APPLICATION_JSON).with(csrf())).andExpect(status().isNotFound());
+    }
+
+    @Test
+    @WithMockUser()
+    @DisplayName("Should return 409 Conflict when entity deletion is blocked by required relations")
+    void deleteEntity_409_blocked_by_required_relations() throws Exception {
+      var teamIdentifier = "test-team-required-delete";
+      var supportIdentifier = "test-support-with-required-team-delete";
+
+      // Create team entity first
+      var teamPayload = """
+          {
+            "name": "Test Team Required",
+            "identifier": "%s",
+            "properties": {
+              "applicationName": "test-app",
+              "ownerEmail": "owner@example.com",
+              "environment": "DEV"
+            }
+          }
+          """.formatted(teamIdentifier);
+
+      mockMvc.perform(MockMvcRequestBuilders.post(ENTITIES_BY_TEMPLATE_IDENTIFIER_PATH, "team")
+          .contentType(APPLICATION_JSON).accept(APPLICATION_JSON).with(csrf()).content(teamPayload))
+          .andExpect(status().isCreated());
+
+      // Create support entity with required relation to team
+      var supportPayload = """
+          {
+            "name": "Test Support With Required Team",
+            "identifier": "%s",
+            "properties": {
+              "applicationName": "support-app",
+              "ownerEmail": "support@example.com",
+              "environment": "PROD",
+              "version": "1.0.0",
+              "teamName": "support-team"
+            },
+            "relations": [
+              {
+                "name": "required_team",
+                "target_entity_identifiers": ["%s"]
+              }
+            ]
+          }
+          """.formatted(supportIdentifier, teamIdentifier);
+
+      mockMvc.perform(MockMvcRequestBuilders.post(ENTITIES_BY_TEMPLATE_IDENTIFIER_PATH, "support")
+          .contentType(APPLICATION_JSON).accept(APPLICATION_JSON).with(csrf())
+          .content(supportPayload)).andExpect(status().isCreated());
+
+      // Verify team entity was created
+      mockMvc
+          .perform(
+              get(ENTITIES_BY_IDENTIFIER_PATH, "team", teamIdentifier).accept(APPLICATION_JSON))
+          .andExpect(status().isOk());
+
+      // Attempt to delete team entity (should fail with 409)
+      mockMvc
+          .perform(delete(ENTITIES_BY_IDENTIFIER_PATH, "team", teamIdentifier)
+              .accept(APPLICATION_JSON).with(csrf()))
+          .andExpect(status().isConflict()).andExpect(jsonPath("$.error").value("CONFLICT"))
+          .andExpect(jsonPath("$.error_description").value(org.hamcrest.Matchers.allOf(
+              org.hamcrest.Matchers.containsString("Cannot delete entity"),
+              org.hamcrest.Matchers.containsString(teamIdentifier),
+              org.hamcrest.Matchers.containsString("required relations"),
+              org.hamcrest.Matchers.containsString(supportIdentifier))));
+
+      // Verify team entity still exists after failed deletion
+      mockMvc
+          .perform(
+              get(ENTITIES_BY_IDENTIFIER_PATH, "team", teamIdentifier).accept(APPLICATION_JSON))
+          .andExpect(status().isOk());
+
+      // Clean up: delete support first, then team should be deletable
+      mockMvc.perform(delete(ENTITIES_BY_IDENTIFIER_PATH, "support", supportIdentifier)
+          .accept(APPLICATION_JSON).with(csrf())).andExpect(status().isNoContent());
+
+      mockMvc.perform(delete(ENTITIES_BY_IDENTIFIER_PATH, "team", teamIdentifier)
+          .accept(APPLICATION_JSON).with(csrf())).andExpect(status().isNoContent());
+    }
+  }
 }

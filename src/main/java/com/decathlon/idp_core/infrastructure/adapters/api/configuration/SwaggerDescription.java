@@ -70,6 +70,8 @@ public class SwaggerDescription {
   public static final String ENDPOINT_POST_ENTITY_DESCRIPTION = "Create a new entity in the system with the provided information";
   public static final String ENDPOINT_PUT_ENTITY_SUMMARY = "Update an existing entity";
   public static final String ENDPOINT_PUT_ENTITY_DESCRIPTION = "Update an existing entity in the system with the provided information";
+  public static final String ENDPOINT_DELETE_ENTITY_SUMMARY = "Delete an existing entity";
+  public static final String ENDPOINT_DELETE_ENTITY_DESCRIPTION = "Delete an entity from the system using its template and entity identifiers. This operation removes the entity and automatically cleans up any relations from other entities that reference it.";
 
   /// API response description constants
   public static final String RESPONSE_TEMPLATES_PAGINATED_SUCCESS = "Paginated templates retrieved successfully";
@@ -85,11 +87,13 @@ public class SwaggerDescription {
   public static final String RESPONSE_INVALID_PAGINATION = "Invalid pagination parameters";
   public static final String RESPONSE_TEMPLATE_CONFLICT = "Template with this identifier already exists";
   public static final String RESPONSE_ENTITY_CONFLICT = "Entity already exists in this template";
+  public static final String RESPONSE_ENTITY_RELATION_CONFLICT = "Target entity has required relations";
   public static final String RESPONSE_ENTITIES_PAGINATED_SUCCESS = "Paginated entities retrieved successfully";
   public static final String RESPONSE_ENTITY_FOUND = "Entity found";
   public static final String RESPONSE_ENTITY_NOT_FOUND_IDENTIFIER = "Entity not found with the provided identifier";
   public static final String RESPONSE_ENTITY_CREATED = "Entity created successfully";
   public static final String RESPONSE_ENTITY_UPDATED = "Entity updated successfully";
+  public static final String RESPONSE_ENTITY_DELETED = "Entity deleted successfully";
   public static final String RESPONSE_INVALID_ENTITY_DATA = "Invalid entity data provided";
   public static final String RESPONSE_UNEXPECTED_SERVER_ERROR = "Unexpected server-side failure";
   public static final String RESPONSE_INSUFFICIENT_RIGHTS = "Insufficient rights";
@@ -109,6 +113,8 @@ public class SwaggerDescription {
   public static final String SCHEMA_ENTITY_CREATE_IN = "Input DTO for creating an entity";
   public static final String SCHEMA_ENTITY_UPDATE_IN = "Input DTO for updating an entity";
   public static final String SCHEMA_ENTITY_RELATION_IN = "Input DTO for an entity relation instance";
+  public static final String SCHEMA_ENTITY_SEARCH_REQUEST_IN = "Request body for the POST /api/v1/entities/search endpoint";
+  public static final String SCHEMA_FILTER_NODE = "A node in the search filter tree. Either a logical group (connector + criteria) or a leaf criterion (field + operation + value).";
 
   // --- Field descriptions (shared) ---
   public static final String FIELD_TEMPLATE_ID = "Unique generated identifier of the entity template";
@@ -149,6 +155,15 @@ public class SwaggerDescription {
   public static final String FIELD_RELATION_REQUIRED = "Whether this relation is required";
   public static final String FIELD_RELATION_TO_MANY = "Whether this relation can have multiple targets";
 
+  public static final String FIELD_SEARCH_QUERY = "Free-text search string. When present, returns entities whose identifier, name, templateIdentifier, or any property value contains this string (case-insensitive). Can be combined with filter.";
+  public static final String FIELD_SEARCH_FILTER = "Root node of the search filter tree. May be omitted or null to return all entities.";
+
+  public static final String FIELD_FILTER_CONNECTOR = "Logical connector for a group node. One of: AND, OR. Required for group nodes.";
+  public static final String FIELD_FILTER_CRITERIA = "Child filter nodes for a group node. Required for group nodes (must be non-empty).";
+  public static final String FIELD_FILTER_FIELD = "Field to filter on for a criterion node. Required for leaf nodes. Examples: template, identifier, name, relation, property.language, relation.api-link, relation.api-link.identifier, relations_as_target.api-link.name";
+  public static final String FIELD_FILTER_OPERATION = "Filter operation for a criterion node. One of: EQ, NEQ, CONTAINS, NOT_CONTAINS, STARTS_WITH, ENDS_WITH, GT, GTE, LT, LTE. Required for leaf nodes.";
+  public static final String FIELD_FILTER_VALUE = "Value to compare against for a criterion node. Required for leaf nodes.";
+
   // --- Pagination and sorting parameter descriptions ---
   public static final String PARAM_PAGE_DESCRIPTION = "Page number for pagination. Defaults to 0.";
   public static final String PARAM_SIZE_DESCRIPTION = "Number of items per page. Defaults to 20.";
@@ -177,4 +192,13 @@ public class SwaggerDescription {
   public static final String PARAM_INCLUDE_DATA_DESCRIPTION = "When true, each graph node includes a data object containing the entity's property values. Defaults to false.";
   public static final String PARAM_RELATIONS_DESCRIPTION = "When provided, only relations whose name matches one of the listed values are traversed and included. Omit to include all relations.";
   public static final String PARAM_PROPERTIES_DESCRIPTION = "When provided, each node's data object is restricted to the listed property names. Requires include_data=true to have any effect. Omit to include all properties.";
+  /// Search API endpoint constants
+  public static final String ENDPOINT_POST_SEARCH_SUMMARY = "Search entities";
+  public static final String ENDPOINT_POST_SEARCH_DESCRIPTION = """
+      Search for entities across all templates using nested filter queries. \
+      Supports complex logical compositions (AND / OR) of filter criteria on \
+      template, identifier, name, properties, relations, and reverse relations.""";
+  public static final String RESPONSE_SEARCH_SUCCESS = "Entities retrieved successfully";
+  public static final String RESPONSE_INVALID_SEARCH_QUERY = "Invalid search filter";
+
 }

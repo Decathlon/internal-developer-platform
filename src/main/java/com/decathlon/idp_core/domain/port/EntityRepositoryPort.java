@@ -11,7 +11,9 @@ import org.springframework.data.domain.Pageable;
 import com.decathlon.idp_core.domain.model.entity.Entity;
 import com.decathlon.idp_core.domain.model.entity.EntityFilter;
 import com.decathlon.idp_core.domain.model.entity.EntitySummary;
-import com.decathlon.idp_core.infrastructure.adapters.persistence.model.entity.EntityJpaEntity;
+import com.decathlon.idp_core.domain.model.search.PaginatedResult;
+import com.decathlon.idp_core.domain.model.search.PaginationCriteria;
+import com.decathlon.idp_core.domain.model.search.SearchFilterNode;
 
 /// Driven port defining the contract for [Entity] persistence operations.
 ///
@@ -25,6 +27,7 @@ import com.decathlon.idp_core.infrastructure.adapters.persistence.model.entity.E
 /// - `findByRelationIdIn()` enables reverse relationship navigation
 /// - `deletePropertiesByTemplateIdentifierAndPropertyName()` must remove all property instances matching the given names for entities of the specified template
 /// - `deleteRelationsByTemplateIdentifierAndRelationName()` must remove all relation instances matching the given names for entities of the specified template
+/// - `search()` searches for entities across all templates using a nested filter tree and optional free-text query.
 ///
 /// **Transaction behavior:** Implementations should handle transaction boundaries
 /// appropriately for the underlying persistence technology.
@@ -44,8 +47,8 @@ public interface EntityRepositoryPort {
   Page<Entity> findByTemplateIdentifierWithFilter(String templateIdentifier, EntityFilter filter,
       Pageable pageable);
 
-  List<EntityJpaEntity> findAllByTemplateIdentifierAndIdentifierIn(String templateIdentifier,
-      List<String> identifiers);
+//   List<EntityJpaEntity> findAllByTemplateIdentifierAndIdentifierIn(String templateIdentifier,
+//       List<String> identifiers);
 
   List<EntitySummary> findByIdentifierIn(List<String> identifiers);
 
@@ -56,4 +59,12 @@ public interface EntityRepositoryPort {
 
   void deleteRelationsByTemplateIdentifierAndRelationName(String templateIdentifier,
       Collection<String> relationNames);
+
+  PaginatedResult<Entity> search(SearchFilterNode filter, String query,
+      PaginationCriteria paginationCriteria);
+
+  List<Entity> findEntitiesRelated(String targetIdentifier);
+
+  void deleteByTemplateIdentifierAndIdentifier(String templateIdentifier, String entityIdentifier);
+
 }

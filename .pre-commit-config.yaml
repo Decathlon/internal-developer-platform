@@ -54,4 +54,4 @@ repos:
         language: system
         pass_filenames: false
         files: \.java$
-        stages: [commit]
+        stages: [pre-commit]

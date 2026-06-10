@@ -116,4 +116,17 @@ public interface JpaEntityRepository
 
   List<EntityJpaEntity> findAllByTemplateIdentifierAndIdentifierIn(String templateIdentifier,
       List<String> identifiers);
+  @Query("""
+      SELECT entity
+      FROM EntityJpaEntity entity
+      JOIN entity.relations relation
+      JOIN relation.targetEntityIdentifiers targetEntityIdentifier
+      WHERE targetEntityIdentifier = :targetIdentifier
+      """)
+  List<EntityJpaEntity> findEntitiesRelated(@Param("targetIdentifier") String targetIdentifier);
+
+  void deleteByTemplateIdentifierAndIdentifier(
+      @Param("templateIdentifier") String templateIdentifier,
+      @Param("entityIdentifier") String entityIdentifier);
+
 }

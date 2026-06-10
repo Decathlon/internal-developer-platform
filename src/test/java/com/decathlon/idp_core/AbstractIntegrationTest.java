@@ -92,7 +92,7 @@ public abstract class AbstractIntegrationTest {
   @SuppressWarnings("rawtypes")
   private static final JdbcDatabaseContainer postgres = new PostgreSQLContainer(
       "postgres:18-alpine").withDatabaseName("idp-core").withUsername("idp-core")
-          .withPassword("idp-core");
+          .withPassword("idp-core").withInitScript("db/init/init-extensions.sql");
 
   @DynamicPropertySource
   static void postgresProperties(DynamicPropertyRegistry registry) {
