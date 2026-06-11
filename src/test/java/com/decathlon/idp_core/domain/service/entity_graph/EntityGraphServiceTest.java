@@ -2,8 +2,10 @@ package com.decathlon.idp_core.domain.service.entity_graph;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.anyInt;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -108,9 +110,8 @@ class EntityGraphServiceTest {
       assertThatThrownBy(() -> entityGraphService.getEntityGraph(TEMPLATE, "missing", 1, false,
           Set.of(), Set.of())).isInstanceOf(EntityNotFoundException.class);
 
-      // verify(entityGraphRepositoryPort, never()).findEntityGraph(anyUuid(),
-      // anyInt(),
-      // anyBoolean());
+      verify(entityGraphRepositoryPort, never()).findEntityGraph(any(UUID.class), anyInt(),
+          anyBoolean());
     }
   }
 
@@ -163,7 +164,7 @@ class EntityGraphServiceTest {
     }
 
     @Test
-    @DisplayName("Should return fallback node when target is not in the pre-loaded entity map")
+    @DisplayName("Should filter out target when not in the pre-loaded entity map")
     void shouldReturnFallbackNodeWhenTargetNotInMap() {
       Entity api = entityWithRelations(TEMPLATE, "api", "API Service",
           List.of(relation("uses-db", "database", "missing-db")));
@@ -175,9 +176,8 @@ class EntityGraphServiceTest {
       EntityGraphNode result = entityGraphService.getEntityGraph(TEMPLATE, "api", 1, false,
           Set.of(), Set.of());
 
-      assertThat(result.relations()).hasSize(1);
-      EntityGraphNode fallback = result.relations().get(0).targets().get(0);
-      assertThat(fallback.identifier()).isEqualTo("missing-db");
+      // When target entity is not found in the map, it's filtered out
+      assertThat(result.relations()).isEmpty();
     }
   }
 
@@ -235,7 +235,7 @@ class EntityGraphServiceTest {
 
       entityGraphService.getEntityGraph(TEMPLATE, "api", 99, false, Set.of(), Set.of());
 
-      verify(entityGraphRepositoryPort).findEntityGraph(api.id(), 10, false);
+      verify(entityGraphRepositoryPort).findEntityGraph(api.id(), 20, false);
     }
   }
 
@@ -251,20 +251,25 @@ class EntityGraphServiceTest {
           List.of(relation("uses-db", "database", "postgres")));
       Entity postgres = entityWithRelations("database", "postgres", "Postgres DB",
           List.of(relation("runs-on", "infra", "server-1")));
-      Entity server = entity("infra", "server-1", "Server 1");
 
       when(entityRepositoryPort.findByTemplateIdentifierAndIdentifier(TEMPLATE, "api"))
           .thenReturn(Optional.of(api));
-      stubGraph(api, postgres, server);
+      // At depth=1, only api and postgres should be in the graph (server is beyond
+      // depth limit)
+      stubGraph(api, postgres);
 
       EntityGraphNode result = entityGraphService.getEntityGraph(TEMPLATE, "api", 1, false,
           Set.of(), Set.of());
 
       EntityGraphNode postgresNode = result.relations().get(0).targets().get(0);
       assertThat(postgresNode.identifier()).isEqualTo("postgres");
-      // At depth=1, postgres is a leaf — no further relations resolved
+      // At depth=1, postgres is a leaf — no further outbound relations resolved
       assertThat(postgresNode.relations()).isEmpty();
-      assertThat(postgresNode.relationsAsTarget()).isEmpty();
+      // But it CAN have inbound relations from entities already in the graph (api)
+      assertThat(postgresNode.relationsAsTarget()).hasSize(1);
+      assertThat(postgresNode.relationsAsTarget().get(0).name()).isEqualTo("uses-db");
+      assertThat(postgresNode.relationsAsTarget().get(0).targets().get(0).identifier())
+          .isEqualTo("api");
     }
   }
 
