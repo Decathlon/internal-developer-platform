@@ -55,38 +55,63 @@ public interface JpaEntityRepository
       @Param("identifiers") Collection<UUID> ids);
 
   @Query(value = """
-      WITH RECURSIVE entity_graph(id, depth) AS (
-          -- 1. ANCHOR MEMBER: Start with the specific root entity UUID
-          SELECT CAST(:entityId AS UUID), 0
+      WITH RECURSIVE entity_graph(id, depth, flow) AS (
+          -- 1. ANCHOR MEMBER: Initialize state tokens for a single root entity
+          SELECT e.id, 0, 'OUTBOUND' AS flow
+          FROM idp_core.entity e
+          WHERE e.id = :rootId AND :mode IN ('STRICT_LINEAGE', 'OUTBOUND_ONLY')
 
-          UNION -- Frontier propagation: automatically eliminates path duplicates at each step
+          UNION
 
-          -- 2. RECURSIVE MEMBER: Scan indexed schema tables via direct binary matches
-          SELECT neighbor.id, eg.depth + 1
+          SELECT e.id, 0, 'INBOUND' AS flow
+          FROM idp_core.entity e
+          WHERE e.id = :rootId AND :mode = 'STRICT_LINEAGE'
+
+          UNION
+
+          SELECT e.id, 0, 'ANY' AS flow
+          FROM idp_core.entity e
+          WHERE e.id = :rootId AND :mode = 'BIDIRECTIONAL'
+
+          UNION
+
+          -- 2. RECURSIVE MEMBER: Propagate isolated pathways down the graph footprint
+          SELECT combined.id, eg.depth + 1, eg.flow
           FROM entity_graph eg
-          CROSS JOIN LATERAL (
-              -- Track A: Outbound direction (this entity -> targets)
-              SELECT rte.target_entity_uuid AS id
+          JOIN (
+              -- Outbound Paths
+              SELECT er.entity_id AS source_id, rte.target_entity_uuid AS id, 'OUTBOUND' AS flow_match
               FROM idp_core.entity_relations er
               JOIN idp_core.relation_target_entities rte ON rte.relation_id = er.relation_id
-              WHERE er.entity_id = eg.id
-                AND rte.target_entity_uuid IS NOT NULL
+              WHERE rte.target_entity_uuid IS NOT NULL
 
               UNION ALL
 
-              -- Track B: Inbound direction (sources -> this entity as target)
-              SELECT er.entity_id AS id
+              SELECT er.entity_id AS source_id, rte.target_entity_uuid AS id, 'ANY' AS flow_match
+              FROM idp_core.entity_relations er
+              JOIN idp_core.relation_target_entities rte ON rte.relation_id = er.relation_id
+              WHERE rte.target_entity_uuid IS NOT NULL
+
+              UNION ALL
+
+              -- Inbound Paths
+              SELECT rte.target_entity_uuid AS source_id, er.entity_id AS id, 'INBOUND' AS flow_match
               FROM idp_core.relation_target_entities rte
               JOIN idp_core.entity_relations er ON er.relation_id = rte.relation_id
-              WHERE rte.target_entity_uuid = eg.id
-          ) neighbor
-          -- Keeps the depth bounded entirely at the database layer
+
+              UNION ALL
+
+              SELECT rte.target_entity_uuid AS source_id, er.entity_id AS id, 'ANY' AS flow_match
+              FROM idp_core.relation_target_entities rte
+              JOIN idp_core.entity_relations er ON er.relation_id = rte.relation_id
+          ) combined ON combined.source_id = eg.id AND combined.flow_match = eg.flow
           WHERE eg.depth < :depth
       )
-      -- 3. LEAN RETURN: Extract only the unique raw UUIDs discovered in the network skeleton
+      -- 3. Return the clean deduplicated set of structural skeleton UUIDs
       SELECT DISTINCT id FROM entity_graph;
-                                    """, nativeQuery = true)
-  List<UUID> findEntityUuidsInGraph(@Param("entityId") UUID entityId, @Param("depth") int depth);
+      """, nativeQuery = true)
+  List<UUID> findEntityUuidsInGraph(@Param("rootId") UUID rootId, @Param("depth") int depth,
+      @Param("mode") String mode);
 
   @Modifying(clearAutomatically = true, flushAutomatically = true)
   @Query("""

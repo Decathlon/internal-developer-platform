@@ -29,6 +29,7 @@ import com.decathlon.idp_core.domain.model.entity.Property;
 import com.decathlon.idp_core.domain.model.entity.Relation;
 import com.decathlon.idp_core.domain.model.entity_graph.EntityGraphNode;
 import com.decathlon.idp_core.domain.model.entity_graph.EntityGraphRelation;
+import com.decathlon.idp_core.domain.model.entity_graph.EntityGraphTraversalMode;
 import com.decathlon.idp_core.domain.port.EntityGraphRepositoryPort;
 import com.decathlon.idp_core.domain.port.EntityRepositoryPort;
 import com.decathlon.idp_core.domain.service.entity_template.EntityTemplateValidationService;
@@ -88,8 +89,8 @@ class EntityGraphServiceTest {
       entityMap = builder;
     }
 
-    when(entityGraphRepositoryPort.findEntityGraph(anyUUID(), anyInt(), anyBoolean()))
-        .thenReturn(entityMap);
+    when(entityGraphRepositoryPort.findEntityGraph(anyUUID(), anyInt(), anyBoolean(),
+        any(EntityGraphTraversalMode.class))).thenReturn(entityMap);
   }
 
   private UUID anyUUID() {
@@ -108,10 +109,11 @@ class EntityGraphServiceTest {
           .thenReturn(Optional.empty());
 
       assertThatThrownBy(() -> entityGraphService.getEntityGraph(TEMPLATE, "missing", 1, false,
-          Set.of(), Set.of())).isInstanceOf(EntityNotFoundException.class);
+          Set.of(), Set.of(), EntityGraphTraversalMode.BIDIRECTIONAL))
+              .isInstanceOf(EntityNotFoundException.class);
 
       verify(entityGraphRepositoryPort, never()).findEntityGraph(any(UUID.class), anyInt(),
-          anyBoolean());
+          anyBoolean(), any(EntityGraphTraversalMode.class));
     }
   }
 
@@ -129,7 +131,7 @@ class EntityGraphServiceTest {
       stubGraph(api);
 
       EntityGraphNode result = entityGraphService.getEntityGraph(TEMPLATE, "api", 1, false,
-          Set.of(), Set.of());
+          Set.of(), Set.of(), EntityGraphTraversalMode.BIDIRECTIONAL);
 
       assertThat(result.identifier()).isEqualTo("api");
       assertThat(result.name()).isEqualTo("API Service");
@@ -155,7 +157,7 @@ class EntityGraphServiceTest {
       stubGraph(api, postgres);
 
       EntityGraphNode result = entityGraphService.getEntityGraph(TEMPLATE, "api", 1, false,
-          Set.of(), Set.of());
+          Set.of(), Set.of(), EntityGraphTraversalMode.BIDIRECTIONAL);
 
       assertThat(result.relations()).hasSize(1);
       assertThat(result.relations().get(0).name()).isEqualTo("uses-db");
@@ -174,7 +176,7 @@ class EntityGraphServiceTest {
       stubGraph(api);
 
       EntityGraphNode result = entityGraphService.getEntityGraph(TEMPLATE, "api", 1, false,
-          Set.of(), Set.of());
+          Set.of(), Set.of(), EntityGraphTraversalMode.BIDIRECTIONAL);
 
       // When target entity is not found in the map, it's filtered out
       assertThat(result.relations()).isEmpty();
@@ -198,7 +200,7 @@ class EntityGraphServiceTest {
       stubGraph(api, consumer);
 
       EntityGraphNode result = entityGraphService.getEntityGraph(TEMPLATE, "api", 1, false,
-          Set.of(), Set.of());
+          Set.of(), Set.of(), EntityGraphTraversalMode.BIDIRECTIONAL);
 
       assertThat(result.relationsAsTarget()).hasSize(1);
       assertThat(result.relationsAsTarget().get(0).name()).isEqualTo("depends-on");
@@ -220,9 +222,11 @@ class EntityGraphServiceTest {
           .thenReturn(Optional.of(api));
       stubGraph(api);
 
-      entityGraphService.getEntityGraph(TEMPLATE, "api", 0, false, Set.of(), Set.of());
+      entityGraphService.getEntityGraph(TEMPLATE, "api", 0, false, Set.of(), Set.of(),
+          EntityGraphTraversalMode.BIDIRECTIONAL);
 
-      verify(entityGraphRepositoryPort).findEntityGraph(api.id(), 1, false);
+      verify(entityGraphRepositoryPort).findEntityGraph(api.id(), 1, false,
+          EntityGraphTraversalMode.BIDIRECTIONAL);
     }
 
     @Test
@@ -233,9 +237,11 @@ class EntityGraphServiceTest {
           .thenReturn(Optional.of(api));
       stubGraph(api);
 
-      entityGraphService.getEntityGraph(TEMPLATE, "api", 99, false, Set.of(), Set.of());
+      entityGraphService.getEntityGraph(TEMPLATE, "api", 99, false, Set.of(), Set.of(),
+          EntityGraphTraversalMode.BIDIRECTIONAL);
 
-      verify(entityGraphRepositoryPort).findEntityGraph(api.id(), 20, false);
+      verify(entityGraphRepositoryPort).findEntityGraph(api.id(), 20, false,
+          EntityGraphTraversalMode.BIDIRECTIONAL);
     }
   }
 
@@ -259,7 +265,7 @@ class EntityGraphServiceTest {
       stubGraph(api, postgres);
 
       EntityGraphNode result = entityGraphService.getEntityGraph(TEMPLATE, "api", 1, false,
-          Set.of(), Set.of());
+          Set.of(), Set.of(), EntityGraphTraversalMode.BIDIRECTIONAL);
 
       EntityGraphNode postgresNode = result.relations().get(0).targets().get(0);
       assertThat(postgresNode.identifier()).isEqualTo("postgres");
@@ -291,7 +297,7 @@ class EntityGraphServiceTest {
       stubGraph(api, postgres, auth);
 
       EntityGraphNode result = entityGraphService.getEntityGraph(TEMPLATE, "api", 1, false,
-          Set.of(), Set.of());
+          Set.of(), Set.of(), EntityGraphTraversalMode.BIDIRECTIONAL);
 
       assertThat(result.relations()).hasSize(2);
       assertThat(result.relations().stream().map(EntityGraphRelation::name))
@@ -318,7 +324,7 @@ class EntityGraphServiceTest {
       stubGraph(a, b, c);
 
       EntityGraphNode result = entityGraphService.getEntityGraph(TEMPLATE, "a", 2, false,
-          Set.of("depends-on"), Set.of());
+          Set.of("depends-on"), Set.of(), EntityGraphTraversalMode.BIDIRECTIONAL);
 
       assertThat(result.relations()).hasSize(1);
       assertThat(result.relations().get(0).name()).isEqualTo("depends-on");
@@ -337,7 +343,7 @@ class EntityGraphServiceTest {
       stubGraph(a, b, c);
 
       EntityGraphNode result = entityGraphService.getEntityGraph(TEMPLATE, "a", 2, false, Set.of(),
-          Set.of());
+          Set.of(), EntityGraphTraversalMode.BIDIRECTIONAL);
 
       assertThat(result.relations()).hasSize(2);
       assertThat(result.relations().stream().map(EntityGraphRelation::name))
@@ -358,7 +364,7 @@ class EntityGraphServiceTest {
       stubGraph(api, consumer, unrelated);
 
       EntityGraphNode result = entityGraphService.getEntityGraph(TEMPLATE, "api", 1, false,
-          Set.of("depends-on"), Set.of());
+          Set.of("depends-on"), Set.of(), EntityGraphTraversalMode.BIDIRECTIONAL);
 
       assertThat(result.relationsAsTarget()).hasSize(1);
       assertThat(result.relationsAsTarget().get(0).name()).isEqualTo("depends-on");
@@ -389,7 +395,7 @@ class EntityGraphServiceTest {
       stubGraph(api);
 
       EntityGraphNode result = entityGraphService.getEntityGraph(TEMPLATE, "api", 1, true, Set.of(),
-          Set.of("env"));
+          Set.of("env"), EntityGraphTraversalMode.BIDIRECTIONAL);
 
       assertThat(result.properties()).hasSize(1);
       assertThat(result.properties().get(0).name()).isEqualTo("env");
@@ -408,7 +414,7 @@ class EntityGraphServiceTest {
       stubGraph(api);
 
       EntityGraphNode result = entityGraphService.getEntityGraph(TEMPLATE, "api", 1, true, Set.of(),
-          Set.of());
+          Set.of(), EntityGraphTraversalMode.BIDIRECTIONAL);
 
       assertThat(result.properties()).hasSize(2);
     }
@@ -424,7 +430,7 @@ class EntityGraphServiceTest {
       stubGraph(api);
 
       EntityGraphNode result = entityGraphService.getEntityGraph(TEMPLATE, "api", 1, false,
-          Set.of(), Set.of("env"));
+          Set.of(), Set.of("env"), EntityGraphTraversalMode.BIDIRECTIONAL);
 
       assertThat(result.properties()).isEmpty();
     }
@@ -452,7 +458,7 @@ class EntityGraphServiceTest {
       // Must complete instantly — any OOM or StackOverflow here means the guard is
       // missing.
       EntityGraphNode result = entityGraphService.getEntityGraph(TEMPLATE, "a", 10, false, Set.of(),
-          Set.of());
+          Set.of(), EntityGraphTraversalMode.BIDIRECTIONAL);
 
       assertThat(result.identifier()).isEqualTo("a");
       assertThat(result.relations()).hasSize(1);
@@ -470,7 +476,7 @@ class EntityGraphServiceTest {
       stubGraph(a, b);
 
       EntityGraphNode result = entityGraphService.getEntityGraph(TEMPLATE, "a", 5, false, Set.of(),
-          Set.of());
+          Set.of(), EntityGraphTraversalMode.BIDIRECTIONAL);
 
       // A → B is resolved
       assertThat(result.relations()).hasSize(1);

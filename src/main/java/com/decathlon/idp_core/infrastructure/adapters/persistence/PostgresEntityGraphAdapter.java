@@ -12,6 +12,7 @@ import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.decathlon.idp_core.domain.model.entity.Entity;
+import com.decathlon.idp_core.domain.model.entity_graph.EntityGraphTraversalMode;
 import com.decathlon.idp_core.domain.port.EntityGraphRepositoryPort;
 import com.decathlon.idp_core.infrastructure.adapters.persistence.mapper.EntityPersistenceMapper;
 import com.decathlon.idp_core.infrastructure.adapters.persistence.model.entity.EntityJpaEntity;
@@ -42,7 +43,8 @@ public class PostgresEntityGraphAdapter implements EntityGraphRepositoryPort {
 
   @Override
   @Transactional(readOnly = true)
-  public Map<UUID, Entity> findEntityGraph(UUID entityId, int depth, boolean includeProperties) {
+  public Map<UUID, Entity> findEntityGraph(UUID entityId, int depth, boolean includeProperties,
+      EntityGraphTraversalMode mode) {
     log.debug(
         "[EntityGraphAdapter] findEntityGraph start: entityId={}, depth={}, includeProperties={}",
         entityId, depth, includeProperties);
@@ -55,7 +57,8 @@ public class PostgresEntityGraphAdapter implements EntityGraphRepositoryPort {
     // so nodes reachable via any path are included even if the filter only matches
     // edges at deeper levels (e.g. filtering "owns" still returns B→C when A→B→C).
     final long tStartCte = System.nanoTime();
-    List<UUID> graphPairs = jpaEntityRepository.findEntityUuidsInGraph(entityId, depth);
+    List<UUID> graphPairs = jpaEntityRepository.findEntityUuidsInGraph(entityId, depth,
+        mode.name());
     final long tAfterCte = System.nanoTime();
     log.debug("[EntityGraphAdapter] CTE returned {} identifiers (elapsed={}ms)",
         graphPairs == null ? 0 : graphPairs.size(), (tAfterCte - tStartCte) / 1_000_000);
@@ -74,11 +77,10 @@ public class PostgresEntityGraphAdapter implements EntityGraphRepositoryPort {
         entitiesIds.size(), (tAfterIdExtract - tStartIdExtract) / 1_000_000);
 
     // Step 3: batch-load entities with relations, then optionally properties in a
-    // separate
-    // query. Properties are skipped when not requested to avoid the extra
-    // round-trip and
-    // keep payloads lean. The two-query split also avoids Hibernate's
-    // MultipleBagFetchException.
+    // separate query.
+    // Properties are skipped when not requested to avoid the extra round-trip and
+    // keep payloads lean.
+    // The two-query split also avoids Hibernate's MultipleBagFetchException.
     log.debug("[EntityGraphAdapter] Loading JPA entities with relations...");
     final long tStartJpaLoad = System.nanoTime();
     List<EntityJpaEntity> jpaEntities = jpaEntityRepository

@@ -20,6 +20,7 @@ import com.decathlon.idp_core.domain.model.entity.Property;
 import com.decathlon.idp_core.domain.model.entity.Relation;
 import com.decathlon.idp_core.domain.model.entity_graph.EntityGraphNode;
 import com.decathlon.idp_core.domain.model.entity_graph.EntityGraphRelation;
+import com.decathlon.idp_core.domain.model.entity_graph.EntityGraphTraversalMode;
 import com.decathlon.idp_core.domain.port.EntityGraphRepositoryPort;
 import com.decathlon.idp_core.domain.port.EntityRepositoryPort;
 import com.decathlon.idp_core.domain.service.entity_template.EntityTemplateValidationService;
@@ -62,8 +63,8 @@ public class EntityGraphService {
 
   @Transactional(readOnly = true)
   public EntityGraphNode getEntityGraph(String templateIdentifier, String entityIdentifier,
-      int depth, boolean includeProperties, Set<String> relationFilter,
-      Set<String> propertyFilter) {
+      int depth, boolean includeProperties, Set<String> relationFilter, Set<String> propertyFilter,
+      EntityGraphTraversalMode mode) {
 
     final long tStartTotal = System.nanoTime();
     int effectiveDepth = Math.clamp(depth, 1, MAX_DEPTH);
@@ -79,7 +80,7 @@ public class EntityGraphService {
     // 2. Load the graph footprint via optimized DB calls (Takes ~150ms)
     final long tStartRepo = System.nanoTime();
     Map<UUID, Entity> entityMap = entityGraphRepositoryPort.findEntityGraph(rootEntity.id(),
-        effectiveDepth, includeProperties);
+        effectiveDepth, includeProperties, mode);
     final long tAfterRepo = System.nanoTime();
 
     if (entityMap == null || entityMap.isEmpty()) {

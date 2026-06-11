@@ -8,6 +8,7 @@ import static com.decathlon.idp_core.infrastructure.adapters.api.configuration.S
 import static com.decathlon.idp_core.infrastructure.adapters.api.configuration.SwaggerDescription.PARAM_INCLUDE_DATA_DESCRIPTION;
 import static com.decathlon.idp_core.infrastructure.adapters.api.configuration.SwaggerDescription.PARAM_PROPERTIES_DESCRIPTION;
 import static com.decathlon.idp_core.infrastructure.adapters.api.configuration.SwaggerDescription.PARAM_RELATIONS_DESCRIPTION;
+import static com.decathlon.idp_core.infrastructure.adapters.api.configuration.SwaggerDescription.PARAM_TRAVERSAL_MODE_DESCRIPTION;
 import static com.decathlon.idp_core.infrastructure.adapters.api.configuration.SwaggerDescription.RESPONSE_ENTITY_GRAPH_FLAT_SUCCESS;
 import static com.decathlon.idp_core.infrastructure.adapters.api.configuration.SwaggerDescription.RESPONSE_ENTITY_NOT_FOUND_IDENTIFIER;
 import static org.springframework.http.HttpStatus.OK;
@@ -26,6 +27,7 @@ import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.decathlon.idp_core.domain.model.entity_graph.EntityGraphNode;
+import com.decathlon.idp_core.domain.model.entity_graph.EntityGraphTraversalMode;
 import com.decathlon.idp_core.domain.service.entity_graph.EntityGraphService;
 import com.decathlon.idp_core.infrastructure.adapters.api.dto.out.entity.EntityGraphFlatDtoOut;
 import com.decathlon.idp_core.infrastructure.adapters.api.handler.ApiExceptionHandler.ErrorResponse;
@@ -79,6 +81,7 @@ public class EntityGraphController {
       @PathVariable @NotBlank String entityIdentifier,
       @Parameter(description = PARAM_DEPTH_DESCRIPTION) @RequestParam(defaultValue = "1") int depth,
       @Parameter(description = PARAM_INCLUDE_DATA_DESCRIPTION) @RequestParam(name = "include_data", defaultValue = "false") boolean includeData,
+      @Parameter(description = PARAM_TRAVERSAL_MODE_DESCRIPTION) @RequestParam(name = "traversal_mode", defaultValue = "STRICT_LINEAGE") EntityGraphTraversalMode mode,
       @Parameter(description = PARAM_RELATIONS_DESCRIPTION) @RequestParam(required = false) List<String> relations,
       @Parameter(description = PARAM_PROPERTIES_DESCRIPTION) @RequestParam(required = false) List<String> properties) {
 
@@ -87,7 +90,7 @@ public class EntityGraphController {
     Set<String> propertyFilter = properties != null ? Set.copyOf(properties) : Set.of();
 
     EntityGraphNode graphNode = entityGraphService.getEntityGraph(templateIdentifier,
-        entityIdentifier, depth, includeData, relationFilter, propertyFilter);
+        entityIdentifier, depth, includeData, relationFilter, propertyFilter, mode);
 
     return EntityGraphFlatDtoOutMapper.toFlatDto(graphNode);
   }
