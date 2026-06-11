@@ -11,6 +11,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.history.RevisionRepository;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
@@ -21,7 +22,8 @@ import com.decathlon.idp_core.infrastructure.adapters.persistence.model.entity.E
 public interface JpaEntityRepository
     extends
       JpaRepository<EntityJpaEntity, UUID>,
-      JpaSpecificationExecutor<EntityJpaEntity> {
+      JpaSpecificationExecutor<EntityJpaEntity>,
+      RevisionRepository<EntityJpaEntity, UUID, Long> {
 
   @Query("SELECT e.identifier AS identifier, e.name AS name, e.templateIdentifier AS templateIdentifier FROM EntityJpaEntity e WHERE e.identifier IN :identifiers")
   List<EntitySummary> findByIdentifierIn(List<String> identifiers);

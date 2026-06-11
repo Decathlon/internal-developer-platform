@@ -10,6 +10,8 @@ import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 
+import org.hibernate.envers.Audited;
+
 import com.decathlon.idp_core.domain.model.enums.PropertyFormat;
 
 import lombok.AllArgsConstructor;
@@ -20,6 +22,7 @@ import lombok.NoArgsConstructor;
 @Entity
 @Data
 @Table(name = "property_rules")
+@Audited
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor

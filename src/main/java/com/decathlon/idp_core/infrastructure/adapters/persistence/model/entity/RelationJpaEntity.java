@@ -14,6 +14,8 @@ import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.Table;
 
+import org.hibernate.envers.Audited;
+
 import org.hibernate.annotations.BatchSize;
 
 import lombok.AllArgsConstructor;
@@ -24,6 +26,7 @@ import lombok.NoArgsConstructor;
 @Entity
 @Data
 @Table(name = "relation")
+@Audited
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor

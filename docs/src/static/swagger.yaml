@@ -15,6 +15,8 @@ tags:
     description: Operations related to entity management
   - name: Entities Templates Management
     description: Operations related to entity template management
+  - name: Audit
+    description: Operations related to audit history
 paths:
   '/api/v1/entity-templates/{identifier}':
     get:
@@ -546,6 +548,59 @@ paths:
             '*/*':
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
+  /api/v1/audit/entities/{templateIdentifier}/{entityIdentifier}:
+    get:
+      tags:
+        - Audit
+      summary: Get audit history
+      description: Retrieve the complete audit history for a specific object,
+        including all revisions with timestamps and modification types
+      operationId: getEntityAuditHistory
+      parameters:
+        - name: templateIdentifier
+          in: path
+          required: true
+          schema:
+            type: string
+            minLength: 1
+        - name: entityIdentifier
+          in: path
+          required: true
+          schema:
+            type: string
+            minLength: 1
+      responses:
+        "200":
+          description: Successfully retrieved entity audit history
+          content:
+            "*/*":
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/EntityAuditDtoOut"
+        "400":
+          description: Invalid template or entity identifier
+          content:
+            "*/*":
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: Unauthorized - Missing or invalid token
+        "403":
+          description: Insufficient rights
+        "404":
+          description: Template not found with the provided identifier or Entity not found
+            with the provided identifier
+          content:
+            "*/*":
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "500":
+          description: Unexpected server-side failure
+          content:
+            "*/*":
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
 components:
   schemas:
     EntityTemplateUpdateDtoIn:
@@ -1108,6 +1163,103 @@ components:
           format: int32
         empty:
           type: boolean
+    EntityAuditDtoOut:
+      type: object
+      description: Audit information for an entity revision
+      properties:
+        revision_number:
+          type: number
+          description: Unique revision number in the audit log
+          example: 42
+        revision_date:
+          type: string
+          format: date-time
+          description: Timestamp when the revision was created
+          example: 2026-06-08T14:37:27.743Z
+        revision_type:
+          type: string
+          description: Type of operation performed (CREATED, UPDATED, DELETED)
+          example: UPDATED
+        modified_by:
+          type: string
+          description: Identifier of the user who performed the modification
+          example: user@example.com
+        snapshot:
+          $ref: "#/components/schemas/EntitySnapshotDtoOut"
+          description: Snapshot of the entity state at this revision
+    EntitySnapshotDtoOut:
+      type: object
+      description: Snapshot of entity state at a specific audit revision
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: Unique identifier
+          example: 550e8400-e29b-41d4-a716-446655440000
+        template_identifier:
+          type: string
+          description: Template identifier
+          example: web-service
+        name:
+          type: string
+          description: Entity name
+          example: My Service
+        identifier:
+          type: string
+          description: Entity identifier
+          example: my-service-api
+        properties:
+          type: array
+          description: Properties of the entity at this revision
+          items:
+            $ref: "#/components/schemas/PropertySnapshotDtoOut"
+        relations:
+          type: array
+          description: Relations of the entity at this revision
+          items:
+            $ref: "#/components/schemas/RelationSnapshotDtoOut"
+    PropertySnapshotDtoOut:
+      type: object
+      description: Snapshot of a property at a specific audit revision
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: Unique identifier of the property
+          example: 550e8400-e29b-41d4-a716-446655440000
+        name:
+          type: string
+          description: Name of the property matching a PropertyDefinition
+          example: description
+        value:
+          type: string
+          description: Value of the property at this revision
+          example: My service description
+    RelationSnapshotDtoOut:
+      type: object
+      description: Snapshot of a relation at a specific audit revision
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: Unique identifier of the relation
+          example: 550e8400-e29b-41d4-a716-446655440000
+        name:
+          type: string
+          description: Name of the relation matching a RelationDefinition
+          example: deployed-on
+        target_template_identifier:
+          type: string
+          description: Identifier of the target entity template
+          example: infrastructure
+        target_entity_identifiers:
+          type: array
+          description: Business identifiers of target entities
+          example:
+            - prod-cluster
+            - staging-cluster
+          items:
+            type: string
     EntityGraphEdgeDtoOut:
       type: object
       properties:

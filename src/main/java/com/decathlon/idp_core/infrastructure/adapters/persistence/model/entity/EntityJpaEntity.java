@@ -15,6 +15,8 @@ import jakarta.persistence.OneToMany;
 import jakarta.persistence.Table;
 import jakarta.persistence.UniqueConstraint;
 
+import org.hibernate.envers.Audited;
+
 import org.hibernate.annotations.BatchSize;
 
 import lombok.AllArgsConstructor;
@@ -26,6 +28,7 @@ import lombok.NoArgsConstructor;
 @Data
 @Table(name = "entity", uniqueConstraints = {
     @UniqueConstraint(columnNames = {"identifier", "template_identifier"})})
+@Audited
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor

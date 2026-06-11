@@ -17,6 +17,8 @@ import jakarta.persistence.OneToMany;
 import jakarta.persistence.OrderBy;
 import jakarta.persistence.Table;
 
+import org.hibernate.envers.Audited;
+
 import lombok.AllArgsConstructor;
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
@@ -30,6 +32,7 @@ import lombok.ToString;
 @ToString
 @EqualsAndHashCode
 @Table(name = "entity_template")
+@Audited
 @NoArgsConstructor
 @AllArgsConstructor
 public class EntityTemplateJpaEntity {
