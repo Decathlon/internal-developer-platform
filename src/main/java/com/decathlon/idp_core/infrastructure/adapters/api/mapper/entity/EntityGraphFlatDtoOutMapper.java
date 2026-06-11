@@ -121,7 +121,6 @@ public final class EntityGraphFlatDtoOutMapper {
 
   /// Builds the unique node identifier from the entity's composite key.
   /// Format: "templateIdentifier:identifier" — mirrors
-  /// EntityCompositeKey.toString().
   private static String nodeId(String templateIdentifier, String identifier) {
     return templateIdentifier + ":" + identifier;
   }

@@ -246,13 +246,7 @@ public class EntityGraphService {
   private static record GraphTraversalContext(Map<UUID, Entity> entityMap,
       Map<EntityCompositeKey, UUID> textToUuidLookup,
       Map<String, Map<String, List<UUID>>> inboundIndex, boolean includeProperties,
-      Set<String> propertyFilter, Set<String> relationFilter, Set<String> activeStack, // Tracks
-                                                                                       // current
-                                                                                       // parent
-                                                                                       // line to
-                                                                                       // block
-                                                                                       // infinite
-                                                                                       // loops
+      Set<String> propertyFilter, Set<String> relationFilter, Set<String> activeStack,
       Map<String, EntityGraphNode> memoCache // High-speed in-memory reuse cache
   ) {
   }

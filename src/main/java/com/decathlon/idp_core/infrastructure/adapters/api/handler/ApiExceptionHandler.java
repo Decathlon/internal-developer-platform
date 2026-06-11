@@ -24,7 +24,6 @@ import com.decathlon.idp_core.domain.exception.entity.EntityAlreadyExistsExcepti
 import com.decathlon.idp_core.domain.exception.entity.EntityDeletionBlockedException;
 import com.decathlon.idp_core.domain.exception.entity.EntityNotFoundException;
 import com.decathlon.idp_core.domain.exception.entity.EntityValidationException;
-import com.decathlon.idp_core.domain.exception.entity.InvalidEntityCompositeKeyException;
 import com.decathlon.idp_core.domain.exception.entity_template.EntityTemplateAlreadyExistsException;
 import com.decathlon.idp_core.domain.exception.entity_template.EntityTemplateIdentifierCannotChangeException;
 import com.decathlon.idp_core.domain.exception.entity_template.EntityTemplateNameAlreadyExistsException;
@@ -257,17 +256,6 @@ public class ApiExceptionHandler {
   public ResponseEntity<ErrorResponse> handleEntityValidationException(
       EntityValidationException ex) {
     log.warn("Entity validation failed: {}", ex.getMessage());
-    return createErrorResponse(HttpStatus.BAD_REQUEST, ex.getMessage());
-  }
-
-  /// Handles domain exception when entity composite key format is invalid.
-  ///
-  /// **HTTP mapping:** Maps domain InvalidEntityCompositeKeyException to HTTP 400
-  /// status indicating client provided a malformed composite key string.
-  @ExceptionHandler(InvalidEntityCompositeKeyException.class)
-  public ResponseEntity<ErrorResponse> handleInvalidEntityCompositeKeyException(
-      InvalidEntityCompositeKeyException ex) {
-    log.warn("Invalid entity composite key format: {}", ex.getMessage());
     return createErrorResponse(HttpStatus.BAD_REQUEST, ex.getMessage());
   }
 
