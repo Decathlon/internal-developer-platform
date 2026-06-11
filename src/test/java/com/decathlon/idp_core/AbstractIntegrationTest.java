@@ -15,7 +15,6 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.locks.LockSupport;
 
 import org.junit.jupiter.api.ClassOrderer;
@@ -76,8 +75,6 @@ public abstract class AbstractIntegrationTest {
   public static ClientAndServer clientAndServer;
 
   public static MockServerClient mockServerClient;
-
-  public static AtomicBoolean initToDo = new AtomicBoolean(true);
 
   protected AbstractIntegrationTest() {
     this.objectMapper = new ObjectMapper();
@@ -246,7 +243,6 @@ public abstract class AbstractIntegrationTest {
     JwtDecoder jwtDecoder() {
       return mock(JwtDecoder.class);
     }
-
   }
 
 }

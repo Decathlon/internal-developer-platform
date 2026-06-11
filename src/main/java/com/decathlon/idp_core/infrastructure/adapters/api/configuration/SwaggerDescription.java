@@ -73,6 +73,11 @@ public class SwaggerDescription {
   public static final String ENDPOINT_DELETE_ENTITY_SUMMARY = "Delete an existing entity";
   public static final String ENDPOINT_DELETE_ENTITY_DESCRIPTION = "Delete an entity from the system using its template and entity identifiers. This operation removes the entity and automatically cleans up any relations from other entities that reference it.";
 
+  /// Entity Audit API endpoint constants
+  public static final String ENDPOINT_GET_ENTITY_AUDIT_SUMMARY = "Get entity audit history";
+  public static final String ENDPOINT_GET_ENTITY_AUDIT_DESCRIPTION = "Retrieve the complete audit history for a specific entity, including all revisions with timestamps and modification types";
+  public static final String RESPONSE_ENTITY_AUDIT_SUCCESS = "Successfully retrieved entity audit history";
+
   /// API response description constants
   public static final String RESPONSE_TEMPLATES_PAGINATED_SUCCESS = "Paginated templates retrieved successfully";
   public static final String RESPONSE_TEMPLATES_PARTIAL_CONTENT = "Partial content - paginated templates retrieved (subset of total data)";
