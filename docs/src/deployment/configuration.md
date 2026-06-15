@@ -121,6 +121,18 @@ spring:
     validate-on-migrate: true
 ```
 
+### PostgreSQL extensions
+
+IDP-Core depends on PostgreSQL extensions that must be installed in the target database before running schema migrations that rely on them. You have three common options:
+
+- Provision extensions directly via your Infrastructure as Code (for example Terraform resources) or checking them off in your cloud provider's database management dashboard
+- Apply the provided initialization script (`/scripts/init-extensions.sql`) using `psql` from your deployment host
+- Add a Flyway migration to your repository. Place a migration such as `V1__install_extensions.sql` in `db/migration` containing the `CREATE EXTENSION` statements. Flyway will execute the SQL file as part of the migration sequence.
+
+Key note:
+
+- Installing extensions requires superuser privileges or a role with `CREATE` extension privileges. If your application user lacks those privileges, perform installation as a DBA or during provisioning.
+
 ---
 
 ## Application Settings
