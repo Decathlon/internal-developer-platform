@@ -81,7 +81,7 @@ public class EntityGraphController {
       @PathVariable @NotBlank String entityIdentifier,
       @Parameter(description = PARAM_DEPTH_DESCRIPTION) @RequestParam(defaultValue = "1") int depth,
       @Parameter(description = PARAM_INCLUDE_DATA_DESCRIPTION) @RequestParam(name = "include_data", defaultValue = "false") boolean includeData,
-      @Parameter(description = PARAM_TRAVERSAL_MODE_DESCRIPTION) @RequestParam(name = "traversal_mode", defaultValue = "STRICT_LINEAGE") EntityGraphTraversalMode mode,
+      @Parameter(description = PARAM_TRAVERSAL_MODE_DESCRIPTION) @RequestParam(name = "traversal_mode", defaultValue = "DIRECT_LINEAGE") EntityGraphTraversalMode mode,
       @Parameter(description = PARAM_RELATIONS_DESCRIPTION) @RequestParam(required = false) List<String> relations,
       @Parameter(description = PARAM_PROPERTIES_DESCRIPTION) @RequestParam(required = false) List<String> properties) {
 

@@ -192,7 +192,7 @@ public class SwaggerDescription {
   public static final String PARAM_INCLUDE_DATA_DESCRIPTION = "When true, each graph node includes a data object containing the entity's property values. Defaults to false.";
   public static final String PARAM_RELATIONS_DESCRIPTION = "When provided, only relations whose name matches one of the listed values are traversed and included. Omit to include all relations.";
   public static final String PARAM_PROPERTIES_DESCRIPTION = "When provided, each node's data object is restricted to the listed property names. Requires include_data=true to have any effect. Omit to include all properties.";
-  public static final String PARAM_TRAVERSAL_MODE_DESCRIPTION = "Specifies the traversal mode for the entity graph. Defaults to STRICT_LINEAGE.";
+  public static final String PARAM_TRAVERSAL_MODE_DESCRIPTION = "Specifies the traversal mode for the entity graph. Defaults to DIRECT_LINEAGE.";
   /// Search API endpoint constants
   public static final String ENDPOINT_POST_SEARCH_SUMMARY = "Search entities";
   public static final String ENDPOINT_POST_SEARCH_DESCRIPTION = """

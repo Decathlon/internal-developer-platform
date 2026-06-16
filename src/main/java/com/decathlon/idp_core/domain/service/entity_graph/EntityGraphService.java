@@ -9,8 +9,6 @@ import java.util.Objects;
 import java.util.Set;
 import java.util.UUID;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -54,8 +52,7 @@ import lombok.RequiredArgsConstructor;
 @RequiredArgsConstructor
 public class EntityGraphService {
 
-  private static final Logger log = LoggerFactory.getLogger(EntityGraphService.class);
-  private static final int MAX_DEPTH = 20;
+  private static final int MAX_DEPTH = 6;
 
   private final EntityRepositoryPort entityRepositoryPort;
   private final EntityGraphRepositoryPort entityGraphRepositoryPort;
@@ -66,35 +63,25 @@ public class EntityGraphService {
       int depth, boolean includeProperties, Set<String> relationFilter, Set<String> propertyFilter,
       EntityGraphTraversalMode mode) {
 
-    final long tStartTotal = System.nanoTime();
     int effectiveDepth = Math.clamp(depth, 1, MAX_DEPTH);
     entityTemplateValidationService.validateTemplateExists(templateIdentifier);
 
     // 1. Resolve root entity
-    final long tStartResolve = System.nanoTime();
     Entity rootEntity = entityRepositoryPort
         .findByTemplateIdentifierAndIdentifier(templateIdentifier, entityIdentifier)
         .orElseThrow(() -> new EntityNotFoundException(templateIdentifier, entityIdentifier));
-    final long tAfterResolve = System.nanoTime();
 
-    // 2. Load the graph footprint via optimized DB calls (Takes ~150ms)
-    final long tStartRepo = System.nanoTime();
+    // 2. Load the graph footprint via optimized DB calls
     Map<UUID, Entity> entityMap = entityGraphRepositoryPort.findEntityGraph(rootEntity.id(),
         effectiveDepth, includeProperties, mode);
-    final long tAfterRepo = System.nanoTime();
 
     if (entityMap == null || entityMap.isEmpty()) {
       return new EntityGraphNode(rootEntity.id().toString(), rootEntity.identifier(),
           rootEntity.name(), List.of(), List.of(), List.of());
     }
 
-    log.debug("[EntityGraph] Repository returned {} entities for root id='{}' repoElapsed={}ms",
-        entityMap.size(), rootEntity.id(), (tAfterRepo - tStartRepo) / 1_000_000);
-
     // 3. Pre-computation Layer
-    final long tStartIndex = System.nanoTime();
-    IndexBundle indices = buildIndices(entityMap);
-    final long tAfterIndex = System.nanoTime();
+    IndexBundle indices = buildIndices(entityMap, mode);
 
     // Context tracking for this execution tree
     Set<String> activeStack = new HashSet<>();
@@ -102,21 +89,10 @@ public class EntityGraphService {
 
     GraphTraversalContext ctx = new GraphTraversalContext(entityMap, indices.textToUuidLookup(),
         indices.inboundIndex(), includeProperties, propertyFilter, relationFilter, activeStack,
-        memoCache);
+        memoCache, mode);
 
     // 4. Trigger recursive tree mapping (O(N) performance, heap-safe)
-    final long tStartRecursion = System.nanoTime();
-    EntityGraphNode rootNode = buildGraphNode(rootEntity.id(), ctx);
-    final long tAfterRecursion = System.nanoTime();
-
-    final long tEndTotal = System.nanoTime();
-    log.debug(
-        "[EntityGraph] End: totalElapsed={}ms (resolve={}ms repo={}ms index={}ms recursion={}ms) CacheSize={}",
-        (tEndTotal - tStartTotal) / 1_000_000, (tAfterResolve - tStartResolve) / 1_000_000,
-        (tAfterRepo - tStartRepo) / 1_000_000, (tAfterIndex - tStartIndex) / 1_000_000,
-        (tAfterRecursion - tStartRecursion) / 1_000_000, memoCache.size());
-
-    return rootNode;
+    return buildGraphNode(rootEntity.id(), ctx);
   }
 
   private EntityGraphNode buildGraphNode(UUID entityUuid, GraphTraversalContext ctx) {
@@ -186,6 +162,11 @@ public class EntityGraphService {
 
   private List<EntityGraphRelation> buildRelationsAsTargetFromIndex(String targetIdentifier,
       GraphTraversalContext ctx) {
+    // Only build inbound relations for BIDIRECTIONAL mode
+    if (ctx.mode() != EntityGraphTraversalMode.BIDIRECTIONAL) {
+      return List.of();
+    }
+
     String normalizedTargetIdentifier = targetIdentifier == null
         ? ""
         : targetIdentifier.trim().toLowerCase();
@@ -205,7 +186,7 @@ public class EntityGraphService {
         }).toList();
   }
 
-  private IndexBundle buildIndices(Map<UUID, Entity> entityMap) {
+  private IndexBundle buildIndices(Map<UUID, Entity> entityMap, EntityGraphTraversalMode mode) {
     Map<EntityCompositeKey, UUID> textToUuidLookup = new HashMap<>();
     Map<String, Map<String, List<UUID>>> inboundIndex = new HashMap<>();
 
@@ -218,13 +199,16 @@ public class EntityGraphService {
       textToUuidLookup.put(new EntityCompositeKey(entity.templateIdentifier(), entity.identifier()),
           sourceUuid);
 
-      for (Relation relation : entity.relations()) {
-        for (String targetId : relation.targetEntityIdentifiers()) {
-          if (targetId == null)
-            continue;
-          String normalizedTargetId = targetId.trim().toLowerCase();
-          inboundIndex.computeIfAbsent(normalizedTargetId, k -> new HashMap<>())
-              .computeIfAbsent(relation.name(), k -> new ArrayList<>()).add(sourceUuid);
+      // Only build inbound index for BIDIRECTIONAL mode
+      if (mode == EntityGraphTraversalMode.BIDIRECTIONAL) {
+        for (Relation relation : entity.relations()) {
+          for (String targetId : relation.targetEntityIdentifiers()) {
+            if (targetId == null)
+              continue;
+            String normalizedTargetId = targetId.trim().toLowerCase();
+            inboundIndex.computeIfAbsent(normalizedTargetId, k -> new HashMap<>())
+                .computeIfAbsent(relation.name(), k -> new ArrayList<>()).add(sourceUuid);
+          }
         }
       }
     }
@@ -248,8 +232,8 @@ public class EntityGraphService {
       Map<EntityCompositeKey, UUID> textToUuidLookup,
       Map<String, Map<String, List<UUID>>> inboundIndex, boolean includeProperties,
       Set<String> propertyFilter, Set<String> relationFilter, Set<String> activeStack,
-      Map<String, EntityGraphNode> memoCache // High-speed in-memory reuse cache
-  ) {
+      Map<String, EntityGraphNode> memoCache, // High-speed in-memory reuse cache
+      EntityGraphTraversalMode mode) {
   }
 }
 

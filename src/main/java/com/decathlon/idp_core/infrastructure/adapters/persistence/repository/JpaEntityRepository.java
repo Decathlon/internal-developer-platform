@@ -59,13 +59,13 @@ public interface JpaEntityRepository
           -- 1. ANCHOR MEMBER: Initialize state tokens for a single root entity
           SELECT e.id, 0, 'OUTBOUND' AS flow
           FROM idp_core.entity e
-          WHERE e.id = :rootId AND :mode IN ('STRICT_LINEAGE', 'OUTBOUND_ONLY')
+          WHERE e.id = :rootId AND :mode IN ('DIRECT_LINEAGE', 'OUTBOUND_ONLY')
 
           UNION
 
           SELECT e.id, 0, 'INBOUND' AS flow
           FROM idp_core.entity e
-          WHERE e.id = :rootId AND :mode = 'STRICT_LINEAGE'
+          WHERE e.id = :rootId AND :mode = 'DIRECT_LINEAGE'
 
           UNION
 
@@ -142,10 +142,8 @@ public interface JpaEntityRepository
   List<EntityJpaEntity> findAllByTemplateIdentifierAndIdentifierIn(String templateIdentifier,
       List<String> identifiers);
 
-  /**
-   * Find all entities that have relations pointing to the given target
-   * identifier. Uses a native query for better control over the join strategy.
-   */
+  // Find all entities that have relations pointing to the given target
+  // identifier. Uses a native query for better control over the join strategy.
   @Query(value = """
       SELECT DISTINCT e.*
       FROM idp_core.entity e
