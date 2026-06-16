@@ -7,9 +7,4 @@ package com.decathlon.idp_core.domain.model.entity_graph;
 /// - **OUTBOUND_ONLY**: Follow only outbound relations without inbound lookups
 public enum EntityGraphTraversalMode {
   DIRECT_LINEAGE, BIDIRECTIONAL, OUTBOUND_ONLY;
-
-  // @Override
-  // public String toString() {
-  // return name();
-  // }
 }

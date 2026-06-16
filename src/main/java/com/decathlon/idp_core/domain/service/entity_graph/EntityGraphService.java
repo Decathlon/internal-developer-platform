@@ -199,20 +199,24 @@ public class EntityGraphService {
       textToUuidLookup.put(new EntityCompositeKey(entity.templateIdentifier(), entity.identifier()),
           sourceUuid);
 
-      // Only build inbound index for BIDIRECTIONAL mode
       if (mode == EntityGraphTraversalMode.BIDIRECTIONAL) {
-        for (Relation relation : entity.relations()) {
-          for (String targetId : relation.targetEntityIdentifiers()) {
-            if (targetId == null)
-              continue;
-            String normalizedTargetId = targetId.trim().toLowerCase();
-            inboundIndex.computeIfAbsent(normalizedTargetId, k -> new HashMap<>())
-                .computeIfAbsent(relation.name(), k -> new ArrayList<>()).add(sourceUuid);
-          }
-        }
+        buildInboundIndexForEntity(entity, sourceUuid, inboundIndex);
       }
     }
     return new IndexBundle(textToUuidLookup, inboundIndex);
+  }
+
+  private void buildInboundIndexForEntity(Entity entity, UUID sourceUuid,
+      Map<String, Map<String, List<UUID>>> inboundIndex) {
+    for (Relation relation : entity.relations()) {
+      for (String targetId : relation.targetEntityIdentifiers()) {
+        if (targetId == null)
+          continue;
+        String normalizedTargetId = targetId.trim().toLowerCase();
+        inboundIndex.computeIfAbsent(normalizedTargetId, k -> new HashMap<>())
+            .computeIfAbsent(relation.name(), k -> new ArrayList<>()).add(sourceUuid);
+      }
+    }
   }
 
   private List<Property> resolveProperties(Entity entity, boolean includeProperties,
