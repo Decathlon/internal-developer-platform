@@ -1,4 +1,4 @@
-package com.decathlon.idp_core.infrastructure.adapters.api.dto.out.entity;
+package com.decathlon.idp_core.infrastructure.adapters.api.dto.out.entity_graph;
 
 import static com.decathlon.idp_core.infrastructure.adapters.api.configuration.SwaggerDescription.ENTITY_GRAPH_FLAT_EDGE_ID_DESCRIPTION;
 import static com.decathlon.idp_core.infrastructure.adapters.api.configuration.SwaggerDescription.ENTITY_GRAPH_FLAT_EDGE_SOURCE_DESCRIPTION;

@@ -1,4 +1,4 @@
-package com.decathlon.idp_core.infrastructure.adapters.api.mapper.entity;
+package com.decathlon.idp_core.infrastructure.adapters.api.mapper.entity_graph;
 
 import java.util.ArrayList;
 import java.util.HashSet;
@@ -13,13 +13,12 @@ import java.util.stream.Collectors;
 import com.decathlon.idp_core.domain.model.entity_graph.EntityGraphNode;
 import com.decathlon.idp_core.domain.model.entity_graph.EntityGraphRelation;
 import com.decathlon.idp_core.domain.service.entity_graph.EntityGraphService;
-import com.decathlon.idp_core.infrastructure.adapters.api.dto.out.entity.EntityGraphEdgeDtoOut;
-import com.decathlon.idp_core.infrastructure.adapters.api.dto.out.entity.EntityGraphFlatDtoOut;
-import com.decathlon.idp_core.infrastructure.adapters.api.dto.out.entity.EntityGraphNodeFlatDtoOut;
+import com.decathlon.idp_core.infrastructure.adapters.api.dto.out.entity_graph.EntityGraphEdgeDtoOut;
+import com.decathlon.idp_core.infrastructure.adapters.api.dto.out.entity_graph.EntityGraphFlatDtoOut;
+import com.decathlon.idp_core.infrastructure.adapters.api.dto.out.entity_graph.EntityGraphNodeFlatDtoOut;
 
 /// Mapper for converting a recursive [EntityGraphNode] domain tree into the flat
 /// nodes-and-edges representation expected by frontend visualization libraries
-/// (React Flow, Vis.js, Cytoscape).
 ///
 /// **Design:**
 /// - Traverses both `relations` (outbound) and `relationsAsTarget` (inbound) depth-first,
