@@ -162,8 +162,9 @@ public class EntityGraphService {
 
   private List<EntityGraphRelation> buildRelationsAsTargetFromIndex(String targetIdentifier,
       GraphTraversalContext ctx) {
-    // Only build inbound relations for BIDIRECTIONAL mode
-    if (ctx.mode() != EntityGraphTraversalMode.BIDIRECTIONAL) {
+    // Include inbound relations for BIDIRECTIONAL and DIRECT_LINEAGE modes
+    if (ctx.mode() != EntityGraphTraversalMode.BIDIRECTIONAL
+        && ctx.mode() != EntityGraphTraversalMode.DIRECT_LINEAGE) {
       return List.of();
     }
 
@@ -199,7 +200,9 @@ public class EntityGraphService {
       textToUuidLookup.put(new EntityCompositeKey(entity.templateIdentifier(), entity.identifier()),
           sourceUuid);
 
-      if (mode == EntityGraphTraversalMode.BIDIRECTIONAL) {
+      // Build inbound index for BIDIRECTIONAL and DIRECT_LINEAGE modes
+      if (mode == EntityGraphTraversalMode.BIDIRECTIONAL
+          || mode == EntityGraphTraversalMode.DIRECT_LINEAGE) {
         buildInboundIndexForEntity(entity, sourceUuid, inboundIndex);
       }
     }

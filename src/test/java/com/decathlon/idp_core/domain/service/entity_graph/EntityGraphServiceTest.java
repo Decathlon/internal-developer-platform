@@ -549,28 +549,45 @@ class EntityGraphServiceTest {
     }
 
     @Test
-    @DisplayName("DIRECT_LINEAGE mode should include only outbound relations")
-    void strictLineageModeShouldExcludeInboundRelations() {
+    @DisplayName("DIRECT_LINEAGE mode should show inbound of root and outbound of downstream")
+    void directLineageModeShouldShowInboundAtRootAndOutboundDownstream() {
+      // Setup: consumer -> api -> postgres, backend -> api
       Entity api = entityWithRelations(TEMPLATE, "api", "API Service",
           List.of(relation("uses-db", "database", "postgres")));
       Entity postgres = entity("database", "postgres", "Postgres DB");
       Entity consumer = entityWithRelations(TEMPLATE, "consumer", "Consumer",
           List.of(relation("depends-on", TEMPLATE, "api")));
+      Entity backend = entityWithRelations(TEMPLATE, "backend", "Backend",
+          List.of(relation("calls", TEMPLATE, "api")));
 
       when(entityRepositoryPort.findByTemplateIdentifierAndIdentifier(TEMPLATE, "api"))
           .thenReturn(Optional.of(api));
-      stubGraph(api, postgres, consumer);
+      stubGraph(api, postgres, consumer, backend);
 
-      EntityGraphNode result = entityGraphService.getEntityGraph(TEMPLATE, "api", 1, false,
+      EntityGraphNode result = entityGraphService.getEntityGraph(TEMPLATE, "api", 2, false,
           Set.of(), Set.of(), EntityGraphTraversalMode.DIRECT_LINEAGE);
 
-      // Should have outbound relation to postgres
+      // Root should have inbound relations: consumer -> api, backend -> api
+      assertThat(result.relationsAsTarget()).hasSize(2);
+      var inboundIdentifiers = result.relationsAsTarget().stream()
+          .flatMap(rel -> rel.targets().stream()).map(EntityGraphNode::identifier).toList();
+      assertThat(inboundIdentifiers).containsExactlyInAnyOrder("consumer", "backend");
+
+      // Root should have outbound relation: api -> postgres
       assertThat(result.relations()).hasSize(1);
       assertThat(result.relations().get(0).name()).isEqualTo("uses-db");
       assertThat(result.relations().get(0).targets().get(0).identifier()).isEqualTo("postgres");
 
-      // Should NOT have inbound relations
-      assertThat(result.relationsAsTarget()).isEmpty();
+      // Downstream nodes (consumer, backend) should NOT have inbound relations
+      var consumerNode = result.relationsAsTarget().stream()
+          .flatMap(rel -> rel.targets().stream()).filter(node -> node.identifier().equals("consumer"))
+          .findFirst().orElseThrow();
+      assertThat(consumerNode.relationsAsTarget()).isEmpty();
+
+      var backendNode = result.relationsAsTarget().stream()
+          .flatMap(rel -> rel.targets().stream()).filter(node -> node.identifier().equals("backend"))
+          .findFirst().orElseThrow();
+      assertThat(backendNode.relationsAsTarget()).isEmpty();
     }
 
     @Test

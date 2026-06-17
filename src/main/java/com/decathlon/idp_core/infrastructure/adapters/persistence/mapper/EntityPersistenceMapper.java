@@ -97,47 +97,53 @@ public class EntityPersistenceMapper {
       return null;
     }
 
-    // Pure in-memory transformation from the unified JPA row down to your string
-    // list
+    // Pure in-memory transformation from the unified JPA row down to string list
+    // Extract the cached text string
     List<String> targetIdentifiers = jpa.getTargetEntities() != null
-        ? jpa.getTargetEntities().stream().map(RelationTargetJpaEntity::getTargetEntityIdentifier) // Extract
-                                                                                                   // the
-                                                                                                   // cached
-                                                                                                   // text
-                                                                                                   // string
+        ? jpa.getTargetEntities().stream().map(RelationTargetJpaEntity::getTargetEntityIdentifier)
             .filter(Objects::nonNull).toList()
         : List.of();
 
     return new Relation(jpa.getId(), jpa.getName(), jpa.getTargetTemplateIdentifier(),
-        targetIdentifiers); // Matches your current domain model signature perfectly!
+        targetIdentifiers);
   }
 
   /// Converts domain relation to JPA entity. Resolves business identifiers to
-  /// UUIDs by querying the entity repository. The JPA entity stores only UUIDs;
-  /// identifiers are not persisted in the infrastructure layer.
+  /// UUIDs by querying the entity repository in a single batch operation. The JPA
+  /// entity stores both UUIDs (for graph traversal) and identifiers (for
+  /// Java mapping).
   public RelationJpaEntity toJpa(Relation domain) {
     if (domain == null) {
       return null;
     }
 
-    // Look up matching entities to bind both fields concurrently into single table
-    // rows
+    // Batch resolve all target identifiers in a single query, then map in-memory
     List<RelationTargetJpaEntity> targetEntities = domain.targetEntityIdentifiers() != null
-        ? domain.targetEntityIdentifiers().stream().map(identifier -> entityRepository
-            .findByTemplateIdentifierAndIdentifier(domain.targetTemplateIdentifier(), identifier)
-            .map(entity -> new RelationTargetJpaEntity(entity.getId(), // The binary UUID used for
-                                                                       // Graph CTE crawls
-                entity.getIdentifier() // The immutable string cached for Java mapping
-            )).orElse(null)).filter(Objects::nonNull).toList()
+        ? resolveBatchTargetEntities(domain.targetTemplateIdentifier(),
+            domain.targetEntityIdentifiers())
         : List.of();
 
-    // Return the unified entity mapping to prevent column nullability errors
     return RelationJpaEntity.builder().id(domain.id()).name(domain.name())
-        .targetTemplateIdentifier(domain.targetTemplateIdentifier()).targetEntities(targetEntities) // The
-                                                                                                    // single
-                                                                                                    // unified
-                                                                                                    // collection
-                                                                                                    // table
+        .targetTemplateIdentifier(domain.targetTemplateIdentifier()).targetEntities(targetEntities)
         .build();
+  }
+
+  /// Resolves multiple target identifiers in a single batch query, then maps the
+  /// results in-memory to RelationTargetJpaEntity records. This prevents N+1 query
+  /// patterns when relations have many targets.
+  private List<RelationTargetJpaEntity> resolveBatchTargetEntities(
+      String targetTemplateIdentifier, List<String> targetIdentifiers) {
+    if (targetIdentifiers == null || targetIdentifiers.isEmpty()) {
+      return List.of();
+    }
+
+    // Single batch query to resolve all targets at once
+    List<EntityJpaEntity> resolvedEntities = entityRepository
+        .findAllByTemplateIdentifierAndIdentifierIn(targetTemplateIdentifier, targetIdentifiers);
+
+    // Map results in-memory, preserving only successfully resolved entities
+    return resolvedEntities.stream()
+        .map(entity -> new RelationTargetJpaEntity(entity.getId(), entity.getIdentifier()))
+        .toList();
   }
 }
