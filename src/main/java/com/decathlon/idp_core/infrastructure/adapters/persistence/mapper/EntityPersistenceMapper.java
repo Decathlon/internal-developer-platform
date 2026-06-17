@@ -129,10 +129,11 @@ public class EntityPersistenceMapper {
   }
 
   /// Resolves multiple target identifiers in a single batch query, then maps the
-  /// results in-memory to RelationTargetJpaEntity records. This prevents N+1 query
+  /// results in-memory to RelationTargetJpaEntity records. This prevents N+1
+  /// query
   /// patterns when relations have many targets.
-  private List<RelationTargetJpaEntity> resolveBatchTargetEntities(
-      String targetTemplateIdentifier, List<String> targetIdentifiers) {
+  private List<RelationTargetJpaEntity> resolveBatchTargetEntities(String targetTemplateIdentifier,
+      List<String> targetIdentifiers) {
     if (targetIdentifiers == null || targetIdentifiers.isEmpty()) {
       return List.of();
     }

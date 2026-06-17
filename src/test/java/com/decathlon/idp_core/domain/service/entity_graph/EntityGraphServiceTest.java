@@ -579,14 +579,12 @@ class EntityGraphServiceTest {
       assertThat(result.relations().get(0).targets().get(0).identifier()).isEqualTo("postgres");
 
       // Downstream nodes (consumer, backend) should NOT have inbound relations
-      var consumerNode = result.relationsAsTarget().stream()
-          .flatMap(rel -> rel.targets().stream()).filter(node -> node.identifier().equals("consumer"))
-          .findFirst().orElseThrow();
+      var consumerNode = result.relationsAsTarget().stream().flatMap(rel -> rel.targets().stream())
+          .filter(node -> node.identifier().equals("consumer")).findFirst().orElseThrow();
       assertThat(consumerNode.relationsAsTarget()).isEmpty();
 
-      var backendNode = result.relationsAsTarget().stream()
-          .flatMap(rel -> rel.targets().stream()).filter(node -> node.identifier().equals("backend"))
-          .findFirst().orElseThrow();
+      var backendNode = result.relationsAsTarget().stream().flatMap(rel -> rel.targets().stream())
+          .filter(node -> node.identifier().equals("backend")).findFirst().orElseThrow();
       assertThat(backendNode.relationsAsTarget()).isEmpty();
     }
 
