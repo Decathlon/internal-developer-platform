@@ -25,10 +25,10 @@ public interface JpaRelationRepository extends JpaRepository<RelationJpaEntity, 
    */
   @Query(value = """
       SELECT
-          rte.target_entity_identifier AS targetIdentifier,
+          rte.target_entity_identifier AS targetEntityIdentifier,
           r.name AS relationName,
-          e.identifier AS sourceIdentifier,
-          e.name AS sourceName
+          e.identifier AS sourceEntityIdentifier,
+          e.name AS sourceEntityName
       FROM idp_core.entity e
       JOIN idp_core.entity_relations er ON er.entity_id = e.id
       JOIN idp_core.relation r ON r.id = er.relation_id
