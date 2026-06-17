@@ -174,7 +174,7 @@ public class SwaggerDescription {
   public static final String RESPONSE_INVALID_QUERY = "Invalid filter query syntax";
 
   // --- Entity Graph (flat nodes & edges) descriptions ---
-  public static final String PARAM_DEPTH_DESCRIPTION = "Maximum traversal depth for relationship resolution. Clamped between 1 and 10.";
+  public static final String PARAM_DEPTH_DESCRIPTION = "Maximum traversal depth for relationship resolution. Clamped between 1 and 6.";
   public static final String ENDPOINT_GET_ENTITY_GRAPH_FLAT_SUMMARY = "Get entity relationship graph as flat nodes and edges";
   public static final String ENDPOINT_GET_ENTITY_GRAPH_FLAT_DESCRIPTION = "Retrieves the entity relationship graph as a flat nodes-and-edges structure, suitable for frontend visualization tools such as React Flow, Vis.js, and Cytoscape.";
   public static final String RESPONSE_ENTITY_GRAPH_FLAT_SUCCESS = "Flat entity graph successfully retrieved";

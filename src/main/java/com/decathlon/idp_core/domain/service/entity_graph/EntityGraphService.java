@@ -76,7 +76,7 @@ public class EntityGraphService {
         effectiveDepth, includeProperties, mode);
 
     if (entityMap == null || entityMap.isEmpty()) {
-      return new EntityGraphNode(rootEntity.id().toString(), rootEntity.identifier(),
+      return new EntityGraphNode(rootEntity.templateIdentifier(), rootEntity.identifier(),
           rootEntity.name(), List.of(), List.of(), List.of());
     }
 
@@ -239,11 +239,14 @@ public class EntityGraphService {
       Map<String, EntityGraphNode> memoCache, // High-speed in-memory reuse cache
       EntityGraphTraversalMode mode) {
   }
-}
 
-record EntityCompositeKey(String templateIdentifier, String identifier) {
-  public EntityCompositeKey {
-    templateIdentifier = templateIdentifier == null ? "" : templateIdentifier.trim().toLowerCase();
-    identifier = identifier == null ? "" : identifier.trim().toLowerCase();
+  private static record EntityCompositeKey(String templateIdentifier, String identifier) {
+    public EntityCompositeKey {
+      templateIdentifier = templateIdentifier == null
+          ? ""
+          : templateIdentifier.trim().toLowerCase();
+      identifier = identifier == null ? "" : identifier.trim().toLowerCase();
+    }
   }
+
 }

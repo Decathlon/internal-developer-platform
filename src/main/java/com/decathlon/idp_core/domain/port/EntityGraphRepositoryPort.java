@@ -22,24 +22,34 @@ import com.decathlon.idp_core.domain.model.entity_graph.EntityGraphTraversalMode
 /// as this port performs no write operations.
 public interface EntityGraphRepositoryPort {
 
-  /// Fetches all entities in the relationship graph rooted at the given composite
-  /// key.
+  /// Fetches all entities in the relationship graph rooted at the given entity
+  /// UUID.
   ///
-  /// Uses a recursive CTE to traverse both outbound and inbound relations up to
-  /// the
-  /// specified depth, then batch-loads all entities in a minimal number of
-  /// queries.
+  /// Performs an optimized recursive CTE (Common Table Expression) database query
+  /// to
+  /// traverse both outbound (forward) and inbound (reverse) relations up to the
+  /// requested depth. All loaded entities are batch-fetched to minimize database
+  /// round trips.
   ///
-  /// @param templateIdentifier the template identifier of the root entity
-  /// @param entityIdentifier the business identifier of the root entity within
-  /// its template
-  /// @param depth the maximum traversal depth (1-10)
-  /// @param includeProperties when true, entity properties are loaded along with
-  /// root not found
-  /// Relation name filtering is intentionally NOT pushed into this port.
-  /// The CTE always traverses all relation types so that nodes reachable via
-  /// any path are loaded. Edge filtering is applied in the service layer so
-  /// that "filter owns" still returns B and C when A→(depends-on)→B→(owns)→C.
+  /// **Key design notes:**
+  /// - Relation name filtering is intentionally NOT pushed into this port. The
+  /// CTE always traverses all relation types so that nodes reachable via any
+  /// path are loaded. Filtering (e.g., "only 'owns' relations") is applied in
+  /// the service layer, allowing for edge filtering without re-querying.
+  /// Example: "filter owns" still returns B and C when A→(depends-on)→B→(owns)→C.
+  /// - The traversal mode determines which relation directions are included.
+  ///
+  /// @param entityId the root entity UUID from which the graph is traversed
+  /// @param depth the maximum traversal depth; typically clamped to 1-6 by the
+  /// service layer
+  /// @param includeProperties when true, entity properties are eagerly loaded
+  /// along
+  /// with the root entity and all reachable entities
+  /// @param mode the graph traversal mode (BIDIRECTIONAL, OUTBOUND_ONLY, or
+  /// STRICT_LINEAGE) determining which relation directions to follow
+  /// @return an immutable map of all discovered entities keyed by their UUID,
+  /// including the root entity. Returns an empty map if the root entity
+  /// does not exist.
   Map<UUID, Entity> findEntityGraph(UUID entityId, int depth, boolean includeProperties,
       EntityGraphTraversalMode mode);
 

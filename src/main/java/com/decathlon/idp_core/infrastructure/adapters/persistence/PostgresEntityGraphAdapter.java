@@ -57,8 +57,7 @@ public class PostgresEntityGraphAdapter implements EntityGraphRepositoryPort {
     // so nodes reachable via any path are included even if the filter only matches
     // edges at deeper levels (e.g. filtering "owns" still returns B→C when A→B→C).
     final long tStartCte = System.nanoTime();
-    List<UUID> graphPairs = jpaEntityRepository.findEntityUuidsInGraph(entityId, depth,
-        mode.name());
+    List<UUID> graphPairs = jpaEntityRepository.findEntityIdsInGraph(entityId, depth, mode.name());
     final long tAfterCte = System.nanoTime();
     log.debug("[EntityGraphAdapter] CTE returned {} identifiers (elapsed={}ms)",
         graphPairs == null ? 0 : graphPairs.size(), (tAfterCte - tStartCte) / 1_000_000);
@@ -83,15 +82,14 @@ public class PostgresEntityGraphAdapter implements EntityGraphRepositoryPort {
     // The two-query split also avoids Hibernate's MultipleBagFetchException.
     log.debug("[EntityGraphAdapter] Loading JPA entities with relations...");
     final long tStartJpaLoad = System.nanoTime();
-    List<EntityJpaEntity> jpaEntities = jpaEntityRepository
-        .findAllByIdentifierInWithRelations(entitiesIds);
+    List<EntityJpaEntity> jpaEntities = jpaEntityRepository.findAllByIdinWithRelations(entitiesIds);
     final long tAfterJpaLoad = System.nanoTime();
     log.debug("[EntityGraphAdapter] Loaded {} JPA entities with relations (elapsed={}ms)",
         jpaEntities.size(), (tAfterJpaLoad - tStartJpaLoad) / 1_000_000);
     if (includeProperties) {
       log.debug("[EntityGraphAdapter] Loading properties for {} entities", entitiesIds.size());
       final long tStartProps = System.nanoTime();
-      List<?> props = jpaEntityRepository.findAllByIdentifierInWithProperties(entitiesIds);
+      List<?> props = jpaEntityRepository.findAllByIdInWithProperties(entitiesIds);
       final long tAfterProps = System.nanoTime();
       log.debug(
           "[EntityGraphAdapter] Properties load completed (result was {} entries, elapsed={}ms)",

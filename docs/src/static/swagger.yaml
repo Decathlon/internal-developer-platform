@@ -6,8 +6,8 @@ info:
 servers:
   - url: http://localhost:8084
 security:
-- clientId: []
-- bearer: []
+  - clientId: []
+  - bearer: []
 tags:
   - name: Entity Graph
     description: Entity relationship graph operations

@@ -31,12 +31,12 @@ import lombok.NoArgsConstructor;
 /// - Relation name criteria filter entities that have a relation with a specific
 ///   name.
 /// - Relation entity criteria use an INNER JOIN on the `relations` collection
-///   and then on the `targetEntityIdentifiers` element collection.
+///   and then on the `targetEntities` element collection.
 /// - Relation property criteria use an INNER JOIN on the `relations` collection
 ///   and filter on the specified property (e.g., `name`, `identifier`).
 /// - Relations as target name criteria find entities where they are targets of
 ///   relations with a specific name (requires joining relations and checking
-///   targetEntityIdentifiers).
+///   targetEntities).
 /// - Join-based criteria call `query.distinct(true)` to prevent duplicate rows
 ///   from
 /// - All criteria are combined with AND logic via [Specification#allOf].

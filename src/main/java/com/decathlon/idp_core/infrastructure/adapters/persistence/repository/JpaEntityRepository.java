@@ -46,13 +46,12 @@ public interface JpaEntityRepository
       LEFT JOIN FETCH e.relations r
       WHERE e.id IN :ids
       """)
-  List<EntityJpaEntity> findAllByIdentifierInWithRelations(@Param("ids") Collection<UUID> ids);
+  List<EntityJpaEntity> findAllByIdinWithRelations(@Param("ids") Collection<UUID> ids);
 
   /// Fetch properties for entities that were already loaded. This is called after
-  /// findAllByIdentifierInWithRelations to complete the entity graph.
-  @Query("SELECT DISTINCT e FROM EntityJpaEntity e LEFT JOIN FETCH e.properties WHERE e.id IN :identifiers")
-  List<EntityJpaEntity> findAllByIdentifierInWithProperties(
-      @Param("identifiers") Collection<UUID> ids);
+  /// findAllByIdInWithRelations to complete the entity graph.
+  @Query("SELECT DISTINCT e FROM EntityJpaEntity e LEFT JOIN FETCH e.properties WHERE e.id IN :ids")
+  List<EntityJpaEntity> findAllByIdInWithProperties(@Param("ids") Collection<UUID> ids);
 
   @Query(value = """
       WITH RECURSIVE entity_graph(id, depth, flow) AS (
@@ -110,7 +109,7 @@ public interface JpaEntityRepository
       -- 3. Return the clean deduplicated set of structural skeleton UUIDs
       SELECT DISTINCT id FROM entity_graph;
       """, nativeQuery = true)
-  List<UUID> findEntityUuidsInGraph(@Param("rootId") UUID rootId, @Param("depth") int depth,
+  List<UUID> findEntityIdsInGraph(@Param("rootId") UUID rootId, @Param("depth") int depth,
       @Param("mode") String mode);
 
   @Modifying(clearAutomatically = true, flushAutomatically = true)

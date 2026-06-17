@@ -440,11 +440,11 @@ class EntityGraphServiceTest {
   class VisitedNodeGuard {
 
     @Test
-    @DisplayName("Should complete at depth=10 without exponential recursion for a small graph")
+    @DisplayName("Should complete at depth=6 without exponential recursion for a small graph")
     void shouldNotExplodeAtMaxDepthWithSmallGraph() {
       // A --(uses)--> B --(uses)--> C; B also has inbound from A and C has inbound
       // from B.
-      // Without the visited-node guard this produces O(2^depth) calls at depth=10.
+      // Without the visited-node guard this produces O(2^depth) calls at depth=6.
       Entity a = entityWithRelations(TEMPLATE, "a", "A", List.of(relation("uses", TEMPLATE, "b")));
       Entity b = entityWithRelations(TEMPLATE, "b", "B", List.of(relation("uses", TEMPLATE, "c")));
       Entity c = entity(TEMPLATE, "c", "C");

@@ -19,7 +19,7 @@ import com.decathlon.idp_core.AbstractIntegrationTest;
 
 /// Integration tests for the EntityGraphController REST API endpoint.
 ///
-/// Tests are based on the three-node chain seeded in R__2_Insert_entities_test_data.sql:
+/// Tests are based on the three-node chain seeded in R__3_Insert_graph_entities_test_data.sql:
 ///
 ///     graph-svc-a --[uses]-->     graph-svc-b --[uses]--> graph-svc-c
 ///     graph-svc-a --[monitors]--> graph-svc-b
