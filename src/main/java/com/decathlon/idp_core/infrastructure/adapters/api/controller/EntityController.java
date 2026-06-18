@@ -47,6 +47,7 @@ import static org.springframework.http.HttpStatus.NO_CONTENT;
 import static org.springframework.http.HttpStatus.OK;
 
 import java.util.List;
+import java.util.Map;
 
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
@@ -69,11 +70,14 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.decathlon.idp_core.domain.model.entity.Entity;
 import com.decathlon.idp_core.domain.model.entity.EntityFilter;
+import com.decathlon.idp_core.domain.model.entity_graph.EntityGraphNode;
+import com.decathlon.idp_core.domain.model.entity_graph.EntityGraphTraversalMode;
 import com.decathlon.idp_core.domain.model.search.PaginatedResult;
 import com.decathlon.idp_core.domain.model.search.PaginationCriteria;
 import com.decathlon.idp_core.domain.model.search.RawSearchFilterNode;
 import com.decathlon.idp_core.domain.model.search.SearchFilterNode;
 import com.decathlon.idp_core.domain.service.entity.EntityService;
+import com.decathlon.idp_core.domain.service.entity_graph.EntityGraphService;
 import com.decathlon.idp_core.domain.service.filter.EntityFilterDslParser;
 import com.decathlon.idp_core.domain.service.search.SearchFilterParser;
 import com.decathlon.idp_core.infrastructure.adapters.api.configuration.SwaggerConfiguration.EntityPageResponse;
@@ -81,6 +85,7 @@ import com.decathlon.idp_core.infrastructure.adapters.api.dto.in.EntityCreateDto
 import com.decathlon.idp_core.infrastructure.adapters.api.dto.in.EntitySearchRequestDtoIn;
 import com.decathlon.idp_core.infrastructure.adapters.api.dto.in.EntityUpdateDtoIn;
 import com.decathlon.idp_core.infrastructure.adapters.api.dto.out.entity.EntityDtoOut;
+import com.decathlon.idp_core.infrastructure.adapters.api.dto.out.entity.EntityDepDtoOut;
 import com.decathlon.idp_core.infrastructure.adapters.api.handler.ApiExceptionHandler;
 import com.decathlon.idp_core.infrastructure.adapters.api.handler.ApiExceptionHandler.ErrorResponse;
 import com.decathlon.idp_core.infrastructure.adapters.api.mapper.entity.EntityDtoInMapper;
@@ -112,6 +117,7 @@ import lombok.RequiredArgsConstructor;
 public class EntityController {
 
   private final EntityService entityService;
+  private final EntityGraphService entityGraphService;
   private final EntityDtoOutMapper entityDtoOutMapper;
   private final EntityDtoInMapper entityDtoInMapper;
   private final EntityFilterDslParser entityFilterDslParser;
@@ -280,6 +286,62 @@ public class EntityController {
   public void deleteEntity(@NotBlank @PathVariable String templateIdentifier,
       @NotBlank @PathVariable String entityIdentifier) {
     entityService.deleteEntity(templateIdentifier, entityIdentifier);
+  }
+
+  /// Retrieves paginated entities with their dependency graphs up to specified depth.
+  ///
+  /// **API contract:** Returns a paginated list of entities with their outbound and
+  /// inbound relations merged into a single relations object. Each entity includes all
+  /// reachable nodes up to the specified depth using DIRECT_LINEAGE traversal mode.
+  /// Results are returned as EntityDepDtoOut DTOs with relations merged from both
+  /// directions.
+  ///
+  /// @param page zero-based page index for pagination navigation
+  /// @param size number of entities per page for response size control
+  /// @param templateIdentifier template filter for entity scope limitation
+  /// @param depth maximum relation traversal depth (default 1, clamped to 1-6)
+  /// @param q optional filter query string for entity filtering
+  /// @return paginated entity dependency DTOs with merged relations up to depth
+  @Operation(summary = "Get entity dependencies", description = "Retrieve entities with their relationship graphs up to specified depth")
+  @ApiResponse(responseCode = OK_CODE, description = "Entity dependencies retrieved successfully", content = @Content(schema = @Schema(implementation = EntityPageResponse.class)))
+  @ApiResponse(responseCode = BAD_REQUEST_CODE, description = RESPONSE_INVALID_PAGINATION, content = {
+      @Content(schema = @Schema(implementation = ErrorResponse.class))})
+  @Parameter(name = "page", description = PARAM_PAGE_DESCRIPTION, in = ParameterIn.QUERY, content = @Content(schema = @Schema(type = "integer", defaultValue = "0")))
+  @Parameter(name = "size", description = PARAM_SIZE_DESCRIPTION, in = ParameterIn.QUERY, content = @Content(schema = @Schema(type = "integer", defaultValue = "20")))
+  @Parameter(name = "sort", description = PARAM_SORT_DESCRIPTION, in = ParameterIn.QUERY, content = @Content(schema = @Schema(type = "string", defaultValue = "identifier,asc")))
+  @Parameter(name = "depth", description = "Maximum relation traversal depth (1-6, default 1)", in = ParameterIn.QUERY, content = @Content(schema = @Schema(type = "integer", defaultValue = "1")))
+  @Parameter(name = "q", description = PARAM_QUERY_DESCRIPTION, in = ParameterIn.QUERY, content = @Content(schema = @Schema(type = "string")))
+  @ResponseStatus(OK)
+  @GetMapping("/{templateIdentifier}/dependencies")
+  public Page<EntityDepDtoOut> getEntitiesDependencies(@RequestParam(defaultValue = "0") int page,
+      @RequestParam(defaultValue = "20") int size, @PathVariable String templateIdentifier,
+      @RequestParam(defaultValue = "1") int depth, @RequestParam(required = false) String q) {
+    Pageable pageable = PageRequest.of(page, size);
+    EntityFilter filter = entityFilterDslParser.parse(q);
+    Page<Entity> entities = entityService.getEntitiesByTemplateIdentifier(pageable, templateIdentifier,
+        filter);
+
+    // Extract entity identifiers for batch graph loading
+    List<String> entityIdentifiers = entities.getContent().stream().map(Entity::identifier).toList();
+
+    if (entityIdentifiers.isEmpty()) {
+      return new PageImpl<>(List.of(), pageable, 0);
+    }
+
+    // Load entity graphs with DIRECT_LINEAGE mode (includes outbound + inbound relations)
+    Map<String, EntityGraphNode> entityGraphs = entityGraphService
+        .getBatchEntityGraphsByIdentifiers(templateIdentifier, entityIdentifiers, depth, false,
+            java.util.Set.of(), java.util.Set.of(), EntityGraphTraversalMode.DIRECT_LINEAGE);
+
+    // Map to EntityDepDtoOut with merged relations
+    List<EntityDepDtoOut> dtoOutList = entities.getContent().stream()
+        .map(entity -> {
+          EntityGraphNode graphNode = entityGraphs.getOrDefault(entity.identifier(), null);
+          return entityDtoOutMapper.fromEntityToDependencyDto(entity, graphNode);
+        })
+        .toList();
+
+    return new PageImpl<>(dtoOutList, pageable, entities.getTotalElements());
   }
 
   /// Searches for entities across all templates using a nested filter query.

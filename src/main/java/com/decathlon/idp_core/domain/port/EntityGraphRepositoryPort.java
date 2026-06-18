@@ -53,4 +53,20 @@ public interface EntityGraphRepositoryPort {
   Map<UUID, Entity> findEntityGraph(UUID entityId, int depth, boolean includeProperties,
       EntityGraphTraversalMode mode);
 
+  /// Fetches relationship graphs for multiple root entities in a batch operation.
+  ///
+  /// Equivalent to calling [findEntityGraph] for each root entity, but optimized
+  /// to use a single batch recursive CTE query for better database performance.
+  ///
+  /// @param rootIds list of root entity UUIDs from which graphs are traversed
+  /// @param depth the maximum traversal depth; typically clamped to 1-6 by the
+  /// service layer
+  /// @param includeProperties when true, entity properties are eagerly loaded
+  /// @param mode the graph traversal mode determining which relation directions to
+  /// follow
+  /// @return an immutable map of all discovered entities keyed by their UUID,
+  /// including all root entities and their reachable neighbors
+  Map<UUID, Entity> findEntityGraphBatch(java.util.List<UUID> rootIds, int depth,
+      boolean includeProperties, EntityGraphTraversalMode mode);
+
 }

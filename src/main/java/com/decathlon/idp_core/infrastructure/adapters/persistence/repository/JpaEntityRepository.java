@@ -157,4 +157,63 @@ public interface JpaEntityRepository
       @Param("templateIdentifier") String templateIdentifier,
       @Param("entityIdentifier") String entityIdentifier);
 
+  @Query(value = """
+      WITH RECURSIVE entity_graph(id, depth, flow) AS (
+          -- 1. ANCHOR MEMBER: Initialize state tokens for multiple root entities
+          SELECT e.id, 0, 'OUTBOUND' AS flow
+          FROM idp_core.entity e
+          WHERE e.id IN :rootIds AND :mode IN ('DIRECT_LINEAGE', 'OUTBOUND_ONLY')
+
+          UNION
+
+          SELECT e.id, 0, 'INBOUND' AS flow
+          FROM idp_core.entity e
+          WHERE e.id IN :rootIds AND :mode = 'DIRECT_LINEAGE'
+
+          UNION
+
+          SELECT e.id, 0, 'ANY' AS flow
+          FROM idp_core.entity e
+          WHERE e.id IN :rootIds AND :mode = 'BIDIRECTIONAL'
+
+          UNION
+
+          -- 2. RECURSIVE MEMBER: Propagate isolated pathways down the graph footprint
+          SELECT combined.id, eg.depth + 1, eg.flow
+          FROM entity_graph eg
+          JOIN (
+              -- Outbound Paths
+              SELECT er.entity_id AS source_id, rte.target_entity_uuid AS id, 'OUTBOUND' AS flow_match
+              FROM idp_core.entity_relations er
+              JOIN idp_core.relation_target_entities rte ON rte.relation_id = er.relation_id
+              WHERE rte.target_entity_uuid IS NOT NULL
+
+              UNION ALL
+
+              SELECT er.entity_id AS source_id, rte.target_entity_uuid AS id, 'ANY' AS flow_match
+              FROM idp_core.entity_relations er
+              JOIN idp_core.relation_target_entities rte ON rte.relation_id = er.relation_id
+              WHERE rte.target_entity_uuid IS NOT NULL
+
+              UNION ALL
+
+              -- Inbound Paths
+              SELECT rte.target_entity_uuid AS source_id, er.entity_id AS id, 'INBOUND' AS flow_match
+              FROM idp_core.relation_target_entities rte
+              JOIN idp_core.entity_relations er ON er.relation_id = rte.relation_id
+
+              UNION ALL
+
+              SELECT rte.target_entity_uuid AS source_id, er.entity_id AS id, 'ANY' AS flow_match
+              FROM idp_core.relation_target_entities rte
+              JOIN idp_core.entity_relations er ON er.relation_id = rte.relation_id
+          ) combined ON combined.source_id = eg.id AND combined.flow_match = eg.flow
+          WHERE eg.depth < :depth
+      )
+      -- 3. Return the clean deduplicated set of structural skeleton UUIDs
+      SELECT DISTINCT id FROM entity_graph;
+      """, nativeQuery = true)
+  List<UUID> findEntityGraphIdentifiersBatch(@Param("rootIds") Collection<UUID> rootIds,
+      @Param("depth") int depth, @Param("mode") String mode);
+
 }

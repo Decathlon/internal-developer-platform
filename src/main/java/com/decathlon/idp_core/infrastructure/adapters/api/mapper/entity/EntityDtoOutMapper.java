@@ -348,4 +348,75 @@ public class EntityDtoOutMapper {
         .relationsAsTarget(mapRelationsAsTargetDto(entity, relationsAsTargetMap)).build();
   }
 
+  /// Maps a domain entity and its entity graph to a dependency DTO with merged
+  /// relations.
+  ///
+  /// **Infrastructure mapping:** Converts entity and graph nodes to EntityDepDtoOut
+  /// with all relations (outbound and inbound) merged into a single relations
+  /// map. If graph node is null, returns basic entity with empty relations.
+  ///
+  /// @param entity the domain entity to convert
+  /// @param graphNode the entity graph node containing relation data
+  /// @return entity dependency DTO with merged relations
+  public com.decathlon.idp_core.infrastructure.adapters.api.dto.out.entity.EntityDepDtoOut fromEntityToDependencyDto(
+      Entity entity,
+      com.decathlon.idp_core.domain.model.entity_graph.EntityGraphNode graphNode) {
+
+    if (graphNode == null) {
+      return com.decathlon.idp_core.infrastructure.adapters.api.dto.out.entity.EntityDepDtoOut
+          .builder().templateIdentifier(entity.templateIdentifier()).name(entity.name())
+          .identifier(entity.identifier()).properties(Collections.emptyMap())
+          .relations(Collections.emptyMap()).build();
+    }
+
+    // Merge outbound and inbound relations from graph node
+    Map<String, List<EntitySummaryDto>> mergedRelations = mergeGraphNodeRelations(graphNode);
+
+    return com.decathlon.idp_core.infrastructure.adapters.api.dto.out.entity.EntityDepDtoOut
+        .builder().templateIdentifier(entity.templateIdentifier()).name(entity.name())
+        .identifier(entity.identifier()).properties(Collections.emptyMap())
+        .relations(mergedRelations).build();
+  }
+
+  /// Merges outbound and inbound relations from an entity graph node into a
+  /// single relations map.
+  ///
+  /// **Business logic:** Combines outbound and inbound relations from the graph
+  /// node into a single relations map where each relation name maps to a list of
+  /// entity summaries.
+  ///
+  /// @param graphNode the entity graph node containing relations data
+  /// @return a map of relation names to lists of entity summaries
+  private Map<String, List<EntitySummaryDto>> mergeGraphNodeRelations(
+      com.decathlon.idp_core.domain.model.entity_graph.EntityGraphNode graphNode) {
+
+    Map<String, List<EntitySummaryDto>> mergedRelations = new java.util.HashMap<>();
+
+    // Add outbound relations
+    if (graphNode.relations() != null) {
+      for (com.decathlon.idp_core.domain.model.entity_graph.EntityGraphRelation rel : graphNode
+          .relations()) {
+        List<EntitySummaryDto> targets = rel.targets().stream()
+            .map(node -> new EntitySummaryDto(node.identifier(), node.name()))
+            .toList();
+        mergedRelations.put(rel.name(), targets);
+      }
+    }
+
+    // Add inbound relations (if any)
+    if (graphNode.relationsAsTarget() != null) {
+      for (com.decathlon.idp_core.domain.model.entity_graph.EntityGraphRelation rel : graphNode
+          .relationsAsTarget()) {
+        List<EntitySummaryDto> targets = rel.targets().stream()
+            .map(node -> new EntitySummaryDto(node.identifier(), node.name()))
+            .toList();
+        List<EntitySummaryDto> existing = mergedRelations.getOrDefault(rel.name(),
+            new ArrayList<>());
+        existing.addAll(targets);
+        mergedRelations.put(rel.name(), existing);
+      }
+    }
+
+    return mergedRelations;
+  }
 }

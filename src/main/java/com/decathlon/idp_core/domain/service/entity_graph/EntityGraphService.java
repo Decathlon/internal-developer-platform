@@ -95,6 +95,110 @@ public class EntityGraphService {
     return buildGraphNode(rootEntity.id(), ctx);
   }
 
+  /// Retrieves entity graphs for multiple root entities in a single batch operation.
+  ///
+  /// **Contract:** Returns a map of entity identifier strings to EntityGraphNode
+  /// objects for efficient bulk processing. Applies the same depth clamping,
+  /// property inclusion, and relation/property filtering as the single-entity
+  /// variant.
+  ///
+  /// @param entityGraphs map of entities keyed by their UUID (as loaded by
+  /// batch repository call)
+  /// @param depth the maximum traversal depth
+  /// @param includeProperties whether to include entity properties
+  /// @param relationFilter set of relation names to include (empty for all)
+  /// @param propertyFilter set of property names to include (empty for all)
+  /// @param mode the graph traversal mode
+  /// @return a map of entity identifier strings to EntityGraphNode objects
+  @Transactional(readOnly = true)
+  public Map<String, EntityGraphNode> getBatchEntityGraphsByIdentifiers(
+      Map<UUID, Entity> entityGraphs, int depth, boolean includeProperties,
+      Set<String> relationFilter, Set<String> propertyFilter, EntityGraphTraversalMode mode) {
+
+    if (entityGraphs == null || entityGraphs.isEmpty()) {
+      return Map.of();
+    }
+
+    // Pre-computation Layer
+    IndexBundle indices = buildIndices(entityGraphs, mode);
+
+    // Context tracking for this batch execution
+    Set<String> activeStack = new HashSet<>();
+    Map<String, EntityGraphNode> memoCache = new HashMap<>();
+
+    GraphTraversalContext ctx = new GraphTraversalContext(entityGraphs, indices.textToUuidLookup(),
+        indices.inboundIndex(), includeProperties, propertyFilter, relationFilter, activeStack,
+        memoCache, mode);
+
+    // Build graph nodes for all entities in the batch
+    Map<String, EntityGraphNode> result = new HashMap<>();
+    for (Map.Entry<UUID, Entity> entry : entityGraphs.entrySet()) {
+      Entity entity = entry.getValue();
+      if (entity != null) {
+        EntityGraphNode node = buildGraphNode(entry.getKey(), ctx);
+        result.put(entity.identifier(), node);
+      }
+    }
+
+    return result;
+  }
+
+  /// Loads and builds entity graphs for multiple entity IDs in a single batch operation.
+  ///
+  /// **Contract:** Fetches entity graphs from the repository for the given entity IDs
+  /// using the specified traversal mode and depth, then converts them to EntityGraphNode
+  /// objects. This is the recommended entry point for batch graph retrieval.
+  ///
+  /// @param entityIds list of entity UUIDs to load graphs for
+  /// @param depth maximum traversal depth; clamped to 1-6 server-side
+  /// @param includeProperties whether to include entity properties in the graph
+  /// @param relationFilter set of relation names to include (empty for all)
+  /// @param propertyFilter set of property names to include (empty for all)
+  /// @param mode the graph traversal mode (BIDIRECTIONAL, OUTBOUND_ONLY, or DIRECT_LINEAGE)
+  /// @return a map of entity identifier strings to their EntityGraphNode representations
+  @Transactional(readOnly = true)
+  public Map<String, EntityGraphNode> loadAndBuildEntityGraphs(List<UUID> entityIds, int depth,
+      boolean includeProperties, Set<String> relationFilter, Set<String> propertyFilter,
+      EntityGraphTraversalMode mode) {
+
+    if (entityIds == null || entityIds.isEmpty()) {
+      return Map.of();
+    }
+
+    int effectiveDepth = Math.clamp(depth, 1, MAX_DEPTH);
+
+    // Load entity graphs from repository
+    Map<UUID, Entity> entityGraphs = entityGraphRepositoryPort.findEntityGraphBatch(entityIds,
+        effectiveDepth, includeProperties, mode);
+
+    if (entityGraphs == null || entityGraphs.isEmpty()) {
+      return Map.of();
+    }
+
+    // Pre-computation Layer
+    IndexBundle indices = buildIndices(entityGraphs, mode);
+
+    // Context tracking for this batch execution
+    Set<String> activeStack = new HashSet<>();
+    Map<String, EntityGraphNode> memoCache = new HashMap<>();
+
+    GraphTraversalContext ctx = new GraphTraversalContext(entityGraphs, indices.textToUuidLookup(),
+        indices.inboundIndex(), includeProperties, propertyFilter, relationFilter, activeStack,
+        memoCache, mode);
+
+    // Build graph nodes for all entities in the batch
+    Map<String, EntityGraphNode> result = new HashMap<>();
+    for (Map.Entry<UUID, Entity> entry : entityGraphs.entrySet()) {
+      Entity entity = entry.getValue();
+      if (entity != null) {
+        EntityGraphNode node = buildGraphNode(entry.getKey(), ctx);
+        result.put(entity.identifier(), node);
+      }
+    }
+
+    return result;
+  }
+
   private EntityGraphNode buildGraphNode(UUID entityUuid, GraphTraversalContext ctx) {
     Entity entity = ctx.entityMap().get(entityUuid);
 
@@ -252,4 +356,79 @@ public class EntityGraphService {
     }
   }
 
+  /// Builds entity graphs for multiple entity string identifiers within a template.
+  ///
+  /// **Contract:** Retrieves entity graphs from the repository for entities identified by
+  /// their string identifiers, then converts them to EntityGraphNode objects. This method
+  /// is useful for batch operations where you have string identifiers rather than UUIDs.
+  ///
+  /// @param templateIdentifier the entity template identifier
+  /// @param entityIdentifiers list of entity string identifiers to load graphs for
+  /// @param depth maximum traversal depth; clamped to 1-6 server-side
+  /// @param includeProperties whether to include entity properties in the graph
+  /// @param relationFilter set of relation names to include (empty for all)
+  /// @param propertyFilter set of property names to include (empty for all)
+  /// @param mode the graph traversal mode (BIDIRECTIONAL, OUTBOUND_ONLY, or DIRECT_LINEAGE)
+  /// @return a map of entity identifier strings to their EntityGraphNode representations
+  @Transactional(readOnly = true)
+  public Map<String, EntityGraphNode> getBatchEntityGraphsByIdentifiers(String templateIdentifier,
+      List<String> entityIdentifiers, int depth, boolean includeProperties,
+      Set<String> relationFilter, Set<String> propertyFilter, EntityGraphTraversalMode mode) {
+
+    if (entityIdentifiers == null || entityIdentifiers.isEmpty()) {
+      return Map.of();
+    }
+
+    int effectiveDepth = Math.clamp(depth, 1, MAX_DEPTH);
+    entityTemplateValidationService.validateTemplateExists(templateIdentifier);
+
+    // Fetch entity UUIDs by loading each entity individually
+    // (Repository doesn't support batch fetch by string identifiers)
+    List<UUID> entityUuids = new ArrayList<>();
+    for (String identifier : entityIdentifiers) {
+      entityRepositoryPort.findByTemplateIdentifierAndIdentifier(templateIdentifier, identifier)
+          .ifPresent(entity -> entityUuids.add(entity.id()));
+    }
+
+    if (entityUuids.isEmpty()) {
+      return Map.of();
+    }
+
+    // Load entity graphs from repository
+    Map<UUID, Entity> entityGraphs = entityGraphRepositoryPort.findEntityGraphBatch(entityUuids,
+        effectiveDepth, includeProperties, mode);
+
+    if (entityGraphs == null || entityGraphs.isEmpty()) {
+      return Map.of();
+    }
+
+    // Pre-computation Layer
+    IndexBundle indices = buildIndices(entityGraphs, mode);
+
+    // Context tracking for this batch execution
+    Set<String> activeStack = new HashSet<>();
+    Map<String, EntityGraphNode> memoCache = new HashMap<>();
+
+    GraphTraversalContext ctx = new GraphTraversalContext(entityGraphs, indices.textToUuidLookup(),
+        indices.inboundIndex(), includeProperties, propertyFilter, relationFilter, activeStack,
+        memoCache, mode);
+
+    // Build graph nodes for all root entities in the batch
+    Map<String, EntityGraphNode> result = new HashMap<>();
+    for (String identifier : entityIdentifiers) {
+      UUID entityUuid = null;
+      for (Map.Entry<UUID, Entity> entry : entityGraphs.entrySet()) {
+        if (entry.getValue().identifier().equals(identifier)) {
+          entityUuid = entry.getKey();
+          break;
+        }
+      }
+      if (entityUuid != null) {
+        EntityGraphNode node = buildGraphNode(entityUuid, ctx);
+        result.put(identifier, node);
+      }
+    }
+
+    return result;
+  }
 }
