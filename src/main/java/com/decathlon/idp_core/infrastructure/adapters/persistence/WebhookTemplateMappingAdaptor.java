@@ -30,4 +30,15 @@ public class WebhookTemplateMappingAdaptor implements WebhookTemplateMappingPort
         .map(webhookTemplateMappingPersistenceMapper::toDomain).toList();
   }
 
+  @Override
+  public boolean existsByEntityMappingId(UUID id) {
+    return jpaWebhookTemplateMappingRepository.existsByEntityMappingId(id);
+  }
+
+  @Override
+  public List<WebhookTemplateMapping> findByEntityMappingId(UUID id) {
+    return jpaWebhookTemplateMappingRepository.findByEntityMappingId(id).stream()
+        .map(webhookTemplateMappingPersistenceMapper::toDomain).toList();
+  }
+
 }

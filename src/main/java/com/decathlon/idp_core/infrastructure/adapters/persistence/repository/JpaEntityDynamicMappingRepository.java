@@ -1,6 +1,7 @@
 package com.decathlon.idp_core.infrastructure.adapters.persistence.repository;
 
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -17,5 +18,13 @@ public interface JpaEntityDynamicMappingRepository
     extends
       JpaRepository<EntityDynamicMappingJpaEntity, UUID> {
   List<EntityDynamicMappingJpaEntity> findByTemplateIdentifier(String templateIdentifier);
+
   Boolean existsByTemplateIdentifier(String templateIdentifier);
+
+  boolean existsByIdentifier(String identifier);
+
+  Optional<EntityDynamicMappingJpaEntity> findByIdentifier(String identifier);
+
+  void deleteByIdentifier(String identifier);
+
 }

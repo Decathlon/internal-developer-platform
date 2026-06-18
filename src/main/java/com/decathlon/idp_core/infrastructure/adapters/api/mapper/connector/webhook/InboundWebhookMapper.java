@@ -1,4 +1,4 @@
-package com.decathlon.idp_core.infrastructure.adapters.api.mapper.webhook;
+package com.decathlon.idp_core.infrastructure.adapters.api.mapper.connector.webhook;
 
 import java.util.List;
 import java.util.Map;
@@ -11,24 +11,31 @@ import com.decathlon.idp_core.domain.model.enums.WebhookSecurityType;
 import com.decathlon.idp_core.domain.model.inbound_connectors.webhook.WebhookConnector;
 import com.decathlon.idp_core.domain.model.inbound_connectors.webhook.WebhookSecurity;
 import com.decathlon.idp_core.infrastructure.adapters.api.dto.in.InboundWebhookCreateDtoIn;
-import com.decathlon.idp_core.infrastructure.adapters.api.dto.in.InboundWebhookMappingDtoIn;
 import com.decathlon.idp_core.infrastructure.adapters.api.dto.in.InboundWebhookSecurityContractDtoIn;
+import com.decathlon.idp_core.infrastructure.adapters.api.dto.out.webhook.EntityDynamicMappingDtoOut;
 import com.decathlon.idp_core.infrastructure.adapters.api.dto.out.webhook.InboundWebhookDtoOut;
-import com.decathlon.idp_core.infrastructure.adapters.api.dto.out.webhook.InboundWebhookEntityMappingDtoOut;
-import com.decathlon.idp_core.infrastructure.adapters.api.dto.out.webhook.InboundWebhookMappingDtoOut;
 import com.decathlon.idp_core.infrastructure.adapters.api.dto.out.webhook.InboundWebhookSecurityDtoOut;
+import com.decathlon.idp_core.infrastructure.adapters.api.mapper.connector.DynamicMappingMapper;
+
+import lombok.AllArgsConstructor;
 
 /// Maps inbound webhook API DTOs to domain models and back.
 @Component
+@AllArgsConstructor
 public class InboundWebhookMapper {
+
+  private final DynamicMappingMapper dynamicMappingMapper;
 
   /// Converts API input payload to the domain aggregate.
   ///
   /// @param dto inbound webhook creation request
+  /// @param resolvedMappings the existing dynamic mappings referenced by the
+  /// request, already resolved and validated by the domain layer
   /// @return domain webhook connector
-  public WebhookConnector toDomain(InboundWebhookCreateDtoIn dto) {
+  public WebhookConnector toDomain(InboundWebhookCreateDtoIn dto,
+      List<EntityDynamicMapping> resolvedMappings) {
     return new WebhookConnector(null, dto.identifier(), dto.title(), dto.description(),
-        dto.enabled(), safeMappings(dto.mappings()), toDomain(dto.security()));
+        dto.enabled(), safeMappings(resolvedMappings), toDomain(dto.security()));
   }
 
   /// Converts API update payload to domain aggregate using the path identifier as
@@ -36,12 +43,13 @@ public class InboundWebhookMapper {
   ///
   /// @param identifier webhook connector identifier from URL path
   /// @param dto inbound webhook update request body
+  /// @param resolvedMappings the existing dynamic mappings referenced by the
+  /// request, already resolved and validated by the domain layer
   /// @return domain webhook connector prepared for update
-  public WebhookConnector toDomainForUpdate(String identifier, InboundWebhookCreateDtoIn dto) {
-    var mappings = safeMappings(dto.mappings());
-    var security = toDomain(dto.security());
+  public WebhookConnector toDomainForUpdate(String identifier, InboundWebhookCreateDtoIn dto,
+      List<EntityDynamicMapping> resolvedMappings) {
     return new WebhookConnector(null, identifier, dto.title(), dto.description(), dto.enabled(),
-        mappings, security);
+        safeMappings(resolvedMappings), toDomain(dto.security()));
   }
 
   /// Converts domain aggregate to API response payload.
@@ -49,31 +57,16 @@ public class InboundWebhookMapper {
   /// @param domain created webhook connector
   /// @return response DTO
   public InboundWebhookDtoOut fromWebhookConnectorToDto(WebhookConnector domain) {
-    var mappings = domain.mappings().stream().map(this::fromEntityMappingToDto).toList();
-    var security = new InboundWebhookSecurityDtoOut(domain.security().type().name(),
-        domain.security().config());
+    List<EntityDynamicMappingDtoOut> mappings = domain.mappings().stream()
+        .map(dynamicMappingMapper::fromEntityMappingToDto).toList();
+    InboundWebhookSecurityDtoOut security = new InboundWebhookSecurityDtoOut(
+        domain.security().type().name(), domain.security().config());
     return new InboundWebhookDtoOut(domain.identifier(), domain.title(), domain.description(),
         domain.enabled(), mappings, security);
   }
 
-  private InboundWebhookMappingDtoOut fromEntityMappingToDto(EntityDynamicMapping mapping) {
-    return new InboundWebhookMappingDtoOut(mapping.templateIdentifier(), mapping.filter(),
-        new InboundWebhookEntityMappingDtoOut(mapping.entityIdentifier(), mapping.entityTitle(),
-            Map.copyOf(mapping.properties()), Map.copyOf(mapping.relations())));
-  }
-
-  private EntityDynamicMapping toDomain(InboundWebhookMappingDtoIn mapping) {
-    return new EntityDynamicMapping(null, mapping.template(), mapping.filter(),
-        mapping.entity().identifier(), mapping.entity().title(),
-        safeMap(mapping.entity().properties()), safeMap(mapping.entity().relations()));
-  }
-
-  private List<EntityDynamicMapping> safeMappings(
-      java.util.List<InboundWebhookMappingDtoIn> mappings) {
-    if (mappings == null || mappings.isEmpty()) {
-      return java.util.List.of();
-    }
-    return mappings.stream().map(this::toDomain).toList();
+  private List<EntityDynamicMapping> safeMappings(List<EntityDynamicMapping> mappings) {
+    return mappings == null ? List.of() : List.copyOf(mappings);
   }
 
   private WebhookSecurity toDomain(InboundWebhookSecurityContractDtoIn security) {

@@ -1,6 +1,10 @@
 -- Sample data for IDP Core domain models - Enhanced with 10 templates
 
 -- Clear existing data (for repeatable migrations)
+-- Order matters: respect foreign key constraints
+DELETE FROM webhook_template_mapping;
+DELETE FROM entity_dynamic_mapping;
+DELETE FROM webhook_connector;
 DELETE FROM entity_template_relations_definitions;
 DELETE FROM entity_template_properties_definitions;
 DELETE FROM entity_template;

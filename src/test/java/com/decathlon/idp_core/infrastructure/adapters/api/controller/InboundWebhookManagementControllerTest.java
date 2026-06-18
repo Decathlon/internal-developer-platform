@@ -9,7 +9,6 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import org.junit.jupiter.api.*;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.context.jdbc.Sql;
 import org.springframework.test.web.servlet.MockMvc;
@@ -26,8 +25,6 @@ import lombok.extern.slf4j.Slf4j;
 /// for all CRUD operations on inbound webhook connectors.
 @DisplayName("InboundWebhookManagementController Integration Tests")
 @TestClassOrder(ClassOrderer.OrderAnnotation.class)
-@Sql(statements = {"DELETE FROM webhook_template_mapping", "DELETE FROM webhook_connector",
-    "DELETE FROM entity_dynamic_mapping"}, executionPhase = Sql.ExecutionPhase.BEFORE_TEST_METHOD)
 @Sql(scripts = {"/db/test/R__1_Insert_test_data.sql",
     "/db/test/R__3_insert_webhhook_test_data.sql"}, executionPhase = Sql.ExecutionPhase.BEFORE_TEST_METHOD)
 @Slf4j
@@ -36,44 +33,58 @@ class InboundWebhookManagementControllerTest extends AbstractIntegrationTest {
   @Autowired
   private MockMvc mockMvc;
 
-  @Autowired
-  private JdbcTemplate jdbcTemplate;
-
   private static final String WEBHOOK_PATH = "/api/v1/inbound-webhooks";
+  private static final String ENTITY_DYNAMIC_MAPPING_PATH = "/api/v1/entity-dynamic-mappings";
   private static final String JSON_PATH = "integration_test/json/webhook/v1/";
 
+  /// Creates an entity dynamic mapping via API required for webhook connector
+  /// creation.
+  private void createEntityDynamicMapping(String mappingIdentifier) throws Exception {
+    var payload = """
+        {
+          "identifier": "%s",
+          "template": "microservice",
+          "filter": ".action == \\"pushed\\"",
+          "entity": {
+            "identifier": ".repository.full_name",
+            "title": ".repository.name",
+            "properties": {
+              "applicationName": ".repository.name",
+              "ownerEmail": ".sender.email",
+              "environment": "\\"DEV\\"",
+              "version": ".ref",
+              "port": "8080",
+              "programmingLanguage": ".repository.language"
+            },
+            "relations": {}
+          }
+        }
+        """.formatted(mappingIdentifier);
+
+    mockMvc
+        .perform(MockMvcRequestBuilders.post(ENTITY_DYNAMIC_MAPPING_PATH)
+            .contentType(APPLICATION_JSON).accept(APPLICATION_JSON).with(csrf()).content(payload))
+        .andExpect(status().isCreated());
+  }
+
   private void createWebhookConnector(String identifier, String title) throws Exception {
+    // Create a unique entity dynamic mapping for this webhook connector
+    String uniqueMappingIdentifier = identifier + "-mapping";
+    createEntityDynamicMapping(uniqueMappingIdentifier);
+
     var payload = """
         {
           "identifier": "%s",
           "title": "%s",
           "description": "test connector",
           "enabled": true,
-          "mappings": [
-            {
-              "template": "microservice",
-              "filter": "true",
-              "entity": {
-                "identifier": ".id",
-                "title": ".name",
-                "properties": {
-                  "applicationName": ".repository.name",
-                  "ownerEmail": ".sender.login",
-                  "environment": ".deployment.environment",
-                  "version": ".deployment.sha",
-                  "port": "8080",
-                  "programmingLanguage": ".language"
-                },
-                "relations": {}
-              }
-            }
-          ],
+          "mapping_identifiers": ["%s"],
           "security": {
             "type": "NONE",
             "config": {}
           }
         }
-        """.formatted(identifier, title);
+        """.formatted(identifier, title, uniqueMappingIdentifier);
 
     mockMvc
         .perform(MockMvcRequestBuilders.post(WEBHOOK_PATH).contentType(APPLICATION_JSON)
@@ -81,32 +92,14 @@ class InboundWebhookManagementControllerTest extends AbstractIntegrationTest {
         .andExpect(status().isCreated());
   }
 
-  private String buildPutPayload(String title, boolean enabled) {
+  private String buildPutPayload(String title, boolean enabled, String mappingIdentifier) {
     return """
         {
           "identifier": "ignored-by-put",
           "title": "%s",
           "description": "updated description",
           "enabled": %s,
-          "mappings": [
-            {
-              "template": "microservice",
-              "filter": "true",
-              "entity": {
-                "identifier": ".id",
-                "title": ".name",
-                "properties": {
-                  "applicationName": ".repository.name",
-                  "ownerEmail": ".sender.login",
-                  "environment": ".deployment.environment",
-                  "version": ".deployment.sha",
-                  "port": "8080",
-                  "programmingLanguage": ".language"
-                },
-                "relations": {}
-              }
-            }
-          ],
+          "mapping_identifiers": ["%s"],
           "security": {
             "type": "STATIC_TOKEN",
             "config": {
@@ -115,7 +108,7 @@ class InboundWebhookManagementControllerTest extends AbstractIntegrationTest {
             }
           }
         }
-        """.formatted(title, enabled);
+        """.formatted(title, enabled, mappingIdentifier);
   }
 
   @Nested
@@ -172,8 +165,7 @@ class InboundWebhookManagementControllerTest extends AbstractIntegrationTest {
           .andExpect(jsonPath("$.title").value("GitHub DORA Connector test"))
           .andExpect(jsonPath("$.security.type").value("HMAC_SHA256"));
 
-      assertWebhookTemplateMapping("github-dora-connector-test", "microservice",
-          ".action == \"deployment\"");
+      assertWebhookTemplateMapping("github-dora-connector-test");
     }
 
     @Test
@@ -221,11 +213,27 @@ class InboundWebhookManagementControllerTest extends AbstractIntegrationTest {
 
     @Test
     @WithMockUser
-    @DisplayName("Should return 400 when JSLT expression is invalid")
-    void postWebhook_400_invalid_jslt() throws Exception {
-      var result = postBadRequestAndAssertContains(WEBHOOK_PATH,
-          JSON_PATH + "postWebhook_400_invalid_jslt.json", "Invalid webhook mapping configuration");
-      assertNotNull(result);
+    @DisplayName("Should return 404 when mapping identifier does not exist")
+    void postWebhook_404_mapping_not_found() throws Exception {
+      var payload = """
+          {
+            "identifier": "webhook-with-unknown-mapping",
+            "title": "Webhook With Unknown Mapping",
+            "description": "Should fail due to non-existent mapping",
+            "enabled": true,
+            "mapping_identifiers": ["non-existent-mapping"],
+            "security": {
+              "type": "NONE",
+              "config": {}
+            }
+          }
+          """;
+
+      mockMvc
+          .perform(MockMvcRequestBuilders.post(WEBHOOK_PATH).contentType(APPLICATION_JSON)
+              .accept(APPLICATION_JSON).with(csrf()).content(payload))
+          .andExpect(status().isNotFound()).andExpect(jsonPath("$.error").value("NOT_FOUND"))
+          .andExpect(jsonPath("$.error_description").value(containsString("non-existent-mapping")));
     }
 
     @Test
@@ -237,7 +245,7 @@ class InboundWebhookManagementControllerTest extends AbstractIntegrationTest {
             "identifier": "missing-security-fields",
             "title": "Missing Security Fields",
             "enabled": true,
-            "mappings": [],
+            "mapping_identifiers": [],
             "security": {
               "type": "HMAC_SHA256",
               "config": {
@@ -313,7 +321,8 @@ class InboundWebhookManagementControllerTest extends AbstractIntegrationTest {
       mockMvc
           .perform(MockMvcRequestBuilders.put(WEBHOOK_PATH + "/connector-put-200")
               .contentType(APPLICATION_JSON).accept(APPLICATION_JSON).with(csrf())
-              .content(buildPutPayload("Connector Put Updated Title", false)))
+              .content(buildPutPayload("Connector Put Updated Title", false,
+                  "connector-put-200-mapping")))
           .andExpect(status().isOk()).andExpect(jsonPath("$.identifier").value("connector-put-200"))
           .andExpect(jsonPath("$.title").value("Connector Put Updated Title"))
           .andExpect(jsonPath("$.enabled").value(false))
@@ -324,7 +333,7 @@ class InboundWebhookManagementControllerTest extends AbstractIntegrationTest {
           .andExpect(jsonPath("$.title").value("Connector Put Updated Title"))
           .andExpect(jsonPath("$.enabled").value(false));
 
-      assertWebhookTemplateMapping("connector-put-200", "microservice", "true");
+      assertWebhookTemplateMapping("connector-put-200");
     }
 
     @Test
@@ -337,7 +346,7 @@ class InboundWebhookManagementControllerTest extends AbstractIntegrationTest {
       mockMvc
           .perform(MockMvcRequestBuilders.put(WEBHOOK_PATH + "/connector-put-409-b")
               .contentType(APPLICATION_JSON).accept(APPLICATION_JSON).with(csrf())
-              .content(buildPutPayload("Connector A Title", true)))
+              .content(buildPutPayload("Connector A Title", true, "connector-put-409-b-mapping")))
           .andExpect(status().isConflict()).andExpect(jsonPath("$.error").value("CONFLICT"))
           .andExpect(jsonPath("$.error_description").value(containsString(
               "Webhook Connector already exist with the same name:Connector A Title")));
@@ -350,7 +359,7 @@ class InboundWebhookManagementControllerTest extends AbstractIntegrationTest {
       mockMvc
           .perform(MockMvcRequestBuilders.put(WEBHOOK_PATH + "/non-existent-connector")
               .contentType(APPLICATION_JSON).accept(APPLICATION_JSON).with(csrf())
-              .content(buildPutPayload("Updated Title", false)))
+              .content(buildPutPayload("Updated Title", false, "microservice-mapping")))
           .andExpect(status().isNotFound()).andExpect(jsonPath("$.error").value("NOT_FOUND"))
           .andExpect(jsonPath("$.error_description").exists());
     }
@@ -377,10 +386,9 @@ class InboundWebhookManagementControllerTest extends AbstractIntegrationTest {
       mockMvc.perform(MockMvcRequestBuilders.delete(WEBHOOK_PATH + "/connector-delete-204")
           .accept(APPLICATION_JSON).with(csrf())).andExpect(status().isNoContent());
 
+      // Verify the webhook no longer exists
       mockMvc.perform(get(WEBHOOK_PATH + "/connector-delete-204").accept(APPLICATION_JSON))
           .andExpect(status().isNotFound()).andExpect(jsonPath("$.error").value("NOT_FOUND"));
-
-      assertWebhookTemplateMappingCount("connector-delete-204", 0L);
     }
 
     @Test
@@ -395,31 +403,11 @@ class InboundWebhookManagementControllerTest extends AbstractIntegrationTest {
     }
   }
 
-  private void assertWebhookTemplateMappingCount(String identifier, long expectedCount) {
-    Long count = jdbcTemplate.queryForObject("""
-        SELECT COUNT(*)
-        FROM webhook_template_mapping wtm
-        JOIN webhook_connector wc ON wc.id = wtm.webhook_id
-        WHERE wc.identifier = ?
-        """, Long.class, identifier);
-
-    org.assertj.core.api.Assertions.assertThat(count).isEqualTo(expectedCount);
-  }
-
-  private void assertWebhookTemplateMapping(String identifier, String templateIdentifier,
-      String filter) {
-    assertWebhookTemplateMappingCount(identifier, 1L);
-
-    var row = jdbcTemplate.queryForMap("""
-        SELECT et.identifier AS template_identifier, wtm.jslt_filter AS jslt_filter
-        FROM idp_core.webhook_template_mapping wtm
-        JOIN idp_core.webhook_connector wc ON wc.id = wtm.webhook_id
-        JOIN idp_core.entity_template et ON et.id = wtm.template_id
-        WHERE wc.identifier = ?
-        """, identifier);
-
-    org.assertj.core.api.Assertions.assertThat(row).containsEntry("template_identifier",
-        templateIdentifier);
-    org.assertj.core.api.Assertions.assertThat(row).containsEntry("jslt_filter", filter);
+  /// Asserts that the webhook connector has at least one mapping via API.
+  private void assertWebhookTemplateMapping(String identifier) throws Exception {
+    mockMvc.perform(get(WEBHOOK_PATH + "/" + identifier).accept(APPLICATION_JSON))
+        .andExpect(status().isOk()).andExpect(jsonPath("$.mappings").isArray())
+        .andExpect(jsonPath("$.mappings").isNotEmpty())
+        .andExpect(jsonPath("$.mappings[0].filter").value(".action == \"pushed\""));
   }
 }

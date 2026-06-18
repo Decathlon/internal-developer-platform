@@ -4,8 +4,12 @@ import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 
-/// Mapping rule request for inbound webhook transformation.
-public record InboundWebhookMappingDtoIn(
+import com.fasterxml.jackson.databind.PropertyNamingStrategies;
+import com.fasterxml.jackson.databind.annotation.JsonNaming;
+
+/// Common fields for entity dynamic mapping requests (create and update).
+@JsonNaming(PropertyNamingStrategies.SnakeCaseStrategy.class)
+public record EntityDynamicMappingDtoInCommonFields(
     @NotBlank(message = "Webhook mapping template is mandatory") String template,
     @NotBlank(message = "Webhook mapping filter is mandatory") String filter,
     @NotNull(message = "Webhook mapping entity section is mandatory") @Valid InboundWebhookEntityMappingDtoIn entity) {

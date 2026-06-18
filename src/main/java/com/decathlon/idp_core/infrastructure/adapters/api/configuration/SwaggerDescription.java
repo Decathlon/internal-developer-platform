@@ -40,9 +40,6 @@ public class SwaggerDescription {
   public static final String ENDPOINT_GET_TEMPLATES_PAGINATED_SUMMARY = "Get paginated templates";
   public static final String ENDPOINT_GET_TEMPLATES_PAGINATED_DESCRIPTION = "Retrieve a paginated list of templates with optional sorting";
 
-  public static final String ENDPOINT_GET_TEMPLATE_BY_ID_SUMMARY = "Get template by ID";
-  public static final String ENDPOINT_GET_TEMPLATE_BY_ID_DESCRIPTION = "Retrieve a specific template using its unique identifier";
-
   public static final String ENDPOINT_GET_TEMPLATE_BY_IDENTIFIER_SUMMARY = "Get template by identifier";
   public static final String ENDPOINT_GET_TEMPLATE_BY_IDENTIFIER_DESCRIPTION = "Retrieve a specific template using its string identifier";
 
@@ -84,6 +81,24 @@ public class SwaggerDescription {
   public static final String ENDPOINT_PUT_WEBHOOK_CONNECTOR_SUMMARY = "Update an existing webhook connector by identifier";
   public static final String ENDPOINT_PUT_WEBHOOK_CONNECTOR_DESCRIPTION = "Update the details of an existing webhook connector identified by its unique string identifier";
 
+  public static final String ENDPOINT_POST_WEBHOOK_CONNECTOR_SUMMARY = "Create a new webhook connector configuration";
+  public static final String ENDPOINT_POST_WEBHOOK_CONNECTOR_DESCRIPTION = "Creates a webhook connector configuration used by the generic inbound webhook endpoint";
+
+  public static final String ENDPOINT_POST_ENTITY_DYNAMIC_MAPPING_SUMMARY = "Create entity dynamic mapping";
+  public static final String ENDPOINT_POST_ENTITY_DYNAMIC_MAPPING_DESCRIPTION = "Creates a new entity dynamic mapping used by the generic inbound webhook endpoint";
+
+  public static final String ENDPOINT_GET_ENTITY_DYNAMIC_MAPPING_PAGINATED_SUMMARY = "Get paginated entity dynamic mappings";
+  public static final String ENDPOINT_GET_ENTITY_DYNAMIC_MAPPING_PAGINATED_DESCRIPTION = "Retrieve a paginated list of entity dynamic mappings with optional sorting";
+
+  public static final String ENDPOINT_DELETE_ENTITY_DYNAMIC_MAPPING_SUMMARY = "Delete an entity dynamic mapping by identifier";
+  public static final String ENDPOINT_DELETE_ENTITY_DYNAMIC_MAPPING_DESCRIPTION = "Remove an entity dynamic from the system using its unique identifier";
+
+  public static final String ENDPOINT_GET_ENTITY_DYNAMIC_MAPPING_BY_IDENTIFIER_SUMMARY = "Get an entity dynamic mapping by identifier";
+  public static final String ENDPOINT_GET_ENTITY_DYNAMIC_MAPPING_BY_IDENTIFIER_DESCRIPTION = "Retrieve an entity dynamic mapping using its string identifier";
+
+  public static final String ENDPOINT_PUT_ENTITY_DYNAMIC_MAPPING_SUMMARY = "Update an existing entity dynamic mapping by identifier";
+  public static final String ENDPOINT_PUT_ENTITY_DYNAMIC_MAPPING_DESCRIPTION = "Update the details of an existing entity dynamic mapping  identified by its unique string identifier";
+
   /// API response description constants
   public static final String RESPONSE_TEMPLATES_PAGINATED_SUCCESS = "Paginated templates retrieved successfully";
   public static final String RESPONSE_TEMPLATES_PARTIAL_CONTENT = "Partial content - paginated templates retrieved (subset of total data)";
@@ -114,6 +129,11 @@ public class SwaggerDescription {
   public static final String RESPONSE_WEBHOOK_CONNECTOR_NOT_FOUND_IDENTIFIER = "Webhook connector not found with the provided identifier";
   public static final String RESPONSE_WEBHOOK_CONNECTOR_FOUND = "Webhook connector found";
   public static final String RESPONSE_WEBHOOK_CONNECTOR_UPDATED = "Webhook connector updated successfully";
+  public static final String RESPONSE_ENTITY_DYNAMIC_MAPPING_PAGINATED_SUCCESS = "Paginated entity dynamic mapping retrieved successfully";
+  public static final String RESPONSE_ENTITY_DYNAMIC_MAPPING_DELETED = "Entity dynamic mapping deleted successfully";
+  public static final String RESPONSE_ENTITY_DYNAMIC_MAPPING_NOT_FOUND_IDENTIFIER = "Entity dynamic mapping not found with the provided identifier";
+  public static final String RESPONSE_ENTITY_DYNAMIC_MAPPING_FOUND = "Entity dynamic mapping found";
+  public static final String RESPONSE_ENTITY_DYNAMIC_MAPPING_UPDATED = "Entity dynamic mapping updated successfully";
 
   // --- Schema (class) descriptions ---
   public static final String SCHEMA_ENTITY_TEMPLATE_CREATE_IN = "Input DTO for creating an entity template";

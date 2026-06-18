@@ -10,6 +10,7 @@ import java.util.stream.Collectors;
 import jakarta.validation.ConstraintViolation;
 import jakarta.validation.ConstraintViolationException;
 
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
@@ -24,7 +25,10 @@ import com.decathlon.idp_core.domain.exception.entity.EntityAlreadyExistsExcepti
 import com.decathlon.idp_core.domain.exception.entity.EntityDeletionBlockedException;
 import com.decathlon.idp_core.domain.exception.entity.EntityNotFoundException;
 import com.decathlon.idp_core.domain.exception.entity.EntityValidationException;
+import com.decathlon.idp_core.domain.exception.entity_mapping.EntityDynamicMappingAlreadyExistsException;
+import com.decathlon.idp_core.domain.exception.entity_mapping.EntityDynamicMappingAlreadyInUseException;
 import com.decathlon.idp_core.domain.exception.entity_mapping.EntityDynamicMappingConfigurationException;
+import com.decathlon.idp_core.domain.exception.entity_mapping.EntityDynamicMappingNotFoundException;
 import com.decathlon.idp_core.domain.exception.entity_template.*;
 import com.decathlon.idp_core.domain.exception.filter.InvalidFilterDslException;
 import com.decathlon.idp_core.domain.exception.search.InvalidSearchQueryException;
@@ -490,6 +494,53 @@ public class ApiExceptionHandler {
     log.warn("Webhook connector not found: {}", ex.getMessage());
     ErrorResponse errorResponse = new ErrorResponse(NOT_FOUND.name(), ex.getMessage());
     return ResponseEntity.status(NOT_FOUND).body(errorResponse);
+  }
+
+  /// Handles a webhook connector referencing a non-existent entity dynamic
+  /// mapping.
+  ///
+  /// HTTP mapping: Maps EntityDynamicMappingNotFoundException to HTTP 404 Not
+  /// Found, because the referenced mapping must be created beforehand.
+  @ExceptionHandler(EntityDynamicMappingNotFoundException.class)
+  public ResponseEntity<ErrorResponse> handleEntityDynamicMappingNotFoundException(
+      EntityDynamicMappingNotFoundException ex) {
+    log.warn("Referenced entity dynamic mapping not found: {}", ex.getMessage());
+    ErrorResponse errorResponse = new ErrorResponse(NOT_FOUND.name(), ex.getMessage());
+    return ResponseEntity.status(NOT_FOUND).body(errorResponse);
+  }
+
+  /// Handles creation of a dynamic mapping whose identifier already exists.
+  ///
+  /// HTTP mapping: Maps EntityDynamicMappingAlreadyExistsException to HTTP 409
+  /// Conflict, surfacing the uniqueness violation with business meaning.
+  @ExceptionHandler(EntityDynamicMappingAlreadyExistsException.class)
+  public ResponseEntity<ErrorResponse> handleEntityDynamicMappingAlreadyExistsException(
+      EntityDynamicMappingAlreadyExistsException ex) {
+    log.warn("Entity dynamic mapping identifier conflict: {}", ex.getMessage());
+    ErrorResponse errorResponse = new ErrorResponse(HttpStatus.CONFLICT.name(), ex.getMessage());
+    return ResponseEntity.status(HttpStatus.CONFLICT).body(errorResponse);
+  }
+
+  /// Handles low-level database integrity violations (for example, unique
+  /// constraint breaches) that were not caught earlier by domain validation.
+  ///
+  /// HTTP mapping: Maps DataIntegrityViolationException to HTTP 409 Conflict to
+  /// avoid leaking technical SQL details while signaling a conflicting state.
+  @ExceptionHandler(DataIntegrityViolationException.class)
+  public ResponseEntity<ErrorResponse> handleDataIntegrityViolationException(
+      DataIntegrityViolationException ex) {
+    log.warn("Data integrity violation: {}", ex.getMostSpecificCause().getMessage());
+    ErrorResponse errorResponse = new ErrorResponse(HttpStatus.CONFLICT.name(),
+        "The request conflicts with the current state of the resource");
+    return ResponseEntity.status(HttpStatus.CONFLICT).body(errorResponse);
+  }
+
+  @ExceptionHandler(EntityDynamicMappingAlreadyInUseException.class)
+  public ResponseEntity<ErrorResponse> handleEntityDynamicMappingAlreadyInUseException(
+      EntityDynamicMappingAlreadyInUseException ex) {
+    log.warn("Entity dynamic mapping already in use: {}", ex.getMessage());
+    ErrorResponse errorResponse = new ErrorResponse(HttpStatus.CONFLICT.name(), ex.getMessage());
+    return ResponseEntity.status(HttpStatus.CONFLICT).body(errorResponse);
   }
 
   /// Handles webhook connector identifier duplication conflicts.

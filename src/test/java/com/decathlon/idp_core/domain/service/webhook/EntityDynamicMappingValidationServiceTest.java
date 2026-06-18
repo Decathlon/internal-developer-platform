@@ -54,9 +54,10 @@ class EntityDynamicMappingValidationServiceTest {
   }
 
   private EntityDynamicMapping buildMapping(String templateIdentifier,
-      Map<String, String> properties, Map<String, String> relations) {
-    return new EntityDynamicMapping(null, templateIdentifier, ".eventType == \"DEPLOYED\"", ".id",
-        ".name", properties, relations);
+      String entityDynamicMappingIdentifier, Map<String, String> properties,
+      Map<String, String> relations) {
+    return new EntityDynamicMapping(null, entityDynamicMappingIdentifier, templateIdentifier,
+        ".eventType == \"DEPLOYED\"", ".id", ".name", properties, relations);
   }
 
   private EntityTemplate buildEntityTemplate(List<PropertyDefinition> properties,
@@ -83,8 +84,8 @@ class EntityDynamicMappingValidationServiceTest {
     void shouldPassWithValidMappingMatchingProperties() {
       PropertyDefinition property = buildProperty("environment", false);
       EntityTemplate template = buildEntityTemplate(List.of(property), List.of());
-      EntityDynamicMapping mapping = buildMapping("deployment", Map.of("environment", ".env"),
-          Map.of());
+      EntityDynamicMapping mapping = buildMapping("deployment", "deployment_mapping",
+          Map.of("environment", ".env"), Map.of());
 
       doNothing().when(entityTemplateValidationService).validateTemplateExists("deployment");
       when(entityTemplateService.getEntityTemplateByIdentifier("deployment")).thenReturn(template);
@@ -102,7 +103,8 @@ class EntityDynamicMappingValidationServiceTest {
     @DisplayName("Should pass with empty properties mapping and empty template properties")
     void shouldPassWithEmptyPropertiesAndEmptyTemplateProperties() {
       EntityTemplate template = buildEntityTemplate(List.of(), List.of());
-      EntityDynamicMapping mapping = buildMapping("deployment", Map.of(), Map.of());
+      EntityDynamicMapping mapping = buildMapping("deployment", "deployment_mapping", Map.of(),
+          Map.of());
 
       doNothing().when(entityTemplateValidationService).validateTemplateExists("deployment");
       when(entityTemplateService.getEntityTemplateByIdentifier("deployment")).thenReturn(template);
@@ -121,7 +123,8 @@ class EntityDynamicMappingValidationServiceTest {
     void shouldPassWithNullRelations() {
       PropertyDefinition property = buildProperty("env", false);
       EntityTemplate template = buildEntityTemplate(List.of(property), List.of());
-      EntityDynamicMapping mapping = buildMapping("deployment", Map.of("env", ".env"), null);
+      EntityDynamicMapping mapping = buildMapping("deployment", "deployment_mapping",
+          Map.of("env", ".env"), null);
 
       doNothing().when(entityTemplateValidationService).validateTemplateExists("deployment");
       when(entityTemplateService.getEntityTemplateByIdentifier("deployment")).thenReturn(template);
@@ -136,7 +139,8 @@ class EntityDynamicMappingValidationServiceTest {
     void shouldPassWithEmptyRelationsAndNoRequiredRelations() {
       RelationDefinition relation = buildRelation("service", false);
       EntityTemplate template = buildEntityTemplate(List.of(), List.of(relation));
-      EntityDynamicMapping mapping = buildMapping("deployment", Map.of(), Map.of());
+      EntityDynamicMapping mapping = buildMapping("deployment", "deployment_mapping", Map.of(),
+          Map.of());
 
       doNothing().when(entityTemplateValidationService).validateTemplateExists("deployment");
       when(entityTemplateService.getEntityTemplateByIdentifier("deployment")).thenReturn(template);
@@ -153,11 +157,12 @@ class EntityDynamicMappingValidationServiceTest {
     void shouldValidateEachMappingInList() {
       PropertyDefinition property1 = buildProperty("env", false);
       EntityTemplate template1 = buildEntityTemplate(List.of(property1), List.of());
-      EntityDynamicMapping mapping1 = buildMapping("deployment", Map.of("env", ".env"), Map.of());
+      EntityDynamicMapping mapping1 = buildMapping("deployment", "deployment_mapping",
+          Map.of("env", ".env"), Map.of());
 
       PropertyDefinition property2 = buildProperty("version", false);
       EntityTemplate template2 = buildEntityTemplate(List.of(property2), List.of());
-      EntityDynamicMapping mapping2 = new EntityDynamicMapping(null, "service",
+      EntityDynamicMapping mapping2 = new EntityDynamicMapping(null, "service_mapping", "service",
           ".type == \"SERVICE\"", ".id", ".name", Map.of("version", ".ver"), Map.of());
 
       doNothing().when(entityTemplateValidationService).validateTemplateExists("deployment");
@@ -185,7 +190,7 @@ class EntityDynamicMappingValidationServiceTest {
     void shouldPassWithValidRelations() {
       RelationDefinition relation = buildRelation("owner", true);
       EntityTemplate template = buildEntityTemplate(List.of(), List.of(relation));
-      EntityDynamicMapping mapping = buildMapping("deployment", Map.of(),
+      EntityDynamicMapping mapping = buildMapping("deployment", "deployment_mapping", Map.of(),
           Map.of("owner", ".owner"));
 
       doNothing().when(entityTemplateValidationService).validateTemplateExists("deployment");
@@ -208,7 +213,8 @@ class EntityDynamicMappingValidationServiceTest {
     @Test
     @DisplayName("Should throw EntityTemplateNotFoundException when template does not exist")
     void shouldThrowWhenTemplateDoesNotExist() {
-      EntityDynamicMapping mapping = buildMapping("unknown-template", Map.of(), Map.of());
+      EntityDynamicMapping mapping = buildMapping("unknown-template", "unknown_mapping", Map.of(),
+          Map.of());
       List<EntityDynamicMapping> mappings = List.of(mapping);
 
       doThrow(new EntityTemplateNotFoundException("identifier", "unknown-template"))
@@ -230,7 +236,8 @@ class EntityDynamicMappingValidationServiceTest {
     @DisplayName("Should throw WebhookTemplateHasNoPropertiesException when mapping has properties but template has none")
     void shouldThrowWhenMappingHasPropertiesButTemplateHasNone() {
       EntityTemplate template = buildEntityTemplate(List.of(), List.of());
-      EntityDynamicMapping mapping = buildMapping("deployment", Map.of("env", ".env"), Map.of());
+      EntityDynamicMapping mapping = buildMapping("deployment", "deployment_mapping",
+          Map.of("env", ".env"), Map.of());
       var mappings = List.of(mapping);
 
       doNothing().when(entityTemplateValidationService).validateTemplateExists("deployment");
@@ -252,8 +259,8 @@ class EntityDynamicMappingValidationServiceTest {
     void shouldThrowWhenPropertyNotFoundInTemplate() {
       PropertyDefinition property = buildProperty("environment", false);
       EntityTemplate template = buildEntityTemplate(List.of(property), List.of());
-      EntityDynamicMapping mapping = buildMapping("deployment", Map.of("unknown-prop", ".x"),
-          Map.of());
+      EntityDynamicMapping mapping = buildMapping("deployment", "deployment_mapping",
+          Map.of("unknown-prop", ".x"), Map.of());
       var mappings = List.of(mapping);
 
       doNothing().when(entityTemplateValidationService).validateTemplateExists("deployment");
@@ -276,7 +283,8 @@ class EntityDynamicMappingValidationServiceTest {
       PropertyDefinition requiredProp = buildProperty("env", true);
       EntityTemplate template = buildEntityTemplate(List.of(requiredProp), List.of());
       // mapping does not include the required property "env"
-      EntityDynamicMapping mapping = buildMapping("deployment", Map.of(), Map.of());
+      EntityDynamicMapping mapping = buildMapping("deployment", "deployment_mapping", Map.of(),
+          Map.of());
       var mappings = List.of(mapping);
 
       doNothing().when(entityTemplateValidationService).validateTemplateExists("deployment");
@@ -295,8 +303,8 @@ class EntityDynamicMappingValidationServiceTest {
     void shouldPassWhenAllRequiredPropertiesMapped() {
       PropertyDefinition requiredProp = buildProperty("env", true);
       EntityTemplate template = buildEntityTemplate(List.of(requiredProp), List.of());
-      EntityDynamicMapping mapping = buildMapping("deployment", Map.of("env", ".environment"),
-          Map.of());
+      EntityDynamicMapping mapping = buildMapping("deployment", "deployment_mapping",
+          Map.of("env", ".environment"), Map.of());
 
       doNothing().when(entityTemplateValidationService).validateTemplateExists("deployment");
       when(entityTemplateService.getEntityTemplateByIdentifier("deployment")).thenReturn(template);
@@ -315,7 +323,8 @@ class EntityDynamicMappingValidationServiceTest {
       PropertyDefinition prop1 = buildProperty("env", true);
       PropertyDefinition prop2 = buildProperty("version", true);
       EntityTemplate template = buildEntityTemplate(List.of(prop1, prop2), List.of());
-      EntityDynamicMapping mapping = buildMapping("deployment", Map.of(), Map.of());
+      EntityDynamicMapping mapping = buildMapping("deployment", "deployment_mapping", Map.of(),
+          Map.of());
       var mappings = List.of(mapping);
 
       doNothing().when(entityTemplateValidationService).validateTemplateExists("deployment");
@@ -338,7 +347,7 @@ class EntityDynamicMappingValidationServiceTest {
     void shouldThrowWhenRelationNotFoundInTemplate() {
       RelationDefinition relation = buildRelation("owner", false);
       EntityTemplate template = buildEntityTemplate(List.of(), List.of(relation));
-      EntityDynamicMapping mapping = buildMapping("deployment", Map.of(),
+      EntityDynamicMapping mapping = buildMapping("deployment", "deployment_mapping", Map.of(),
           Map.of("unknown-relation", ".x"));
       var mappings = List.of(mapping);
 
@@ -363,7 +372,8 @@ class EntityDynamicMappingValidationServiceTest {
     void shouldThrowWhenRequiredRelationMissingFromMapping() {
       RelationDefinition requiredRelation = buildRelation("owner", true);
       EntityTemplate template = buildEntityTemplate(List.of(), List.of(requiredRelation));
-      EntityDynamicMapping mapping = buildMapping("deployment", Map.of(), Map.of());
+      EntityDynamicMapping mapping = buildMapping("deployment", "deployment_mapping", Map.of(),
+          Map.of());
       var mappings = List.of(mapping);
 
       doNothing().when(entityTemplateValidationService).validateTemplateExists("deployment");
@@ -385,7 +395,7 @@ class EntityDynamicMappingValidationServiceTest {
     void shouldPassWhenRequiredRelationMapped() {
       RelationDefinition requiredRelation = buildRelation("owner", true);
       EntityTemplate template = buildEntityTemplate(List.of(), List.of(requiredRelation));
-      EntityDynamicMapping mapping = buildMapping("deployment", Map.of(),
+      EntityDynamicMapping mapping = buildMapping("deployment", "deployment_mapping", Map.of(),
           Map.of("owner", ".ownerId"));
 
       doNothing().when(entityTemplateValidationService).validateTemplateExists("deployment");
@@ -406,7 +416,8 @@ class EntityDynamicMappingValidationServiceTest {
       RelationDefinition rel1 = buildRelation("owner", true);
       RelationDefinition rel2 = buildRelation("team", true);
       EntityTemplate template = buildEntityTemplate(List.of(), List.of(rel1, rel2));
-      EntityDynamicMapping mapping = buildMapping("deployment", Map.of(), Map.of());
+      EntityDynamicMapping mapping = buildMapping("deployment", "deployment_mapping", Map.of(),
+          Map.of());
       var mappings = List.of(mapping);
 
       doNothing().when(entityTemplateValidationService).validateTemplateExists("deployment");
@@ -425,7 +436,8 @@ class EntityDynamicMappingValidationServiceTest {
     @DisplayName("Should skip relation validation when relations map is null")
     void shouldSkipRelationValidationWhenNull() {
       EntityTemplate template = buildEntityTemplate(List.of(), List.of());
-      EntityDynamicMapping mapping = buildMapping("deployment", Map.of(), null);
+      EntityDynamicMapping mapping = buildMapping("deployment", "deployment_mapping", Map.of(),
+          null);
 
       doNothing().when(entityTemplateValidationService).validateTemplateExists("deployment");
       when(entityTemplateService.getEntityTemplateByIdentifier("deployment")).thenReturn(template);
@@ -446,7 +458,8 @@ class EntityDynamicMappingValidationServiceTest {
     @DisplayName("Should delegate to entityDynamicMapperValidator after all domain checks pass")
     void shouldDelegateToMapperValidator() {
       EntityTemplate template = buildEntityTemplate(List.of(), List.of());
-      EntityDynamicMapping mapping = buildMapping("deployment", Map.of(), Map.of());
+      EntityDynamicMapping mapping = buildMapping("deployment", "deployment_mapping", Map.of(),
+          Map.of());
 
       doNothing().when(entityTemplateValidationService).validateTemplateExists("deployment");
       when(entityTemplateService.getEntityTemplateByIdentifier("deployment")).thenReturn(template);
@@ -463,7 +476,8 @@ class EntityDynamicMappingValidationServiceTest {
     @Test
     @DisplayName("Should NOT call entityDynamicMapperValidator when domain check throws")
     void shouldNotCallMapperValidatorWhenDomainCheckFails() {
-      EntityDynamicMapping mapping = buildMapping("bad-template", Map.of(), Map.of());
+      EntityDynamicMapping mapping = buildMapping("bad-template", "deployment_mapping", Map.of(),
+          Map.of());
       var mappings = List.of(mapping);
 
       doThrow(new EntityTemplateNotFoundException("identifier", "bad-template"))

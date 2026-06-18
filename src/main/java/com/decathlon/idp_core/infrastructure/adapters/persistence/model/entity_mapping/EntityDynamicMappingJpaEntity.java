@@ -27,6 +27,9 @@ public class EntityDynamicMappingJpaEntity {
   @GeneratedValue(strategy = GenerationType.UUID)
   private UUID id;
 
+  @Column(name = "identifier", nullable = false, unique = true)
+  private String identifier;
+
   @Column(name = "template_identifier", nullable = false)
   private String templateIdentifier;
 

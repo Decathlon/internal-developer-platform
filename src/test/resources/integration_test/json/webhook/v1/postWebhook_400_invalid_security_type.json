@@ -3,25 +3,7 @@
   "title": "Invalid Security Type",
   "description": "Should fail",
   "enabled": true,
-  "mappings": [
-    {
-      "template": "microservice",
-      "filter": "true",
-      "entity": {
-        "identifier": ".id",
-        "title": ".name",
-        "properties": {
-          "applicationName": ".repository.name",
-          "ownerEmail": ".sender.login + \"@example.com\"",
-          "environment": ".deployment.environment",
-          "version": ".deployment.sha",
-          "port": "8080",
-          "programmingLanguage": "\"Java\""
-        },
-        "relations": {}
-      }
-    }
-  ],
+  "mapping_identifiers": ["microservice-mapping"],
   "security": {
     "type": "UNKNOWN_TYPE",
     "config": {}

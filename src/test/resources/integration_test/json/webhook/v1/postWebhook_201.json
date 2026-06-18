@@ -3,25 +3,7 @@
   "title": "GitHub DORA Connector test",
   "description": "Collects deployment events from GitHub",
   "enabled": true,
-  "mappings": [
-    {
-      "template": "microservice",
-      "filter": ".action == \"deployment\"",
-      "entity": {
-        "identifier": ".repository.name",
-        "title": ".repository.name",
-        "properties": {
-          "applicationName": ".repository.name",
-          "ownerEmail": ".sender.login + \"@example.com\"",
-          "environment": ".deployment.environment",
-          "version": ".deployment.sha",
-          "port": "8080",
-          "programmingLanguage": "\"Java\""
-        },
-        "relations": {}
-      }
-    }
-  ],
+  "mapping_identifiers": ["microservice-mapping"],
   "security": {
     "type": "HMAC_SHA256",
     "config": {

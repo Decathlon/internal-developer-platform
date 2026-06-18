@@ -68,6 +68,9 @@ public class ValidationMessages {
   public static final String WEBHOOK_CONNECTOR_IDENTIFIER_MANDATORY = "Webhook Connector identifier is mandatory and cannot be blank";
   public static final String WEBHOOK_CONNECTOR_TITLE_ALREADY_EXIST = "Webhook Connector already exist with the same name";
   public static final String WEBHOOK_IDENTIFIER_NOT_FOUND = "Target webhook with identifier '%s' does not exist";
+  public static final String ENTITY_DYNAMIC_MAPPING_NOT_FOUND = "Entity dynamic mapping with identifier '%s' does not exist";
+  public static final String ENTITY_DYNAMIC_MAPPING_ALREADY_EXISTS = "Entity dynamic mapping already exists with the same identifier '%s'";
+  public static final String ENTITY_DYNAMIC_MAPPING_ALREADY_IN_USE = "Entity dynamic mapping already in use, please remove it from the associated webhook connector '%s' before deleting it";
 
   // Entity creation validation messages
   public static final String ENTITY_NOT_FOUND = "Entity not found with template identifier %s and entity identifier '%s'";

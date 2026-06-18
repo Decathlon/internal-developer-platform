@@ -3,7 +3,7 @@
   "title": "No Mappings",
   "description": "Should fail",
   "enabled": true,
-  "mappings": [],
+  "mapping_identifiers": [],
   "security": {
     "type": "NONE",
     "config": {}

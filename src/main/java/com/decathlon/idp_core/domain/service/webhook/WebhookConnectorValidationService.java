@@ -8,6 +8,7 @@ import com.decathlon.idp_core.domain.exception.webhook.WebhookConnectorNotFoundE
 import com.decathlon.idp_core.domain.exception.webhook.WebhookConnectorTitleAlreadyExistsException;
 import com.decathlon.idp_core.domain.model.inbound_connectors.webhook.WebhookConnector;
 import com.decathlon.idp_core.domain.port.WebhookConnectorRepositoryPort;
+import com.decathlon.idp_core.domain.port.WebhookTemplateMappingPort;
 import com.decathlon.idp_core.domain.service.webhook.security.WebhookSecurityValidationService;
 
 import lombok.RequiredArgsConstructor;
@@ -21,13 +22,13 @@ import lombok.RequiredArgsConstructor;
 public class WebhookConnectorValidationService {
 
   private final WebhookConnectorRepositoryPort webhookConnectorRepositoryPort;
+  private final WebhookTemplateMappingPort webhookTemplateMappingPort;
   private final EntityDynamicMappingValidationService webhookConnectorMappingValidationService;
   private final WebhookSecurityValidationService webhookSecurityValidationService;
 
   public void validateWebhookConnectorForCreation(WebhookConnector webhookConnector) {
     validateIdentifierUniqueness(webhookConnector.identifier());
     validateTitleUniqueness(webhookConnector.title());
-    validateMappingsIfPresent(webhookConnector);
     webhookSecurityValidationService.validateForCreation(webhookConnector.security());
 
   }

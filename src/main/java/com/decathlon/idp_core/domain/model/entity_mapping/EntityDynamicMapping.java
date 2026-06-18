@@ -12,11 +12,15 @@ import com.decathlon.idp_core.domain.exception.entity_mapping.EntityDynamicMappi
 ///
 /// Note: The technical ID is managed purely at the infrastructure layer
 /// (persisted in entity_dynamic_mapping table) and is NOT part of the domain model.
-public record EntityDynamicMapping(UUID id, String templateIdentifier, String filter,
-    String entityIdentifier, String entityTitle, Map<String, String> properties,
+public record EntityDynamicMapping(UUID id, String identifier, String templateIdentifier,
+    String filter, String entityIdentifier, String entityTitle, Map<String, String> properties,
     Map<String, String> relations) {
 
   public EntityDynamicMapping {
+    if (isBlank(identifier)) {
+      throw new EntityDynamicMappingConfigurationException(
+          "Entity dynamic mapping identifier cannot be empty");
+    }
     if (isBlank(templateIdentifier)) {
       throw new EntityDynamicMappingConfigurationException("Template identifier cannot be empty");
     }

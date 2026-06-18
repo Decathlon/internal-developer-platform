@@ -44,21 +44,21 @@ public class EntityDynamicMappingValidationService {
   /// - Required properties and relations from the target template are present.
   /// - The mapping expression syntax is valid.
   ///
-  /// @param webhookMapping the mapping to validate
-  private void validateMapping(EntityDynamicMapping webhookMapping) {
-    String templateIdentifier = webhookMapping.templateIdentifier();
+  /// @param entityDynamicMapping the mapping to validate
+  protected void validateMapping(EntityDynamicMapping entityDynamicMapping) {
+    String templateIdentifier = entityDynamicMapping.templateIdentifier();
     entityTemplateValidationService.validateTemplateExists(templateIdentifier);
     EntityTemplate entityTemplate = entityTemplateService
         .getEntityTemplateByIdentifier(templateIdentifier);
-    entityTemplateValidationService.validatePropertiesExistInTemplate(webhookMapping.properties(),
+    entityTemplateValidationService.validatePropertiesExistInTemplate(
+        entityDynamicMapping.properties(), entityTemplate.propertiesDefinitions());
+    validateRequiredPropertiesAreMapped(entityDynamicMapping.properties(),
         entityTemplate.propertiesDefinitions());
-    validateRequiredPropertiesAreMapped(webhookMapping.properties(),
-        entityTemplate.propertiesDefinitions());
-    entityTemplateValidationService
-        .validateRelationNameAlreadyExistInTemplate(webhookMapping.relations(), entityTemplate);
-    validateRequiredRelationDefinitionsAreMapped(webhookMapping.relations(),
+    entityTemplateValidationService.validateRelationNameAlreadyExistInTemplate(
+        entityDynamicMapping.relations(), entityTemplate);
+    validateRequiredRelationDefinitionsAreMapped(entityDynamicMapping.relations(),
         entityTemplate.relationsDefinitions());
-    entityDynamicMapperValidator.validate(webhookMapping);
+    entityDynamicMapperValidator.validate(entityDynamicMapping);
   }
 
   /// Validates that all required relation definitions in the target template

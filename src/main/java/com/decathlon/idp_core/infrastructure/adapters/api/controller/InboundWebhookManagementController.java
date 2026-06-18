@@ -16,7 +16,7 @@ import com.decathlon.idp_core.infrastructure.adapters.api.configuration.SwaggerC
 import com.decathlon.idp_core.infrastructure.adapters.api.dto.in.InboundWebhookCreateDtoIn;
 import com.decathlon.idp_core.infrastructure.adapters.api.dto.out.webhook.InboundWebhookDtoOut;
 import com.decathlon.idp_core.infrastructure.adapters.api.handler.ApiExceptionHandler;
-import com.decathlon.idp_core.infrastructure.adapters.api.mapper.webhook.InboundWebhookMapper;
+import com.decathlon.idp_core.infrastructure.adapters.api.mapper.connector.webhook.InboundWebhookMapper;
 
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -41,16 +41,17 @@ public class InboundWebhookManagementController {
   ///
   /// @param request creation payload
   /// @return created connector response
-  @Operation(summary = "Create inbound webhook configuration", description = "Creates a webhook connector configuration used by the generic inbound webhook endpoint")
+  @Operation(summary = ENDPOINT_POST_WEBHOOK_CONNECTOR_SUMMARY, description = ENDPOINT_POST_WEBHOOK_CONNECTOR_DESCRIPTION)
   @ApiResponse(responseCode = "201", description = "Webhook connector created")
   @ApiResponse(responseCode = "400", description = "Invalid request payload")
   @ApiResponse(responseCode = "409", description = "Identifier already exists")
   @PostMapping
   @ResponseStatus(CREATED)
   public InboundWebhookDtoOut createInboundWebhook(
-      @Valid @RequestBody InboundWebhookCreateDtoIn request) {
+      @Valid @RequestBody InboundWebhookCreateDtoIn request) {// remove jakarta
     WebhookConnector webhookConnector = webhookConnectorService
-        .createWebhookConnector(inboundWebhookMapper.toDomain(request));
+        .createWebhookConnector(inboundWebhookMapper.toDomain(request,
+            webhookConnectorService.resolveAndValidateMappings(request.mappingIdentifiers())));
     return inboundWebhookMapper.fromWebhookConnectorToDto(webhookConnector);
   }
 
@@ -69,7 +70,7 @@ public class InboundWebhookManagementController {
         .map(inboundWebhookMapper::fromWebhookConnectorToDto);
   }
 
-  @Operation(summary = ENDPOINT_DELETE_WEBHOOK_CONNECTOR_SUMMARY, description = ENDPOINT_DELETE_WEBHOOK_CONNECTOR_DESCRIPTION)
+  @Operation(summary = ENDPOINT_DELETE_WEBHOOK_CONNECTOR_SUMMARY, description = ENDPOINT_DELETE_ENTITY_DYNAMIC_MAPPING_DESCRIPTION)
   @ApiResponse(responseCode = NO_CONTENT_CODE, description = RESPONSE_WEBHOOK_CONNECTOR_DELETED)
   @ApiResponse(responseCode = NOT_FOUND_CODE, description = RESPONSE_WEBHOOK_CONNECTOR_NOT_FOUND_IDENTIFIER, content = {
       @Content(schema = @Schema(implementation = ApiExceptionHandler.ErrorResponse.class))})
@@ -104,8 +105,10 @@ public class InboundWebhookManagementController {
   @ResponseStatus(OK)
   public InboundWebhookDtoOut putWebhookConnector(@PathVariable String identifier,
       @Valid @RequestBody InboundWebhookCreateDtoIn request) {
+    var resolvedMappings = webhookConnectorService
+        .resolveAndValidateMappings(request.mappingIdentifiers());
     return inboundWebhookMapper
         .fromWebhookConnectorToDto(webhookConnectorService.updateWebhookConnector(identifier,
-            inboundWebhookMapper.toDomainForUpdate(identifier, request)));
+            inboundWebhookMapper.toDomainForUpdate(identifier, request, resolvedMappings)));
   }
 }

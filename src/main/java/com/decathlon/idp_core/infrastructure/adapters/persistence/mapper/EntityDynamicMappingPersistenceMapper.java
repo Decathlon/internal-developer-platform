@@ -16,7 +16,6 @@ import com.decathlon.idp_core.infrastructure.adapters.persistence.model.entity_m
 @Mapper(componentModel = SPRING, uses = EntityDynamicMappingJsonbHelper.class)
 public interface EntityDynamicMappingPersistenceMapper {
 
-  @Mapping(target = "id", ignore = true)
   @Mapping(target = "properties", qualifiedByName = "jsonStringToMap")
   @Mapping(target = "relations", qualifiedByName = "jsonStringToMap")
   EntityDynamicMapping toDomain(EntityDynamicMappingJpaEntity jpa);

@@ -24,10 +24,13 @@ import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 
+import com.decathlon.idp_core.domain.exception.entity_mapping.EntityDynamicMappingNotFoundException;
 import com.decathlon.idp_core.domain.exception.webhook.WebhookConnectorNotFoundException;
+import com.decathlon.idp_core.domain.model.entity_mapping.EntityDynamicMapping;
 import com.decathlon.idp_core.domain.model.enums.WebhookSecurityType;
 import com.decathlon.idp_core.domain.model.inbound_connectors.webhook.WebhookConnector;
 import com.decathlon.idp_core.domain.model.inbound_connectors.webhook.WebhookSecurity;
+import com.decathlon.idp_core.domain.port.EntityDynamicMappingPort;
 import com.decathlon.idp_core.domain.port.WebhookConnectorRepositoryPort;
 
 @DisplayName("WebhookConnectorService Tests")
@@ -40,12 +43,15 @@ class WebhookConnectorServiceTest {
   @Mock
   private WebhookConnectorValidationService webhookConnectorValidationService;
 
+  @Mock
+  private EntityDynamicMappingPort entityDynamicMappingPort;
+
   private WebhookConnectorService service;
 
   @BeforeEach
   void setUp() {
     service = new WebhookConnectorService(webhookConnectorRepositoryPort,
-        webhookConnectorValidationService);
+        webhookConnectorValidationService, entityDynamicMappingPort);
   }
 
   @Nested
@@ -285,5 +291,49 @@ class WebhookConnectorServiceTest {
     WebhookSecurity security = new WebhookSecurity(WebhookSecurityType.HMAC_SHA256,
         Map.of("header_name", "X-Hub-Signature-256", "secret_alias", "MY_SECRET"));
     return new WebhookConnector(id, identifier, title, description, enabled, List.of(), security);
+  }
+
+  @Nested
+  @DisplayName("resolveAndValidateMappings")
+  class ResolveAndValidateMappingsTests {
+
+    @Test
+    @DisplayName("Should return empty list when identifiers are null or empty")
+    void shouldReturnEmptyWhenNoIdentifiers() {
+      assertThat(service.resolveAndValidateMappings(null)).isEmpty();
+      assertThat(service.resolveAndValidateMappings(List.of())).isEmpty();
+      verifyNoInteractions(entityDynamicMappingPort);
+    }
+
+    @Test
+    @DisplayName("Should resolve each identifier to its existing mapping")
+    void shouldResolveExistingMappings() {
+      EntityDynamicMapping mapping = buildMapping("deployment-mapping");
+      when(entityDynamicMappingPort.findByIdentifier("deployment-mapping"))
+          .thenReturn(Optional.of(mapping));
+
+      List<EntityDynamicMapping> result = service
+          .resolveAndValidateMappings(List.of("deployment-mapping"));
+
+      assertThat(result).containsExactly(mapping);
+    }
+
+    @Test
+    @DisplayName("Should throw EntityDynamicMappingNotFoundException when a mapping is missing")
+    void shouldThrowWhenMappingMissing() {
+      when(entityDynamicMappingPort.findByIdentifier("missing-mapping"))
+          .thenReturn(Optional.empty());
+
+      List<String> mappings = List.of("missing-mapping");
+
+      assertThatThrownBy(() -> service.resolveAndValidateMappings(mappings))
+          .isInstanceOf(EntityDynamicMappingNotFoundException.class)
+          .hasMessageContaining("missing-mapping");
+    }
+
+    private EntityDynamicMapping buildMapping(String identifier) {
+      return new EntityDynamicMapping(UUID.randomUUID(), identifier, "deployment", "true", ".id",
+          ".name", Map.of(), Map.of());
+    }
   }
 }

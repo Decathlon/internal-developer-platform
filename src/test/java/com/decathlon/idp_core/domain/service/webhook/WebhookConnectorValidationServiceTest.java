@@ -23,6 +23,7 @@ import com.decathlon.idp_core.domain.model.enums.WebhookSecurityType;
 import com.decathlon.idp_core.domain.model.inbound_connectors.webhook.WebhookConnector;
 import com.decathlon.idp_core.domain.model.inbound_connectors.webhook.WebhookSecurity;
 import com.decathlon.idp_core.domain.port.WebhookConnectorRepositoryPort;
+import com.decathlon.idp_core.domain.port.WebhookTemplateMappingPort;
 import com.decathlon.idp_core.domain.service.webhook.security.WebhookSecurityValidationService;
 
 @DisplayName("WebhookConnectorValidationService Tests")
@@ -31,6 +32,9 @@ class WebhookConnectorValidationServiceTest {
 
   @Mock
   private WebhookConnectorRepositoryPort webhookConnectorRepositoryPort;
+
+  @Mock
+  private WebhookTemplateMappingPort webhookTemplateMappingPort;
 
   @Mock
   private WebhookSecurityValidationService webhookSecurityValidationService;
@@ -43,7 +47,8 @@ class WebhookConnectorValidationServiceTest {
   @BeforeEach
   void setUp() {
     service = new WebhookConnectorValidationService(webhookConnectorRepositoryPort,
-        webhookConnectorMappingValidationService, webhookSecurityValidationService);
+        webhookTemplateMappingPort, webhookConnectorMappingValidationService,
+        webhookSecurityValidationService);
   }
 
   @Nested

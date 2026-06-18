@@ -17,5 +17,6 @@ public interface JpaWebhookTemplateMappingRepository
   /// Retrieves all mappings associated with a webhook connector.
   List<WebhookTemplateMappingJpaEntity> findByWebhookId(UUID webhookId);
   List<WebhookTemplateMappingJpaEntity> findByTemplateId(UUID templateId);
-  boolean existsByTemplateId(UUID templateId);
+  boolean existsByEntityMappingId(UUID entityMappingId);
+  List<WebhookTemplateMappingJpaEntity> findByEntityMappingId(UUID entityMappingId);
 }

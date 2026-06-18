@@ -8,5 +8,7 @@ import com.decathlon.idp_core.domain.model.inbound_connectors.webhook.WebhookTem
 public interface WebhookTemplateMappingPort {
 
   List<WebhookTemplateMapping> findByTemplateId(UUID templateId);
+  boolean existsByEntityMappingId(UUID id);
+  List<WebhookTemplateMapping> findByEntityMappingId(UUID id);
 
 }
