@@ -62,7 +62,8 @@ public interface EntityGraphRepositoryPort {
   /// @param depth the maximum traversal depth; typically clamped to 1-6 by the
   /// service layer
   /// @param includeProperties when true, entity properties are eagerly loaded
-  /// @param mode the graph traversal mode determining which relation directions to
+  /// @param mode the graph traversal mode determining which relation directions
+  /// to
   /// follow
   /// @return an immutable map of all discovered entities keyed by their UUID,
   /// including all root entities and their reachable neighbors

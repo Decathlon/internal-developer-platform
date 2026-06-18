@@ -84,10 +84,11 @@ import com.decathlon.idp_core.infrastructure.adapters.api.configuration.SwaggerC
 import com.decathlon.idp_core.infrastructure.adapters.api.dto.in.EntityCreateDtoIn;
 import com.decathlon.idp_core.infrastructure.adapters.api.dto.in.EntitySearchRequestDtoIn;
 import com.decathlon.idp_core.infrastructure.adapters.api.dto.in.EntityUpdateDtoIn;
-import com.decathlon.idp_core.infrastructure.adapters.api.dto.out.entity.EntityDtoOut;
 import com.decathlon.idp_core.infrastructure.adapters.api.dto.out.entity.EntityDepDtoOut;
+import com.decathlon.idp_core.infrastructure.adapters.api.dto.out.entity.EntityDtoOut;
 import com.decathlon.idp_core.infrastructure.adapters.api.handler.ApiExceptionHandler;
 import com.decathlon.idp_core.infrastructure.adapters.api.handler.ApiExceptionHandler.ErrorResponse;
+import com.decathlon.idp_core.infrastructure.adapters.api.mapper.entity.EntityDepDtoOutMapper;
 import com.decathlon.idp_core.infrastructure.adapters.api.mapper.entity.EntityDtoInMapper;
 import com.decathlon.idp_core.infrastructure.adapters.api.mapper.entity.EntityDtoOutMapper;
 import com.decathlon.idp_core.infrastructure.adapters.api.mapper.entity.SearchFilterMapper;
@@ -123,18 +124,18 @@ public class EntityController {
   private final EntityFilterDslParser entityFilterDslParser;
   private final SearchFilterMapper searchFilterMapper;
   private final SearchFilterParser searchFilterParser;
+  private final EntityDepDtoOutMapper entityDepDtoOutMapper;
 
   /// Returns paginated entities filtered by template with HTTP pagination
   /// support.
   ///
   /// **API contract:** Provides paginated entity listings for template-specific
-  /// views.
-  /// Supports standard REST pagination parameters and an optional `q` filter
-  /// query.
-  /// Template validation is handled by the domain service layer.
+  /// views. Supports standard REST pagination parameters and an optional `q`
+  /// filter query. Template validation is handled by the domain service layer.
   ///
   /// @param page zero-based page index for pagination navigation
-  /// @param size number of entities per page for response size control
+  /// @param size number of entities per page for response size
+  /// control
   /// @param templateIdentifier template filter for entity scope limitation
   /// @param q optional filter query string (e.g.
   /// `name:API;property.language=JAVA`)
@@ -164,9 +165,8 @@ public class EntityController {
   /// Retrieves a single entity by template and entity identifiers.
   ///
   /// **API contract:** Provides specific entity lookup using compound identifier
-  /// pattern.
-  /// Returns HTTP 404 if either template or entity doesn't exist, maintaining
-  /// REST semantics.
+  /// pattern. Returns HTTP 404 if either template or entity doesn't exist,
+  /// maintaining REST semantics.
   ///
   /// @param templateIdentifier business template identifier for entity scope
   /// @param entityIdentifier unique business identifier within template context
@@ -188,10 +188,8 @@ public class EntityController {
   /// Creates a new entity for the specified template with validation.
   ///
   /// **API contract:** Accepts entity creation payload and returns created entity
-  /// with
-  /// generated identifiers. Validates entity structure against template
-  /// constraints
-  /// and returns HTTP 201 on success, HTTP 400 for validation errors.
+  /// with generated identifiers. Validates entity structure against template
+  /// constraints and returns HTTP 201 on success, HTTP 400 for validation errors.
   ///
   /// @param templateIdentifier target template identifier for entity creation
   /// context
@@ -225,10 +223,9 @@ public class EntityController {
   /// Updates an existing entity for the specified template.
   ///
   /// **API contract:** Accepts entity update payload and returns updated entity.
-  /// Validates
-  /// that the entity exists and that the update payload conforms to template
-  /// constraints. Returns HTTP 200 on success, HTTP 400 for validation errors,
-  /// HTTP 404 if entity doesn't exist.
+  /// Validates that the entity exists and that the update payload conforms to
+  /// template constraints. Returns HTTP 200 on success, HTTP 400 for validation
+  /// errors, HTTP 404 if entity doesn't exist.
   ///
   /// @param templateIdentifier target template identifier for entity update
   /// context
@@ -262,10 +259,10 @@ public class EntityController {
   /// Deletes an existing entity identified by template and entity identifiers.
   ///
   /// **API contract:** Validates the template and entity exist, cleans up
-  /// relations in parent
-  /// entities that reference the deleted entity, then deletes the entity.
-  /// Returns HTTP 204 on successful deletion, HTTP 404 if entity doesn't exist,
-  /// HTTP 400 if deletion is not allowed due to existing references.
+  /// relations in parent entities that reference the deleted entity, then deletes
+  /// the entity. Returns HTTP 204 on successful deletion, HTTP 404 if entity
+  /// doesn't exist, HTTP 400 if deletion is not allowed due to existing
+  /// references.
   ///
   /// @param templateIdentifier the template identifier of the entity to delete
   /// @param entityIdentifier the identifier of the entity to delete
@@ -288,18 +285,21 @@ public class EntityController {
     entityService.deleteEntity(templateIdentifier, entityIdentifier);
   }
 
-  /// Retrieves paginated entities with their dependency graphs up to specified depth.
+  /// Retrieves paginated entities with their dependency graphs up to specified
+  /// depth.
   ///
-  /// **API contract:** Returns a paginated list of entities with their outbound and
-  /// inbound relations merged into a single relations object. Each entity includes all
-  /// reachable nodes up to the specified depth using DIRECT_LINEAGE traversal mode.
-  /// Results are returned as EntityDepDtoOut DTOs with relations merged from both
-  /// directions.
+  /// **API contract:** Returns a paginated list of entities with their outbound
+  /// and inbound relations merged into a single relations object. Each entity
+  /// includes all reachable nodes up to the specified depth using DIRECT_LINEAGE
+  /// traversal mode. Results are returned as EntityDepDtoOut DTOs with relations
+  /// merged from both directions.
   ///
   /// @param page zero-based page index for pagination navigation
-  /// @param size number of entities per page for response size control
+  /// @param size number of entities per page for response size
+  /// control
   /// @param templateIdentifier template filter for entity scope limitation
-  /// @param depth maximum relation traversal depth (default 1, clamped to 1-6)
+  /// @param depth maximum relation traversal depth (default 1,
+  /// clamped to 1-6)
   /// @param q optional filter query string for entity filtering
   /// @return paginated entity dependency DTOs with merged relations up to depth
   @Operation(summary = "Get entity dependencies", description = "Retrieve entities with their relationship graphs up to specified depth")
@@ -318,28 +318,28 @@ public class EntityController {
       @RequestParam(defaultValue = "1") int depth, @RequestParam(required = false) String q) {
     Pageable pageable = PageRequest.of(page, size);
     EntityFilter filter = entityFilterDslParser.parse(q);
-    Page<Entity> entities = entityService.getEntitiesByTemplateIdentifier(pageable, templateIdentifier,
-        filter);
+    Page<Entity> entities = entityService.getEntitiesByTemplateIdentifier(pageable,
+        templateIdentifier, filter);
 
     // Extract entity identifiers for batch graph loading
-    List<String> entityIdentifiers = entities.getContent().stream().map(Entity::identifier).toList();
+    List<String> entityIdentifiers = entities.getContent().stream().map(Entity::identifier)
+        .toList();
 
     if (entityIdentifiers.isEmpty()) {
       return new PageImpl<>(List.of(), pageable, 0);
     }
 
-    // Load entity graphs with DIRECT_LINEAGE mode (includes outbound + inbound relations)
+    // Load entity graphs with DIRECT_LINEAGE mode (includes outbound + inbound
+    // relations)
     Map<String, EntityGraphNode> entityGraphs = entityGraphService
         .getBatchEntityGraphsByIdentifiers(templateIdentifier, entityIdentifiers, depth, false,
             java.util.Set.of(), java.util.Set.of(), EntityGraphTraversalMode.DIRECT_LINEAGE);
 
     // Map to EntityDepDtoOut with merged relations
-    List<EntityDepDtoOut> dtoOutList = entities.getContent().stream()
-        .map(entity -> {
-          EntityGraphNode graphNode = entityGraphs.getOrDefault(entity.identifier(), null);
-          return entityDtoOutMapper.fromEntityToDependencyDto(entity, graphNode);
-        })
-        .toList();
+    List<EntityDepDtoOut> dtoOutList = entities.getContent().stream().map(entity -> {
+      EntityGraphNode graphNode = entityGraphs.getOrDefault(entity.identifier(), null);
+      return entityDepDtoOutMapper.toDto(graphNode);
+    }).toList();
 
     return new PageImpl<>(dtoOutList, pageable, entities.getTotalElements());
   }
@@ -347,11 +347,9 @@ public class EntityController {
   /// Searches for entities across all templates using a nested filter query.
   ///
   /// **API contract:** Accepts a JSON body with a nested filter tree, pagination,
-  /// and
-  /// sorting parameters. Returns a paginated list of entities matching the
-  /// filter.
-  /// No template scoping is applied by default; include a template criterion
-  /// in the filter to scope results to a specific template.
+  /// and sorting parameters. Returns a paginated list of entities matching the
+  /// filter. No template scoping is applied by default; include a template
+  /// criterion in the filter to scope results to a specific template.
   ///
   /// @param searchRequest the search request body with filter, page, size, and
   /// sort
