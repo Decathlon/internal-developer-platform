@@ -14,12 +14,15 @@ public class HmacSignatureValidator {
 
   public String computeHexSha256(byte[] payload, String secret) {
     try {
+      if (secret == null || secret.isBlank()) {
+        throw new WebhookAuthenticationException("Unable to compute HMAC signature");
+      }
       Mac mac = Mac.getInstance("HmacSHA256");
       mac.init(new SecretKeySpec(secret.getBytes(StandardCharsets.UTF_8), "HmacSHA256"));
       byte[] digest = mac.doFinal(payload);
       return toHex(digest);
-    } catch (Exception _) {
-      throw new WebhookAuthenticationException("Unable to compute HMAC signature");
+    } catch (Exception e) {
+      throw new WebhookAuthenticationException("Unable to compute HMAC signature", e);
     }
   }
 

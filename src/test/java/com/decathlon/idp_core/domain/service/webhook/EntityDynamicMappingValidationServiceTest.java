@@ -57,7 +57,7 @@ class EntityDynamicMappingValidationServiceTest {
       String entityDynamicMappingIdentifier, Map<String, String> properties,
       Map<String, String> relations) {
     return new EntityDynamicMapping(null, entityDynamicMappingIdentifier, templateIdentifier,
-        ".eventType == \"DEPLOYED\"", ".id", ".name", properties, relations);
+        ".eventType == \"DEPLOYED\"", "name", "description", ".id", ".name", properties, relations);
   }
 
   private EntityTemplate buildEntityTemplate(List<PropertyDefinition> properties,
@@ -163,7 +163,8 @@ class EntityDynamicMappingValidationServiceTest {
       PropertyDefinition property2 = buildProperty("version", false);
       EntityTemplate template2 = buildEntityTemplate(List.of(property2), List.of());
       EntityDynamicMapping mapping2 = new EntityDynamicMapping(null, "service_mapping", "service",
-          ".type == \"SERVICE\"", ".id", ".name", Map.of("version", ".ver"), Map.of());
+          ".type == \"SERVICE\"", "service mapping", "service mapping description", ".id", ".name",
+          Map.of("version", ".ver"), Map.of());
 
       doNothing().when(entityTemplateValidationService).validateTemplateExists("deployment");
       doNothing().when(entityTemplateValidationService).validateTemplateExists("service");

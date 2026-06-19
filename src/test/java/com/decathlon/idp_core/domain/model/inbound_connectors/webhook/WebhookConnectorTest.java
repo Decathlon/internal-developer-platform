@@ -21,7 +21,8 @@ class WebhookConnectorTest {
   @DisplayName("Should default mappings to empty list and disable connector when mappings are null")
   void shouldDefaultMappingsToEmptyListAndDisableWhenMappingsAreNull() {
     WebhookConnector connector = new WebhookConnector(UUID.randomUUID(), "github-dora",
-        "GitHub DORA", "desc", true, null, new WebhookSecurity(WebhookSecurityType.NONE, Map.of()));
+        "GitHub DORA", "desc", false, null,
+        new WebhookSecurity(WebhookSecurityType.NONE, Map.of()));
 
     assertThat(connector.mappings()).isEmpty();
     assertThat(connector.enabled()).isFalse();
@@ -31,7 +32,7 @@ class WebhookConnectorTest {
   @DisplayName("Should disable connector when mappings are empty")
   void shouldDisableWhenMappingsAreEmpty() {
     WebhookConnector connector = new WebhookConnector(UUID.randomUUID(), "github-dora",
-        "GitHub DORA", "desc", true, List.of(),
+        "GitHub DORA", "desc", false, List.of(),
         new WebhookSecurity(WebhookSecurityType.NONE, Map.of()));
 
     assertThat(connector.mappings()).isEmpty();

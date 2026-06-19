@@ -12,7 +12,7 @@ import com.decathlon.idp_core.domain.model.inbound_connectors.webhook.WebhookCon
 import com.decathlon.idp_core.domain.model.inbound_connectors.webhook.WebhookSecurity;
 import com.decathlon.idp_core.infrastructure.adapters.api.dto.in.InboundWebhookCreateDtoIn;
 import com.decathlon.idp_core.infrastructure.adapters.api.dto.in.InboundWebhookSecurityContractDtoIn;
-import com.decathlon.idp_core.infrastructure.adapters.api.dto.out.webhook.EntityDynamicMappingDtoOut;
+import com.decathlon.idp_core.infrastructure.adapters.api.dto.out.entity_dynamic_mapping.EntityDynamicMappingDtoOut;
 import com.decathlon.idp_core.infrastructure.adapters.api.dto.out.webhook.InboundWebhookDtoOut;
 import com.decathlon.idp_core.infrastructure.adapters.api.dto.out.webhook.InboundWebhookSecurityDtoOut;
 import com.decathlon.idp_core.infrastructure.adapters.api.mapper.connector.DynamicMappingMapper;

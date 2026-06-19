@@ -52,12 +52,12 @@ public class PropertyRegexValidationService {
   /// @throws PropertyDefinitionRulesConflictException if any security check fails
   public void validateRegexPattern(String propertyName, String regexPattern) {
     if (regexPattern.length() > MAX_REGEX_LENGTH) {
-      throw new PropertyDefinitionRulesConflictException(propertyName, PropertyType.STRING,
+      throw new PropertyDefinitionRulesConflictException(propertyName, PropertyType.STRING.name(),
           "Regex pattern too long (max " + MAX_REGEX_LENGTH + " characters)");
     }
 
     if (containsDangerousPatterns(regexPattern)) {
-      throw new PropertyDefinitionRulesConflictException(propertyName, PropertyType.STRING,
+      throw new PropertyDefinitionRulesConflictException(propertyName, PropertyType.STRING.name(),
           "Regex pattern contains potentially unsafe constructs");
     }
 
@@ -65,7 +65,7 @@ public class PropertyRegexValidationService {
     try {
       compiledRegexPattern = Pattern.compile(regexPattern);
     } catch (PatternSyntaxException e) {
-      throw new PropertyDefinitionRulesConflictException(propertyName, PropertyType.STRING,
+      throw new PropertyDefinitionRulesConflictException(propertyName, PropertyType.STRING.name(),
           "Invalid regex pattern: " + e.getMessage());
     }
 
@@ -91,14 +91,14 @@ public class PropertyRegexValidationService {
       future.get(VALIDATION_TIMEOUT_MS, TimeUnit.MILLISECONDS);
     } catch (TimeoutException _) {
       future.cancel(true);
-      throw new PropertyDefinitionRulesConflictException(propertyName, PropertyType.STRING,
+      throw new PropertyDefinitionRulesConflictException(propertyName, PropertyType.STRING.name(),
           "Regex pattern rejected: execution time exceeded safety limits (ReDoS risk)");
     } catch (InterruptedException _) {
       Thread.currentThread().interrupt();
-      throw new PropertyDefinitionRulesConflictException(propertyName, PropertyType.STRING,
+      throw new PropertyDefinitionRulesConflictException(propertyName, PropertyType.STRING.name(),
           "Regex pattern validation was interrupted");
     } catch (ExecutionException e) {
-      throw new PropertyDefinitionRulesConflictException(propertyName, PropertyType.STRING,
+      throw new PropertyDefinitionRulesConflictException(propertyName, PropertyType.STRING.name(),
           "Regex validation failed: " + e.getCause().getMessage());
     }
   }

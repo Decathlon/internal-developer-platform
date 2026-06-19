@@ -1,4 +1,4 @@
-package com.decathlon.idp_core.infrastructure.adapters.api.dto.out.webhook;
+package com.decathlon.idp_core.infrastructure.adapters.api.dto.out.entity_dynamic_mapping;
 
 import java.util.Map;
 

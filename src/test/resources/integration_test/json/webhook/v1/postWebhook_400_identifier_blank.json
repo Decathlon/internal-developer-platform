@@ -3,7 +3,7 @@
   "title": "Blank Identifier",
   "description": "Should fail",
   "enabled": true,
-                                                                                               "mapping_identifiers": ["microservice-mapping"],
+  "mapping_identifiers": ["microservice-mapping"],
   "security": {
     "type": "NONE",
     "config": {}

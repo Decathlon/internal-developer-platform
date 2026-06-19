@@ -18,9 +18,7 @@ import com.decathlon.idp_core.domain.port.EntityDynamicMappingPort;
 import com.decathlon.idp_core.domain.port.WebhookConnectorRepositoryPort;
 
 import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
 
-@Slf4j
 @Service
 @Validated
 @RequiredArgsConstructor
@@ -35,7 +33,7 @@ public class WebhookConnectorService {
   ///
   /// Each identifier is validated against the persisted dynamic mappings. This
   /// guarantees a webhook connector can only reference mappings that were
-  /// previously created through the `/api/v1/inbound-dynamic-mapping` endpoint.
+  /// previously created through the `/api/v1/entity-dynamic-mappings` endpoint.
   ///
   /// @param mappingIdentifiers the referenced mapping identifiers (may be null or
   /// empty)
@@ -62,7 +60,12 @@ public class WebhookConnectorService {
   @Transactional
   public WebhookConnector createWebhookConnector(WebhookConnector connector) {
     webhookConnectorValidationService.validateWebhookConnectorForCreation(connector);
-    return webhookConnectorRepositoryPort.save(connector);
+
+    WebhookConnector connectorToSave = connector.mappings().isEmpty() && connector.enabled()
+        ? connector.withEnabled(false)
+        : connector;
+
+    return webhookConnectorRepositoryPort.save(connectorToSave);
   }
 
   @Transactional
@@ -72,9 +75,10 @@ public class WebhookConnectorService {
     webhookConnectorValidationService.validateWebhookConnectorForUpdate(webhookConnectorInDb,
         connectorToUpdate);
 
+    boolean enabledValue = !connectorToUpdate.mappings().isEmpty() && connectorToUpdate.enabled();
     WebhookConnector mergedConnector = new WebhookConnector(webhookConnectorInDb.id(),
         webhookConnectorInDb.identifier(), connectorToUpdate.title(),
-        connectorToUpdate.description(), connectorToUpdate.enabled(), connectorToUpdate.mappings(),
+        connectorToUpdate.description(), enabledValue, connectorToUpdate.mappings(),
         connectorToUpdate.security());
 
     return webhookConnectorRepositoryPort.save(mergedConnector);

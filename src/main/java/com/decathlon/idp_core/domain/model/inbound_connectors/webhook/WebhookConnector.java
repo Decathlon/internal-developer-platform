@@ -18,9 +18,6 @@ public record WebhookConnector(UUID id, String identifier, String title, String 
     if (security == null) {
       throw new WebhookSecurityConfigurationException("Webhook security type is mandatory");
     }
-    if (mappings.isEmpty()) {
-      enabled = false;
-    }
 
     if (isBlank(identifier)) {
       throw new WebhookConnectorConfigurationException(WEBHOOK_CONNECTOR_IDENTIFIER_MANDATORY);
@@ -30,11 +27,20 @@ public record WebhookConnector(UUID id, String identifier, String title, String 
     }
 
     if (isBlank(title)) {
-      throw new WebhookConnectorConfigurationException("Webhook title is mandatory");
+      throw new WebhookConnectorConfigurationException(
+          "Webhook identifier must not exceed 255 characters");
     }
     if (title.length() > 255) {
       throw new WebhookConnectorConfigurationException(TEMPLATE_NAME_MAX_SIZE);
     }
+  }
+
+  /// Creates a copy of this connector with the specified enabled state.
+  ///
+  /// @param enabled the new enabled state
+  /// @return a new WebhookConnector instance with the updated enabled field
+  public WebhookConnector withEnabled(boolean enabled) {
+    return new WebhookConnector(id, identifier, title, description, enabled, mappings, security);
   }
 
   private static boolean isBlank(String value) {

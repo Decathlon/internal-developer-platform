@@ -14,8 +14,8 @@ import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
 
 import com.decathlon.idp_core.infrastructure.adapters.api.dto.out.entity.EntityDtoOut;
+import com.decathlon.idp_core.infrastructure.adapters.api.dto.out.entity_dynamic_mapping.EntityDynamicMappingDtoOut;
 import com.decathlon.idp_core.infrastructure.adapters.api.dto.out.entity_template.EntityTemplateDtoOut;
-import com.decathlon.idp_core.infrastructure.adapters.api.dto.out.webhook.EntityDynamicMappingDtoOut;
 import com.decathlon.idp_core.infrastructure.adapters.api.dto.out.webhook.InboundWebhookDtoOut;
 
 import io.swagger.v3.core.converter.ModelConverters;

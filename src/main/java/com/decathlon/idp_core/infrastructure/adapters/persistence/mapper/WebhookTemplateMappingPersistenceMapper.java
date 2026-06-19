@@ -2,6 +2,7 @@ package com.decathlon.idp_core.infrastructure.adapters.persistence.mapper;
 
 import java.util.UUID;
 
+import org.mapstruct.InjectionStrategy;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
 import org.mapstruct.MappingConstants;
@@ -16,7 +17,7 @@ import com.decathlon.idp_core.infrastructure.adapters.persistence.model.webhook.
 /// when persisting new links.
 @Mapper(componentModel = MappingConstants.ComponentModel.SPRING, uses = {
     WebhookConnectorPersistenceMapper.class, EntityTemplatePersistenceMapper.class,
-    EntityDynamicMappingPersistenceMapper.class})
+    EntityDynamicMappingPersistenceMapper.class}, injectionStrategy = InjectionStrategy.CONSTRUCTOR)
 public interface WebhookTemplateMappingPersistenceMapper {
 
   /// Maps JPA association data to the domain model.

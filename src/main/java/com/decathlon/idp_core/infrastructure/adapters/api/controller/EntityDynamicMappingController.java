@@ -15,7 +15,7 @@ import com.decathlon.idp_core.domain.service.webhook.DynamicMappingService;
 import com.decathlon.idp_core.infrastructure.adapters.api.configuration.SwaggerConfiguration;
 import com.decathlon.idp_core.infrastructure.adapters.api.dto.in.EntityDynamicMappingCreateDtoIn;
 import com.decathlon.idp_core.infrastructure.adapters.api.dto.in.EntityDynamicMappingUpdateDtoIn;
-import com.decathlon.idp_core.infrastructure.adapters.api.dto.out.webhook.EntityDynamicMappingDtoOut;
+import com.decathlon.idp_core.infrastructure.adapters.api.dto.out.entity_dynamic_mapping.EntityDynamicMappingDtoOut;
 import com.decathlon.idp_core.infrastructure.adapters.api.handler.ApiExceptionHandler;
 import com.decathlon.idp_core.infrastructure.adapters.api.mapper.connector.DynamicMappingMapper;
 
@@ -75,7 +75,7 @@ public class EntityDynamicMappingController {
       @Content(schema = @Schema(implementation = ApiExceptionHandler.ErrorResponse.class))})
   @ResponseStatus(NO_CONTENT)
   @DeleteMapping("/{identifier}")
-  public void deleteTemplate(@PathVariable String identifier) {
+  public void deleteEntityDynamicMapping(@PathVariable String identifier) {
     dynamicMappingService.deleteEntityDynamicMapping(identifier);
   }
 
@@ -86,7 +86,7 @@ public class EntityDynamicMappingController {
       @Content(schema = @Schema(implementation = ApiExceptionHandler.ErrorResponse.class))})
   @GetMapping("/{identifier}")
   @ResponseStatus(OK)
-  public EntityDynamicMappingDtoOut getWebhookConnectorByIdentifier(
+  public EntityDynamicMappingDtoOut getEntityDynamicMappingByIdentifier(
       @PathVariable String identifier) {
     EntityDynamicMapping entityDynamicMapping = dynamicMappingService
         .getEntityDynamicMapping(identifier);

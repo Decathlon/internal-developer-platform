@@ -36,6 +36,11 @@ public class EntityDynamicMappingJpaEntity {
   @Column(nullable = false)
   private String filter;
 
+  @Column(nullable = false)
+  private String name;
+
+  private String description;
+
   @Column(name = "entity_identifier", nullable = false)
   private String entityIdentifier;
 

@@ -15,9 +15,9 @@ import lombok.*;
 
 /// JPA entity mapping to the `webhook_connector` PostgreSQL table.
 ///
-/// JSONB columns (mappings, security) are stored as raw JSON strings and deserialized
+/// The `security` JSONB column is stored as a raw JSON string and deserialized
 /// in [WebhookConnectorPersistenceMapper] using Jackson.
-/// The webhook security payload follows the generic [SecurityContract] shape at the adapter boundary.
+/// The webhook security payload follows the generic `{ type, config }` contract at the adapter boundary.
 @Entity
 @Table(name = "webhook_connector")
 @EntityListeners(AuditingEntityListener.class)

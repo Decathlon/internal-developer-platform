@@ -21,9 +21,7 @@ import com.decathlon.idp_core.domain.port.EntityDynamicMappingPort;
 import com.decathlon.idp_core.domain.port.WebhookTemplateMappingPort;
 
 import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
 
-@Slf4j
 @Service
 @Validated
 @RequiredArgsConstructor
@@ -102,7 +100,8 @@ public class DynamicMappingService {
 
     EntityDynamicMapping mergedMapping = new EntityDynamicMapping(existingMapping.id(),
         existingMapping.identifier(), entityDynamicMapping.templateIdentifier(),
-        entityDynamicMapping.filter(), entityDynamicMapping.entityIdentifier(),
+        entityDynamicMapping.filter(), entityDynamicMapping.name(),
+        entityDynamicMapping.description(), entityDynamicMapping.entityIdentifier(),
         entityDynamicMapping.entityTitle(), entityDynamicMapping.properties(),
         entityDynamicMapping.relations());
 

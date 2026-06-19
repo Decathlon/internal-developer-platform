@@ -48,7 +48,7 @@ public class InboundWebhookManagementController {
   @PostMapping
   @ResponseStatus(CREATED)
   public InboundWebhookDtoOut createInboundWebhook(
-      @Valid @RequestBody InboundWebhookCreateDtoIn request) {// remove jakarta
+      @Valid @RequestBody InboundWebhookCreateDtoIn request) {
     WebhookConnector webhookConnector = webhookConnectorService
         .createWebhookConnector(inboundWebhookMapper.toDomain(request,
             webhookConnectorService.resolveAndValidateMappings(request.mappingIdentifiers())));
@@ -64,19 +64,19 @@ public class InboundWebhookManagementController {
   @Parameter(name = "sort", description = PARAM_SORT_DESCRIPTION, in = ParameterIn.QUERY, content = @Content(schema = @Schema(type = "string", defaultValue = "identifier,asc")))
   @GetMapping
   @ResponseStatus(OK)
-  public Page<InboundWebhookDtoOut> getTemplatesPaginated(
+  public Page<InboundWebhookDtoOut> getWebhooksPaginated(
       @PageableDefault(size = 20, sort = "identifier") @Parameter(hidden = true) Pageable pageable) {
     return webhookConnectorService.getAllWebhookConnector(pageable)
         .map(inboundWebhookMapper::fromWebhookConnectorToDto);
   }
 
-  @Operation(summary = ENDPOINT_DELETE_WEBHOOK_CONNECTOR_SUMMARY, description = ENDPOINT_DELETE_ENTITY_DYNAMIC_MAPPING_DESCRIPTION)
+  @Operation(summary = ENDPOINT_DELETE_WEBHOOK_CONNECTOR_SUMMARY, description = ENDPOINT_DELETE_WEBHOOK_CONNECTOR_DESCRIPTION)
   @ApiResponse(responseCode = NO_CONTENT_CODE, description = RESPONSE_WEBHOOK_CONNECTOR_DELETED)
   @ApiResponse(responseCode = NOT_FOUND_CODE, description = RESPONSE_WEBHOOK_CONNECTOR_NOT_FOUND_IDENTIFIER, content = {
       @Content(schema = @Schema(implementation = ApiExceptionHandler.ErrorResponse.class))})
   @ResponseStatus(NO_CONTENT)
   @DeleteMapping("/{identifier}")
-  public void deleteTemplate(@PathVariable String identifier) {
+  public void deleteWebhookConnector(@PathVariable String identifier) {
     webhookConnectorService.deleteWebhookConnector(identifier);
   }
 

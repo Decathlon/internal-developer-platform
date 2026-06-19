@@ -40,6 +40,8 @@ class EntityDynamicMappingControllerTest extends AbstractIntegrationTest {
           "identifier": "%s",
           "template": "microservice",
           "filter": ".action == \\"pushed\\"",
+          "name":"microservice name",
+          "description":"description",
           "entity": {
             "identifier": ".repository.full_name",
             "title": ".repository.name",
@@ -63,6 +65,8 @@ class EntityDynamicMappingControllerTest extends AbstractIntegrationTest {
         {
           "template": "microservice",
           "filter": ".action == \\"released\\"",
+          "name":"microservice name updated",
+          "description":"updated description",
           "entity": {
             "identifier": ".release.tag_name",
             "title": ".release.name",
@@ -221,6 +225,8 @@ class EntityDynamicMappingControllerTest extends AbstractIntegrationTest {
             "identifier": "test-mapping",
             "template": "non-existent-template",
             "filter": ".action == \\"pushed\\"",
+            "name":"test mapping",
+            "description":"descrption",
             "entity": {
               "identifier": ".repository.full_name",
               "title": ".repository.name",
@@ -247,6 +253,8 @@ class EntityDynamicMappingControllerTest extends AbstractIntegrationTest {
             "identifier": "test-mapping",
             "template": "microservice",
             "filter": ".action == \\"pushed\\"",
+            "name":"test mapping name",
+            "description":"descrption",
             "entity": {
               "identifier": ".repository.full_name",
               "title": ".repository.name",
@@ -322,6 +330,27 @@ class EntityDynamicMappingControllerTest extends AbstractIntegrationTest {
               .content(buildUpdatePayload()))
           .andExpect(status().isNotFound()).andExpect(jsonPath("$.error").value("NOT_FOUND"))
           .andExpect(jsonPath("$.error_description").exists());
+    }
+
+    @Test
+    @WithMockUser
+    @DisplayName("Should update mapping and return 200")
+    void putMapping_200() throws Exception {
+      mockMvc.perform(MockMvcRequestBuilders.post(MAPPING_PATH).contentType(APPLICATION_JSON)
+          .accept(APPLICATION_JSON).with(csrf()).content(buildCreatePayload("mapping-to-update")))
+          .andExpect(status().isCreated());
+
+      mockMvc
+          .perform(MockMvcRequestBuilders.put(MAPPING_PATH + "/mapping-to-update")
+              .contentType(APPLICATION_JSON).accept(APPLICATION_JSON).with(csrf())
+              .content(buildUpdatePayload()))
+          .andExpect(status().isOk()).andExpect(jsonPath("$.identifier").value("mapping-to-update"))
+          .andExpect(jsonPath("$.filter").value(".action == \"released\""))
+          .andExpect(jsonPath("$.entity.identifier").value(".release.tag_name"));
+
+      mockMvc.perform(get(MAPPING_PATH + "/mapping-to-update").accept(APPLICATION_JSON))
+          .andExpect(status().isOk())
+          .andExpect(jsonPath("$.filter").value(".action == \"released\""));
     }
 
     @Test

@@ -1,9 +1,12 @@
 package com.decathlon.idp_core.infrastructure.adapters.persistence;
 
+import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -19,6 +22,7 @@ import com.decathlon.idp_core.domain.port.EntityTemplateRepositoryPort;
 import com.decathlon.idp_core.domain.port.WebhookConnectorRepositoryPort;
 import com.decathlon.idp_core.infrastructure.adapters.persistence.mapper.EntityDynamicMappingPersistenceMapper;
 import com.decathlon.idp_core.infrastructure.adapters.persistence.mapper.WebhookConnectorPersistenceMapper;
+import com.decathlon.idp_core.infrastructure.adapters.persistence.model.entity_mapping.EntityDynamicMappingJpaEntity;
 import com.decathlon.idp_core.infrastructure.adapters.persistence.model.webhook.WebhookConnectorJpaEntity;
 import com.decathlon.idp_core.infrastructure.adapters.persistence.model.webhook.WebhookTemplateMappingJpaEntity;
 import com.decathlon.idp_core.infrastructure.adapters.persistence.repository.JpaEntityDynamicMappingRepository;
@@ -56,7 +60,46 @@ public class PostgresWebhookConnectorAdapter implements WebhookConnectorReposito
 
   @Override
   public Page<WebhookConnector> findAll(Pageable pageable) {
-    return jpaWebhookConnectorRepository.findAll(pageable).map(this::loadConnectorWithMappings);
+    Page<WebhookConnectorJpaEntity> jpaPage = jpaWebhookConnectorRepository.findAll(pageable);
+
+    if (jpaPage.isEmpty()) {
+      return jpaPage.map(mapper::toDomain);
+    }
+
+    // Collect all webhook IDs from the page
+    List<UUID> webhookIds = jpaPage.stream().map(WebhookConnectorJpaEntity::getId).toList();
+
+    // Batch load all template mappings for all webhooks in the page
+    List<WebhookTemplateMappingJpaEntity> allTemplateMappings = jpaWebhookTemplateMappingRepository
+        .findByWebhookIdIn(webhookIds);
+
+    // Collect all unique mapping IDs
+    List<UUID> allMappingIds = allTemplateMappings.stream()
+        .map(WebhookTemplateMappingJpaEntity::getEntityMappingId).distinct().toList();
+
+    // Batch load all entity mappings in one query
+    Map<UUID, EntityDynamicMapping> allMappingsById = jpaEntityDynamicMappingRepository
+        .findAllById(allMappingIds).stream()
+        .collect(Collectors.toMap(EntityDynamicMappingJpaEntity::getId, mappingMapper::toDomain,
+            (existing, replacement) -> existing));
+
+    // Group mappings by webhook ID
+    Map<UUID, List<EntityDynamicMapping>> mappingsByWebhookId = allTemplateMappings.stream()
+        .collect(Collectors.groupingBy(WebhookTemplateMappingJpaEntity::getWebhookId,
+            Collectors.mapping(wtm -> allMappingsById.get(wtm.getEntityMappingId()),
+                Collectors.filtering(Objects::nonNull, Collectors.toList()))));
+
+    // Map each JPA entity to domain with its mappings
+    return jpaPage.map(jpaEntity -> {
+      WebhookConnector connectorWithoutMappings = mapper.toDomain(jpaEntity);
+      List<EntityDynamicMapping> mappings = mappingsByWebhookId.getOrDefault(jpaEntity.getId(),
+          Collections.emptyList());
+
+      return new WebhookConnector(connectorWithoutMappings.id(),
+          connectorWithoutMappings.identifier(), connectorWithoutMappings.title(),
+          connectorWithoutMappings.description(), connectorWithoutMappings.enabled(), mappings,
+          connectorWithoutMappings.security());
+    });
   }
 
   @Override
@@ -99,11 +142,19 @@ public class PostgresWebhookConnectorAdapter implements WebhookConnectorReposito
   }
 
   /// Loads all dynamic mappings associated with a webhook connector.
+  /// Uses batch loading to avoid N+1 query problem.
   private List<EntityDynamicMapping> loadMappingsForWebhook(UUID webhookId) {
-    return jpaWebhookTemplateMappingRepository
-        .findByWebhookId(webhookId).stream().map(wtm -> jpaEntityDynamicMappingRepository
-            .findById(wtm.getEntityMappingId()).map(mappingMapper::toDomain).orElse(null))
-        .filter(Objects::nonNull).toList();
+    List<WebhookTemplateMappingJpaEntity> templateMappings = jpaWebhookTemplateMappingRepository
+        .findByWebhookId(webhookId);
+    List<UUID> mappingIds = templateMappings.stream()
+        .map(WebhookTemplateMappingJpaEntity::getEntityMappingId).toList();
+    if (mappingIds.isEmpty()) {
+      return List.of();
+    }
+    Map<UUID, EntityDynamicMapping> mappingsById = jpaEntityDynamicMappingRepository
+        .findAllById(mappingIds).stream()
+        .collect(Collectors.toMap(EntityDynamicMappingJpaEntity::getId, mappingMapper::toDomain));
+    return mappingIds.stream().map(mappingsById::get).filter(Objects::nonNull).toList();
   }
 
   /// Persists the webhook's template mappings in the webhook_template_mapping

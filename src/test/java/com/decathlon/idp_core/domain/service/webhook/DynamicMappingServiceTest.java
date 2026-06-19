@@ -75,7 +75,7 @@ class DynamicMappingServiceTest {
 
   private EntityDynamicMapping buildMapping() {
     return new EntityDynamicMapping(UUID.randomUUID(), MAPPING_IDENTIFIER,
-        "github_deployment_status", ".deployment_status != null", ".id", ".name", Map.of(),
-        Map.of());
+        "github_deployment_status", ".deployment_status != null", "github deployment status name",
+        "github deployment status description", ".id", ".name", Map.of(), Map.of());
   }
 }

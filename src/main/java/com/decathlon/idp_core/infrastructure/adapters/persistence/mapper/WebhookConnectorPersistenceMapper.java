@@ -2,6 +2,7 @@ package com.decathlon.idp_core.infrastructure.adapters.persistence.mapper;
 
 import static org.mapstruct.MappingConstants.ComponentModel.SPRING;
 
+import org.mapstruct.InjectionStrategy;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
 
@@ -16,7 +17,7 @@ import com.decathlon.idp_core.infrastructure.adapters.persistence.model.webhook.
 /// [com.decathlon.idp_core.infrastructure.adapters.persistence.PostgresWebhookConnectorAdapter]
 /// through the `webhook_template_mapping` table because it requires dedicated persistence
 /// for `entity_dynamic_mapping` rows.
-@Mapper(componentModel = SPRING, uses = WebhookConnectorJsonbHelper.class)
+@Mapper(componentModel = SPRING, uses = WebhookConnectorJsonbHelper.class, injectionStrategy = InjectionStrategy.CONSTRUCTOR)
 public interface WebhookConnectorPersistenceMapper {
 
   @Mapping(target = "mappings", ignore = true)

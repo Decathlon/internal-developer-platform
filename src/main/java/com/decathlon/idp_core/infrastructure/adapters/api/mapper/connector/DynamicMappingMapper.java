@@ -7,8 +7,7 @@ import org.springframework.stereotype.Component;
 import com.decathlon.idp_core.domain.model.entity_mapping.EntityDynamicMapping;
 import com.decathlon.idp_core.infrastructure.adapters.api.dto.in.EntityDynamicMappingCreateDtoIn;
 import com.decathlon.idp_core.infrastructure.adapters.api.dto.in.EntityDynamicMappingUpdateDtoIn;
-import com.decathlon.idp_core.infrastructure.adapters.api.dto.out.webhook.EntityDynamicMappingDtoOut;
-import com.decathlon.idp_core.infrastructure.adapters.api.dto.out.webhook.InboundWebhookEntityMappingDtoOut;
+import com.decathlon.idp_core.infrastructure.adapters.api.dto.out.entity_dynamic_mapping.EntityDynamicMappingDtoOut;
 
 @Component
 public class DynamicMappingMapper {
@@ -26,7 +25,8 @@ public class DynamicMappingMapper {
         mapping.identifier(), // identifier
         fields.template(), // templateIdentifier
         fields.filter(), // filter
-        fields.entity().identifier(), // entityIdentifier
+        fields.name(), // titre
+        fields.description(), fields.entity().identifier(), // entityIdentifier
         fields.entity().title(), // entityTitle
         safeMap(fields.entity().properties()), // properties
         safeMap(fields.entity().relations())); // relations
@@ -34,9 +34,10 @@ public class DynamicMappingMapper {
 
   public EntityDynamicMappingDtoOut fromEntityMappingToDto(EntityDynamicMapping mapping) {
     return new EntityDynamicMappingDtoOut(mapping.identifier(), mapping.templateIdentifier(),
-        mapping.filter(),
-        new InboundWebhookEntityMappingDtoOut(mapping.entityIdentifier(), mapping.entityTitle(),
-            Map.copyOf(mapping.properties()), Map.copyOf(mapping.relations())));
+        mapping.filter(), mapping.name(), mapping.description(),
+        new EntityDynamicMappingDtoOut.InboundWebhookEntityMappingDtoOut(mapping.entityIdentifier(),
+            mapping.entityTitle(), Map.copyOf(mapping.properties()),
+            Map.copyOf(mapping.relations())));
   }
 
   /// Converts an update DTO to domain model, using the identifier from the path.
@@ -51,7 +52,8 @@ public class DynamicMappingMapper {
         identifier, // identifier from path
         fields.template(), // templateIdentifier
         fields.filter(), // filter
-        fields.entity().identifier(), // entityIdentifier
+        fields.name(), // titre
+        fields.description(), fields.entity().identifier(), // entityIdentifier
         fields.entity().title(), // entityTitle
         safeMap(fields.entity().properties()), // properties
         safeMap(fields.entity().relations())); // relations

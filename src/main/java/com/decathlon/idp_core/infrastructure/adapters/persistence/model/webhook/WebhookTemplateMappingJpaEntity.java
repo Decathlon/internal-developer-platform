@@ -59,7 +59,7 @@ public class WebhookTemplateMappingJpaEntity {
   private EntityTemplateJpaEntity entityTemplate;
 
   /// Lazy-loaded relationship to the dynamic mapping (optional, for navigation).
-  @OneToOne(fetch = FetchType.LAZY)
+  @ManyToOne(fetch = FetchType.LAZY)
   @JoinColumn(name = "entity_mapping_id", nullable = false, insertable = false, updatable = false)
   private EntityDynamicMappingJpaEntity entityMapping;
 }

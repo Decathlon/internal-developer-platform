@@ -13,7 +13,7 @@ import com.fasterxml.jackson.databind.annotation.JsonNaming;
 /// Request payload used to create an inbound webhook connector configuration.
 ///
 /// Mappings are no longer embedded in the connector payload. They are created
-/// independently through the `/api/v1/inbound-dynamic-mapping` endpoint and
+/// independently through the `/api/v1/entity-dynamic-mappings` endpoint and
 /// referenced here by their identifiers. Each referenced mapping existence is
 /// validated in the domain layer before the connector is persisted.
 @JsonNaming(PropertyNamingStrategies.SnakeCaseStrategy.class)

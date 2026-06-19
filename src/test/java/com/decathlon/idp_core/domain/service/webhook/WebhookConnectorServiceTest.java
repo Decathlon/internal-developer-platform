@@ -89,9 +89,9 @@ class WebhookConnectorServiceTest {
     @DisplayName("Should validate then save and return the connector")
     void shouldValidateAndSave() {
       WebhookConnector toCreate = buildWebhookConnector(null, "github-dora", "GitHub DORA", "desc",
-          true);
+          false);
       WebhookConnector saved = buildWebhookConnector(UUID.randomUUID(), "github-dora",
-          "GitHub DORA", "desc", true);
+          "GitHub DORA", "desc", false);
       when(webhookConnectorRepositoryPort.save(any())).thenReturn(saved);
 
       WebhookConnector result = service.createWebhookConnector(toCreate);
@@ -114,6 +114,46 @@ class WebhookConnectorServiceTest {
           .hasMessageContaining("validation error");
 
       verify(webhookConnectorRepositoryPort, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("Should force enabled to false when mappings are empty")
+    void shouldDisableConnectorWhenMappingsAreEmpty() {
+      // User tries to create an enabled connector with no mappings
+      WebhookConnector toCreate = buildWebhookConnector(null, "github-dora", "GitHub DORA", "desc",
+          true);
+      when(webhookConnectorRepositoryPort.save(any())).thenAnswer(inv -> inv.getArgument(0));
+
+      service.createWebhookConnector(toCreate);
+
+      var captor = ArgumentCaptor.forClass(WebhookConnector.class);
+      verify(webhookConnectorRepositoryPort).save(captor.capture());
+      var saved = captor.getValue();
+
+      // Even though toCreate had enabled=true, it should be saved with enabled=false
+      assertThat(saved.enabled()).isFalse();
+      assertThat(saved.mappings()).isEmpty();
+    }
+
+    @Test
+    @DisplayName("Should keep enabled as true when mappings are present")
+    void shouldKeepEnabledWhenMappingsPresent() {
+      EntityDynamicMapping mapping = new EntityDynamicMapping(UUID.randomUUID(),
+          "deployment-mapping", "deployment", "true", "deployment name", "deployment description",
+          ".id", ".name", Map.of(), Map.of());
+      WebhookConnector toCreate = buildWebhookConnectorWithMappings(null, "github-dora",
+          "GitHub DORA", "desc", true, List.of(mapping));
+      when(webhookConnectorRepositoryPort.save(any())).thenAnswer(inv -> inv.getArgument(0));
+
+      service.createWebhookConnector(toCreate);
+
+      var captor = ArgumentCaptor.forClass(WebhookConnector.class);
+      verify(webhookConnectorRepositoryPort).save(captor.capture());
+      var saved = captor.getValue();
+
+      // With mappings present, enabled should remain true
+      assertThat(saved.enabled()).isTrue();
+      assertThat(saved.mappings()).hasSize(1);
     }
   }
 
@@ -221,6 +261,56 @@ class WebhookConnectorServiceTest {
           any());
       verify(webhookConnectorRepositoryPort, never()).save(any());
     }
+
+    @Test
+    @DisplayName("Should force enabled to false when update removes all mappings")
+    void shouldDisableConnectorWhenUpdatingWithEmptyMappings() {
+      WebhookConnector existing = buildWebhookConnector(EXISTING_ID, IDENTIFIER, "Old title",
+          "Old desc", true);
+      // User tries to update with enabled=true but empty mappings
+      WebhookConnector incoming = buildWebhookConnector(null, IDENTIFIER, "New title", "New desc",
+          true);
+
+      when(webhookConnectorRepositoryPort.findByIdentifier(IDENTIFIER))
+          .thenReturn(Optional.of(existing));
+      when(webhookConnectorRepositoryPort.save(any())).thenAnswer(inv -> inv.getArgument(0));
+
+      service.updateWebhookConnector(IDENTIFIER, incoming);
+
+      var captor = ArgumentCaptor.forClass(WebhookConnector.class);
+      verify(webhookConnectorRepositoryPort).save(captor.capture());
+      var saved = captor.getValue();
+
+      // Should be forced to false because mappings are empty
+      assertThat(saved.enabled()).isFalse();
+      assertThat(saved.mappings()).isEmpty();
+    }
+
+    @Test
+    @DisplayName("Should keep enabled value when update has mappings")
+    void shouldKeepEnabledWhenUpdateHasMappings() {
+      EntityDynamicMapping mapping = new EntityDynamicMapping(UUID.randomUUID(),
+          "deployment-mapping", "deployment", "true", "deployment name", "deployment description",
+          ".id", ".name", Map.of(), Map.of());
+      WebhookConnector existing = buildWebhookConnector(EXISTING_ID, IDENTIFIER, "Old title",
+          "Old desc", false);
+      WebhookConnector incoming = buildWebhookConnectorWithMappings(null, IDENTIFIER, "New title",
+          "New desc", true, List.of(mapping));
+
+      when(webhookConnectorRepositoryPort.findByIdentifier(IDENTIFIER))
+          .thenReturn(Optional.of(existing));
+      when(webhookConnectorRepositoryPort.save(any())).thenAnswer(inv -> inv.getArgument(0));
+
+      service.updateWebhookConnector(IDENTIFIER, incoming);
+
+      var captor = ArgumentCaptor.forClass(WebhookConnector.class);
+      verify(webhookConnectorRepositoryPort).save(captor.capture());
+      var saved = captor.getValue();
+
+      // Should remain true because mappings are present
+      assertThat(saved.enabled()).isTrue();
+      assertThat(saved.mappings()).hasSize(1);
+    }
   }
 
   @Nested
@@ -293,6 +383,13 @@ class WebhookConnectorServiceTest {
     return new WebhookConnector(id, identifier, title, description, enabled, List.of(), security);
   }
 
+  private WebhookConnector buildWebhookConnectorWithMappings(UUID id, String identifier,
+      String title, String description, boolean enabled, List<EntityDynamicMapping> mappings) {
+    WebhookSecurity security = new WebhookSecurity(WebhookSecurityType.HMAC_SHA256,
+        Map.of("header_name", "X-Hub-Signature-256", "secret_alias", "MY_SECRET"));
+    return new WebhookConnector(id, identifier, title, description, enabled, mappings, security);
+  }
+
   @Nested
   @DisplayName("resolveAndValidateMappings")
   class ResolveAndValidateMappingsTests {
@@ -332,8 +429,8 @@ class WebhookConnectorServiceTest {
     }
 
     private EntityDynamicMapping buildMapping(String identifier) {
-      return new EntityDynamicMapping(UUID.randomUUID(), identifier, "deployment", "true", ".id",
-          ".name", Map.of(), Map.of());
+      return new EntityDynamicMapping(UUID.randomUUID(), identifier, "deployment", "true",
+          "deployment name", "deployment description", ".id", ".name", Map.of(), Map.of());
     }
   }
 }
