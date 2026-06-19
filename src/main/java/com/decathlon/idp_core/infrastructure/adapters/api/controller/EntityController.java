@@ -299,7 +299,25 @@ public class EntityController {
   /// control
   /// @param templateIdentifier template filter for entity scope limitation
   /// @param depth maximum relation traversal depth (default 1,
-  /// clamped to 1-6)
+  /// Retrieves paginated entities with their dependency graphs up to specified
+  /// depth.
+  ///
+  /// **API contract:** Returns a paginated list of entities with their outbound
+  /// and
+  /// inbound relations merged into a single relations object. Each entity
+  /// includes all
+  /// reachable nodes up to the specified depth using DIRECT_LINEAGE traversal
+  /// mode.
+  /// Results are returned as EntityDepDtoOut DTOs with relations merged from both
+  /// directions. Supports filtering relations by name using a comma-separated
+  /// list.
+  ///
+  /// @param page zero-based page index for pagination navigation
+  /// @param size number of entities per page for response size control
+  /// @param templateIdentifier template filter for entity scope limitation
+  /// @param depth maximum relation traversal depth (default 1, clamped to 1-6)
+  /// @param relationsFilter comma-separated list of relation names to include
+  /// (optional, empty means all relations)
   /// @param q optional filter query string for entity filtering
   /// @return paginated entity dependency DTOs with merged relations up to depth
   @Operation(summary = "Get entity dependencies", description = "Retrieve entities with their relationship graphs up to specified depth")
@@ -310,12 +328,15 @@ public class EntityController {
   @Parameter(name = "size", description = PARAM_SIZE_DESCRIPTION, in = ParameterIn.QUERY, content = @Content(schema = @Schema(type = "integer", defaultValue = "20")))
   @Parameter(name = "sort", description = PARAM_SORT_DESCRIPTION, in = ParameterIn.QUERY, content = @Content(schema = @Schema(type = "string", defaultValue = "identifier,asc")))
   @Parameter(name = "depth", description = "Maximum relation traversal depth (1-6, default 1)", in = ParameterIn.QUERY, content = @Content(schema = @Schema(type = "integer", defaultValue = "1")))
+  @Parameter(name = "relations_filter", description = "Comma-separated list of relation names to include (optional, empty means all relations)", in = ParameterIn.QUERY, content = @Content(schema = @Schema(type = "string", example = "component-supported_by-support_group,component-owned_by-product")))
   @Parameter(name = "q", description = PARAM_QUERY_DESCRIPTION, in = ParameterIn.QUERY, content = @Content(schema = @Schema(type = "string")))
   @ResponseStatus(OK)
   @GetMapping("/{templateIdentifier}/dependencies")
   public Page<EntityDepDtoOut> getEntitiesDependencies(@RequestParam(defaultValue = "0") int page,
       @RequestParam(defaultValue = "20") int size, @PathVariable String templateIdentifier,
-      @RequestParam(defaultValue = "1") int depth, @RequestParam(required = false) String q) {
+      @RequestParam(defaultValue = "1") int depth,
+      @RequestParam(required = false, defaultValue = "") String relationsFilter,
+      @RequestParam(required = false) String q) {
     Pageable pageable = PageRequest.of(page, size);
     EntityFilter filter = entityFilterDslParser.parse(q);
     Page<Entity> entities = entityService.getEntitiesByTemplateIdentifier(pageable,
@@ -329,11 +350,15 @@ public class EntityController {
       return new PageImpl<>(List.of(), pageable, 0);
     }
 
+    // Parse relations filter from comma-separated list
+    java.util.Set<String> relationFilterSet = java.util.Arrays.stream(relationsFilter.split(","))
+        .map(String::trim).filter(s -> !s.isBlank()).collect(java.util.stream.Collectors.toSet());
+
     // Load entity graphs with DIRECT_LINEAGE mode (includes outbound + inbound
     // relations)
     Map<String, EntityGraphNode> entityGraphs = entityGraphService
         .getBatchEntityGraphsByIdentifiers(templateIdentifier, entityIdentifiers, depth, false,
-            java.util.Set.of(), java.util.Set.of(), EntityGraphTraversalMode.DIRECT_LINEAGE);
+            relationFilterSet, java.util.Set.of(), EntityGraphTraversalMode.DIRECT_LINEAGE);
 
     // Map to EntityDepDtoOut with merged relations
     List<EntityDepDtoOut> dtoOutList = entities.getContent().stream().map(entity -> {
