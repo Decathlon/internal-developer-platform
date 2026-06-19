@@ -60,7 +60,7 @@ Thank you for your interest in contributing to IDP-Core. This section provides e
 
 ## Code of Conduct
 
-Please carefully read and follow our **[Code of Conduct](../../../CODE_OF_CONDUCT.md)** to ensure a welcoming environment for all contributors.
+Please carefully read and follow our **[Code of Conduct](https://github.com/Decathlon/internal-developer-platform/blob/main/CODE_OF_CONDUCT.md)** to ensure a welcoming environment for all contributors.
 
 ### Our Standards
 

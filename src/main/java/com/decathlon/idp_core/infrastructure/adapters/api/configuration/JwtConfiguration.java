@@ -22,8 +22,12 @@ import org.springframework.security.oauth2.jwt.NimbusJwtDecoder;
 @Configuration
 public class JwtConfiguration {
 
-  @Value("${spring.security.oauth2.resourceserver.jwt.jwk-set-uri}")
-  private String jwkSetUri;
+  private final String jwkSetUri;
+
+  public JwtConfiguration(
+      @Value("${spring.security.oauth2.resourceserver.jwt.jwk-set-uri}") String jwkSetUri) {
+    this.jwkSetUri = jwkSetUri;
+  }
 
   @Bean
   @ConditionalOnMissingBean
