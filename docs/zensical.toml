@@ -64,7 +64,8 @@ nav = [
         "contributing/code/exception-handling.md",
         "contributing/code/domain-model-validations.md",
         "contributing/code/best-practices.md",
-        "contributing/code/code-conventions.md"
+        "contributing/code/code-conventions.md",
+        "contributing/code/architecture-tests.md"
     ]},
     { "Architecture Decision Records" = [
         "contributing/adrs/index.md",

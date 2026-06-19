@@ -55,11 +55,15 @@ public class SwaggerConfiguration {
   public static final String CLIENT_ID = "clientId";
   public static final String BEARER = "bearer";
 
-  @Value("${spring.security.oauth2.client.provider.idp-core.token-uri}")
-  private String oauth2url;
+  private final String oauth2url;
+  private final String idpCorePrefixUrl;
 
-  @Value("${app.idp-core-prefix-url}")
-  private String idpCorePrefixUrl;
+  public SwaggerConfiguration(
+      @Value("${spring.security.oauth2.client.provider.idp-core.token-uri}") String oauth2url,
+      @Value("${app.idp-core-prefix-url}") String idpCorePrefixUrl) {
+    this.oauth2url = oauth2url;
+    this.idpCorePrefixUrl = idpCorePrefixUrl;
+  }
 
   @Bean
   public OpenAPI openAPI() {
