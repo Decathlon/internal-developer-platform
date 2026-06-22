@@ -1,6 +1,13 @@
 -- Sample data for IDP Core domain models - Enhanced with 10 templates
 
--- Clear existing data (for repeatable migrations)
+-- Clear existing data (for repeatable migrations).
+-- Deletion order respects FK constraints: child tables first, then parents.
+DELETE FROM entity_properties;
+DELETE FROM entity_relations;
+DELETE FROM relation_target_entities;
+DELETE FROM relation;
+DELETE FROM entity;
+DELETE FROM property;
 DELETE FROM entity_template_relations_definitions;
 DELETE FROM entity_template_properties_definitions;
 DELETE FROM entity_template;

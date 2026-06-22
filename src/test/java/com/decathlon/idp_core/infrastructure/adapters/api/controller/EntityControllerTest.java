@@ -55,8 +55,8 @@ public class EntityControllerTest extends AbstractIntegrationTest {
               .param("size", "15").accept(APPLICATION_JSON))
           .andExpect(status().isOk()).andExpect(content().contentType(APPLICATION_JSON))
           .andExpect(jsonPath("$.content").isArray())
-          .andExpect(jsonPath("$.content.length()").value(2))
-          .andExpect(jsonPath("$.page.total_elements").value(2))
+          .andExpect(jsonPath("$.content.length()").value(5))
+          .andExpect(jsonPath("$.page.total_elements").value(5))
           .andExpect(jsonPath("$.page.total_pages").value(1))
           .andExpect(jsonPath("$.page.size").value(15))
           .andExpect(jsonPath("$.page.number").value(0))
@@ -114,8 +114,8 @@ public class EntityControllerTest extends AbstractIntegrationTest {
               .accept(APPLICATION_JSON))
           .andExpect(status().isOk()).andExpect(content().contentType(APPLICATION_JSON))
           .andExpect(jsonPath("$.content").isArray())
-          .andExpect(jsonPath("$.content.length()").value(2))
-          .andExpect(jsonPath("$.page.total_elements").value(2))
+          .andExpect(jsonPath("$.content.length()").value(5))
+          .andExpect(jsonPath("$.page.total_elements").value(5))
           .andExpect(jsonPath("$.page.total_pages").value(1))
           .andExpect(jsonPath("$.page.size").value(20))
           .andExpect(jsonPath("$.page.number").value(0))
@@ -266,8 +266,8 @@ public class EntityControllerTest extends AbstractIntegrationTest {
       mockMvc
           .perform(get(ENTITIES_BY_TEMPLATE_IDENTIFIER_PATH, TEMPLATE_IDENTIFIER).param("q", q)
               .accept(APPLICATION_JSON))
-          .andExpect(status().isOk()).andExpect(jsonPath("$.content.length()").value(2))
-          .andExpect(jsonPath("$.page.total_elements").value(2));
+          .andExpect(status().isOk()).andExpect(jsonPath("$.content.length()").value(5))
+          .andExpect(jsonPath("$.page.total_elements").value(5));
     }
 
     @Test

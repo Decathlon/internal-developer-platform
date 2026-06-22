@@ -10,6 +10,9 @@ import java.util.UUID;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 
+import com.decathlon.idp_core.domain.model.entity_template.EntityTemplate;
+import com.decathlon.idp_core.domain.model.entity_template.RelationDefinition;
+
 /// A concrete relationship instance connecting entities in the business domain.
 ///
 /// Represents actual business connections between entities that conform to the
