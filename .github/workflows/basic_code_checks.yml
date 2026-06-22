@@ -5,6 +5,9 @@ on:  # yamllint disable-line rule:truthy
     branches:
       - main
     types: [opened, synchronize, reopened, ready_for_review]
+  push:
+    branches:
+      - main
   workflow_dispatch:
 
 concurrency:
@@ -15,6 +18,7 @@ jobs:
   lint:
     name: Lint & Pre-Commit Checks
     runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
     steps:
       - name: Checkout repository
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6.0.2
@@ -62,6 +66,8 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6.0.2
+        with:
+          fetch-depth: 0
 
       - name: Cache Maven packages
         uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae  # v5.0.5
@@ -82,11 +88,16 @@ jobs:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
+          SONAR_EXTRA_ARGS=""
+          if [ "${{ github.event_name }}" != "pull_request" ]; then
+            SONAR_EXTRA_ARGS="-Dsonar.branch.name=${{ github.ref_name }}"
+          fi
           mvn clean verify org.sonarsource.scanner.maven:sonar-maven-plugin:sonar \
             -Dsonar.organization=decathlon \
             -Dsonar.projectKey=Decathlon_internal-developer-platform \
             -Dsonar.coverage.jacoco.xmlReportPaths=target/site/jacoco/jacoco.xml \
             -Dsonar.host.url=https://sonarcloud.io \
+            $SONAR_EXTRA_ARGS \
             -B
 
       - name: Upload code coverage to GitHub
@@ -175,6 +186,7 @@ jobs:
     name: OpenAPI Static Swagger Update Check
     runs-on: ubuntu-latest
     needs: build
+    if: github.event_name == 'pull_request'
     steps:
       - name: Checkout repository
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6.0.2
@@ -238,6 +250,7 @@ jobs:
     name: OpenAPI Breaking Change Check
     runs-on: ubuntu-latest
     needs: check-openapi-static-swagger-update
+    if: github.event_name == 'pull_request'
     steps:
       - name: Checkout repository
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6.0.2
