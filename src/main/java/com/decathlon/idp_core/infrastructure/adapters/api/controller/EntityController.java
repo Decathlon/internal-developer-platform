@@ -369,6 +369,47 @@ public class EntityController {
     return new PageImpl<>(dtoOutList, pageable, entities.getTotalElements());
   }
 
+  @ResponseStatus(OK)
+  @GetMapping("/{templateIdentifier}/relation-template")
+  public Page<EntityDepDtoOut> getEntitiesByRelationTemplate(
+      @RequestParam(defaultValue = "0") int page, @RequestParam(defaultValue = "20") int size,
+      @RequestParam List<String> filterIds, @PathVariable String templateIdentifier,
+      @RequestParam(defaultValue = "1") int depth,
+      @RequestParam(required = false) String startTemplate) {
+    Pageable pageable = PageRequest.of(page, size);
+    // EntityFilter filter = entityFilterDslParser.parse(q);
+    // Page<Entity> entities =
+    // entityService.getEntitiesByTemplateIdentifierIn(pageable,
+    // templateIdentifier, filter);
+
+    // Extract entity identifiers for batch graph loading
+    // List<String> entityIdentifiers =
+    // entities.getContent().stream().map(Entity::identifier)
+    // .toList();
+
+    // if (entityIdentifiers.isEmpty()) {
+    // return new PageImpl<>(List.of(), pageable, 0);
+    // }
+
+    // // Parse relations filter from comma-separated list
+    // java.util.Set<String>
+    // relationFiltgetBatchEntityGraphsByTemplateIdentifierserSet =
+    // java.util.Arrays.stream(relationsFilter.split(","))
+    // .map(String::trim).filter(s ->
+    // !s.isBlank()).collect(java.util.stream.Collectors.toSet());
+
+    // Load entity graphs with DIRECT_LINEAGE mode (includes outbound + inbound
+    // relations)
+    Map<String, EntityGraphNode> entityGraphs = entityGraphService.getBatchEntityGraphsByTemplate(
+        templateIdentifier, filterIds, depth, startTemplate, size, page);
+
+    // Map to EntityDepDtoOut with merged relations
+    List<EntityDepDtoOut> dtoOutList = entityGraphs.values().stream()
+        .map(entityNode -> entityDepDtoOutMapper.toDto(entityNode)).toList();
+
+    return new PageImpl<>(dtoOutList, pageable, entityGraphs.size());
+  }
+
   /// Searches for entities across all templates using a nested filter query.
   ///
   /// **API contract:** Accepts a JSON body with a nested filter tree, pagination,

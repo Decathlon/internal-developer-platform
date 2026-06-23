@@ -253,6 +253,73 @@ public class EntityGraphService {
     return result;
   }
 
+  @Transactional(readOnly = true)
+  public Map<String, EntityGraphNode> getBatchEntityGraphsByTemplate(String templateIdentifier,
+      List<String> entityIdentifiers, int depth, String startTemplate, int size, int offset) {
+
+    EntityGraphTraversalMode mode = EntityGraphTraversalMode.DIRECT_LINEAGE;
+
+    if (entityIdentifiers == null || entityIdentifiers.isEmpty()) {
+      return Map.of();
+    }
+
+    int effectiveDepth = Math.clamp(depth, 1, MAX_DEPTH);
+    entityTemplateValidationService.validateTemplateExists(templateIdentifier);
+
+    List<UUID> entityUuids = new ArrayList<>();
+    for (String identifier : entityIdentifiers) {
+      entityRepositoryPort.findByTemplateIdentifierAndIdentifier(startTemplate, identifier)
+          .ifPresent(entity -> entityUuids.add(entity.id()));
+    }
+
+    if (entityUuids.isEmpty()) {
+      return Map.of();
+    }
+
+    Map<UUID, Entity> entityGraphs = entityGraphRepositoryPort.findEntityGraphBatchByTemplate(
+        entityUuids, effectiveDepth, templateIdentifier, size, offset);
+
+    if (entityGraphs == null || entityGraphs.isEmpty()) {
+      return Map.of();
+    }
+
+    IndexBundle globalIndices = buildIndices(entityGraphs, mode);
+    Map<String, EntityGraphNode> result = new HashMap<>();
+
+    for (Map.Entry<UUID, Entity> entry : entityGraphs.entrySet()) {
+      UUID entityUuid = entry.getKey();
+      // for (Map.Entry<UUID, Entity> entry : entityGraphs.entrySet()) {
+      // if (entry.getValue().identifier().equals(identifier)) {
+      // entityUuid = entry.getKey();
+      // break;
+      // }
+      // }
+
+      if (entityUuid != null) {
+        Set<UUID> reachableFootprint = computeReachableSubGraph(entityUuid, entityGraphs,
+            globalIndices, effectiveDepth, mode);
+
+        Map<UUID, Entity> localizedEntityMap = entityGraphs.entrySet().stream()
+            .filter(e -> reachableFootprint.contains(e.getKey()))
+            .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
+
+        IndexBundle localizedIndices = buildIndices(localizedEntityMap, mode);
+
+        Set<String> isolatedStack = new HashSet<>();
+        Map<String, EntityGraphNode> isolatedCache = new HashMap<>();
+
+        GraphTraversalContext localizedCtx = new GraphTraversalContext(localizedEntityMap,
+            localizedIndices.textToUuidLookup(), localizedIndices.inboundIndex(), false, Set.of(),
+            Set.of(), isolatedStack, isolatedCache, mode);
+
+        EntityGraphNode node = buildGraphNode(entityUuid, localizedCtx);
+        result.put(entityUuid.toString(), node);
+      }
+    }
+
+    return result;
+  }
+
   private EntityGraphNode buildGraphNode(UUID entityUuid, GraphTraversalContext ctx) {
     Entity entity = ctx.entityMap().get(entityUuid);
 

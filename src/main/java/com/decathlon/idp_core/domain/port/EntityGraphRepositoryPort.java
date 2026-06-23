@@ -70,4 +70,6 @@ public interface EntityGraphRepositoryPort {
   Map<UUID, Entity> findEntityGraphBatch(java.util.List<UUID> rootIds, int depth,
       boolean includeProperties, EntityGraphTraversalMode mode);
 
+  Map<UUID, Entity> findEntityGraphBatchByTemplate(java.util.List<UUID> rootIds, int depth,
+      String startTemplate, int size, int offset);
 }

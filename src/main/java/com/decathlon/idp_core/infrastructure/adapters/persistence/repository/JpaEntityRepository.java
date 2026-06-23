@@ -216,4 +216,40 @@ public interface JpaEntityRepository
   List<UUID> findEntityGraphIdentifiersBatch(@Param("rootIds") Collection<UUID> rootIds,
       @Param("depth") int depth, @Param("mode") String mode);
 
+  @Query(value = """
+              WITH RECURSIVE agnostic_discovery(id, depth) AS (
+          -- ANCHOR: Start directly using the resolved target UUIDs
+          SELECT e.id, 0
+          FROM idp_core.entity e
+          WHERE e.id IN (:rootIds)
+
+          UNION
+
+          -- RECURSIVE STEP: Trace connections across the edge tables
+          SELECT combined.id, ad.depth + 1
+          FROM agnostic_discovery ad
+          JOIN (
+              SELECT rte.target_entity_uuid AS anchor_id, er.entity_id AS id
+              FROM idp_core.relation_target_entities rte
+              JOIN idp_core.entity_relations er ON er.relation_id = rte.relation_id
+
+              UNION ALL
+
+              SELECT er.entity_id AS anchor_id, rte.target_entity_uuid AS id
+              FROM idp_core.entity_relations er
+              JOIN idp_core.relation_target_entities rte ON rte.relation_id = er.relation_id
+              WHERE rte.target_entity_uuid IS NOT NULL
+          ) combined ON combined.anchor_id = ad.id
+          WHERE ad.depth < :depth
+      )
+      -- Filter down to the starting template (e.g., 'component') and paginate the roots
+      SELECT DISTINCT e.id
+      FROM agnostic_discovery ad
+      JOIN idp_core.entity e ON e.id = ad.id
+      WHERE e.template_identifier = :startTemplate
+      LIMIT :size OFFSET :offset
+          """, nativeQuery = true)
+  List<UUID> findEntityGraphIdsByTemplate(@Param("rootIds") Collection<UUID> rootIds,
+      @Param("depth") int depth, @Param("startTemplate") String startTemplate,
+      @Param("size") int size, @Param("offset") int offset);
 }
