@@ -19,6 +19,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import com.decathlon.idp_core.domain.exception.webhook.WebhookConnectorAlreadyExistException;
 import com.decathlon.idp_core.domain.exception.webhook.WebhookConnectorNotFoundException;
 import com.decathlon.idp_core.domain.exception.webhook.WebhookConnectorTitleAlreadyExistsException;
+import com.decathlon.idp_core.domain.model.entity_mapping.EntityDynamicMapping;
 import com.decathlon.idp_core.domain.model.enums.WebhookSecurityType;
 import com.decathlon.idp_core.domain.model.inbound_connectors.webhook.WebhookConnector;
 import com.decathlon.idp_core.domain.model.inbound_connectors.webhook.WebhookSecurity;
@@ -142,6 +143,31 @@ class WebhookConnectorValidationServiceTest {
 
       verify(webhookSecurityValidationService, never()).validateForCreation(any());
     }
+
+    @Test
+    @DisplayName("Should validate mappings when connector has mappings")
+    void shouldValidateMappingsWhenPresent() {
+      WebhookConnector existingConnector = buildWebhookConnector("github-dora", "Title");
+      WebhookConnector connectorToUpdate = buildWebhookConnectorWithMappings("github-dora",
+          "Title");
+
+      service.validateWebhookConnectorForUpdate(existingConnector, connectorToUpdate);
+
+      verify(webhookConnectorMappingValidationService)
+          .validateWebhookMapping(connectorToUpdate.mappings());
+      verify(webhookSecurityValidationService).validateForCreation(connectorToUpdate.security());
+    }
+
+    @Test
+    @DisplayName("Should skip mapping validation when connector has no mappings")
+    void shouldSkipMappingValidationWhenNoMappings() {
+      WebhookConnector existingConnector = buildWebhookConnector("github-dora", "Title");
+      WebhookConnector connectorToUpdate = buildWebhookConnector("github-dora", "Title");
+
+      service.validateWebhookConnectorForUpdate(existingConnector, connectorToUpdate);
+
+      verify(webhookConnectorMappingValidationService, never()).validateWebhookMapping(any());
+    }
   }
 
   @Nested
@@ -197,5 +223,14 @@ class WebhookConnectorValidationServiceTest {
         Map.of("header_name", "X-Hub-Signature-256", "secret_alias", "MY_SECRET"));
     return new WebhookConnector(UUID.randomUUID(), identifier, title, "desc", true, List.of(),
         security);
+  }
+
+  private WebhookConnector buildWebhookConnectorWithMappings(String identifier, String title) {
+    WebhookSecurity security = new WebhookSecurity(WebhookSecurityType.HMAC_SHA256,
+        Map.of("header_name", "X-Hub-Signature-256", "secret_alias", "MY_SECRET"));
+    EntityDynamicMapping mapping = new EntityDynamicMapping(UUID.randomUUID(), "my-mapping",
+        "web-service", ".filter", "name", "desc", ".id", ".title", Map.of(), Map.of());
+    return new WebhookConnector(UUID.randomUUID(), identifier, title, "desc", true,
+        List.of(mapping), security);
   }
 }

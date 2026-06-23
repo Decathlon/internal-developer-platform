@@ -6,6 +6,7 @@ import java.util.List;
 
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Size;
 
 import com.fasterxml.jackson.databind.PropertyNamingStrategies;
 import com.fasterxml.jackson.databind.annotation.JsonNaming;
@@ -18,9 +19,9 @@ import com.fasterxml.jackson.databind.annotation.JsonNaming;
 /// validated in the domain layer before the connector is persisted.
 @JsonNaming(PropertyNamingStrategies.SnakeCaseStrategy.class)
 public record InboundWebhookCreateDtoIn(
-    @NotBlank(message = WEBHOOK_CONNECTOR_IDENTIFIER_MANDATORY) String identifier,
-    @NotBlank(message = "Webhook title is mandatory") String title, String description,
-    boolean enabled, List<String> mappingIdentifiers,
+    @NotBlank(message = WEBHOOK_CONNECTOR_IDENTIFIER_MANDATORY) @Size(max = 255, message = "Webhook identifier must not exceed 255 characters") String identifier,
+    @NotBlank(message = "Webhook title is mandatory") @Size(max = 255, message = "Webhook title must not exceed 255 characters") String title,
+    String description, boolean enabled, List<String> mappingIdentifiers,
     @Valid InboundWebhookSecurityContractDtoIn security) {
 
   public InboundWebhookCreateDtoIn {
