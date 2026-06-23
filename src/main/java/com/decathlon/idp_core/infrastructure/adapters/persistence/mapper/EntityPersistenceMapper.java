@@ -1,7 +1,9 @@
 package com.decathlon.idp_core.infrastructure.adapters.persistence.mapper;
 
-import org.mapstruct.Mapper;
-import org.mapstruct.MappingConstants;
+import java.util.List;
+import java.util.Objects;
+
+import org.springframework.stereotype.Component;
 
 import com.decathlon.idp_core.domain.model.entity.Entity;
 import com.decathlon.idp_core.domain.model.entity.Property;
@@ -9,19 +11,140 @@ import com.decathlon.idp_core.domain.model.entity.Relation;
 import com.decathlon.idp_core.infrastructure.adapters.persistence.model.entity.EntityJpaEntity;
 import com.decathlon.idp_core.infrastructure.adapters.persistence.model.entity.PropertyJpaEntity;
 import com.decathlon.idp_core.infrastructure.adapters.persistence.model.entity.RelationJpaEntity;
+import com.decathlon.idp_core.infrastructure.adapters.persistence.model.entity.RelationTargetJpaEntity;
+import com.decathlon.idp_core.infrastructure.adapters.persistence.repository.JpaEntityRepository;
 
-@Mapper(componentModel = MappingConstants.ComponentModel.SPRING)
-public interface EntityPersistenceMapper {
+import lombok.RequiredArgsConstructor;
 
-  Entity toDomain(EntityJpaEntity jpa);
+/// Custom mapper for Entity persistence layer.
+///
+/// Handles conversion between domain models and JPA entities, including
+/// identifier-to-UUID resolution for relations. Uses custom logic instead of
+/// MapStruct because relation mapping requires repository lookups to convert
+/// business identifiers to technical UUIDs and vice versa.
+@Component
+@RequiredArgsConstructor
+public class EntityPersistenceMapper {
 
-  EntityJpaEntity toJpa(Entity domain);
+  private final JpaEntityRepository entityRepository;
 
-  Property toDomain(PropertyJpaEntity jpa);
+  // =========================================================================
+  // Entity Mapping
+  // =========================================================================
 
-  PropertyJpaEntity toJpa(Property domain);
+  public Entity toDomain(EntityJpaEntity jpa) {
+    if (jpa == null) {
+      return null;
+    }
 
-  Relation toDomain(RelationJpaEntity jpa);
+    List<Property> properties = jpa.getProperties() != null
+        ? jpa.getProperties().stream().map(this::toDomain).toList()
+        : List.of();
 
-  RelationJpaEntity toJpa(Relation domain);
+    List<Relation> relations = jpa.getRelations() != null
+        ? jpa.getRelations().stream().map(this::toDomain).toList()
+        : List.of();
+
+    return new Entity(jpa.getId(), jpa.getTemplateIdentifier(), jpa.getName(), jpa.getIdentifier(),
+        properties, relations);
+  }
+
+  public EntityJpaEntity toJpa(Entity domain) {
+    if (domain == null) {
+      return null;
+    }
+
+    List<PropertyJpaEntity> properties = domain.properties() != null
+        ? domain.properties().stream().map(this::toJpa).toList()
+        : List.of();
+
+    List<RelationJpaEntity> relations = domain.relations() != null
+        ? domain.relations().stream().map(this::toJpa).toList()
+        : List.of();
+
+    return EntityJpaEntity.builder().id(domain.id()).templateIdentifier(domain.templateIdentifier())
+        .name(domain.name()).identifier(domain.identifier()).properties(properties)
+        .relations(relations).build();
+  }
+
+  // =========================================================================
+  // Property Mapping
+  // =========================================================================
+
+  public Property toDomain(PropertyJpaEntity jpa) {
+    if (jpa == null) {
+      return null;
+    }
+
+    return new Property(jpa.getId(), jpa.getName(), jpa.getValue());
+  }
+
+  public PropertyJpaEntity toJpa(Property domain) {
+    if (domain == null) {
+      return null;
+    }
+
+    return PropertyJpaEntity.builder().id(domain.id()).name(domain.name()).value(domain.value())
+        .build();
+  }
+
+  // =========================================================================
+  // Relation Mapping (with identifier ↔ UUID conversion)
+  // =========================================================================
+
+  public Relation toDomain(RelationJpaEntity jpa) {
+    if (jpa == null) {
+      return null;
+    }
+
+    // Pure in-memory transformation from the unified JPA row down to string list
+    // Extract the cached text string
+    List<String> targetIdentifiers = jpa.getTargetEntities() != null
+        ? jpa.getTargetEntities().stream().map(RelationTargetJpaEntity::getTargetEntityIdentifier)
+            .filter(Objects::nonNull).toList()
+        : List.of();
+
+    return new Relation(jpa.getId(), jpa.getName(), jpa.getTargetTemplateIdentifier(),
+        targetIdentifiers);
+  }
+
+  /// Converts domain relation to JPA entity. Resolves business identifiers to
+  /// UUIDs by querying the entity repository in a single batch operation. The JPA
+  /// entity stores both UUIDs (for graph traversal) and identifiers (for
+  /// Java mapping).
+  public RelationJpaEntity toJpa(Relation domain) {
+    if (domain == null) {
+      return null;
+    }
+
+    // Batch resolve all target identifiers in a single query, then map in-memory
+    List<RelationTargetJpaEntity> targetEntities = domain.targetEntityIdentifiers() != null
+        ? resolveBatchTargetEntities(domain.targetTemplateIdentifier(),
+            domain.targetEntityIdentifiers())
+        : List.of();
+
+    return RelationJpaEntity.builder().id(domain.id()).name(domain.name())
+        .targetTemplateIdentifier(domain.targetTemplateIdentifier()).targetEntities(targetEntities)
+        .build();
+  }
+
+  /// Resolves multiple target identifiers in a single batch query, then maps the
+  /// results in-memory to RelationTargetJpaEntity records. This prevents N+1
+  /// query
+  /// patterns when relations have many targets.
+  private List<RelationTargetJpaEntity> resolveBatchTargetEntities(String targetTemplateIdentifier,
+      List<String> targetIdentifiers) {
+    if (targetIdentifiers == null || targetIdentifiers.isEmpty()) {
+      return List.of();
+    }
+
+    // Single batch query to resolve all targets at once
+    List<EntityJpaEntity> resolvedEntities = entityRepository
+        .findAllByTemplateIdentifierAndIdentifierIn(targetTemplateIdentifier, targetIdentifiers);
+
+    // Map results in-memory, preserving only successfully resolved entities
+    return resolvedEntities.stream()
+        .map(entity -> new RelationTargetJpaEntity(entity.getId(), entity.getIdentifier()))
+        .toList();
+  }
 }

@@ -24,7 +24,7 @@ import lombok.extern.slf4j.Slf4j;
 @DisplayName("EntityDynamicMappingController Integration Tests")
 @TestClassOrder(ClassOrderer.OrderAnnotation.class)
 @Sql(scripts = {"/db/test/R__1_Insert_test_data.sql",
-    "/db/test/R__3_insert_webhhook_test_data.sql"}, executionPhase = Sql.ExecutionPhase.BEFORE_TEST_METHOD)
+    "/db/test/R__4_insert_webhook_test_data.sql"}, executionPhase = Sql.ExecutionPhase.BEFORE_TEST_METHOD)
 @Slf4j
 class EntityDynamicMappingControllerTest extends AbstractIntegrationTest {
 

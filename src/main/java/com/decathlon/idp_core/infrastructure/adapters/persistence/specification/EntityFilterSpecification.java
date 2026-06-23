@@ -18,6 +18,7 @@ import com.decathlon.idp_core.domain.model.search.SearchOperator;
 import com.decathlon.idp_core.infrastructure.adapters.persistence.model.entity.EntityJpaEntity;
 import com.decathlon.idp_core.infrastructure.adapters.persistence.model.entity.PropertyJpaEntity;
 import com.decathlon.idp_core.infrastructure.adapters.persistence.model.entity.RelationJpaEntity;
+import com.decathlon.idp_core.infrastructure.adapters.persistence.model.entity.RelationTargetJpaEntity;
 
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
@@ -27,14 +28,17 @@ import lombok.NoArgsConstructor;
 /// **Query strategy:**
 /// - Attribute criteria use direct predicates on the entity root.
 /// - Property criteria use an INNER JOIN on the `properties` collection.
-/// - Relation name criteria filter entities that have a relation with a specific name.
-/// - Relation entity criteria use an INNER JOIN on the `relations` collection and
-///   then on the `targetEntityIdentifiers` element collection.
-/// - Relation property criteria use an INNER JOIN on the `relations` collection and
-///   filter on the specified property (e.g., `name`, `identifier`).
-/// - Relations as target name criteria find entities where they are targets of relations
-///   with a specific name (requires joining relations and checking targetEntityIdentifiers).
-/// - Join-based criteria call `query.distinct(true)` to prevent duplicate rows from
+/// - Relation name criteria filter entities that have a relation with a specific
+///   name.
+/// - Relation entity criteria use an INNER JOIN on the `relations` collection
+///   and then on the `targetEntities` element collection.
+/// - Relation property criteria use an INNER JOIN on the `relations` collection
+///   and filter on the specified property (e.g., `name`, `identifier`).
+/// - Relations as target name criteria find entities where they are targets of
+///   relations with a specific name (requires joining relations and checking
+///   targetEntities).
+/// - Join-based criteria call `query.distinct(true)` to prevent duplicate rows
+///   from
 /// - All criteria are combined with AND logic via [Specification#allOf].
 ///
 /// **Security:** The CONTAINS operator escapes SQL LIKE wildcards (`%`, `_`) in
@@ -45,16 +49,18 @@ public final class EntityFilterSpecification {
   private static final String NAME = "name";
   private static final String IDENTIFIER = "identifier";
   private static final String RELATIONS = "relations";
-  private static final String TARGET_ENTITY_IDENTIFIERS = "targetEntityIdentifiers";
+  private static final String TARGET_ENTITIES = "targetEntities";
+  private static final String TARGET_ENTITY_IDENTIFIER = "targetEntityIdentifier";
+  private static final String TEMPLATE_IDENTIFIER = "templateIdentifier";
 
   /// Builds a [Specification] that matches entities belonging to the given
-  /// template identifier
-  /// and satisfying all criteria in the given filter.
+  /// template identifier and satisfying all criteria in the given filter.
   ///
   /// @param templateIdentifier the template to scope the query to
-  /// @param filter the filter to apply; may be empty (no additional predicates)
-  /// @return a composed [Specification] combining template scope and all filter
-  /// criteria
+  /// @param filter the filter to apply; may be empty (no additional
+  /// predicates)
+  /// @return a composed [Specification] combining template scope and all
+  /// filter criteria
   public static Specification<EntityJpaEntity> of(String templateIdentifier, EntityFilter filter) {
     var criteriaSpecs = filter.criteria().stream().map(EntityFilterSpecification::fromCriterion);
 
@@ -63,7 +69,7 @@ public final class EntityFilterSpecification {
   }
 
   private static Specification<EntityJpaEntity> hasTemplateIdentifier(String templateIdentifier) {
-    return (root, query, cb) -> cb.equal(root.get("templateIdentifier"), templateIdentifier);
+    return (root, query, cb) -> cb.equal(root.get(TEMPLATE_IDENTIFIER), templateIdentifier);
   }
 
   private static Specification<EntityJpaEntity> fromCriterion(FilterCriterion criterion) {
@@ -96,9 +102,12 @@ public final class EntityFilterSpecification {
     return (root, query, cb) -> {
       query.distinct(true);
       Join<EntityJpaEntity, RelationJpaEntity> relJoin = root.join(RELATIONS);
-      Join<RelationJpaEntity, String> targetJoin = relJoin.join(TARGET_ENTITY_IDENTIFIERS);
+      Join<RelationJpaEntity, RelationTargetJpaEntity> targetJoin = relJoin.join(TARGET_ENTITIES);
+
       return cb.and(cb.equal(relJoin.get(NAME), criterion.key()),
-          buildPredicate(cb, targetJoin, criterion.operator(), criterion.value()));
+          // Access the targetEntityIdentifier field within the embeddable
+          buildPredicate(cb, targetJoin.get(TARGET_ENTITY_IDENTIFIER), criterion.operator(),
+              criterion.value()));
     };
   }
 
@@ -117,8 +126,9 @@ public final class EntityFilterSpecification {
 
       // Check if the property is a target entity property (identifier, name)
       if (IDENTIFIER.equals(propertyName) || NAME.equals(propertyName)) {
-        // Join to target entity identifiers first
-        Join<RelationJpaEntity, String> targetIdJoin = relJoin.join(TARGET_ENTITY_IDENTIFIERS);
+        // Join to the embeddable collection
+        Join<RelationJpaEntity, RelationTargetJpaEntity> targetJoin = relJoin.join(TARGET_ENTITIES);
+
         // Create a subquery to find the actual target entities and filter by their
         // properties
         var subquery = query.subquery(String.class);
@@ -127,7 +137,8 @@ public final class EntityFilterSpecification {
             buildPredicate(cb, subRoot.get(propertyName), criterion.operator(), criterion.value()));
 
         return cb.and(cb.equal(relJoin.get(NAME), relationName),
-            cb.in(targetIdJoin).value(subquery));
+            // Access targetEntityIdentifier from the embeddable
+            cb.in(targetJoin.get(TARGET_ENTITY_IDENTIFIER)).value(subquery));
       } else {
         // Direct relation property (shouldn't happen normally as RelationJpaEntity has
         // limited properties)
@@ -163,25 +174,23 @@ public final class EntityFilterSpecification {
     return (root, query, cb) -> {
       // Find entities whose identifier appears as a target in any relation whose name
       // matches.
-      // Uses a correlated subquery to avoid joining through the entity's own outgoing
-      // relations.
       Subquery<String> subquery = query.subquery(String.class);
       Root<RelationJpaEntity> relRoot = subquery.from(RelationJpaEntity.class);
-      Join<RelationJpaEntity, String> targetJoin = relRoot.join(TARGET_ENTITY_IDENTIFIERS);
-      subquery.select(targetJoin)
+      Join<RelationJpaEntity, RelationTargetJpaEntity> targetJoin = relRoot.join(TARGET_ENTITIES);
+
+      subquery.select(targetJoin.get(TARGET_ENTITY_IDENTIFIER)) // Access embeddable field
           .where(buildPredicate(cb, relRoot.get(NAME), criterion.operator(), criterion.value()));
+
       return cb.in(root.get(IDENTIFIER)).value(subquery);
     };
   }
 
   /// Finds entities whose `identifier` appears as a `targetEntityIdentifier` in
-  /// any
-  /// relation whose **source entity** property matches the criterion.
+  /// any relation whose **source entity** property matches the criterion.
   ///
   /// Example: `relations_as_target.api-link.name:microservice` returns entities
-  /// that
-  /// are targeted by a `api-link` relation originating from an entity whose name
-  /// contains "microservice".
+  /// that are targeted by a `api-link` relation originating from an entity whose
+  /// name contains "microservice".
   private static Specification<EntityJpaEntity> relationsAsTargetPropertySpec(
       FilterCriterion criterion) {
     return (root, query, cb) -> {
@@ -198,9 +207,12 @@ public final class EntityFilterSpecification {
       Subquery<String> subquery = query.subquery(String.class);
       Root<EntityJpaEntity> sourceRoot = subquery.from(EntityJpaEntity.class);
       Join<EntityJpaEntity, RelationJpaEntity> relJoin = sourceRoot.join(RELATIONS);
-      Join<RelationJpaEntity, String> targetJoin = relJoin.join(TARGET_ENTITY_IDENTIFIERS);
-      subquery.select(targetJoin).where(cb.equal(relJoin.get(NAME), relationName), buildPredicate(
-          cb, sourceRoot.get(propertyName), criterion.operator(), criterion.value()));
+      Join<RelationJpaEntity, RelationTargetJpaEntity> targetJoin = relJoin.join(TARGET_ENTITIES);
+
+      subquery.select(targetJoin.get(TARGET_ENTITY_IDENTIFIER))
+          .where(cb.equal(relJoin.get(NAME), relationName), buildPredicate(cb,
+              sourceRoot.get(propertyName), criterion.operator(), criterion.value()));
+
       return cb.in(root.get(IDENTIFIER)).value(subquery);
     };
   }

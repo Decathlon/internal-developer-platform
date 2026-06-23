@@ -9,6 +9,8 @@ import java.util.UUID;
 
 import jakarta.validation.constraints.NotBlank;
 
+import com.decathlon.idp_core.domain.model.entity_template.EntityTemplate;
+
 /// Domain entity representing a concrete instance of an [EntityTemplate].
 ///
 /// Business invariants:
