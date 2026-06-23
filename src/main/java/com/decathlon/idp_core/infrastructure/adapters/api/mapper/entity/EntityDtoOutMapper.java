@@ -1,6 +1,8 @@
 package com.decathlon.idp_core.infrastructure.adapters.api.mapper.entity;
 
+import java.lang.reflect.Array;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -9,7 +11,6 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.stereotype.Component;
 
@@ -21,11 +22,13 @@ import com.decathlon.idp_core.domain.model.entity.RelationAsTargetSummary;
 import com.decathlon.idp_core.domain.model.entity_template.EntityTemplate;
 import com.decathlon.idp_core.domain.model.entity_template.PropertyDefinition;
 import com.decathlon.idp_core.domain.model.enums.PropertyType;
-import com.decathlon.idp_core.domain.service.entity_template.EntityTemplateService;
 import com.decathlon.idp_core.domain.service.RelationService;
 import com.decathlon.idp_core.domain.service.entity.EntityService;
+import com.decathlon.idp_core.domain.service.entity_template.EntityTemplateService;
 import com.decathlon.idp_core.infrastructure.adapters.api.dto.out.entity.EntityDtoOut;
 import com.decathlon.idp_core.infrastructure.adapters.api.dto.out.entity.EntitySummaryDto;
+
+import lombok.RequiredArgsConstructor;
 
 /// Adapter mapper for converting domain [Entity] objects to API DTOs.
 ///
@@ -197,7 +200,7 @@ public class EntityDtoOutMapper {
     /// @param entity         the entity whose properties to map
     /// @param entityTemplate the template for property type mapping
     /// @return a map of property names to typed values
-    private Map<String, Object> mapPropertiesDto(Entity entity, EntityTemplate entityTemplate) {
+        private Map<String, Object> mapPropertiesDto(Entity entity, EntityTemplate entityTemplate) {
         if (entity.properties() == null) {
             return Collections.emptyMap();
         }
@@ -206,7 +209,7 @@ public class EntityDtoOutMapper {
                 .collect(Collectors.toMap(PropertyDefinition::name, Function.identity()));
 
         return entity.properties().stream()
-                .filter(prop -> prop.value() != null)
+                .filter(prop -> prop.value() != null && !isEmptyValue(prop.value()))
                 .collect(Collectors.toMap(
                         Property::name,
                         prop -> {
@@ -229,6 +232,25 @@ public class EntityDtoOutMapper {
                             return stringValue;
                         }));
     }
+
+        private boolean isEmptyValue(Object rawValue) {
+                if (rawValue == null) {
+                        return true;
+                }
+                if (rawValue instanceof String) {
+                        return ((String) rawValue).isBlank();
+                }
+                if (rawValue instanceof Collection) {
+                        return ((Collection<?>) rawValue).isEmpty();
+                }
+                if (rawValue instanceof Map) {
+                        return ((Map<?, ?>) rawValue).isEmpty();
+                }
+                if (rawValue.getClass().isArray()) {
+                        return Array.getLength(rawValue) == 0;
+                }
+                return false;
+        }
 
     /// Maps the relations of an entity to a map of relation names to lists of target
     /// entity summaries.
