@@ -385,7 +385,6 @@ class SearchFilterValidationServiceTest {
           .hasMessageContaining("STRING");
     }
   }
-
   private static SearchFilterNode.Criterion criterion(String field, SearchOperator op,
       String value) {
     return new SearchFilterNode.Criterion(field, op, value);

@@ -16,6 +16,7 @@ import com.decathlon.idp_core.domain.model.search.SearchFilterNode;
 import com.decathlon.idp_core.domain.model.search.SearchOperator;
 import com.decathlon.idp_core.infrastructure.adapters.persistence.model.entity.EntityJpaEntity;
 import com.decathlon.idp_core.infrastructure.adapters.persistence.model.entity.RelationJpaEntity;
+import com.decathlon.idp_core.infrastructure.adapters.persistence.model.entity.RelationTargetJpaEntity;
 
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
@@ -54,7 +55,8 @@ public final class EntitySearchSpecification {
   private static final String RELATION = "relation";
   private static final String RELATIONS = "relations";
   private static final String RELATIONS_AS_TARGET = "relations_as_target";
-  private static final String TARGET_ENTITY_IDENTIFIERS = "targetEntityIdentifiers";
+  private static final String TARGET_ENTITIES = "targetEntities";
+  private static final String TARGET_ENTITY_IDENTIFIER = "targetEntityIdentifier";
   private static final String PROPERTY_PREFIX = "property.";
   private static final String RELATION_PREFIX = "relation.";
   private static final String RELATIONS_AS_TARGET_PREFIX = "relations_as_target.";
@@ -204,10 +206,10 @@ public final class EntitySearchSpecification {
       var sub = query.subquery(Integer.class);
       var subRoot = sub.from(EntityJpaEntity.class);
       var relJoin = subRoot.join(RELATIONS);
-      var targetJoin = relJoin.join(TARGET_ENTITY_IDENTIFIERS);
+      Join<RelationJpaEntity, RelationTargetJpaEntity> targetJoin = relJoin.join(TARGET_ENTITIES);
       sub.select(cb.literal(1)).where(cb.equal(subRoot.get("id"), root.get("id")),
           cb.equal(relJoin.get(NAME), relationName),
-          buildPredicate(cb, targetJoin, c.operation(), c.value()));
+          buildPredicate(cb, targetJoin.get(TARGET_ENTITY_IDENTIFIER), c.operation(), c.value()));
       return cb.exists(sub);
     };
   }
@@ -221,7 +223,7 @@ public final class EntitySearchSpecification {
       var sub = query.subquery(Integer.class);
       var subRoot = sub.from(EntityJpaEntity.class);
       var relJoin = subRoot.join(RELATIONS);
-      var targetIdJoin = relJoin.join(TARGET_ENTITY_IDENTIFIERS);
+      Join<RelationJpaEntity, RelationTargetJpaEntity> targetJoin = relJoin.join(TARGET_ENTITIES);
 
       // Inner scalar subquery: entity identifiers whose identifier/name satisfies the
       // criterion.
@@ -231,7 +233,8 @@ public final class EntitySearchSpecification {
           .where(buildPredicate(cb, innerRoot.get(property), c.operation(), c.value()));
 
       sub.select(cb.literal(1)).where(cb.equal(subRoot.get("id"), root.get("id")),
-          cb.equal(relJoin.get(NAME), relationName), cb.in(targetIdJoin).value(innerSubquery));
+          cb.equal(relJoin.get(NAME), relationName),
+          cb.in(targetJoin.get(TARGET_ENTITY_IDENTIFIER)).value(innerSubquery));
       return cb.exists(sub);
     };
   }
@@ -257,8 +260,8 @@ public final class EntitySearchSpecification {
       Subquery<String> subquery = query.subquery(String.class);
       Root<EntityJpaEntity> sourceRoot = subquery.from(EntityJpaEntity.class);
       Join<EntityJpaEntity, RelationJpaEntity> relJoin = sourceRoot.join(RELATIONS);
-      Join<RelationJpaEntity, String> targetJoin = relJoin.join(TARGET_ENTITY_IDENTIFIERS);
-      subquery.select(targetJoin)
+      Join<RelationJpaEntity, RelationTargetJpaEntity> targetJoin = relJoin.join(TARGET_ENTITIES);
+      subquery.select(targetJoin.get(TARGET_ENTITY_IDENTIFIER))
           .where(buildPredicate(cb, relJoin.get(NAME), effectiveOp, c.value()));
 
       boolean isNegated = c.operation() == SearchOperator.NOT_CONTAINS
@@ -284,8 +287,9 @@ public final class EntitySearchSpecification {
       Subquery<String> subquery = query.subquery(String.class);
       Root<EntityJpaEntity> sourceRoot = subquery.from(EntityJpaEntity.class);
       Join<EntityJpaEntity, RelationJpaEntity> relJoin = sourceRoot.join(RELATIONS);
-      Join<RelationJpaEntity, String> targetJoin = relJoin.join(TARGET_ENTITY_IDENTIFIERS);
-      subquery.select(targetJoin).where(cb.equal(relJoin.get(NAME), relationName),
+      Join<RelationJpaEntity, RelationTargetJpaEntity> targetJoin = relJoin.join(TARGET_ENTITIES);
+      subquery.select(targetJoin.get(TARGET_ENTITY_IDENTIFIER)).where(
+          cb.equal(relJoin.get(NAME), relationName),
           buildPredicate(cb, sourceRoot.get(property), c.operation(), c.value()));
       return cb.in(root.get(IDENTIFIER)).value(subquery);
     };

@@ -15,6 +15,8 @@ import jakarta.persistence.OneToMany;
 import jakarta.persistence.Table;
 import jakarta.persistence.UniqueConstraint;
 
+import org.hibernate.annotations.BatchSize;
+
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -40,11 +42,13 @@ public class EntityJpaEntity {
 
   private String identifier;
 
+  @BatchSize(size = 50)
   @OneToMany(cascade = CascadeType.ALL, orphanRemoval = true)
   @JoinTable(name = "entity_properties", joinColumns = @JoinColumn(name = "entity_id"), inverseJoinColumns = @JoinColumn(name = "property_id"), uniqueConstraints = @UniqueConstraint(columnNames = {
       "entity_id", "property_id"}), indexes = @Index(columnList = "entity_id"))
   private List<PropertyJpaEntity> properties;
 
+  @BatchSize(size = 50)
   @OneToMany(cascade = CascadeType.ALL, orphanRemoval = true)
   @JoinTable(name = "entity_relations", joinColumns = @JoinColumn(name = "entity_id"), inverseJoinColumns = @JoinColumn(name = "relation_id"), uniqueConstraints = @UniqueConstraint(columnNames = {
       "entity_id", "relation_id"}), indexes = @Index(columnList = "entity_id"))

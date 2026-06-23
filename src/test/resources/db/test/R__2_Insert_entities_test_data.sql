@@ -1,5 +1,8 @@
--- Insert sample entities into idp_core.entity
-INSERT INTO idp_core.entity (id, identifier, name, template_identifier)
+-- -----------------------------------------------------------------------
+-- Sample entity instances
+-- -----------------------------------------------------------------------
+
+INSERT INTO entity (id, identifier, name, template_identifier)
 VALUES
   ('550e8400-e29b-41d4-a716-446655440115', 'default-team', 'Default Team', 'team'),
   ('550e8400-e29b-41d4-a716-446655440116', 'test-team-required', 'Test Team Required', 'team'),
@@ -66,6 +69,7 @@ VALUES
   ('aa000000-0000-0000-0000-000000000001', 'programmingLanguage', 'JAVA'),
   ('aa000000-0000-0000-0000-000000000002', 'environment', 'PROD'),
   ('aa000000-0000-0000-0000-000000000005', 'port', '8080');
+
 INSERT INTO idp_core.entity_properties (entity_id, property_id)
 VALUES
   ('550e8400-e29b-41d4-a716-446655440100', 'aa000000-0000-0000-0000-000000000001'),
@@ -78,6 +82,7 @@ VALUES
   ('aa000000-0000-0000-0000-000000000003', 'programmingLanguage', 'PYTHON'),
   ('aa000000-0000-0000-0000-000000000004', 'environment', 'DEV'),
   ('aa000000-0000-0000-0000-000000000006', 'port', '9090');
+
 INSERT INTO idp_core.entity_properties (entity_id, property_id)
 VALUES
   ('550e8400-e29b-41d4-a716-446655440101', 'aa000000-0000-0000-0000-000000000003'),
@@ -88,9 +93,11 @@ VALUES
 INSERT INTO idp_core.relation (id, name, target_template_identifier)
 VALUES
   ('bb000000-0000-0000-0000-000000000001', 'database', 'database-service');
+
 INSERT INTO idp_core.relation_target_entities (relation_id, target_entity_identifier)
 VALUES
   ('bb000000-0000-0000-0000-000000000001', 'database-service-1');
+
 INSERT INTO idp_core.entity_relations (entity_id, relation_id)
 VALUES
   ('550e8400-e29b-41d4-a716-446655440100', 'bb000000-0000-0000-0000-000000000001');
@@ -99,9 +106,11 @@ VALUES
 INSERT INTO idp_core.relation (id, name, target_template_identifier)
 VALUES
   ('bb000000-0000-0000-0000-000000000002', 'database', 'cache-service');
+
 INSERT INTO idp_core.relation_target_entities (relation_id, target_entity_identifier)
 VALUES
   ('bb000000-0000-0000-0000-000000000002', 'cache-service-1');
+
 INSERT INTO idp_core.entity_relations (entity_id, relation_id)
 VALUES
   ('550e8400-e29b-41d4-a716-446655440101', 'bb000000-0000-0000-0000-000000000002');
@@ -110,9 +119,11 @@ VALUES
 INSERT INTO idp_core.relation (id, name, target_template_identifier)
 VALUES
   ('bb000000-0000-0000-0000-000000000003', 'api-link', 'microservice');
+
 INSERT INTO idp_core.relation_target_entities (relation_id, target_entity_identifier)
 VALUES
   ('bb000000-0000-0000-0000-000000000003', 'microservice-1');
+
 INSERT INTO idp_core.entity_relations (entity_id, relation_id)
 VALUES
   ('550e8400-e29b-41d4-a716-446655440100', 'bb000000-0000-0000-0000-000000000003');
@@ -121,9 +132,11 @@ VALUES
 INSERT INTO idp_core.relation (id, name, target_template_identifier)
 VALUES
   ('bb000000-0000-0000-0000-000000000006', 'required_team', 'team');
+
 INSERT INTO idp_core.relation_target_entities (relation_id, target_entity_identifier)
 VALUES
   ('bb000000-0000-0000-0000-000000000006', 'test-team-required');
+
 INSERT INTO idp_core.entity_relations (entity_id, relation_id)
 VALUES
   ('550e8400-e29b-41d4-a716-446655440117', 'bb000000-0000-0000-0000-000000000006');
