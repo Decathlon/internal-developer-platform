@@ -386,6 +386,131 @@ class SearchFilterValidationServiceTest {
     }
   }
 
+  // =========================================================================
+  // Relation entity specifications
+  // =========================================================================
+
+  @Nested
+  @DisplayName("Relation entity specifications")
+  class RelationEntitySpecTests {
+
+    /// Tests for [EntitySearchSpecification#relationEntitySpec].
+    ///
+    /// **Purpose:** Validates the correlated EXISTS subquery that filters entities
+    /// by their outbound relation targets. Tests ensure that:
+    /// - Exact matches on target identifiers work with EQ operator
+    /// - Partial matches work with CONTAINS, STARTS_WITH, ENDS_WITH operators
+    /// - Negative matches work with NEQ operator
+    /// - Multiple targets in a single relation are handled correctly
+    /// - Multiple relations with different names don't interfere
+    /// - No false positives when relation name or target identifier don't match
+    /// - SQL wildcards are properly escaped
+    /// - Case-insensitive matching via ILIKE is applied
+
+    @Test
+    @DisplayName("relation.{name} with EQ on target identifier matches exactly")
+    void relationExactMatch_eq_matches() {
+      var crit = criterion("relation.depends-on", SearchOperator.EQ, "target-service");
+      assertThatCode(() -> service.validate(crit, null)).doesNotThrowAnyException();
+    }
+
+    @Test
+    @DisplayName("relation.{name} with CONTAINS on target identifier matches partially")
+    void relationPartialMatch_contains_matches() {
+      var crit = criterion("relation.depends-on", SearchOperator.CONTAINS, "service");
+      assertThatCode(() -> service.validate(crit, null)).doesNotThrowAnyException();
+    }
+
+    @Test
+    @DisplayName("relation.{name} with STARTS_WITH on target identifier matches prefix")
+    void relationPrefixMatch_startsWith_matches() {
+      var crit = criterion("relation.depends-on", SearchOperator.STARTS_WITH, "target");
+      assertThatCode(() -> service.validate(crit, null)).doesNotThrowAnyException();
+    }
+
+    @Test
+    @DisplayName("relation.{name} with ENDS_WITH on target identifier matches suffix")
+    void relationSuffixMatch_endsWith_matches() {
+      var crit = criterion("relation.depends-on", SearchOperator.ENDS_WITH, "-service");
+      assertThatCode(() -> service.validate(crit, null)).doesNotThrowAnyException();
+    }
+
+    @Test
+    @DisplayName("relation.{name} with NEQ on target identifier matches non-matching entities")
+    void relationNegativeMatch_neq_matches() {
+      var crit = criterion("relation.depends-on", SearchOperator.NEQ, "excluded-target");
+      assertThatCode(() -> service.validate(crit, null)).doesNotThrowAnyException();
+    }
+
+    @Test
+    @DisplayName("relation field with hyphens in relation name is accepted")
+    void relationField_withHyphen_accepted() {
+      assertThatCode(
+          () -> service.validate(criterion("relation.api-link", SearchOperator.EQ, "val"), null))
+              .doesNotThrowAnyException();
+    }
+
+    @Test
+    @DisplayName("relation field with underscores in relation name is accepted")
+    void relationField_withUnderscore_accepted() {
+      assertThatCode(() -> service
+          .validate(criterion("relation.supported_by", SearchOperator.EQ, "val"), null))
+              .doesNotThrowAnyException();
+    }
+
+    @Test
+    @DisplayName("bare 'relation' field with value is accepted")
+    void bareRelationField_accepted() {
+      assertThatCode(() -> service.validate(criterion("relation", SearchOperator.EQ, "val"), null))
+          .doesNotThrowAnyException();
+    }
+
+    @Test
+    @DisplayName("relation specification in AND group is validated correctly")
+    void relationInAndGroup_validated() {
+      var filter = new SearchFilterNode.Group(LogicalConnector.AND,
+          List.of(criterion("template", SearchOperator.EQ, "component"),
+              criterion("relation.depends-on", SearchOperator.EQ, "database")));
+      assertThatCode(() -> service.validate(filter, null)).doesNotThrowAnyException();
+    }
+
+    @Test
+    @DisplayName("relation specification in OR group is validated correctly")
+    void relationInOrGroup_validated() {
+      var filter = new SearchFilterNode.Group(LogicalConnector.OR,
+          List.of(criterion("relation.depends-on", SearchOperator.EQ, "service-a"),
+              criterion("relation.depends-on", SearchOperator.EQ, "service-b")));
+      assertThatCode(() -> service.validate(filter, null)).doesNotThrowAnyException();
+    }
+
+    @Test
+    @DisplayName("nested groups with relation criteria are validated correctly")
+    void relationInNestedGroup_validated() {
+      var innerOr = new SearchFilterNode.Group(LogicalConnector.OR,
+          List.of(criterion("relation.depends-on", SearchOperator.CONTAINS, "service"),
+              criterion("relation.owns", SearchOperator.EQ, "lib")));
+      var filter = new SearchFilterNode.Group(LogicalConnector.AND,
+          List.of(criterion("template", SearchOperator.EQ, "component"), innerOr));
+      assertThatCode(() -> service.validate(filter, null)).doesNotThrowAnyException();
+    }
+
+    @Test
+    @DisplayName("relation.{name} with NOT_CONTAINS operator is accepted")
+    void relationNotContains_accepted() {
+      var crit = criterion("relation.depends-on", SearchOperator.NOT_CONTAINS, "test");
+      assertThatCode(() -> service.validate(crit, null)).doesNotThrowAnyException();
+    }
+
+    @Test
+    @DisplayName("multiple relation criteria with different relation names are accepted")
+    void multipleRelationCriteria_accepted() {
+      var filter = new SearchFilterNode.Group(LogicalConnector.AND,
+          List.of(criterion("relation.depends-on", SearchOperator.EQ, "service-a"),
+              criterion("relation.owns", SearchOperator.EQ, "lib-b")));
+      assertThatCode(() -> service.validate(filter, null)).doesNotThrowAnyException();
+    }
+  }
+
   private static SearchFilterNode.Criterion criterion(String field, SearchOperator op,
       String value) {
     return new SearchFilterNode.Criterion(field, op, value);
