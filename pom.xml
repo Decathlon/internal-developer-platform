@@ -433,8 +433,6 @@
           </rules>
           <exclusions>
             <exclude>org.hibernate.orm:hibernate-core:6.6.29.Final</exclude>
-            <exclude>ch.qos.logback:logback-classic:1.5.25</exclude>
-            <exclude>ch.qos.logback:logback-core:1.5.25</exclude>
           </exclusions>
         </configuration>
         <executions>
