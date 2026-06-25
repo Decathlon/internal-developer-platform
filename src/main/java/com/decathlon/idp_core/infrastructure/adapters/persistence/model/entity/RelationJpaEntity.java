@@ -17,6 +17,7 @@ import jakarta.persistence.Table;
 
 import org.hibernate.annotations.BatchSize;
 import org.hibernate.envers.Audited;
+import org.hibernate.envers.NotAudited;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -46,9 +47,4 @@ public class RelationJpaEntity {
   @CollectionTable(name = "relation_target_entities", schema = "idp_core", joinColumns = @JoinColumn(name = "relation_id"))
   @BatchSize(size = 50)
   private List<RelationTargetJpaEntity> targetEntities;
-
-  @ElementCollection
-  @CollectionTable(name = "relation_target_entities", joinColumns = @JoinColumn(name = "relation_id"), indexes = @Index(columnList = "relation_id"))
-  @Column(name = "target_entity_identifier")
-  private List<String> targetEntityIdentifiers;
 }

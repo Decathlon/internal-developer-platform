@@ -31,6 +31,7 @@ import com.decathlon.idp_core.infrastructure.adapters.persistence.model.audit.Cu
 import com.decathlon.idp_core.infrastructure.adapters.persistence.model.entity.EntityJpaEntity;
 import com.decathlon.idp_core.infrastructure.adapters.persistence.model.entity.PropertyJpaEntity;
 import com.decathlon.idp_core.infrastructure.adapters.persistence.model.entity.RelationJpaEntity;
+import com.decathlon.idp_core.infrastructure.adapters.persistence.model.entity.RelationTargetJpaEntity;
 import com.decathlon.idp_core.infrastructure.adapters.persistence.repository.JpaEntityRepository;
 
 /// Unit tests for PostgresEntityAuditAdapter.
@@ -98,8 +99,6 @@ class PostgresEntityAuditAdapterTest {
             .thenReturn(auditQuery);
         when(auditQuery.add(any())).thenReturn(auditQuery);
         when(auditQuery.addOrder(any())).thenReturn(auditQuery);
-        // FIX: Explicitly type List.<Object[]>of() to prevent varargs from flattening
-        // the array
         when(auditQuery.getResultList()).thenReturn(List.<Object[]>of(revision));
 
         EntityJpaEntity historicalEntity = mock(EntityJpaEntity.class);
@@ -148,8 +147,7 @@ class PostgresEntityAuditAdapterTest {
         when(auditQuery.addOrder(any())).thenReturn(auditQuery);
         when(auditQuery.getResultList()).thenReturn(List.of());
 
-        // When & Then - FIX: Match the exact message format returned by
-        // EntityNotFoundException
+        // When & Then
         assertThatThrownBy(
             () -> adapter.getEntityAuditHistory(templateIdentifier, entityIdentifier))
                 .isInstanceOf(EntityNotFoundException.class)
@@ -447,11 +445,16 @@ class PostgresEntityAuditAdapterTest {
         when(property.getName()).thenReturn("environment");
         when(property.getValue()).thenReturn("PROD");
 
+        RelationTargetJpaEntity target1 = mock(RelationTargetJpaEntity.class);
+        when(target1.getTargetEntityIdentifier()).thenReturn("svc-1");
+        RelationTargetJpaEntity target2 = mock(RelationTargetJpaEntity.class);
+        when(target2.getTargetEntityIdentifier()).thenReturn("svc-2");
+
         RelationJpaEntity relation = mock(RelationJpaEntity.class);
         when(relation.getId()).thenReturn(UUID.randomUUID());
         when(relation.getName()).thenReturn("dependencies");
         when(relation.getTargetTemplateIdentifier()).thenReturn("service");
-        when(relation.getTargetEntityIdentifiers()).thenReturn(List.of("svc-1", "svc-2"));
+        when(relation.getTargetEntities()).thenReturn(List.of(target1, target2));
 
         EntityJpaEntity historicalEntity = mock(EntityJpaEntity.class);
         when(historicalEntity.getId()).thenReturn(entityId);
@@ -475,6 +478,8 @@ class PostgresEntityAuditAdapterTest {
         assertThat(result.getFirst().snapshot().relations()).hasSize(1);
         assertThat(result.getFirst().snapshot().relations().getFirst().name())
             .isEqualTo("dependencies");
+        assertThat(result.getFirst().snapshot().relations().getFirst().targetEntityIdentifiers())
+            .containsExactly("svc-1", "svc-2");
       }
     }
 
@@ -712,12 +717,12 @@ class PostgresEntityAuditAdapterTest {
   }
 
   @Nested
-  @DisplayName("Relation Target Identifiers Tests")
-  class RelationTargetIdentifiersTests {
+  @DisplayName("Relation Target Entities Tests")
+  class RelationTargetEntitiesTests {
 
     @Test
-    @DisplayName("Should defensively copy targetEntityIdentifiers list")
-    void shouldDefensivelyCopyTargetIdentifiers() {
+    @DisplayName("Should handle mapping changes correctly across target list modifications")
+    void shouldHandleTargetEntityListMapping() {
       // Given
       UUID entityId = UUID.randomUUID();
       String templateIdentifier = "web-service";
@@ -750,12 +755,18 @@ class PostgresEntityAuditAdapterTest {
         when(auditQuery.addOrder(any())).thenReturn(auditQuery);
         when(auditQuery.getResultList()).thenReturn(List.<Object[]>of(revision));
 
-        List<String> targetIds = new java.util.ArrayList<>(List.of("id1", "id2"));
+        RelationTargetJpaEntity target1 = mock(RelationTargetJpaEntity.class);
+        when(target1.getTargetEntityIdentifier()).thenReturn("id1");
+        RelationTargetJpaEntity target2 = mock(RelationTargetJpaEntity.class);
+        when(target2.getTargetEntityIdentifier()).thenReturn("id2");
+
+        List<RelationTargetJpaEntity> targetEntities = new java.util.ArrayList<>(
+            List.of(target1, target2));
         RelationJpaEntity relation = mock(RelationJpaEntity.class);
         when(relation.getId()).thenReturn(UUID.randomUUID());
         when(relation.getName()).thenReturn("deps");
         when(relation.getTargetTemplateIdentifier()).thenReturn("service");
-        when(relation.getTargetEntityIdentifiers()).thenReturn(targetIds);
+        when(relation.getTargetEntities()).thenReturn(targetEntities);
 
         EntityJpaEntity historicalEntity = mock(EntityJpaEntity.class);
         when(historicalEntity.getId()).thenReturn(entityId);
@@ -771,18 +782,19 @@ class PostgresEntityAuditAdapterTest {
         List<EntityAuditInfo> result = adapter.getEntityAuditHistory(templateIdentifier,
             entityIdentifier);
 
-        // Modify original list
-        targetIds.add("id3");
+        // Modify original list setup
+        RelationTargetJpaEntity target3 = mock(RelationTargetJpaEntity.class);
+        targetEntities.add(target3);
 
-        // Then - snapshot should not be affected
+        // Then - snapshot mapping guarantees isolation
         assertThat(result.getFirst().snapshot().relations().getFirst().targetEntityIdentifiers())
             .containsExactly("id1", "id2");
       }
     }
 
     @Test
-    @DisplayName("Should handle null targetEntityIdentifiers")
-    void shouldHandleNullTargetIdentifiers() {
+    @DisplayName("Should handle null target entities gracefully")
+    void shouldHandleNullTargetEntities() {
       // Given
       UUID entityId = UUID.randomUUID();
       String templateIdentifier = "web-service";
@@ -819,7 +831,7 @@ class PostgresEntityAuditAdapterTest {
         when(relation.getId()).thenReturn(UUID.randomUUID());
         when(relation.getName()).thenReturn("deps");
         when(relation.getTargetTemplateIdentifier()).thenReturn("service");
-        when(relation.getTargetEntityIdentifiers()).thenReturn(null);
+        when(relation.getTargetEntities()).thenReturn(null);
 
         EntityJpaEntity historicalEntity = mock(EntityJpaEntity.class);
         when(historicalEntity.getId()).thenReturn(entityId);

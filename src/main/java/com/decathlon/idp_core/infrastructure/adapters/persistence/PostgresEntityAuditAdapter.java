@@ -19,6 +19,7 @@ import com.decathlon.idp_core.infrastructure.adapters.persistence.model.audit.Cu
 import com.decathlon.idp_core.infrastructure.adapters.persistence.model.entity.EntityJpaEntity;
 import com.decathlon.idp_core.infrastructure.adapters.persistence.model.entity.PropertyJpaEntity;
 import com.decathlon.idp_core.infrastructure.adapters.persistence.model.entity.RelationJpaEntity;
+import com.decathlon.idp_core.infrastructure.adapters.persistence.model.entity.RelationTargetJpaEntity;
 import com.decathlon.idp_core.infrastructure.adapters.persistence.repository.JpaEntityRepository;
 
 import lombok.RequiredArgsConstructor;
@@ -127,8 +128,9 @@ public class PostgresEntityAuditAdapter implements EntityAuditPort {
     return relations.stream()
         .map(rel -> new EntityAuditInfo.RelationSnapshot(rel.getId(), rel.getName(),
             rel.getTargetTemplateIdentifier(),
-            rel.getTargetEntityIdentifiers() != null
-                ? List.copyOf(rel.getTargetEntityIdentifiers())
+            rel.getTargetEntities() != null
+                ? rel.getTargetEntities().stream()
+                    .map(RelationTargetJpaEntity::getTargetEntityIdentifier).toList()
                 : List.of()))
         .toList();
   }
