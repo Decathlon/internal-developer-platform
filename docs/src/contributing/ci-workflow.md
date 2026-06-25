@@ -10,39 +10,53 @@ flowchart TD
     %% Triggers
     StartPR([PR Created/Updated])
     StartMain([Push to Main])
+    StartRelease([GitHub Release Published])
 
-    %% PR Workflow
-    subgraph PR_Checks [Pull Request Checks]
+    %% PR-only checks
+    subgraph PR_Checks [Pull Request — Additional Checks]
         direction TB
         LintTitle[Lint PR Title]
-        Sonar[SonarCloud Analysis]
+        LintCode[Lint & Pre-Commit Hooks]
+        OpenAPI[OpenAPI Swagger Update Check]
+        BreakingChange{Breaking Change?}
+        CheckCommit{Announced?}
+        AllowBreaking[⚠️ Allow with Warning]
+        FailPipeline[❌ Fail Pipeline]
 
-        subgraph BasicChecks [Basic Code Checks Workflow]
-            LintCode[Lint & Pre-Commit Hooks] --> License[License Compliance Check]
-            License --> UnitTests[Run Unit Tests]
-            UnitTests --> IntTests[Run Integration Tests]
-            IntTests --> BuildApp[Build Application]
-            BuildApp --> BreakingChange{Breaking Change?}
-            BreakingChange -->|Yes| CheckCommit{Announced?}
-            CheckCommit -->|Yes| AllowBreaking[⚠️ Allow with Warning]
-            CheckCommit -->|No| FailPipeline[❌ Fail Pipeline]
-            BreakingChange -->|No Breaking| PassCheck[✅ Pass Check]
-        end
+        LintCode --> License2[License Compliance]
+        OpenAPI --> BreakingChange
+        BreakingChange -->|Yes| CheckCommit
+        CheckCommit -->|Yes| AllowBreaking
+        CheckCommit -->|No| FailPipeline
+        BreakingChange -->|No| PassBreaking[✅ No Breaking Change]
     end
 
-    %% Main Workflow
-    subgraph Deploy_Flow [Deployment Workflow]
+    %% Shared checks — run on both PR and push to main
+    subgraph SharedChecks [Basic Code Checks — PR & Main]
         direction TB
-        BuildProd[Build Docker Image] --> TagImage[Tag with SHA & Latest]
-        TagImage --> PushReg[Push to Registry]
+        License[License Compliance] --> Build
+        Build[Build & Test\nmvn clean verify] --> Sonar[SonarCloud Analysis]
+        Build --> Coverage[GitHub Coverage Report]
+        Build --> Security[Security Scan\nSpotBugs / OWASP]
+        Build --> DockerTest[Docker Image Build Test]
+    end
+
+    %% Release / deployment
+    subgraph Deploy_Flow [Deployment Workflow — Release only]
+        direction TB
+        BuildProd[Build Docker Image] --> TagImage[Tag with version & latest]
+        TagImage --> PushReg[Push to Docker Hub]
     end
 
     %% Connections
     StartPR --> LintTitle
-    StartPR --> Sonar
     StartPR --> LintCode
+    StartPR --> SharedChecks
+    SharedChecks --> OpenAPI
 
-    StartMain --> BuildProd
+    StartMain --> SharedChecks
+
+    StartRelease --> BuildProd
 
     %% Styling
     classDef trigger fill:#9575cd,stroke:#333,stroke-width:2px,color:white;
@@ -52,21 +66,34 @@ flowchart TD
     classDef failure fill:#ffcdd2,stroke:#c62828,stroke-width:2px;
     classDef container fill:#fff3e0,stroke:#ff6f00,stroke-width:2px,stroke-dasharray: 5 5;
 
-    class StartPR,StartMain trigger;
-    class LintTitle,Sonar,LintCode,License,UnitTests,IntTests,BuildApp,BuildProd,TagImage,PushReg step;
+    class StartPR,StartMain,StartRelease trigger;
+    class LintTitle,LintCode,License,License2,Build,Sonar,Coverage,Security,DockerTest,OpenAPI,BuildProd,TagImage,PushReg step;
     class BreakingChange,CheckCommit decision;
-    class PassCheck,AllowBreaking success;
+    class PassBreaking,AllowBreaking success;
     class FailPipeline failure;
-    class BasicChecks,Deploy_Flow container;
+    class SharedChecks,PR_Checks,Deploy_Flow container;
 ```
 
 ## Key Checks
+
+The `Basic Code Checks` workflow runs on every **pull request** targeting `main` and on every **push to `main`**. Some jobs are PR-only.
+
+| Job | Pull Request | Push to `main` |
+| --- | :---: | :---: |
+| Lint & Pre-Commit Hooks | ✅ | — |
+| License Compliance | ✅ | ✅ |
+| Build, Test & SonarCloud Analysis | ✅ | ✅ |
+| GitHub Coverage Report | ✅ | ✅ |
+| Security Scan (SpotBugs / OWASP) | ✅ | ✅ |
+| OpenAPI Breaking Change Check | ✅ | — |
+| Docker Image Build Test | ✅ | ✅ |
 
 1. **Conventional Commits**: PR titles must follow `feat:`, `fix:`, etc. We also control the scope, for example `feat(domain): ...`.
 2. **Breaking Changes**: We use `oasdiff` to check for API breaking changes.
     * **Announce** breaking changes in the commit message, for example `feat(domain)!: remove endpoint`.
     * Unannounced breaking changes **fail the pipeline**.
-3. **Tests**: Unit tests and Integration tests using Testcontainers must pass. Coverage should be at least 80%.
+3. **Tests**: Unit tests and integration tests using Testcontainers must pass. Coverage should be at least 80%.
+4. **Coverage reporting**: SonarCloud and GitHub quality both receive coverage data on every push to `main` and on every PR.
 
 ## Release Process
 

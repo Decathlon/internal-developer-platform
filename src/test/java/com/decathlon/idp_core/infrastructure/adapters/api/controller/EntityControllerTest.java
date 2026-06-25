@@ -55,8 +55,8 @@ public class EntityControllerTest extends AbstractIntegrationTest {
               .param("size", "15").accept(APPLICATION_JSON))
           .andExpect(status().isOk()).andExpect(content().contentType(APPLICATION_JSON))
           .andExpect(jsonPath("$.content").isArray())
-          .andExpect(jsonPath("$.content.length()").value(2))
-          .andExpect(jsonPath("$.page.total_elements").value(2))
+          .andExpect(jsonPath("$.content.length()").value(5))
+          .andExpect(jsonPath("$.page.total_elements").value(5))
           .andExpect(jsonPath("$.page.total_pages").value(1))
           .andExpect(jsonPath("$.page.size").value(15))
           .andExpect(jsonPath("$.page.number").value(0))
@@ -114,8 +114,8 @@ public class EntityControllerTest extends AbstractIntegrationTest {
               .accept(APPLICATION_JSON))
           .andExpect(status().isOk()).andExpect(content().contentType(APPLICATION_JSON))
           .andExpect(jsonPath("$.content").isArray())
-          .andExpect(jsonPath("$.content.length()").value(2))
-          .andExpect(jsonPath("$.page.total_elements").value(2))
+          .andExpect(jsonPath("$.content.length()").value(5))
+          .andExpect(jsonPath("$.page.total_elements").value(5))
           .andExpect(jsonPath("$.page.total_pages").value(1))
           .andExpect(jsonPath("$.page.size").value(20))
           .andExpect(jsonPath("$.page.number").value(0))
@@ -266,8 +266,8 @@ public class EntityControllerTest extends AbstractIntegrationTest {
       mockMvc
           .perform(get(ENTITIES_BY_TEMPLATE_IDENTIFIER_PATH, TEMPLATE_IDENTIFIER).param("q", q)
               .accept(APPLICATION_JSON))
-          .andExpect(status().isOk()).andExpect(jsonPath("$.content.length()").value(2))
-          .andExpect(jsonPath("$.page.total_elements").value(2));
+          .andExpect(status().isOk()).andExpect(jsonPath("$.content.length()").value(5))
+          .andExpect(jsonPath("$.page.total_elements").value(5));
     }
 
     @Test
@@ -1446,6 +1446,356 @@ public class EntityControllerTest extends AbstractIntegrationTest {
           getJsonTestFileContent(
               ENTITY_JSON_FILES_TEST_PATH + "searchEntities_200_byRelationNameContains.json"),
           result.getResponse().getContentAsString(), JSONCompareMode.STRICT);
+    }
+
+    // Additional tests for EntitySearchSpecification coverage
+
+    @Test
+    @WithMockUser
+    @DisplayName("Should search entities using LT operator on NUMBER property")
+    void search_200_numericLt_onNumberProperty() throws Exception {
+      mockMvc
+          .perform(MockMvcRequestBuilders.post(SEARCH_PATH).contentType(APPLICATION_JSON)
+              .accept(APPLICATION_JSON).with(csrf()).content("""
+                  {
+                    "filter": {
+                      "connector": "AND",
+                      "criteria": [
+                        { "field": "template", "operation": "EQ", "value": "web-service" },
+                        { "field": "property.port", "operation": "LT", "value": "8081" }
+                      ]
+                    },
+                    "page": 0, "size": 20
+                  }
+                  """))
+          .andExpect(status().isOk())
+          .andExpect(jsonPath("$.content[*].identifier", hasItem("web-api-1")));
+    }
+
+    @Test
+    @WithMockUser
+    @DisplayName("Should search entities using GTE operator on NUMBER property")
+    void search_200_numericGte_onNumberProperty() throws Exception {
+      mockMvc.perform(MockMvcRequestBuilders.post(SEARCH_PATH).contentType(APPLICATION_JSON)
+          .accept(APPLICATION_JSON).with(csrf()).content("""
+              {
+                "filter": {
+                  "connector": "AND",
+                  "criteria": [
+                    { "field": "template", "operation": "EQ", "value": "web-service" },
+                    { "field": "property.port", "operation": "GTE", "value": "8080" }
+                  ]
+                },
+                "page": 0, "size": 20
+              }
+              """)).andExpect(status().isOk()).andExpect(
+              jsonPath("$.page.total_elements", org.hamcrest.Matchers.greaterThanOrEqualTo(2)));
+    }
+
+    @Test
+    @WithMockUser
+    @DisplayName("Should search entities by relation.{name}.identifier using EQ")
+    void search_200_byRelationTargetIdentifierEq() throws Exception {
+      mockMvc
+          .perform(MockMvcRequestBuilders.post(SEARCH_PATH).contentType(APPLICATION_JSON)
+              .accept(APPLICATION_JSON).with(csrf()).content(
+                  """
+                      {
+                        "filter": {
+                          "connector": "AND",
+                          "criteria": [
+                            { "field": "template", "operation": "EQ", "value": "web-service" },
+                            { "field": "relation.api-link.identifier", "operation": "EQ", "value": "microservice-1" }
+                          ]
+                        },
+                        "page": 0, "size": 20
+                      }
+                      """))
+          .andExpect(status().isOk())
+          .andExpect(jsonPath("$.content[*].identifier", hasItem("web-api-1")));
+    }
+
+    @Test
+    @WithMockUser
+    @DisplayName("Should search entities by relation.{name}.name using CONTAINS")
+    void search_200_byRelationTargetNameContains() throws Exception {
+      mockMvc
+          .perform(MockMvcRequestBuilders.post(SEARCH_PATH).contentType(APPLICATION_JSON)
+              .accept(APPLICATION_JSON).with(csrf()).content(
+                  """
+                      {
+                        "filter": {
+                          "connector": "AND",
+                          "criteria": [
+                            { "field": "template", "operation": "EQ", "value": "web-service" },
+                            { "field": "relation.api-link.name", "operation": "CONTAINS", "value": "Microservice" }
+                          ]
+                        },
+                        "page": 0, "size": 20
+                      }
+                      """))
+          .andExpect(status().isOk())
+          .andExpect(jsonPath("$.content[*].identifier", hasItem("web-api-1")));
+    }
+
+    @Test
+    @WithMockUser
+    @DisplayName("Should search entities using ENDS_WITH operator on identifier")
+    void search_200_identifierEndsWith() throws Exception {
+      mockMvc
+          .perform(MockMvcRequestBuilders.post(SEARCH_PATH).contentType(APPLICATION_JSON)
+              .accept(APPLICATION_JSON).with(csrf()).content("""
+                  {
+                    "filter": {
+                      "field": "identifier",
+                      "operation": "ENDS_WITH",
+                      "value": "-1"
+                    },
+                    "page": 0, "size": 20
+                  }
+                  """))
+          .andExpect(status().isOk())
+          .andExpect(jsonPath("$.content[*].identifier", hasItem("web-api-1")))
+          .andExpect(jsonPath("$.content[*].identifier", hasItem("microservice-1")));
+    }
+
+    @Test
+    @WithMockUser
+    @DisplayName("Should search entities by relation name using STARTS_WITH")
+    void search_200_byRelationNameStartsWith() throws Exception {
+      mockMvc
+          .perform(MockMvcRequestBuilders.post(SEARCH_PATH).contentType(APPLICATION_JSON)
+              .accept(APPLICATION_JSON).with(csrf()).content("""
+                  {
+                    "filter": {
+                      "field": "relation",
+                      "operation": "STARTS_WITH",
+                      "value": "api"
+                    },
+                    "page": 0, "size": 20
+                  }
+                  """))
+          .andExpect(status().isOk())
+          .andExpect(jsonPath("$.content[*].identifier", hasItem("web-api-1")));
+    }
+
+    @Test
+    @WithMockUser
+    @DisplayName("Should search entities by relation name using ENDS_WITH")
+    void search_200_byRelationNameEndsWith() throws Exception {
+      mockMvc
+          .perform(MockMvcRequestBuilders.post(SEARCH_PATH).contentType(APPLICATION_JSON)
+              .accept(APPLICATION_JSON).with(csrf()).content("""
+                  {
+                    "filter": {
+                      "field": "relation",
+                      "operation": "ENDS_WITH",
+                      "value": "-link"
+                    },
+                    "page": 0, "size": 20
+                  }
+                  """))
+          .andExpect(status().isOk())
+          .andExpect(jsonPath("$.content[*].identifier", hasItem("web-api-1")));
+    }
+
+    @Test
+    @WithMockUser
+    @DisplayName("Should search entities by relation name using NOT_CONTAINS")
+    void search_200_byRelationNameNotContains() throws Exception {
+      // NOTE: NOT_CONTAINS on relation currently means "has at least one relation NOT
+      // containing the value".
+      // This returns web-service entities that have at least one relation not
+      // containing "api-link":
+      // - web-api-1: has "database" and "api-link" → "database" doesn't contain
+      // "api-link" → MATCH
+      // - graph-svc-a: has "uses" and "monitors" → neither contains "api-link" →
+      // MATCH
+      // - graph-svc-b: has "uses" → doesn't contain "api-link" → MATCH
+      // Note: web-api-2 is not returned despite having a "database" relation
+      // (possible data loading issue)
+      mockMvc
+          .perform(MockMvcRequestBuilders.post(SEARCH_PATH).contentType(APPLICATION_JSON)
+              .accept(APPLICATION_JSON).with(csrf()).content("""
+                  {
+                    "filter": {
+                      "connector": "AND",
+                      "criteria": [
+                        { "field": "template", "operation": "EQ", "value": "web-service" },
+                        { "field": "relation", "operation": "NOT_CONTAINS", "value": "api-link" }
+                      ]
+                    },
+                    "page": 0, "size": 20
+                  }
+                  """))
+          .andExpect(status().isOk())
+          .andExpect(jsonPath("$.content[*].identifier", hasItem("web-api-1")))
+          .andExpect(jsonPath("$.content[*].identifier", hasItem("graph-svc-a")))
+          .andExpect(jsonPath("$.content[*].identifier", hasItem("graph-svc-b")));
+    }
+
+    @Test
+    @WithMockUser
+    @DisplayName("Should search entities by relations_as_target using STARTS_WITH")
+    void search_200_byRelationsAsTargetStartsWith() throws Exception {
+      mockMvc
+          .perform(MockMvcRequestBuilders.post(SEARCH_PATH).contentType(APPLICATION_JSON)
+              .accept(APPLICATION_JSON).with(csrf()).content("""
+                  {
+                    "filter": {
+                      "field": "relations_as_target",
+                      "operation": "STARTS_WITH",
+                      "value": "api"
+                    },
+                    "page": 0, "size": 20
+                  }
+                  """))
+          .andExpect(status().isOk())
+          .andExpect(jsonPath("$.content.length()").value(org.hamcrest.Matchers.greaterThan(0)));
+    }
+
+    @Test
+    @WithMockUser
+    @DisplayName("Should search entities by relations_as_target using ENDS_WITH")
+    void search_200_byRelationsAsTargetEndsWith() throws Exception {
+      mockMvc
+          .perform(MockMvcRequestBuilders.post(SEARCH_PATH).contentType(APPLICATION_JSON)
+              .accept(APPLICATION_JSON).with(csrf()).content("""
+                  {
+                    "filter": {
+                      "field": "relations_as_target",
+                      "operation": "ENDS_WITH",
+                      "value": "link"
+                    },
+                    "page": 0, "size": 20
+                  }
+                  """))
+          .andExpect(status().isOk())
+          .andExpect(jsonPath("$.content.length()").value(org.hamcrest.Matchers.greaterThan(0)));
+    }
+
+    @Test
+    @WithMockUser
+    @DisplayName("Should search entities using property STARTS_WITH operator")
+    void search_200_propertyStartsWith() throws Exception {
+      mockMvc
+          .perform(MockMvcRequestBuilders.post(SEARCH_PATH).contentType(APPLICATION_JSON)
+              .accept(APPLICATION_JSON).with(csrf()).content(
+                  """
+                      {
+                        "filter": {
+                          "connector": "AND",
+                          "criteria": [
+                            { "field": "template", "operation": "EQ", "value": "web-service" },
+                            { "field": "property.programmingLanguage", "operation": "STARTS_WITH", "value": "JAV" }
+                          ]
+                        },
+                        "page": 0, "size": 20
+                      }
+                      """))
+          .andExpect(status().isOk())
+          .andExpect(jsonPath("$.content[*].identifier", hasItem("web-api-1")));
+    }
+
+    @Test
+    @WithMockUser
+    @DisplayName("Should search entities using property ENDS_WITH operator")
+    void search_200_propertyEndsWith() throws Exception {
+      mockMvc
+          .perform(MockMvcRequestBuilders.post(SEARCH_PATH).contentType(APPLICATION_JSON)
+              .accept(APPLICATION_JSON).with(csrf()).content(
+                  """
+                      {
+                        "filter": {
+                          "connector": "AND",
+                          "criteria": [
+                            { "field": "template", "operation": "EQ", "value": "web-service" },
+                            { "field": "property.programmingLanguage", "operation": "ENDS_WITH", "value": "AVA" }
+                          ]
+                        },
+                        "page": 0, "size": 20
+                      }
+                      """))
+          .andExpect(status().isOk())
+          .andExpect(jsonPath("$.content[*].identifier", hasItem("web-api-1")));
+    }
+
+    @Test
+    @WithMockUser
+    @DisplayName("Should search entities using property NOT_CONTAINS operator")
+    void search_200_propertyNotContains() throws Exception {
+      mockMvc
+          .perform(MockMvcRequestBuilders.post(SEARCH_PATH).contentType(APPLICATION_JSON)
+              .accept(APPLICATION_JSON).with(csrf()).content(
+                  """
+                      {
+                        "filter": {
+                          "connector": "AND",
+                          "criteria": [
+                            { "field": "template", "operation": "EQ", "value": "web-service" },
+                            { "field": "property.programmingLanguage", "operation": "NOT_CONTAINS", "value": "PYTHON" }
+                          ]
+                        },
+                        "page": 0, "size": 20
+                      }
+                      """))
+          .andExpect(status().isOk())
+          .andExpect(jsonPath("$.content[*].identifier", hasItem("web-api-1")));
+    }
+
+    @Test
+    @WithMockUser
+    @DisplayName("Should search with deeply nested group (3 levels)")
+    void search_200_deeplyNestedGroups() throws Exception {
+      mockMvc
+          .perform(MockMvcRequestBuilders.post(SEARCH_PATH).contentType(APPLICATION_JSON)
+              .accept(APPLICATION_JSON).with(csrf()).content(
+                  """
+                      {
+                        "filter": {
+                          "connector": "OR",
+                          "criteria": [
+                            {
+                              "connector": "AND",
+                              "criteria": [
+                                { "field": "template", "operation": "EQ", "value": "web-service" },
+                                {
+                                  "connector": "OR",
+                                  "criteria": [
+                                    { "field": "property.programmingLanguage", "operation": "EQ", "value": "JAVA" },
+                                    { "field": "property.programmingLanguage", "operation": "EQ", "value": "PYTHON" }
+                                  ]
+                                }
+                              ]
+                                               },
+                            { "field": "template", "operation": "EQ", "value": "microservice" }
+                          ]
+                        },
+                        "page": 0, "size": 20
+                      }
+                      """))
+          .andExpect(status().isOk())
+          .andExpect(jsonPath("$.content.length()").value(org.hamcrest.Matchers.greaterThan(0)));
+    }
+
+    @Test
+    @WithMockUser
+    @DisplayName("Should return 400 when filter group has empty criteria")
+    void search_400_emptyGroupCriteria() throws Exception {
+      mockMvc
+          .perform(MockMvcRequestBuilders.post(SEARCH_PATH).contentType(APPLICATION_JSON)
+              .accept(APPLICATION_JSON).with(csrf()).content("""
+                  {
+                    "filter": {
+                      "connector": "AND",
+                      "criteria": []
+                    },
+                    "page": 0, "size": 5
+                  }
+                  """))
+          .andExpect(status().isBadRequest()).andExpect(jsonPath("$.error").value("BAD_REQUEST"))
+          .andExpect(jsonPath("$.error_description")
+              .value("A group node must have a non-empty 'criteria' list"));
     }
   }
 

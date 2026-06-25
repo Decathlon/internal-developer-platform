@@ -96,7 +96,6 @@ public class PostgresEntityAdapter implements EntityRepositoryPort {
         relationNames);
   }
 
-  @Override
   public PaginatedResult<Entity> search(SearchFilterNode filter, String query,
       PaginationCriteria paginationCriteria) {
     Specification<EntityJpaEntity> spec = EntitySearchSpecification.of(filter);

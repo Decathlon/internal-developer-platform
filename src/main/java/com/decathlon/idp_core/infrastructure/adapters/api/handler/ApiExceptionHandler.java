@@ -43,11 +43,13 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
-/// Global exception handler providing centralized error handling for all API endpoints.
+/// Global exception handler providing centralized error handling for all API
+/// endpoints.
 ///
-/// **Infrastructure error handling strategy:** Intercepts domain and validation exceptions
-/// and converts them to appropriate HTTP responses with consistent error formatting.
-/// Ensures API consumers receive standardized error messages regardless of internal failures.
+/// **Infrastructure error handling strategy:** Intercepts domain and validation
+/// exceptions and converts them to appropriate HTTP responses with consistent
+/// error formatting. Ensures API consumers receive standardized error messages
+/// regardless of internal failures.
 ///
 /// **Exception mapping approach:**
 /// - Domain exceptions → HTTP 404/409 with business-meaningful messages
@@ -55,8 +57,9 @@ import lombok.extern.slf4j.Slf4j;
 /// - JSON parsing errors → HTTP 400 with user-friendly parsing messages
 /// - Generic exceptions → HTTP 500 with safe internal error responses
 ///
-/// **Error response standardization:** All errors follow consistent [ErrorResponse] format
-/// with appropriate HTTP status codes and logged for monitoring/debugging purposes.
+/// **Error response standardization:** All errors follow consistent
+/// [ErrorResponse] format with appropriate HTTP status codes and logged for
+/// monitoring/debugging purposes.
 @Slf4j
 @ControllerAdvice
 public class ApiExceptionHandler {
@@ -67,8 +70,7 @@ public class ApiExceptionHandler {
   /// Handles domain exception when entity templates are not found.
   ///
   /// **HTTP mapping:** Maps domain EntityTemplateNotFoundException to HTTP 404
-  /// status
-  /// with business-meaningful error message for API consumers.
+  /// status with business-meaningful error message for API consumers.
   @ExceptionHandler(EntityTemplateNotFoundException.class)
   public ResponseEntity<ErrorResponse> handleTemplateNotFoundException(
       EntityTemplateNotFoundException ex) {
@@ -77,11 +79,6 @@ public class ApiExceptionHandler {
     return ResponseEntity.status(NOT_FOUND).body(errorResponse);
   }
 
-  /// Handles domain exception for malformed filter query strings (`q=` DSL).
-  ///
-  /// **HTTP mapping:** Maps domain [InvalidFilterDslException] to HTTP 400 Bad
-  /// Request
-  /// so API consumers receive clear feedback about invalid `q` parameter syntax.
   @ExceptionHandler(InvalidFilterDslException.class)
   public ResponseEntity<ErrorResponse> handleInvalidFilterDslException(
       InvalidFilterDslException ex) {
@@ -105,8 +102,7 @@ public class ApiExceptionHandler {
   /// Handles domain exception when entity templates already exist.
   ///
   /// **HTTP mapping:** Maps domain EntityTemplateAlreadyExistsException to HTTP
-  /// 409
-  /// status indicating business rule conflict for duplicate identifiers.
+  /// 409 status indicating business rule conflict for duplicate identifiers.
   @ExceptionHandler(EntityTemplateAlreadyExistsException.class)
   public ResponseEntity<ErrorResponse> handleEntityTemplateAlreadyExistsException(
       EntityTemplateAlreadyExistsException ex) {
@@ -118,8 +114,8 @@ public class ApiExceptionHandler {
   /// Handles domain exception when entity template names already exist.
   ///
   /// **HTTP mapping:** Maps domain EntityTemplateNameAlreadyExistsException to
-  /// HTTP 409
-  /// status indicating business rule conflict for duplicate template names.
+  /// HTTP 409 status indicating business rule conflict for duplicate
+  /// template names.
   @ExceptionHandler(EntityTemplateNameAlreadyExistsException.class)
   public ResponseEntity<ErrorResponse> handleEntityTemplateNameAlreadyExistsException(
       EntityTemplateNameAlreadyExistsException ex) {
@@ -132,8 +128,8 @@ public class ApiExceptionHandler {
   /// identifier.
   ///
   /// **HTTP mapping:** Maps domain EntityTemplateIdentifierCannotChangeException
-  /// to HTTP 400
-  /// status indicating validation error for immutable identifier field.
+  /// to HTTP 400 status indicating validation error for immutable
+  /// identifier field.
   @ExceptionHandler(EntityTemplateIdentifierCannotChangeException.class)
   public ResponseEntity<ErrorResponse> handleEntityTemplateIdentifierCannotChangeException(
       EntityTemplateIdentifierCannotChangeException ex) {
@@ -145,8 +141,7 @@ public class ApiExceptionHandler {
   /// Handles domain exception for wrong entity template property rules.
   ///
   /// **HTTP mapping:** Maps domain PropertyDefinitionRulesConflictException to
-  /// HTTP 400
-  /// status indicating validation error for wrong property rules.
+  /// HTTP 400 status indicating validation error for wrong property rules.
   @ExceptionHandler(PropertyDefinitionRulesConflictException.class)
   public ResponseEntity<ErrorResponse> handleWrongPropertyRulesException(
       PropertyDefinitionRulesConflictException ex) {
@@ -193,8 +188,8 @@ public class ApiExceptionHandler {
 
   /// Handles domain exception when type changes are attempted.
   ///
-  /// **HTTP mapping:** Maps domain PropertyTypeChangeException to HTTP 400
-  /// status indicating validation error for type changes.
+  /// **HTTP mapping:** Maps domain PropertyTypeChangeException to HTTP 400 status
+  /// indicating validation error for type changes.
   @ExceptionHandler(PropertyTypeChangeException.class)
   public ResponseEntity<ErrorResponse> handleTypeChangeException(PropertyTypeChangeException ex) {
     log.warn("Type change error: {}", ex.getMessage());
@@ -205,8 +200,7 @@ public class ApiExceptionHandler {
   /// attempted.
   ///
   /// **HTTP mapping:** Maps domain RelationTargetTemplateChangeException to HTTP
-  /// 400
-  /// status indicating validation error for immutable target template field.
+  /// 400 status indicating validation error for immutable target template field.
   @ExceptionHandler(RelationTargetTemplateChangeException.class)
   public ResponseEntity<ErrorResponse> handleRelationTargetTemplateChangeException(
       RelationTargetTemplateChangeException ex) {
@@ -230,8 +224,7 @@ public class ApiExceptionHandler {
   /// Handles validation exceptions from Spring MVC handler method parameters.
   ///
   /// **Error aggregation:** Combines multiple validation error messages into a
-  /// single
-  /// user-friendly response with HTTP 400 status for client correction.
+  /// single user-friendly response with HTTP 400 status for client correction.
   @ExceptionHandler(HandlerMethodValidationException.class)
   public ResponseEntity<ErrorResponse> handleHandlerMethodValidationException(
       HandlerMethodValidationException ex) {
@@ -245,7 +238,8 @@ public class ApiExceptionHandler {
   /// Handles domain exception when entities already exist.
   ///
   /// **HTTP mapping:** Maps domain EntityAlreadyExistsException to HTTP 409
-  /// status indicating business rule conflict for duplicate entities.
+  /// status
+  /// indicating business rule conflict for duplicate entities.
   @ExceptionHandler(EntityAlreadyExistsException.class)
   public ResponseEntity<ErrorResponse> handleEntityAlreadyExistsException(
       EntityAlreadyExistsException ex) {
@@ -257,27 +251,12 @@ public class ApiExceptionHandler {
   /// Handles domain exception when entity validation fails.
   ///
   /// **HTTP mapping:** Maps domain EntityValidationException to HTTP 400 status
-  /// with aggregated
-  /// validation error messages for client correction.
+  /// with aggregated validation error messages for client correction.
   @ExceptionHandler(EntityValidationException.class)
   public ResponseEntity<ErrorResponse> handleEntityValidationException(
       EntityValidationException ex) {
     log.warn("Entity validation failed: {}", ex.getMessage());
     return createErrorResponse(HttpStatus.BAD_REQUEST, ex.getMessage());
-  }
-
-  /// Handles Bean Validation constraint violations from domain model validation.
-  ///
-  /// **Error aggregation:** Combines multiple constraint violation messages into
-  /// single user-friendly response with HTTP 400 status for client correction.
-  @ExceptionHandler(ConstraintViolationException.class)
-  public ResponseEntity<ErrorResponse> handleConstraintViolationException(
-      ConstraintViolationException ex) {
-    log.warn("Validation constraint violation: {}", ex.getMessage());
-
-    String errorMessage = ex.getConstraintViolations().stream().map(ConstraintViolation::getMessage)
-        .collect(Collectors.joining(", "));
-    return createErrorResponse(HttpStatus.BAD_REQUEST, errorMessage);
   }
 
   /// Handles Spring MVC request body validation failures.
@@ -312,13 +291,27 @@ public class ApiExceptionHandler {
   /// Handles domain exception when entities are not found.
   ///
   /// **HTTP mapping:** Maps domain EntityNotFoundException to HTTP 404 status
-  /// with specific entity context for API consumers.
+  /// with
+  /// specific entity context for API consumers.
   @ExceptionHandler(EntityNotFoundException.class)
   public ResponseEntity<ErrorResponse> handleEntityNotFoundException(EntityNotFoundException ex) {
     ErrorResponse errorResponse = new ErrorResponse(NOT_FOUND.name(), ex.getMessage());
     return ResponseEntity.status(NOT_FOUND).body(errorResponse);
   }
 
+  /// Handles Bean Validation constraint violations from domain model validation.
+  ///
+  /// **Error aggregation:** Combines multiple constraint violation messages into
+  /// single user-friendly response with HTTP 400 status for client correction.
+  @ExceptionHandler(ConstraintViolationException.class)
+  public ResponseEntity<ErrorResponse> handleConstraintViolationException(
+      ConstraintViolationException ex) {
+    log.warn("Validation constraint violation: {}", ex.getMessage());
+
+    String errorMessage = ex.getConstraintViolations().stream().map(ConstraintViolation::getMessage)
+        .collect(Collectors.joining(", "));
+    return createErrorResponse(HttpStatus.BAD_REQUEST, errorMessage);
+  }
   /// Handles domain exception when entity deletion is blocked by required
   /// relations.
   ///
@@ -439,8 +432,8 @@ public class ApiExceptionHandler {
   /// Handles all unexpected exceptions as safety fallback.
   ///
   /// **Security consideration:** Returns generic error message to prevent
-  /// information
-  /// leakage while logging full exception details for internal debugging.
+  /// information leakage while logging full exception details for
+  /// internal debugging.
   @ExceptionHandler(Exception.class)
   public ResponseEntity<ErrorResponse> handleGenericException(Exception ex) {
     log.error("Unexpected error occurred: {}", ex.getMessage(), ex);
