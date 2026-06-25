@@ -101,12 +101,58 @@ public class PostgresPropertyAuditAdapter implements PropertyAuditPort {
 }
 ```
 
-## Step 4: Add Domain Service and REST Endpoint
+## Step 4: Add/Update Domain Service and REST Endpoint
 
-Finally, orchestrate the retrieval through a Domain Service and expose it via your API adapter.
+Depending on the domain design, you can either reuse existing files to minimize boilerplate, or create dedicated audit files for clean separation of concerns.
 
 1. **Service:** Create `PropertyAuditService` to handle business logic (like ensuring the parent object exists before querying history).
 2. **Controller:** Expose the endpoint, using standard DTOs formatted with Jackson's `SnakeCaseStrategy`.
+
+
+### Approach 1: Reusing Existing Structures (Recommended for simple resources)
+
+If you already have a PropertyService and a PropertyController, simply append the new functionality directly to them to keep things concise.
+
+1. **Service:** In PropertyService: Inject the PropertyAuditPort and add a getPropertyHistory(UUID id) method.
+2. **Controller:** In PropertyController: Expose a nested route following clean RESTful guidelines.
+
+```java
+// Within your existing PropertyController.java
+@GetMapping("/{propertyId}/history")
+public List<PropertyAuditDtoOut> getPropertyHistory(@PathVariable UUID propertyId) {
+return auditMapper.fromDomainList(propertyService.getPropertyHistory(propertyId));
+}
+```
+
+### Approach 2: Creating Dedicated Audit Handlers (Recommended for complex auditing rules)
+If retrieving audit details requires dedicated permissions, complex filtering, or distinct business rules, decouple them into dedicated files.
+
+1. **Service:** Establish a PropertyAuditService to guarantee domain invariant verification (e.g., verifying object access permissions before compiling historical records).
+
+2. **Controller:** Build a focused controller parsing outputs cleanly with Jackson's SnakeCaseStrategy.
+
+```java
+package com.company.project.infrastructure.adapters.api;
+
+import lombok.RequiredArgsConstructor;
+import org.springframework.web.bind.annotation.*;
+import java.util.List;
+import java.util.UUID;
+
+@RestController
+@RequestMapping("/api/v1/audit/")
+@RequiredArgsConstructor
+public class PropertyAuditController {
+
+    private final PropertyAuditService auditService;
+    private final PropertyAuditDtoOutMapper mapper;
+
+    @GetMapping("properties/{propertyId}")
+    public List<PropertyAuditDtoOut> getPropertyAuditHistory(@PathVariable UUID propertyId) {
+        return mapper.fromDomainList(auditService.getHistory(propertyId));
+    }
+}
+```
 
 ```java
 @RestController
