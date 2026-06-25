@@ -428,7 +428,7 @@
             <rule>name:equal:Apache License, Version 2.0</rule>
             <rule>name:regex:Apache(\s|-)(Software )?(License |License,
                             )?(Version|version )?2\.0</rule>
-            <rule>name:equal:EPL 2.0</rule>
+            <rule>name:regex:(?i)(EPL|Eclipse Public License)(\s|-|\s+-\s+|\s+v\.?\s*)2\.0</rule>
             <rule>name:equal:Eclipse Public License - v 2.0</rule>
             <rule>name:equal:Eclipse Distribution License - v 1.0</rule>
             <rule>name:equal:Eclipse Distribution License v. 1.0</rule>
@@ -436,13 +436,12 @@
             <rule>name:equal:BSD-3-Clause</rule>
             <rule>name:equal:BSD-2-Clause</rule>
             <rule>name:equal:MPL 2.0</rule>
+            <rule>name:equal:LGPL-2.1-only</rule>
             <rule>name:equal:EPL 1.0</rule>
             <rule>name:equal:Public Domain, per Creative Commons CC0</rule>
           </rules>
           <exclusions>
             <exclude>org.hibernate.orm:hibernate-core:6.6.29.Final</exclude>
-            <exclude>ch.qos.logback:logback-classic:1.5.25</exclude>
-            <exclude>ch.qos.logback:logback-core:1.5.25</exclude>
           </exclusions>
         </configuration>
         <executions>
