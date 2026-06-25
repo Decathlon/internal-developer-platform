@@ -127,7 +127,7 @@ return auditMapper.fromDomainList(propertyService.getPropertyHistory(propertyId)
 
 If retrieving audit details requires dedicated permissions, complex filtering, or distinct business rules, decouple them into dedicated files.
 
-1. **Service:** Establish a PropertyAuditService to guarantee domain invariant verification (e.g., verifying object access permissions before compiling historical records).
+1. **Service:** Establish a PropertyAuditService to guarantee domain invariant verification (for example verifying object access permissions before compiling historical records).
 2. **Controller:** Build a focused controller parsing outputs cleanly with Jackson's SnakeCaseStrategy.
 
 ```java
