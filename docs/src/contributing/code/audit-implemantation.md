@@ -108,7 +108,6 @@ Depending on the domain design, you can either reuse existing files to minimize 
 1. **Service:** Create `PropertyAuditService` to handle business logic (like ensuring the parent object exists before querying history).
 2. **Controller:** Expose the endpoint, using standard DTOs formatted with Jackson's `SnakeCaseStrategy`.
 
-
 ### Approach 1: Reusing Existing Structures (Recommended for simple resources)
 
 If you already have a PropertyService and a PropertyController, simply append the new functionality directly to them to keep things concise.
@@ -125,10 +124,10 @@ return auditMapper.fromDomainList(propertyService.getPropertyHistory(propertyId)
 ```
 
 ### Approach 2: Creating Dedicated Audit Handlers (Recommended for complex auditing rules)
+
 If retrieving audit details requires dedicated permissions, complex filtering, or distinct business rules, decouple them into dedicated files.
 
 1. **Service:** Establish a PropertyAuditService to guarantee domain invariant verification (e.g., verifying object access permissions before compiling historical records).
-
 2. **Controller:** Build a focused controller parsing outputs cleanly with Jackson's SnakeCaseStrategy.
 
 ```java
