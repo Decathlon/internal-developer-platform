@@ -123,15 +123,33 @@ spring:
 
 ### PostgreSQL extensions
 
-IDP-Core depends on PostgreSQL extensions that must be installed in the target database before running schema migrations that rely on them. You have three common options:
+IDP-Core depends on PostgreSQL extensions. They must be installed in the target database before running schema migrations that rely on them.
 
-- Provision extensions directly via your Infrastructure as Code (for example Terraform resources) or checking them off in your cloud provider's database management dashboard
+#### For local development (Docker Compose)
+
+Use the provided initialization script in your `docker-compose.yml`:
+
+```yaml title="docker-compose.yml"
+services:
+  postgres:
+    image: postgres:15
+    volumes:
+      - ./scripts/init-extensions.sql:/docker-entrypoint-initdb.d/01-init-extensions.sql
+```
+
+The script runs automatically on container initialization via the `docker-entrypoint-initdb.d` directory.
+
+#### For production
+
+There are several options depending on your context:
+
+- Provision extensions directly via your Infrastructure as Code (for example Terraform resources)
+- Enable extensions in your cloud provider's database management dashboard
 - Apply the provided initialization script (`/scripts/init-extensions.sql`) using `psql` from your deployment host
-- Add a Flyway migration to your repository. Place a migration such as `V1__install_extensions.sql` in `db/migration` containing the `CREATE EXTENSION` statements. Flyway will execute the SQL file as part of the migration sequence.
 
 Key note:
 
-- Installing extensions requires superuser privileges or a role with `CREATE` extension privileges. If your application user lacks those privileges, perform installation as a DBA or during provisioning.
+Installing extensions requires superuser privileges or a role with `CREATE` extension privileges. If your application user lacks these, handle installation as a separate DBA step during provisioning.
 
 ---
 
