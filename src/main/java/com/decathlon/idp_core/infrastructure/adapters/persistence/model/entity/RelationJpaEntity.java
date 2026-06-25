@@ -11,6 +11,7 @@ import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
+import jakarta.persistence.Index;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.Table;
 
@@ -45,4 +46,9 @@ public class RelationJpaEntity {
   @CollectionTable(name = "relation_target_entities", schema = "idp_core", joinColumns = @JoinColumn(name = "relation_id"))
   @BatchSize(size = 50)
   private List<RelationTargetJpaEntity> targetEntities;
+
+  @ElementCollection
+  @CollectionTable(name = "relation_target_entities", joinColumns = @JoinColumn(name = "relation_id"), indexes = @Index(columnList = "relation_id"))
+  @Column(name = "target_entity_identifier")
+  private List<String> targetEntityIdentifiers;
 }
