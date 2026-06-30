@@ -1,6 +1,7 @@
 package com.decathlon.idp_core.infrastructure.adapters.api.mapper.entity;
 
 import java.util.List;
+import java.util.Map;
 
 import org.springframework.stereotype.Component;
 
@@ -29,7 +30,11 @@ public class EntityAuditDtoOutMapper {
           .templateIdentifier(auditInfo.snapshot().templateIdentifier())
           .name(auditInfo.snapshot().name()).identifier(auditInfo.snapshot().identifier())
           .properties(mapPropertySnapshots(auditInfo.snapshot().properties()))
-          .relations(mapRelationSnapshots(auditInfo.snapshot().relations())).build();
+          .relations(mapRelationSnapshots(auditInfo.snapshot().relations()))
+          .modifiedFlags(auditInfo.snapshot().modifiedFlags() != null
+              ? Map.copyOf(auditInfo.snapshot().modifiedFlags())
+              : Map.of())
+          .build();
     }
 
     return EntityAuditDtoOut.builder().revisionNumber(auditInfo.revisionNumber())
@@ -51,8 +56,13 @@ public class EntityAuditDtoOutMapper {
     if (properties == null || properties.isEmpty()) {
       return List.of();
     }
-    return properties.stream().map(prop -> PropertySnapshotDtoOut.builder().id(prop.id())
-        .name(prop.name()).value(prop.value()).build()).toList();
+    return properties.stream()
+        .map(prop -> PropertySnapshotDtoOut.builder().id(prop.id()).name(prop.name())
+            .value(prop.value())
+            .modifiedFlags(
+                prop.modifiedFlags() != null ? Map.copyOf(prop.modifiedFlags()) : Map.of())
+            .build())
+        .toList();
   }
 
   /// Maps domain relation snapshots to DTO relation snapshots.
@@ -68,6 +78,7 @@ public class EntityAuditDtoOutMapper {
             .targetEntityIdentifiers(rel.targetEntityIdentifiers() != null
                 ? List.copyOf(rel.targetEntityIdentifiers())
                 : List.of())
+            .modifiedFlags(rel.modifiedFlags() != null ? Map.copyOf(rel.modifiedFlags()) : Map.of())
             .build())
         .toList();
   }

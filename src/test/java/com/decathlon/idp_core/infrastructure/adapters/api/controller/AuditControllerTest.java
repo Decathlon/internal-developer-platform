@@ -89,6 +89,9 @@ class AuditControllerTest extends AbstractIntegrationTest {
         .andExpect(jsonPath("$[1].revision_type").value("UPDATED"))
         .andExpect(jsonPath("$[1].modified_by").value("test-user"))
         .andExpect(jsonPath("$[1].snapshot.name").value("Audit Test Entity Updated"))
+        // Verify modification flags in snapshot (only true flags are included)
+        .andExpect(jsonPath("$[1].snapshot.modified_flags.name_mod").value(true))
+        .andExpect(jsonPath("$[1].snapshot.modified_flags.identifier_mod").doesNotExist())
 
         // First action (CREATED)
         .andExpect(jsonPath("$[2].revision_type").value("CREATED"))

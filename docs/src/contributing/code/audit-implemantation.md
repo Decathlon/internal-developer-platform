@@ -22,7 +22,7 @@ import org.hibernate.envers.NotAudited;
 
 @Entity
 @Table(name = "property")
-@Audited // <--- Add this annotation to track changes
+@Audited(withModifiedFlag=true) // <--- Add this annotation to track changes and flag column modified
 public class PropertyJpaEntity {
 
     @Id

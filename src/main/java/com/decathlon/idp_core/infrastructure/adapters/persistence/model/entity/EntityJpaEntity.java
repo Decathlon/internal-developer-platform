@@ -27,7 +27,7 @@ import lombok.NoArgsConstructor;
 @Data
 @Table(name = "entity", uniqueConstraints = {
     @UniqueConstraint(columnNames = {"identifier", "template_identifier"})})
-@Audited
+@Audited(withModifiedFlag = true)
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor

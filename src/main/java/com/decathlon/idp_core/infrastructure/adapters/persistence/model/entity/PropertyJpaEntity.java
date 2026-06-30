@@ -19,7 +19,7 @@ import lombok.NoArgsConstructor;
 @Entity
 @Data
 @Table(name = "property")
-@Audited
+@Audited(withModifiedFlag = true)
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor

@@ -22,7 +22,7 @@ import lombok.NoArgsConstructor;
 @Entity
 @Data
 @Table(name = "property_rules")
-@Audited
+@Audited(withModifiedFlag = true)
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor

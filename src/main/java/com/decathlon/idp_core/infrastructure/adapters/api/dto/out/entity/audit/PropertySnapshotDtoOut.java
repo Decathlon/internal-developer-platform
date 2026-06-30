@@ -1,5 +1,6 @@
 package com.decathlon.idp_core.infrastructure.adapters.api.dto.out.entity.audit;
 
+import java.util.Map;
 import java.util.UUID;
 
 import com.fasterxml.jackson.databind.PropertyNamingStrategies.SnakeCaseStrategy;
@@ -28,4 +29,7 @@ public class PropertySnapshotDtoOut {
 
   @Schema(description = "Value of the property at this revision", example = "My service description")
   private String value;
+
+  @Schema(description = "Map of modified flags", example = "{'name_mod': true, 'value_mod': false}")
+  private Map<String, Boolean> modifiedFlags;
 }

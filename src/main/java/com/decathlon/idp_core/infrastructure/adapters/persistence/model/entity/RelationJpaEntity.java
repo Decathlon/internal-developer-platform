@@ -25,7 +25,7 @@ import lombok.NoArgsConstructor;
 @Entity
 @Data
 @Table(name = "relation")
-@Audited
+@Audited(withModifiedFlag = true)
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor

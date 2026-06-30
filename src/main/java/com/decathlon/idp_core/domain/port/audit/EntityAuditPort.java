@@ -8,7 +8,7 @@ import com.decathlon.idp_core.domain.model.entity.EntityAuditInfo;
 ///
 /// **Port contract:** Defines operations for accessing historical revision data
 /// of entities. Implementations should interact with the audit storage system
-/// (e.g., Hibernate Envers) to provide audit trail information.
+/// (Hibernate Envers) to provide audit trail information.
 ///
 /// **Hexagonal architecture:** This is a **driven port** (outbound), implemented
 /// by infrastructure adapters and used by domain services to access audit data.

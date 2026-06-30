@@ -32,7 +32,7 @@ import lombok.ToString;
 @ToString
 @EqualsAndHashCode
 @Table(name = "entity_template")
-@Audited
+@Audited(withModifiedFlag = true)
 @NoArgsConstructor
 @AllArgsConstructor
 public class EntityTemplateJpaEntity {

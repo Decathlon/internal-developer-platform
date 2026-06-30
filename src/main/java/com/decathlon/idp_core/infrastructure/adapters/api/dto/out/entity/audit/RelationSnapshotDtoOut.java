@@ -1,6 +1,7 @@
 package com.decathlon.idp_core.infrastructure.adapters.api.dto.out.entity.audit;
 
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 import com.fasterxml.jackson.databind.PropertyNamingStrategies.SnakeCaseStrategy;
@@ -33,4 +34,7 @@ public class RelationSnapshotDtoOut {
 
   @Schema(description = "Business identifiers of target entities", example = "[\"prod-cluster\", \"staging-cluster\"]")
   private List<String> targetEntityIdentifiers;
+
+  @Schema(description = "Map of modified flags", example = "{'name_mod': true, 'target_template_identifier_mod': false}")
+  private Map<String, Boolean> modifiedFlags;
 }

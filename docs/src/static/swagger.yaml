@@ -1187,79 +1187,94 @@ components:
         snapshot:
           $ref: "#/components/schemas/EntitySnapshotDtoOut"
           description: Snapshot of the entity state at this revision
-    EntitySnapshotDtoOut:
-      type: object
-      description: Snapshot of entity state at a specific audit revision
-      properties:
-        id:
-          type: string
-          format: uuid
-          description: Unique identifier
-          example: 550e8400-e29b-41d4-a716-446655440000
-        template_identifier:
-          type: string
-          description: Template identifier
-          example: web-service
-        name:
-          type: string
-          description: Entity name
-          example: My Service
-        identifier:
-          type: string
-          description: Entity identifier
-          example: my-service-api
-        properties:
-          type: array
-          description: Properties of the entity at this revision
-          items:
-            $ref: "#/components/schemas/PropertySnapshotDtoOut"
-        relations:
-          type: array
-          description: Relations of the entity at this revision
-          items:
-            $ref: "#/components/schemas/RelationSnapshotDtoOut"
-    PropertySnapshotDtoOut:
-      type: object
-      description: Snapshot of a property at a specific audit revision
-      properties:
-        id:
-          type: string
-          format: uuid
-          description: Unique identifier of the property
-          example: 550e8400-e29b-41d4-a716-446655440000
-        name:
-          type: string
-          description: Name of the property matching a PropertyDefinition
-          example: description
-        value:
-          type: string
-          description: Value of the property at this revision
-          example: My service description
-    RelationSnapshotDtoOut:
-      type: object
-      description: Snapshot of a relation at a specific audit revision
-      properties:
-        id:
-          type: string
-          format: uuid
-          description: Unique identifier of the relation
-          example: 550e8400-e29b-41d4-a716-446655440000
-        name:
-          type: string
-          description: Name of the relation matching a RelationDefinition
-          example: deployed-on
-        target_template_identifier:
-          type: string
-          description: Identifier of the target entity template
-          example: infrastructure
-        target_entity_identifiers:
-          type: array
-          description: Business identifiers of target entities
-          example:
-            - prod-cluster
-            - staging-cluster
-          items:
-            type: string
+     EntitySnapshotDtoOut:
+       type: object
+       description: Snapshot of entity state at a specific audit revision
+       properties:
+         id:
+           type: string
+           format: uuid
+           description: Unique identifier
+           example: 550e8400-e29b-41d4-a716-446655440000
+         template_identifier:
+           type: string
+           description: Template identifier
+           example: web-service
+         name:
+           type: string
+           description: Entity name
+           example: My Service
+         identifier:
+           type: string
+           description: Entity identifier
+           example: my-service-api
+         properties:
+           type: array
+           description: Properties of the entity at this revision
+           items:
+             $ref: "#/components/schemas/PropertySnapshotDtoOut"
+         relations:
+           type: array
+           description: Relations of the entity at this revision
+           items:
+             $ref: "#/components/schemas/RelationSnapshotDtoOut"
+         modified_flags:
+           type: object
+           additionalProperties:
+             type: boolean
+           description: Map of modified flags (for example, 'name_mod': true)
+     PropertySnapshotDtoOut:
+       type: object
+       description: Snapshot of a property at a specific audit revision
+       properties:
+         id:
+           type: string
+           format: uuid
+           description: Unique identifier of the property
+           example: 550e8400-e29b-41d4-a716-446655440000
+         name:
+           type: string
+           description: Name of the property matching a PropertyDefinition
+           example: description
+         value:
+           type: string
+           description: Value of the property at this revision
+           example: My service description
+         modified_flags:
+           type: object
+           additionalProperties:
+             type: boolean
+           description: Map of modified flags (for example, 'name_mod': true, 'value_mod': false)
+     RelationSnapshotDtoOut:
+       type: object
+       description: Snapshot of a relation at a specific audit revision
+       properties:
+         id:
+           type: string
+           format: uuid
+           description: Unique identifier of the relation
+           example: 550e8400-e29b-41d4-a716-446655440000
+         name:
+           type: string
+           description: Name of the relation matching a RelationDefinition
+           example: deployed-on
+         target_template_identifier:
+           type: string
+           description: Identifier of the target entity template
+           example: infrastructure
+         target_entity_identifiers:
+           type: array
+           description: Business identifiers of target entities
+           example:
+             - prod-cluster
+             - staging-cluster
+           items:
+             type: string
+         modified_flags:
+           type: object
+           additionalProperties:
+             type: boolean
+           description: Map of modified flags (for example, 'name_mod': true, 'target_template_identifier_mod': false)
     EntityGraphEdgeDtoOut:
       type: object
       properties:

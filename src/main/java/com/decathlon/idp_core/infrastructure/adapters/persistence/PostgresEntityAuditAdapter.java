@@ -1,7 +1,10 @@
 package com.decathlon.idp_core.infrastructure.adapters.persistence;
 
+import java.sql.ResultSetMetaData;
 import java.time.Instant;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 import jakarta.persistence.EntityManager;
@@ -10,6 +13,9 @@ import org.hibernate.envers.AuditReader;
 import org.hibernate.envers.AuditReaderFactory;
 import org.hibernate.envers.RevisionType;
 import org.hibernate.envers.query.AuditEntity;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Component;
 
 import com.decathlon.idp_core.domain.exception.entity.EntityNotFoundException;
@@ -28,8 +34,11 @@ import lombok.RequiredArgsConstructor;
 @RequiredArgsConstructor
 public class PostgresEntityAuditAdapter implements EntityAuditPort {
 
+  private static final Logger logger = LoggerFactory.getLogger(PostgresEntityAuditAdapter.class);
+
   private final EntityManager entityManager;
   private final JpaEntityRepository jpaEntityRepository;
+  private final JdbcTemplate jdbcTemplate;
 
   @Override
   public List<EntityAuditInfo> getEntityAuditHistory(String templateIdentifier,
@@ -88,32 +97,85 @@ public class PostgresEntityAuditAdapter implements EntityAuditPort {
     AuditReader auditReader = AuditReaderFactory.get(entityManager);
     EntityJpaEntity historicalEntity = auditReader.find(EntityJpaEntity.class, entityId,
         snapshotRevisionNumber);
-
     if (historicalEntity != null) {
+      // Retrieve modification flags for entity from audit table
+      Map<String, Boolean> entityModFlags = getModificationFlags("entity_aud", entityId,
+          snapshotRevisionNumber);
+
       List<EntityAuditInfo.PropertySnapshot> propertySnapshots = mapPropertySnapshots(
-          historicalEntity.getProperties());
+          historicalEntity.getProperties(), snapshotRevisionNumber);
       List<EntityAuditInfo.RelationSnapshot> relationSnapshots = mapRelationSnapshots(
-          historicalEntity.getRelations());
+          historicalEntity.getRelations(), snapshotRevisionNumber);
 
       snapshot = new EntityAuditInfo.EntitySnapshot(historicalEntity.getId(),
           historicalEntity.getTemplateIdentifier(), historicalEntity.getName(),
-          historicalEntity.getIdentifier(), propertySnapshots, relationSnapshots);
+          historicalEntity.getIdentifier(), entityModFlags, propertySnapshots, relationSnapshots);
     }
 
     return new EntityAuditInfo(revisionNumber, revisionDate, revisionTypeStr, modifiedBy, snapshot);
+  }
+
+  /// Retrieves all modification flags from an audit table dynamically.
+  /// Selects all columns ending with '_mod' and returns them as a map.
+  /// Only flags that are true are included in the response (missing flags are
+  /// assumed false).
+  ///
+  /// **Note:** Modification tracking is an optional feature. If retrieval fails,
+  /// the audit
+  /// history remains available without granular field-level change tracking.
+  ///
+  /// @param tableName name of the audit table (for example, "entity_aud",
+  /// "property_aud")
+  /// @param id UUID of the audited entity
+  /// @param revisionNumber revision number to query
+  /// @return map of field names to modification status (for example, "name_mod"
+  /// ->
+  /// true);
+  /// only true flags are included in the map
+  private Map<String, Boolean> getModificationFlags(String tableName, UUID id,
+      Number revisionNumber) {
+    Map<String, Boolean> modifiedFlags = new HashMap<>();
+    try {
+      String sql = "SELECT * FROM " + tableName + " WHERE id = ? AND rev = ?";
+
+      jdbcTemplate.query(sql, rs -> {
+        ResultSetMetaData metaData = rs.getMetaData();
+        int columnCount = metaData.getColumnCount();
+
+        for (int i = 1; i <= columnCount; i++) {
+          String columnName = metaData.getColumnName(i);
+          if (columnName.endsWith("_mod")) {
+            Boolean value = rs.getBoolean(i);
+            if (!rs.wasNull() && value) {
+              modifiedFlags.put(columnName, true);
+            }
+          }
+        }
+      }, id, revisionNumber.longValue());
+    } catch (Exception e) {
+      // Modification tracking is optional. Log warning but don't fail audit history
+      // retrieval.
+      logger.warn("Failed to retrieve modification flags for entity '{}' at revision '{}'. "
+          + "Modification flag tracking is optional and will not be included in this audit entry.",
+          id, revisionNumber.longValue(), e);
+    }
+    return modifiedFlags;
   }
 
   /// Converts a list of JPA property entities to domain property snapshot
   /// records.
   /// Ensures null safety and defensive copying to preserve immutability.
   private List<EntityAuditInfo.PropertySnapshot> mapPropertySnapshots(
-      List<PropertyJpaEntity> properties) {
+      List<PropertyJpaEntity> properties, Number revisionNumber) {
     if (properties == null || properties.isEmpty()) {
       return List.of();
     }
-    return properties.stream().map(
-        prop -> new EntityAuditInfo.PropertySnapshot(prop.getId(), prop.getName(), prop.getValue()))
-        .toList();
+    return properties.stream().map(prop -> {
+      Map<String, Boolean> modFlags = getModificationFlags("property_aud", prop.getId(),
+          revisionNumber);
+      return new EntityAuditInfo.PropertySnapshot(prop.getId(), prop.getName(), prop.getValue(),
+          modFlags);
+    }).toList();
   }
 
   /// Converts a list of JPA relation entities to domain relation snapshot
@@ -121,18 +183,21 @@ public class PostgresEntityAuditAdapter implements EntityAuditPort {
   /// Ensures null safety and defensive copying to preserve immutability of target
   /// identifiers.
   private List<EntityAuditInfo.RelationSnapshot> mapRelationSnapshots(
-      List<RelationJpaEntity> relations) {
+      List<RelationJpaEntity> relations, Number revisionNumber) {
     if (relations == null || relations.isEmpty()) {
       return List.of();
     }
-    return relations.stream()
-        .map(rel -> new EntityAuditInfo.RelationSnapshot(rel.getId(), rel.getName(),
-            rel.getTargetTemplateIdentifier(),
-            rel.getTargetEntities() != null
-                ? rel.getTargetEntities().stream()
-                    .map(RelationTargetJpaEntity::getTargetEntityIdentifier).toList()
-                : List.of()))
-        .toList();
+    return relations.stream().map(rel -> {
+      Map<String, Boolean> modFlags = getModificationFlags("relation_aud", rel.getId(),
+          revisionNumber);
+      return new EntityAuditInfo.RelationSnapshot(rel.getId(), rel.getName(),
+          rel.getTargetTemplateIdentifier(),
+          rel.getTargetEntities() != null
+              ? rel.getTargetEntities().stream()
+                  .map(RelationTargetJpaEntity::getTargetEntityIdentifier).toList()
+              : List.of(),
+          modFlags);
+    }).toList();
   }
 
   private String mapRevisionType(RevisionType revisionType) {

@@ -25,12 +25,17 @@ CREATE INDEX idx_transaction_log_auth_id ON envers_transaction_log (auth_id);
 
 CREATE TABLE entity_aud
 (
-    id                  UUID   NOT NULL,
-    rev                 BIGINT NOT NULL,
-    revtype             SMALLINT,
-    template_identifier VARCHAR(255),
-    name                VARCHAR(255),
-    identifier          VARCHAR(255),
+    id                      UUID   NOT NULL,
+    rev                     BIGINT NOT NULL,
+    revtype                 SMALLINT,
+    template_identifier     VARCHAR(255),
+    template_identifier_mod BOOLEAN,
+    name                    VARCHAR(255),
+    name_mod                BOOLEAN,
+    identifier              VARCHAR(255),
+    identifier_mod          BOOLEAN,
+    properties_mod          BOOLEAN,
+    relations_mod           BOOLEAN,
     PRIMARY KEY (id, rev),
     CONSTRAINT fk_entity_aud_revinfo FOREIGN KEY (rev) REFERENCES envers_transaction_log (rev) ON DELETE CASCADE
 );
@@ -40,11 +45,13 @@ CREATE INDEX idx_entity_aud_template_identifier_identifier ON entity_aud (templa
 
 CREATE TABLE property_aud
 (
-    id      UUID   NOT NULL,
-    rev     BIGINT NOT NULL,
-    revtype SMALLINT,
-    name    VARCHAR(255),
-    value   VARCHAR(255),
+    id        UUID   NOT NULL,
+    rev       BIGINT NOT NULL,
+    revtype   SMALLINT,
+    name      VARCHAR(255),
+    name_mod  BOOLEAN,
+    value     VARCHAR(255),
+    value_mod BOOLEAN,
     PRIMARY KEY (id, rev),
     CONSTRAINT fk_property_aud_revinfo FOREIGN KEY (rev) REFERENCES envers_transaction_log (rev) ON DELETE CASCADE
 );
@@ -53,11 +60,14 @@ CREATE INDEX idx_property_aud_rev ON property_aud (rev);
 
 CREATE TABLE relation_aud
 (
-    id                         UUID   NOT NULL,
-    rev                        BIGINT NOT NULL,
-    revtype                    SMALLINT,
-    name                       VARCHAR(255),
-    target_template_identifier VARCHAR(255),
+    id                             UUID   NOT NULL,
+    rev                            BIGINT NOT NULL,
+    revtype                        SMALLINT,
+    name                           VARCHAR(255),
+    name_mod                       BOOLEAN,
+    target_template_identifier     VARCHAR(255),
+    target_template_identifier_mod BOOLEAN,
+    target_entities_mod            BOOLEAN,
     PRIMARY KEY (id, rev),
     CONSTRAINT fk_relation_aud_revinfo FOREIGN KEY (rev) REFERENCES envers_transaction_log (rev) ON DELETE CASCADE
 );
@@ -66,12 +76,17 @@ CREATE INDEX idx_relation_aud_rev ON relation_aud (rev);
 
 CREATE TABLE entity_template_aud
 (
-    id          UUID   NOT NULL,
-    rev         BIGINT NOT NULL,
-    revtype     SMALLINT,
-    identifier  VARCHAR(255),
-    name        VARCHAR(255),
-    description TEXT,
+    id              UUID   NOT NULL,
+    rev             BIGINT NOT NULL,
+    revtype         SMALLINT,
+    identifier      VARCHAR(255),
+    identifier_mod BOOLEAN,
+    name            VARCHAR(255),
+    name_mod        BOOLEAN,
+    description     TEXT,
+    description_mod BOOLEAN,
+    properties_definitions_mod BOOLEAN,
+    relations_definitions_mod  BOOLEAN,
     PRIMARY KEY (id, rev),
     CONSTRAINT fk_entity_template_aud_revinfo FOREIGN KEY (rev) REFERENCES envers_transaction_log (rev) ON DELETE CASCADE
 );
@@ -80,14 +95,19 @@ CREATE INDEX idx_entity_template_aud_rev ON entity_template_aud (rev);
 
 CREATE TABLE property_definition_aud
 (
-    id          UUID   NOT NULL,
-    rev         BIGINT NOT NULL,
-    revtype     SMALLINT,
-    name        VARCHAR(255),
-    description TEXT,
-    type        VARCHAR(50),
-    required    BOOLEAN,
-    rules_id    UUID,
+    id              UUID   NOT NULL,
+    rev             BIGINT NOT NULL,
+    revtype         SMALLINT,
+    name            VARCHAR(255),
+    name_mod        BOOLEAN,
+    description     TEXT,
+    description_mod BOOLEAN,
+    type            VARCHAR(50),
+    type_mod        BOOLEAN,
+    required        BOOLEAN,
+    required_mod    BOOLEAN,
+    rules_id        UUID,
+    rules_mod    BOOLEAN,
     PRIMARY KEY (id, rev),
     CONSTRAINT fk_property_definition_aud_revinfo FOREIGN KEY (rev) REFERENCES envers_transaction_log (rev) ON DELETE CASCADE
 );
@@ -96,16 +116,23 @@ CREATE INDEX idx_property_definition_aud_rev ON property_definition_aud (rev);
 
 CREATE TABLE property_rules_aud
 (
-    id          UUID   NOT NULL,
-    rev         BIGINT NOT NULL,
-    revtype     SMALLINT,
-    format      VARCHAR(50),
-    enum_values TEXT[],
-    regex       VARCHAR(500),
-    max_length  INTEGER,
-    min_length  INTEGER,
-    max_value   INTEGER,
-    min_value   INTEGER,
+    id              UUID   NOT NULL,
+    rev             BIGINT NOT NULL,
+    revtype         SMALLINT,
+    format          VARCHAR(50),
+    format_mod      BOOLEAN,
+    enum_values     TEXT[],
+    enum_values_mod BOOLEAN,
+    regex           VARCHAR(500),
+    regex_mod       BOOLEAN,
+    max_length      INTEGER,
+    max_length_mod  BOOLEAN,
+    min_length      INTEGER,
+    min_length_mod  BOOLEAN,
+    max_value       INTEGER,
+    max_value_mod   BOOLEAN,
+    min_value       INTEGER,
+    min_value_mod   BOOLEAN,
     PRIMARY KEY (id, rev),
     CONSTRAINT fk_property_rules_aud_revinfo FOREIGN KEY (rev) REFERENCES envers_transaction_log (rev) ON DELETE CASCADE
 );
@@ -114,13 +141,17 @@ CREATE INDEX idx_property_rules_aud_rev ON property_rules_aud (rev);
 
 CREATE TABLE relation_definition_aud
 (
-    id                         UUID   NOT NULL,
-    rev                        BIGINT NOT NULL,
-    revtype                    SMALLINT,
-    name                       VARCHAR(255),
-    target_template_identifier VARCHAR(255),
-    required                   BOOLEAN,
-    to_many                    BOOLEAN,
+    id                             UUID   NOT NULL,
+    rev                            BIGINT NOT NULL,
+    revtype                        SMALLINT,
+    name                           VARCHAR(255),
+    name_mod                       BOOLEAN,
+    target_template_identifier     VARCHAR(255),
+    target_template_identifier_mod BOOLEAN,
+    required                       BOOLEAN,
+    required_mod                   BOOLEAN,
+    to_many                        BOOLEAN,
+    to_many_mod                    BOOLEAN,
     PRIMARY KEY (id, rev),
     CONSTRAINT fk_relation_definition_aud_revinfo FOREIGN KEY (rev) REFERENCES envers_transaction_log (rev) ON DELETE CASCADE
 );
@@ -129,10 +160,12 @@ CREATE INDEX idx_relation_definition_aud_rev ON relation_definition_aud (rev);
 
 CREATE TABLE entity_properties_aud
 (
-    rev         BIGINT NOT NULL,
-    revtype     SMALLINT,
-    entity_id   UUID   NOT NULL,
-    property_id UUID   NOT NULL,
+    rev             BIGINT NOT NULL,
+    revtype         SMALLINT,
+    entity_id       UUID   NOT NULL,
+    entity_id_mod   BOOLEAN,
+    property_id     UUID   NOT NULL,
+    property_id_mod BOOLEAN,
     PRIMARY KEY (rev, entity_id, property_id),
     CONSTRAINT fk_entity_properties_aud_revinfo FOREIGN KEY (rev) REFERENCES envers_transaction_log (rev) ON DELETE CASCADE
 );
@@ -141,10 +174,12 @@ CREATE INDEX idx_entity_properties_aud_entity_id ON entity_properties_aud (entit
 
 CREATE TABLE entity_relations_aud
 (
-    rev         BIGINT NOT NULL,
-    revtype     SMALLINT,
-    entity_id   UUID   NOT NULL,
-    relation_id UUID   NOT NULL,
+    rev             BIGINT NOT NULL,
+    revtype         SMALLINT,
+    entity_id       UUID   NOT NULL,
+    entity_id_mod   BOOLEAN,
+    relation_id     UUID   NOT NULL,
+    relation_id_mod BOOLEAN,
     PRIMARY KEY (rev, entity_id, relation_id),
     CONSTRAINT fk_entity_relations_aud_revinfo FOREIGN KEY (rev) REFERENCES envers_transaction_log (rev) ON DELETE CASCADE
 );
@@ -153,10 +188,12 @@ CREATE INDEX idx_entity_relations_aud_entity_id ON entity_relations_aud (entity_
 
 CREATE TABLE relation_target_entities_aud
 (
-    rev                      BIGINT       NOT NULL,
-    revtype                  SMALLINT,
-    relation_id              UUID         NOT NULL,
-    target_entity_identifier VARCHAR(255) NOT NULL,
+    rev                          BIGINT       NOT NULL,
+    revtype                      SMALLINT,
+    relation_id                  UUID         NOT NULL,
+    relation_id_mod              BOOLEAN,
+    target_entity_identifier     VARCHAR(255) NOT NULL,
+    target_entity_identifier_mod BOOLEAN,
     PRIMARY KEY (rev, relation_id, target_entity_identifier),
     CONSTRAINT fk_relation_target_entities_aud_revinfo FOREIGN KEY (rev) REFERENCES envers_transaction_log (rev) ON DELETE CASCADE
 );
@@ -165,10 +202,12 @@ CREATE INDEX idx_relation_target_entities_aud_relation_id ON relation_target_ent
 
 CREATE TABLE entity_template_properties_definitions_aud
 (
-    rev                       BIGINT NOT NULL,
-    revtype                   SMALLINT,
-    entity_template_id        UUID   NOT NULL,
-    properties_definitions_id UUID   NOT NULL,
+    rev                           BIGINT NOT NULL,
+    revtype                       SMALLINT,
+    entity_template_id            UUID   NOT NULL,
+    entity_template_id_mod        BOOLEAN,
+    properties_definitions_id     UUID   NOT NULL,
+    properties_definitions_id_mod BOOLEAN,
     PRIMARY KEY (rev, entity_template_id, properties_definitions_id),
     CONSTRAINT fk_entity_template_properties_definitions_aud_revinfo FOREIGN KEY (rev) REFERENCES envers_transaction_log (rev) ON DELETE CASCADE
 );
@@ -177,10 +216,12 @@ CREATE INDEX idx_entity_template_properties_definitions_aud_template_id ON entit
 
 CREATE TABLE entity_template_relations_definitions_aud
 (
-    rev                      BIGINT NOT NULL,
-    revtype                  SMALLINT,
-    entity_template_id       UUID   NOT NULL,
-    relations_definitions_id UUID   NOT NULL,
+    rev                          BIGINT NOT NULL,
+    revtype                      SMALLINT,
+    entity_template_id           UUID   NOT NULL,
+    entity_template_id_mod       BOOLEAN,
+    relations_definitions_id     UUID   NOT NULL,
+    relations_definitions_id_mod BOOLEAN,
     PRIMARY KEY (rev, entity_template_id, relations_definitions_id),
     CONSTRAINT fk_entity_template_relations_definitions_aud_revinfo FOREIGN KEY (rev) REFERENCES envers_transaction_log (rev) ON DELETE CASCADE
 );

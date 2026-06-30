@@ -271,7 +271,107 @@ Each revision includes a snapshot of the entity's state at that moment, containi
 
 ---
 
-## Audit and Entity Deletion
+## Modification Flags
+
+Hibernate Envers includes optional field-level change tracking through **modification flags**. When enabled on an entity with `@Audited(withModifiedFlag=true)`, Envers generates a `_mod` column for each audited field in the audit table.
+
+### How Modification Flags Work
+
+For each field in an audited entity, Envers creates a corresponding `_mod` column (for example, `name_mod`, `identifier_mod`). During an UPDATE operation, these flags are set to `true` only for fields that actually changed.
+
+**Database Schema Example:**
+
+```sql
+CREATE TABLE entity_aud (
+    id UUID NOT NULL,
+    rev BIGINT NOT NULL,
+    revtype SMALLINT,
+    name VARCHAR(255),
+    name_mod BOOLEAN,          -- Tracks if 'name' field was modified
+    identifier VARCHAR(255),
+    identifier_mod BOOLEAN,    -- Tracks if 'identifier' field was modified
+    PRIMARY KEY (id, rev)
+);
+```
+
+### Flag Values in Audit Responses
+
+The audit API only includes modification flags that are `true`. Missing flags should be interpreted as `false` (field was not modified in that revision).
+
+**Response Example - UPDATE Operation:**
+
+When updating only the `name` field:
+
+```json
+{
+  "revision_number": 2,
+  "revision_type": "UPDATED",
+  "modified_by": "alice@example.com",
+  "snapshot": {
+    "id": "550e8400-e29b-41d4-a716-446655440000",
+    "template_identifier": "web-service",
+    "identifier": "my-service",
+    "name": "Updated Service Name",
+    "modification_flags": {
+      "name_mod": true
+      // identifier_mod is NOT included (meaning it was false/unchanged)
+    }
+  }
+}
+```
+
+**Response Example - Creation Operation:**
+
+During creation, all fields are considered modified:
+
+```json
+{
+  "revision_number": 1,
+  "revision_type": "CREATED",
+  "modified_by": "bob@example.com",
+  "snapshot": {
+    "id": "550e8400-e29b-41d4-a716-446655440000",
+    "name": "Service Name",
+    "modification_flags": {
+      "name_mod": true,
+      "identifier_mod": true
+    }
+  }
+}
+```
+
+### Collections Flag
+
+Envers also tracks modifications to collection fields (relationships) through the `collections_flag`. This flag indicates whether any collection in the entity was modified (added/removed items) in this revision.
+
+**Example with Relations:**
+
+```json
+{
+  "revision_number": 3,
+  "revision_type": "UPDATED",
+  "modified_by": "charlie@example.com",
+  "snapshot": {
+    "id": "550e8400-e29b-41d4-a716-446655440000",
+    "name": "Service Name",
+    "modification_flags": {
+      "relations_mod": true,  // Collections (relations) were modified
+      // Individual relation items are tracked in relation_aud table
+    }
+  }
+}
+```
+
+### Using Modification Flags
+
+Modification flags enable you to:
+
+- **Track precise field changes** - Know exactly which fields changed in an update
+- **Implement smart versioning** - Only serialize fields that actually changed
+- **Audit compliance** - Prove which fields were modified for regulatory purposes
+- **Change notifications** - Alert only when specific fields change
+
+---
 
 The audit system preserves audit history even after entity deletion.
 
@@ -328,6 +428,16 @@ Audit tables store historical versions of every column with additional hibernate
 
 - `REV` - Revision number
 - `REVTYPE` - Revision type (0=CREATED, 1=UPDATED, 2=DELETED)
+- `{field}_MOD` - Modification flags (optional, when `@Audited(withModifiedFlag=true)`)
+
+### Modification Flag Retrieval
+
+The audit system automatically retrieves modification flags from audit tables during history queries:
+
+- **Dynamic Column Detection** - The adapter queries audit tables to find all columns ending with `_mod`
+- **Selective Inclusion** - Only flags with `true` values are included in API responses (false values are omitted)
+- **Graceful Degradation** - If modification flag retrieval fails, the audit history is still returned without the granular field-level tracking
+- **Logging** - Failures to retrieve modification flags are logged as warnings, allowing operators to monitor optional feature availability
 
 ### Performance Considerations
 
