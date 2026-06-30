@@ -24,7 +24,6 @@ import org.junit.jupiter.api.Test;
 import org.mockito.Mock;
 import org.mockito.MockedStatic;
 import org.mockito.MockitoAnnotations;
-import org.springframework.jdbc.core.JdbcTemplate;
 
 import com.decathlon.idp_core.domain.exception.entity.EntityNotFoundException;
 import com.decathlon.idp_core.domain.model.entity.EntityAuditInfo;
@@ -47,9 +46,6 @@ class PostgresEntityAuditAdapterTest {
   private JpaEntityRepository jpaEntityRepository;
 
   @Mock
-  private JdbcTemplate jdbcTemplate;
-
-  @Mock
   private AuditReader auditReader;
 
   @Mock
@@ -63,7 +59,7 @@ class PostgresEntityAuditAdapterTest {
   @BeforeEach
   void setUp() {
     MockitoAnnotations.openMocks(this);
-    adapter = new PostgresEntityAuditAdapter(entityManager, jpaEntityRepository, jdbcTemplate);
+    adapter = new PostgresEntityAuditAdapter(entityManager, jpaEntityRepository);
   }
 
   @Nested
