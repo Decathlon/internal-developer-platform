@@ -1222,7 +1222,7 @@ components:
           type: object
           additionalProperties:
             type: boolean
-          description: Map of modified flags (for example, 'name_mod': true)
+          description: Map of modified flags (for example, 'name_mod', true)
     PropertySnapshotDtoOut:
       type: object
       description: Snapshot of a property at a specific audit revision
@@ -1244,7 +1244,7 @@ components:
           type: object
           additionalProperties:
             type: boolean
-          description: Map of modified flags (for example, 'name_mod': true, 'value_mod': false)
+          description: Map of modified flags (for example, 'name_mod', true, 'value_mod', false)
     RelationSnapshotDtoOut:
       type: object
       description: Snapshot of a relation at a specific audit revision
@@ -1274,7 +1274,7 @@ components:
           type: object
           additionalProperties:
             type: boolean
-          description: Map of modified flags (for example, 'name_mod': true, 'target_template_identifier_mod': false)
+          description: Map of modified flags (for example, 'name_mod', true, 'target_template_identifier_mod', false)
     EntityGraphEdgeDtoOut:
       type: object
       properties:
