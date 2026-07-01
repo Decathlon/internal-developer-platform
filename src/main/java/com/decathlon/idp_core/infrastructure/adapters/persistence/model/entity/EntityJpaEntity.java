@@ -55,4 +55,7 @@ public class EntityJpaEntity {
   @JoinTable(name = "entity_relations", joinColumns = @JoinColumn(name = "entity_id"), inverseJoinColumns = @JoinColumn(name = "relation_id"), uniqueConstraints = @UniqueConstraint(columnNames = {
       "entity_id", "relation_id"}), indexes = @Index(columnList = "entity_id"))
   private List<RelationJpaEntity> relations;
+
+  @Column(name = "updated_at")
+  private Long updatedAt;
 }

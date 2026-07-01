@@ -3,7 +3,9 @@ package com.decathlon.idp_core.infrastructure.adapters.persistence;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -157,6 +159,40 @@ class PostgresEntityAuditAdapterTest {
     }
 
     @Test
+    @DisplayName("Should throw EntityNotFoundException if audit history exists but first element is not EntityJpaEntity")
+    void shouldThrowExceptionIfAuditHistoryFirstElementInvalid() {
+      // Given
+      String templateIdentifier = "test-template";
+      String entityIdentifier = "test-entity";
+
+      when(jpaEntityRepository.findByTemplateIdentifierAndIdentifier(templateIdentifier,
+          entityIdentifier)).thenReturn(Optional.empty());
+
+      try (
+          MockedStatic<org.hibernate.envers.AuditReaderFactory> auditReaderFactoryMock = org.mockito.Mockito
+              .mockStatic(org.hibernate.envers.AuditReaderFactory.class)) {
+        auditReaderFactoryMock
+            .when(() -> org.hibernate.envers.AuditReaderFactory.get(entityManager))
+            .thenReturn(auditReader);
+
+        when(auditReader.createQuery()).thenReturn(auditQueryCreator);
+        when(auditQueryCreator.forRevisionsOfEntity(EntityJpaEntity.class, false, true))
+            .thenReturn(auditQuery);
+        when(auditQuery.add(any())).thenReturn(auditQuery);
+        when(auditQuery.addOrder(any())).thenReturn(auditQuery);
+
+        Object[] invalidRevision = {"not-an-entity", mock(CustomRevisionEntity.class),
+            RevisionType.ADD};
+        when(auditQuery.getResultList()).thenReturn(List.<Object[]>of(invalidRevision));
+
+        // When & Then
+        assertThatThrownBy(
+            () -> adapter.getEntityAuditHistory(templateIdentifier, entityIdentifier))
+                .isInstanceOf(EntityNotFoundException.class);
+      }
+    }
+
+    @Test
     @DisplayName("Should retrieve multiple revision entries sorted by revision number descending")
     void shouldRetrieveMultipleRevisionsSorted() {
       // Given
@@ -202,8 +238,7 @@ class PostgresEntityAuditAdapterTest {
             .thenReturn(auditQuery);
         when(auditQuery.add(any())).thenReturn(auditQuery);
         when(auditQuery.addOrder(any())).thenReturn(auditQuery);
-        when(auditQuery.getResultList())
-            .thenReturn(List.<Object[]>of(revision1, revision2, revision3));
+        when(auditQuery.getResultList()).thenReturn(List.of(revision1, revision2, revision3));
 
         EntityJpaEntity historicalEntity = mock(EntityJpaEntity.class);
         when(historicalEntity.getId()).thenReturn(entityId);
@@ -354,12 +389,21 @@ class PostgresEntityAuditAdapterTest {
       EntityJpaEntity jpaEntity = mock(EntityJpaEntity.class);
       when(jpaEntity.getId()).thenReturn(entityId);
 
-      CustomRevisionEntity revisionEntity = mock(CustomRevisionEntity.class);
-      when(revisionEntity.getRev()).thenReturn(3L);
-      when(revisionEntity.getRevisionTimestamp()).thenReturn(System.currentTimeMillis());
-      when(revisionEntity.getAuthId()).thenReturn("admin");
+      // Current deletion revision (Rev 3)
+      CustomRevisionEntity revisionEntityDel = mock(CustomRevisionEntity.class);
+      when(revisionEntityDel.getRev()).thenReturn(3L);
+      when(revisionEntityDel.getRevisionTimestamp()).thenReturn(System.currentTimeMillis());
+      when(revisionEntityDel.getAuthId()).thenReturn("admin");
 
-      Object[] revision = {jpaEntity, revisionEntity, RevisionType.DEL};
+      // Preceding modification revision (Rev 2) - Required for the index scan to look
+      // backwards
+      CustomRevisionEntity revisionEntityMod = mock(CustomRevisionEntity.class);
+      when(revisionEntityMod.getRev()).thenReturn(2L);
+      when(revisionEntityMod.getRevisionTimestamp()).thenReturn(System.currentTimeMillis());
+      when(revisionEntityMod.getAuthId()).thenReturn("user-prev");
+
+      Object[] revisionDel = {jpaEntity, revisionEntityDel, RevisionType.DEL};
+      Object[] revisionMod = {jpaEntity, revisionEntityMod, RevisionType.MOD};
 
       when(jpaEntityRepository.findByTemplateIdentifierAndIdentifier(templateIdentifier,
           entityIdentifier)).thenReturn(Optional.of(jpaEntity));
@@ -376,7 +420,8 @@ class PostgresEntityAuditAdapterTest {
             .thenReturn(auditQuery);
         when(auditQuery.add(any())).thenReturn(auditQuery);
         when(auditQuery.addOrder(any())).thenReturn(auditQuery);
-        when(auditQuery.getResultList()).thenReturn(List.<Object[]>of(revision));
+        // Mock returning historical descending array timeline
+        when(auditQuery.getResultList()).thenReturn(List.of(revisionDel, revisionMod));
 
         EntityJpaEntity historicalEntity = mock(EntityJpaEntity.class);
         when(historicalEntity.getId()).thenReturn(entityId);
@@ -386,7 +431,8 @@ class PostgresEntityAuditAdapterTest {
         when(historicalEntity.getProperties()).thenReturn(List.of());
         when(historicalEntity.getRelations()).thenReturn(List.of());
 
-        // For DEL, should query revision 2 (3-1)
+        // For DEL (Rev 3), it should evaluate the next element (Rev 2) and trigger
+        // find() on version 2L
         when(auditReader.find(EntityJpaEntity.class, entityId, 2L)).thenReturn(historicalEntity);
 
         // When
@@ -394,9 +440,13 @@ class PostgresEntityAuditAdapterTest {
             entityIdentifier);
 
         // Then
+        assertThat(result).hasSize(2);
         assertThat(result.getFirst().revisionType()).isEqualTo("DELETED");
         assertThat(result.getFirst().snapshot()).isNotNull();
-        verify(auditReader).find(EntityJpaEntity.class, entityId, 2L);
+
+        // FIX: Verify it was accessed twice (once for the DEL evaluation, once for the
+        // MOD evaluation)
+        verify(auditReader, times(2)).find(EntityJpaEntity.class, entityId, 2L);
       }
     }
   }
@@ -538,6 +588,133 @@ class PostgresEntityAuditAdapterTest {
         assertThat(result.getFirst().snapshot().relations()).isEmpty();
       }
     }
+
+    @Test
+    @DisplayName("Should handle null historical entity gracefully")
+    void shouldHandleNullHistoricalEntity() {
+      // Given
+      UUID entityId = UUID.randomUUID();
+      String templateIdentifier = "web-service";
+      String entityIdentifier = "web-api";
+
+      EntityJpaEntity jpaEntity = mock(EntityJpaEntity.class);
+      when(jpaEntity.getId()).thenReturn(entityId);
+
+      CustomRevisionEntity revisionEntity = mock(CustomRevisionEntity.class);
+      when(revisionEntity.getRev()).thenReturn(1L);
+      when(revisionEntity.getRevisionTimestamp()).thenReturn(System.currentTimeMillis());
+      when(revisionEntity.getAuthId()).thenReturn("test-user");
+
+      Object[] revision = {jpaEntity, revisionEntity, RevisionType.ADD};
+
+      when(jpaEntityRepository.findByTemplateIdentifierAndIdentifier(templateIdentifier,
+          entityIdentifier)).thenReturn(Optional.of(jpaEntity));
+
+      try (
+          MockedStatic<org.hibernate.envers.AuditReaderFactory> auditReaderFactoryMock = org.mockito.Mockito
+              .mockStatic(org.hibernate.envers.AuditReaderFactory.class)) {
+        auditReaderFactoryMock
+            .when(() -> org.hibernate.envers.AuditReaderFactory.get(entityManager))
+            .thenReturn(auditReader);
+
+        when(auditReader.createQuery()).thenReturn(auditQueryCreator);
+        when(auditQueryCreator.forRevisionsOfEntity(EntityJpaEntity.class, false, true))
+            .thenReturn(auditQuery);
+        when(auditQuery.add(any())).thenReturn(auditQuery);
+        when(auditQuery.addOrder(any())).thenReturn(auditQuery);
+        when(auditQuery.getResultList()).thenReturn(List.<Object[]>of(revision));
+
+        when(auditReader.find(EntityJpaEntity.class, entityId, 1L)).thenReturn(null);
+
+        // When
+        List<EntityAuditInfo> result = adapter.getEntityAuditHistory(templateIdentifier,
+            entityIdentifier);
+
+        // Then
+        assertThat(result).hasSize(1);
+        assertThat(result.getFirst().snapshot()).isNull();
+      }
+    }
+
+    @Test
+    @DisplayName("Should include modification flags when changes are tracked")
+    void shouldIncludeModificationFlags() {
+      UUID entityId = UUID.randomUUID();
+      String templateIdentifier = "web-service";
+      String entityIdentifier = "web-api";
+
+      EntityJpaEntity jpaEntity = mock(EntityJpaEntity.class);
+      when(jpaEntity.getId()).thenReturn(entityId);
+
+      CustomRevisionEntity revisionEntity = mock(CustomRevisionEntity.class);
+      when(revisionEntity.getRev()).thenReturn(1L);
+      when(revisionEntity.getRevisionTimestamp()).thenReturn(System.currentTimeMillis());
+      when(revisionEntity.getAuthId()).thenReturn("test-user");
+
+      Object[] revision = {jpaEntity, revisionEntity, RevisionType.ADD};
+
+      when(jpaEntityRepository.findByTemplateIdentifierAndIdentifier(templateIdentifier,
+          entityIdentifier)).thenReturn(Optional.of(jpaEntity));
+
+      try (
+          MockedStatic<org.hibernate.envers.AuditReaderFactory> auditReaderFactoryMock = org.mockito.Mockito
+              .mockStatic(org.hibernate.envers.AuditReaderFactory.class)) {
+        auditReaderFactoryMock
+            .when(() -> org.hibernate.envers.AuditReaderFactory.get(entityManager))
+            .thenReturn(auditReader);
+
+        when(auditReader.createQuery()).thenReturn(auditQueryCreator);
+        when(auditQueryCreator.forRevisionsOfEntity(EntityJpaEntity.class, false, true))
+            .thenReturn(auditQuery);
+        when(auditQuery.add(any())).thenReturn(auditQuery);
+        when(auditQuery.addOrder(any())).thenReturn(auditQuery);
+        when(auditQuery.getResultList()).thenReturn(List.<Object[]>of(revision));
+
+        PropertyJpaEntity property = mock(PropertyJpaEntity.class);
+        UUID propId = UUID.randomUUID();
+        when(property.getId()).thenReturn(propId);
+        when(property.getName()).thenReturn("environment");
+        when(property.getValue()).thenReturn("PROD");
+
+        RelationJpaEntity relation = mock(RelationJpaEntity.class);
+        UUID relId = UUID.randomUUID();
+        when(relation.getId()).thenReturn(relId);
+        when(relation.getName()).thenReturn("dependencies");
+        when(relation.getTargetTemplateIdentifier()).thenReturn("service");
+        when(relation.getTargetEntities()).thenReturn(List.of());
+
+        EntityJpaEntity historicalEntity = mock(EntityJpaEntity.class);
+        when(historicalEntity.getId()).thenReturn(entityId);
+        when(historicalEntity.getTemplateIdentifier()).thenReturn(templateIdentifier);
+        when(historicalEntity.getName()).thenReturn("Web API");
+        when(historicalEntity.getIdentifier()).thenReturn(entityIdentifier);
+        when(historicalEntity.getProperties()).thenReturn(List.of(property));
+        when(historicalEntity.getRelations()).thenReturn(List.of(relation));
+
+        when(auditReader.find(EntityJpaEntity.class, entityId, 1L)).thenReturn(historicalEntity);
+
+        // Mock forRevisionsOfEntityWithChanges for modification flags tracking
+        AuditQuery modQuery = mock(AuditQuery.class);
+        when(auditQueryCreator.forRevisionsOfEntityWithChanges(any(), eq(true)))
+            .thenReturn(modQuery);
+        when(modQuery.add(any())).thenReturn(modQuery);
+
+        java.util.Set<Object> changesSet = new java.util.HashSet<>();
+        changesSet.add("name");
+        changesSet.add(123);
+        Object[] changesArray = {null, null, null, changesSet};
+        when(modQuery.getResultList()).thenReturn(List.<Object[]>of(changesArray));
+
+        // When
+        List<EntityAuditInfo> result = adapter.getEntityAuditHistory(templateIdentifier,
+            entityIdentifier);
+
+        // Then
+        assertThat(result).isNotEmpty();
+        EntityAuditInfo.EntitySnapshot snapshot = result.getFirst().snapshot();
+        assertThat(snapshot).isNotNull();
+      }
+    }
   }
 
   @Nested
@@ -552,7 +729,7 @@ class PostgresEntityAuditAdapterTest {
       String templateIdentifier = "web-service";
       String entityIdentifier = "web-api-deleted";
 
-      // Entity not in current database
+      // Entity not in current operational database
       when(jpaEntityRepository.findByTemplateIdentifierAndIdentifier(templateIdentifier,
           entityIdentifier)).thenReturn(Optional.empty());
 
@@ -561,12 +738,21 @@ class PostgresEntityAuditAdapterTest {
       when(deletedJpaEntity.getTemplateIdentifier()).thenReturn(templateIdentifier);
       when(deletedJpaEntity.getIdentifier()).thenReturn(entityIdentifier);
 
-      CustomRevisionEntity revisionEntity = mock(CustomRevisionEntity.class);
-      when(revisionEntity.getRev()).thenReturn(3L);
-      when(revisionEntity.getRevisionTimestamp()).thenReturn(System.currentTimeMillis());
-      when(revisionEntity.getAuthId()).thenReturn("admin");
+      // Deletion log configuration (Rev 3)
+      CustomRevisionEntity revisionEntityDel = mock(CustomRevisionEntity.class);
+      when(revisionEntityDel.getRev()).thenReturn(3L);
+      when(revisionEntityDel.getRevisionTimestamp()).thenReturn(System.currentTimeMillis());
+      when(revisionEntityDel.getAuthId()).thenReturn("admin");
 
-      Object[] auditRevision = {deletedJpaEntity, revisionEntity, RevisionType.DEL};
+      // Prior tracking log configuration (Rev 2) - Required for standard timeline
+      // matching
+      CustomRevisionEntity revisionEntityMod = mock(CustomRevisionEntity.class);
+      when(revisionEntityMod.getRev()).thenReturn(2L);
+      when(revisionEntityMod.getRevisionTimestamp()).thenReturn(System.currentTimeMillis());
+      when(revisionEntityMod.getAuthId()).thenReturn("system");
+
+      Object[] auditRevisionDel = {deletedJpaEntity, revisionEntityDel, RevisionType.DEL};
+      Object[] auditRevisionMod = {deletedJpaEntity, revisionEntityMod, RevisionType.MOD};
 
       try (
           MockedStatic<org.hibernate.envers.AuditReaderFactory> auditReaderFactoryMock = org.mockito.Mockito
@@ -580,7 +766,8 @@ class PostgresEntityAuditAdapterTest {
             .thenReturn(auditQuery);
         when(auditQuery.add(any())).thenReturn(auditQuery);
         when(auditQuery.addOrder(any())).thenReturn(auditQuery);
-        when(auditQuery.getResultList()).thenReturn(List.<Object[]>of(auditRevision));
+        // Mock returning the full array sequence
+        when(auditQuery.getResultList()).thenReturn(List.of(auditRevisionDel, auditRevisionMod));
 
         EntityJpaEntity historicalEntity = mock(EntityJpaEntity.class);
         when(historicalEntity.getId()).thenReturn(entityId);
@@ -590,6 +777,8 @@ class PostgresEntityAuditAdapterTest {
         when(historicalEntity.getProperties()).thenReturn(List.of());
         when(historicalEntity.getRelations()).thenReturn(List.of());
 
+        // Ensure find operations are explicitly linked to revision 2L (pre-delete block
+        // state)
         when(auditReader.find(EntityJpaEntity.class, entityId, 2L)).thenReturn(historicalEntity);
 
         // When
@@ -597,8 +786,9 @@ class PostgresEntityAuditAdapterTest {
             entityIdentifier);
 
         // Then
-        assertThat(result).hasSize(1);
+        assertThat(result).hasSize(2);
         assertThat(result.getFirst().revisionType()).isEqualTo("DELETED");
+        assertThat(result.getFirst().snapshot()).isNotNull();
       }
     }
   }

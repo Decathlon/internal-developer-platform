@@ -1,8 +1,6 @@
 package com.decathlon.idp_core.infrastructure.adapters.api.dto.out.entity.audit;
 
 import java.util.List;
-import java.util.Map;
-import java.util.UUID;
 
 import com.fasterxml.jackson.databind.PropertyNamingStrategies.SnakeCaseStrategy;
 import com.fasterxml.jackson.databind.annotation.JsonNaming;
@@ -23,9 +21,6 @@ import lombok.Data;
 @Schema(description = "Snapshot of entity state at a specific audit revision")
 public class EntitySnapshotDtoOut {
 
-  @Schema(description = "Unique identifier", example = "550e8400-e29b-41d4-a716-446655440000")
-  private UUID id;
-
   @Schema(description = "Template identifier", example = "web-service")
   private String templateIdentifier;
 
@@ -40,7 +35,4 @@ public class EntitySnapshotDtoOut {
 
   @Schema(description = "Relations of the entity at this revision")
   private List<RelationSnapshotDtoOut> relations;
-
-  @Schema(description = "Map of modified flags", example = "{'name_mod': true, 'identifier_mod': false}")
-  private Map<String, Boolean> modifiedFlags;
 }

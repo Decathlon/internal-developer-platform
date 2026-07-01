@@ -4,7 +4,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import java.time.Instant;
 import java.util.List;
-import java.util.Map;
 import java.util.UUID;
 
 import org.junit.jupiter.api.BeforeEach;
@@ -55,15 +54,11 @@ class EntityAuditDtoOutMapperTest {
       UUID entityId = UUID.randomUUID();
       Instant revisionDate = Instant.now();
 
-      var propertySnapshot = new EntityAuditInfo.PropertySnapshot(UUID.randomUUID(), "env", "PROD",
-          Map.of("name_mod", false, "value_mod", true));
+      var propertySnapshot = new EntityAuditInfo.PropertySnapshot(UUID.randomUUID(), "env", "PROD");
       var relationSnapshot = new EntityAuditInfo.RelationSnapshot(UUID.randomUUID(), "dependency",
-          "service", List.of("service-1", "service-2"),
-          Map.of("name_mod", false, "target_template_identifier_mod", false));
-
+          "service", List.of("service-1", "service-2"));
       var entitySnapshot = new EntityAuditInfo.EntitySnapshot(entityId, "web-service",
-          "Web API Service", "web-api-v1", Map.of("name_mod", true), List.of(propertySnapshot),
-          List.of(relationSnapshot));
+          "Web API Service", "web-api-v1", List.of(propertySnapshot), List.of(relationSnapshot));
 
       var auditInfo = new EntityAuditInfo(5L, revisionDate, "UPDATED", "developer", entitySnapshot);
 
@@ -79,7 +74,6 @@ class EntityAuditDtoOutMapperTest {
 
       // Verify snapshot
       assertThat(result.getSnapshot()).isNotNull();
-      assertThat(result.getSnapshot().getId()).isEqualTo(entityId);
       assertThat(result.getSnapshot().getTemplateIdentifier()).isEqualTo("web-service");
       assertThat(result.getSnapshot().getName()).isEqualTo("Web API Service");
       assertThat(result.getSnapshot().getIdentifier()).isEqualTo("web-api-v1");
@@ -101,9 +95,9 @@ class EntityAuditDtoOutMapperTest {
     void shouldMapDeletedRevisionType() {
       // Given
       var propertySnapshot = new EntityAuditInfo.PropertySnapshot(UUID.randomUUID(), "status",
-          "active", Map.of());
+          "active");
       var entitySnapshot = new EntityAuditInfo.EntitySnapshot(UUID.randomUUID(), "web-service",
-          "Service", "web-api", Map.of(), List.of(propertySnapshot), List.of());
+          "Service", "web-api", List.of(propertySnapshot), List.of());
 
       var auditInfo = new EntityAuditInfo(10L, Instant.now(), "DELETED", "admin", entitySnapshot);
 
@@ -132,7 +126,7 @@ class EntityAuditDtoOutMapperTest {
     void shouldMapAuditInfoWithEmptyCollections() {
       // Given
       var entitySnapshot = new EntityAuditInfo.EntitySnapshot(UUID.randomUUID(), "template", "Name",
-          "identifier", Map.of(), List.of(), List.of());
+          "identifier", List.of(), List.of());
       var auditInfo = new EntityAuditInfo(1L, Instant.now(), "CREATED", "user", entitySnapshot);
 
       // When
@@ -150,7 +144,7 @@ class EntityAuditDtoOutMapperTest {
     void shouldMapAuditInfoWithNullCollections() {
       // Given
       var entitySnapshot = new EntityAuditInfo.EntitySnapshot(UUID.randomUUID(), "template", "Name",
-          "identifier", Map.of(), null, null);
+          "identifier", List.of(), List.of());
       var auditInfo = new EntityAuditInfo(1L, Instant.now(), "UPDATED", "user", entitySnapshot);
 
       // When
@@ -168,9 +162,9 @@ class EntityAuditDtoOutMapperTest {
     void shouldMapRelationWithNullTargetIdentifiers() {
       // Given
       var relationSnapshot = new EntityAuditInfo.RelationSnapshot(UUID.randomUUID(), "relation",
-          "target-template", null, Map.of());
+          "target-template", null);
       var entitySnapshot = new EntityAuditInfo.EntitySnapshot(UUID.randomUUID(), "template", "Name",
-          "id", Map.of(), List.of(), List.of(relationSnapshot));
+          "id", List.of(), List.of(relationSnapshot));
 
       var auditInfo = new EntityAuditInfo(1L, Instant.now(), "CREATED", "user", entitySnapshot);
 
@@ -212,9 +206,9 @@ class EntityAuditDtoOutMapperTest {
     void shouldMapAuditInfoListWithSnapshots() {
       // Given
       var snapshot1 = new EntityAuditInfo.EntitySnapshot(UUID.randomUUID(), "template1", "Name1",
-          "id1", Map.of(), List.of(), List.of());
+          "id1", List.of(), List.of());
       var snapshot2 = new EntityAuditInfo.EntitySnapshot(UUID.randomUUID(), "template2", "Name2",
-          "id2", Map.of(), List.of(), List.of());
+          "id2", List.of(), List.of());
 
       var auditInfo1 = new EntityAuditInfo(1L, Instant.now(), "CREATED", "user1", snapshot1);
       var auditInfo2 = new EntityAuditInfo(2L, Instant.now(), "UPDATED", "user2", snapshot2);
@@ -256,7 +250,7 @@ class EntityAuditDtoOutMapperTest {
     void shouldMapListWithMixedSnapshots() {
       // Given
       var snapshot = new EntityAuditInfo.EntitySnapshot(UUID.randomUUID(), "template", "Name", "id",
-          Map.of(), List.of(), List.of());
+          List.of(), List.of());
 
       var auditInfo1 = new EntityAuditInfo(1L, Instant.now(), "CREATED", "user1", null);
       var auditInfo2 = new EntityAuditInfo(2L, Instant.now(), "UPDATED", "user2", snapshot);
@@ -280,9 +274,9 @@ class EntityAuditDtoOutMapperTest {
     @DisplayName("Should handle property snapshot with null values")
     void shouldHandlePropertySnapshotWithNullValues() {
       // Given
-      var propertySnapshot = new EntityAuditInfo.PropertySnapshot(null, null, null, Map.of());
+      var propertySnapshot = new EntityAuditInfo.PropertySnapshot(null, null, null);
       var entitySnapshot = new EntityAuditInfo.EntitySnapshot(UUID.randomUUID(), "template", "Name",
-          "id", Map.of(), List.of(propertySnapshot), List.of());
+          "id", List.of(propertySnapshot), List.of());
 
       var auditInfo = new EntityAuditInfo(1L, Instant.now(), "CREATED", "user", entitySnapshot);
 
@@ -291,7 +285,6 @@ class EntityAuditDtoOutMapperTest {
 
       // Then
       assertThat(result.getSnapshot().getProperties()).hasSize(1);
-      assertThat(result.getSnapshot().getProperties().get(0).getId()).isNull();
       assertThat(result.getSnapshot().getProperties().get(0).getName()).isNull();
       assertThat(result.getSnapshot().getProperties().get(0).getValue()).isNull();
     }
@@ -302,9 +295,9 @@ class EntityAuditDtoOutMapperTest {
       // Given
       List<String> originalIdentifiers = new java.util.ArrayList<>(List.of("id1", "id2"));
       var relationSnapshot = new EntityAuditInfo.RelationSnapshot(UUID.randomUUID(), "relation",
-          "target", originalIdentifiers, Map.of());
+          "target", originalIdentifiers);
       var entitySnapshot = new EntityAuditInfo.EntitySnapshot(UUID.randomUUID(), "template", "Name",
-          "id", Map.of(), List.of(), List.of(relationSnapshot));
+          "id", List.of(), List.of(relationSnapshot));
 
       var auditInfo = new EntityAuditInfo(1L, Instant.now(), "CREATED", "user", entitySnapshot);
 
@@ -323,9 +316,9 @@ class EntityAuditDtoOutMapperTest {
     void shouldHandleRelationWithEmptyTargetIdentifiers() {
       // Given
       var relationSnapshot = new EntityAuditInfo.RelationSnapshot(UUID.randomUUID(), "relation",
-          "target", List.of(), Map.of());
+          "target", List.of());
       var entitySnapshot = new EntityAuditInfo.EntitySnapshot(UUID.randomUUID(), "template", "Name",
-          "id", Map.of(), List.of(), List.of(relationSnapshot));
+          "id", List.of(), List.of(relationSnapshot));
 
       var auditInfo = new EntityAuditInfo(1L, Instant.now(), "CREATED", "user", entitySnapshot);
 
@@ -340,20 +333,17 @@ class EntityAuditDtoOutMapperTest {
     @DisplayName("Should map multiple properties and relations correctly")
     void shouldMapMultiplePropertiesAndRelations() {
       // Given
-      var prop1 = new EntityAuditInfo.PropertySnapshot(UUID.randomUUID(), "prop1", "value1",
-          Map.of("name_mod", false, "value_mod", true));
-      var prop2 = new EntityAuditInfo.PropertySnapshot(UUID.randomUUID(), "prop2", "value2",
-          Map.of("name_mod", true, "value_mod", false));
-      var prop3 = new EntityAuditInfo.PropertySnapshot(UUID.randomUUID(), "prop3", "value3",
-          Map.of());
+      var prop1 = new EntityAuditInfo.PropertySnapshot(UUID.randomUUID(), "prop1", "value1");
+      var prop2 = new EntityAuditInfo.PropertySnapshot(UUID.randomUUID(), "prop2", "value2");
+      var prop3 = new EntityAuditInfo.PropertySnapshot(UUID.randomUUID(), "prop3", "value3");
 
       var rel1 = new EntityAuditInfo.RelationSnapshot(UUID.randomUUID(), "rel1", "t1",
-          List.of("id1"), Map.of("name_mod", false));
+          List.of("id1"));
       var rel2 = new EntityAuditInfo.RelationSnapshot(UUID.randomUUID(), "rel2", "t2",
-          List.of("id2", "id3"), Map.of("target_template_identifier_mod", true));
+          List.of("id2", "id3"));
 
       var entitySnapshot = new EntityAuditInfo.EntitySnapshot(UUID.randomUUID(), "template", "Name",
-          "id", Map.of("name_mod", true), List.of(prop1, prop2, prop3), List.of(rel1, rel2));
+          "id", List.of(prop1, prop2, prop3), List.of(rel1, rel2));
 
       var auditInfo = new EntityAuditInfo(1L, Instant.now(), "CREATED", "user", entitySnapshot);
 

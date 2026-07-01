@@ -2,7 +2,6 @@ package com.decathlon.idp_core.domain.model.entity;
 
 import java.time.Instant;
 import java.util.List;
-import java.util.Map;
 import java.util.UUID;
 
 /// Domain model representing audit information for an [Entity] revision.
@@ -39,15 +38,12 @@ public record EntityAuditInfo(Number revisionNumber, Instant revisionDate, Strin
   /// conforms to
   /// @param name human-readable name of the entity
   /// @param identifier identifier of the entity
-  /// @param modifiedFlags map of field names to modification status (for example,
-  /// "name_mod" -> true)
   /// @param properties list of property snapshots capturing property values at
   /// this revision
   /// @param relations list of relation snapshots capturing relationship targets
   /// at this revision
   public record EntitySnapshot(UUID id, String templateIdentifier, String name, String identifier,
-      Map<String, Boolean> modifiedFlags, List<PropertySnapshot> properties,
-      List<RelationSnapshot> relations) {
+      List<PropertySnapshot> properties, List<RelationSnapshot> relations) {
   }
 
   /// Snapshot of a property's state at a specific point in time during entity
@@ -64,10 +60,7 @@ public record EntityAuditInfo(Number revisionNumber, Instant revisionDate, Strin
   /// template
   /// @param value the value of the property as a string (preserves JSON-typed
   /// values as strings)
-  /// @param modifiedFlags map of field names to modification status (for example,
-  /// "name_mod" -> true, "value_mod" -> false)
-  public record PropertySnapshot(UUID id, String name, String value,
-      Map<String, Boolean> modifiedFlags) {
+  public record PropertySnapshot(UUID id, String name, String value) {
   }
 
   /// Snapshot of a relation's state at a specific point in time during entity
@@ -84,10 +77,8 @@ public record EntityAuditInfo(Number revisionNumber, Instant revisionDate, Strin
   /// @param targetTemplateIdentifier identifier of the target entity template
   /// @param targetEntityIdentifiers list of business identifiers of target
   /// entities
-  /// @param modifiedFlags map of field names to modification status (for example,
-  /// "name_mod" -> true, "target_template_identifier_mod" -> false)
   public record RelationSnapshot(UUID id, String name, String targetTemplateIdentifier,
-      List<String> targetEntityIdentifiers, Map<String, Boolean> modifiedFlags) {
+      List<String> targetEntityIdentifiers) {
     public RelationSnapshot {
       targetEntityIdentifiers = targetEntityIdentifiers == null
           ? List.of()

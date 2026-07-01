@@ -22,6 +22,7 @@ import lombok.RequiredArgsConstructor;
 /// - Retrieve audit history for entities including deleted ones
 /// - Validate template existence before returning audit data
 /// - Transform technical audit data into business-meaningful information
+/// - Query child entity revision history to detect modifications
 @Service
 @RequiredArgsConstructor
 public class EntityAuditService {

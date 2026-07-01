@@ -1,8 +1,5 @@
 package com.decathlon.idp_core.infrastructure.adapters.api.dto.out.entity.audit;
 
-import java.util.Map;
-import java.util.UUID;
-
 import com.fasterxml.jackson.databind.PropertyNamingStrategies.SnakeCaseStrategy;
 import com.fasterxml.jackson.databind.annotation.JsonNaming;
 
@@ -21,15 +18,9 @@ import lombok.Data;
 @Schema(description = "Snapshot of a property at a specific audit revision")
 public class PropertySnapshotDtoOut {
 
-  @Schema(description = "Unique identifier of the property", example = "550e8400-e29b-41d4-a716-446655440000")
-  private UUID id;
-
   @Schema(description = "Name of the property matching a PropertyDefinition", example = "description")
   private String name;
 
   @Schema(description = "Value of the property at this revision", example = "My service description")
   private String value;
-
-  @Schema(description = "Map of modified flags", example = "{'name_mod': true, 'value_mod': false}")
-  private Map<String, Boolean> modifiedFlags;
 }
