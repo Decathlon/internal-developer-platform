@@ -6,7 +6,7 @@
   <parent>
     <groupId>org.springframework.boot</groupId>
     <artifactId>spring-boot-starter-parent</artifactId>
-    <version>4.0.5</version>
+    <version>4.1.0</version>
     <relativePath/>
   </parent>
 
@@ -27,11 +27,23 @@
     <xml-maven-plugin.version>1.1.0</xml-maven-plugin.version>
     <mapstruct.version>1.5.5.Final</mapstruct.version>
     <archunit.version>1.3.2</archunit.version>
+    <netty.version>4.2.15.Final</netty.version>
+    <spring-security.version>7.1.0</spring-security.version>
+    <spring-framework.version>7.0.8</spring-framework.version>
+    <postgresql.version>42.7.11</postgresql.version>
+    <nimbus-jose-jwt.version>10.9.1</nimbus-jose-jwt.version>
   </properties>
 
   <!--  Swagger version management to avoid conflicts -->
   <dependencyManagement>
     <dependencies>
+      <dependency>
+        <groupId>io.netty</groupId>
+        <artifactId>netty-bom</artifactId>
+        <version>${netty.version}</version>
+        <type>pom</type>
+        <scope>import</scope>
+      </dependency>
       <dependency>
         <groupId>io.swagger.core.v3</groupId>
         <artifactId>swagger-core-jakarta</artifactId>
@@ -269,6 +281,7 @@
       <plugin>
         <groupId>org.flywaydb</groupId>
         <artifactId>flyway-maven-plugin</artifactId>
+        <version>9.12.0</version>
       </plugin>
 
       <plugin>
@@ -420,6 +433,7 @@
             <rule>name:regex:Apache(\s|-)(Software )?(License |License,
                             )?(Version|version )?2\.0</rule>
             <rule>name:regex:(?i)(EPL|Eclipse Public License)(\s|-|\s+-\s+|\s+v\.?\s*)2\.0</rule>
+            <rule>name:equal:EPL 2.0</rule>
             <rule>name:equal:Eclipse Public License - v 2.0</rule>
             <rule>name:equal:Eclipse Distribution License - v 1.0</rule>
             <rule>name:equal:Eclipse Distribution License v. 1.0</rule>
@@ -433,6 +447,8 @@
           </rules>
           <exclusions>
             <exclude>org.hibernate.orm:hibernate-core:6.6.29.Final</exclude>
+            <exclude>ch.qos.logback:logback-classic:1.5.34</exclude>
+            <exclude>ch.qos.logback:logback-core:1.5.34</exclude>
           </exclusions>
         </configuration>
         <executions>
