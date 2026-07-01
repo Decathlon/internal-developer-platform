@@ -1,0 +1,15 @@
+{
+  "identifier": "github-dora-connector",
+  "title": "GitHub DORA Connector",
+  "description": "Collects deployment events from GitHub",
+  "enabled": true,
+  "mapping_identifiers": ["microservice-mapping"],
+  "security": {
+    "type": "HMAC_SHA256",
+    "config": {
+      "header_name": "X-Hub-Signature-256",
+      "secret_alias": "MY_WEBHOOK_SECRET",
+      "prefix": "sha256="
+    }
+  }
+}

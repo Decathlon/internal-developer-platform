@@ -1,0 +1,14 @@
+{
+  "identifier": "connector-to-update",
+  "title": "Updated Title",
+  "description": "Updated description",
+  "enabled": false,
+  "mapping_identifiers": ["microservice-mapping"],
+  "security": {
+    "type": "STATIC_TOKEN",
+    "config": {
+      "header_name": "X-Token",
+      "secret_alias": "MY_TOKEN"
+    }
+  }
+}

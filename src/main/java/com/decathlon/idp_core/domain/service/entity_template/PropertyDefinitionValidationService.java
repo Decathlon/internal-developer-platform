@@ -102,7 +102,8 @@ public class PropertyDefinitionValidationService {
       boolean propertyTypeChanged = updated != null && !existing.type().equals(updated.type());
 
       if (propertyTypeChanged) {
-        throw new PropertyTypeChangeException(existing.name(), existing.type(), updated.type());
+        throw new PropertyTypeChangeException(existing.name(), existing.type().name(),
+            updated.type().name());
       }
     }
   }
@@ -177,18 +178,18 @@ public class PropertyDefinitionValidationService {
   private void validateStringConstraints(String propertyName, PropertyRules rules) {
     // Validate min_length is non-negative
     if (rules.minLength() != null && rules.minLength() < 0) {
-      throw new PropertyDefinitionRulesConflictException(propertyName, PropertyType.STRING,
+      throw new PropertyDefinitionRulesConflictException(propertyName, PropertyType.STRING.name(),
           PROPERTY_RULES_MIN_LENGTH_NON_NEGATIVE);
     }
     // Validate max_length is not zero or negative
     if (rules.maxLength() != null && rules.maxLength() <= 0) {
-      throw new PropertyDefinitionRulesConflictException(propertyName, PropertyType.STRING,
+      throw new PropertyDefinitionRulesConflictException(propertyName, PropertyType.STRING.name(),
           PROPERTY_RULES_MAX_LENGTH_POSITIVE);
     }
     // Validate min_length is below or equal to max_length
     if (rules.minLength() != null && rules.maxLength() != null
         && rules.minLength() > rules.maxLength()) {
-      throw new PropertyDefinitionRulesConflictException(propertyName, PropertyType.STRING,
+      throw new PropertyDefinitionRulesConflictException(propertyName, PropertyType.STRING.name(),
           minMaxConstraintViolated(LENGTH));
     }
   }
@@ -210,31 +211,31 @@ public class PropertyDefinitionValidationService {
     // Reject numeric rules for STRING type
     if (rules.maxValue() != null || rules.minValue() != null) {
       String ruleName = rules.maxValue() != null ? MAX_VALUE : MIN_VALUE;
-      throw new PropertyDefinitionRulesConflictException(propertyName, PropertyType.STRING,
+      throw new PropertyDefinitionRulesConflictException(propertyName, PropertyType.STRING.name(),
           PROPERTY_RULES_NUMERIC_RULE_NOT_ALLOWED.replace("{rule}", ruleName));
     }
 
     // format, regex, and enum_values are incompatible with each other
     if (rules.format() != null && rules.enumValues() != null) {
-      throw new PropertyDefinitionRulesConflictException(propertyName, PropertyType.STRING,
+      throw new PropertyDefinitionRulesConflictException(propertyName, PropertyType.STRING.name(),
           rulesAreIncompatible(FORMAT, ENUM_VALUES));
     }
     if (rules.format() != null && rules.regex() != null) {
-      throw new PropertyDefinitionRulesConflictException(propertyName, PropertyType.STRING,
+      throw new PropertyDefinitionRulesConflictException(propertyName, PropertyType.STRING.name(),
           rulesAreIncompatible(FORMAT, REGEX));
     }
     if (rules.regex() != null && rules.enumValues() != null) {
-      throw new PropertyDefinitionRulesConflictException(propertyName, PropertyType.STRING,
+      throw new PropertyDefinitionRulesConflictException(propertyName, PropertyType.STRING.name(),
           rulesAreIncompatible(REGEX, ENUM_VALUES));
     }
 
     // enum_values and length constraints are incompatible with each other
     if (rules.enumValues() != null && rules.maxLength() != null) {
-      throw new PropertyDefinitionRulesConflictException(propertyName, PropertyType.STRING,
+      throw new PropertyDefinitionRulesConflictException(propertyName, PropertyType.STRING.name(),
           rulesAreIncompatible(ENUM_VALUES, MAX_LENGTH));
     }
     if (rules.enumValues() != null && rules.minLength() != null) {
-      throw new PropertyDefinitionRulesConflictException(propertyName, PropertyType.STRING,
+      throw new PropertyDefinitionRulesConflictException(propertyName, PropertyType.STRING.name(),
           rulesAreIncompatible(ENUM_VALUES, MIN_LENGTH));
     }
 
@@ -254,33 +255,33 @@ public class PropertyDefinitionValidationService {
   /// or min/max value constraints are violated
   private void validateNumberPropertyRules(String propertyName, PropertyRules rules) {
     if (rules.format() != null) {
-      throw new PropertyDefinitionRulesConflictException(propertyName, PropertyType.NUMBER,
+      throw new PropertyDefinitionRulesConflictException(propertyName, PropertyType.NUMBER.name(),
           ruleNotAllowed(FORMAT, PropertyType.NUMBER.name()));
     }
 
     if (rules.enumValues() != null) {
-      throw new PropertyDefinitionRulesConflictException(propertyName, PropertyType.NUMBER,
+      throw new PropertyDefinitionRulesConflictException(propertyName, PropertyType.NUMBER.name(),
           ruleNotAllowed(ENUM_VALUES, PropertyType.NUMBER.name()));
     }
 
     if (rules.regex() != null) {
-      throw new PropertyDefinitionRulesConflictException(propertyName, PropertyType.NUMBER,
+      throw new PropertyDefinitionRulesConflictException(propertyName, PropertyType.NUMBER.name(),
           ruleNotAllowed(REGEX, PropertyType.NUMBER.name()));
     }
 
     if (rules.minLength() != null) {
-      throw new PropertyDefinitionRulesConflictException(propertyName, PropertyType.NUMBER,
+      throw new PropertyDefinitionRulesConflictException(propertyName, PropertyType.NUMBER.name(),
           ruleNotAllowed(MIN_LENGTH, PropertyType.NUMBER.name()));
     }
 
     if (rules.maxLength() != null) {
-      throw new PropertyDefinitionRulesConflictException(propertyName, PropertyType.NUMBER,
+      throw new PropertyDefinitionRulesConflictException(propertyName, PropertyType.NUMBER.name(),
           ruleNotAllowed(MAX_LENGTH, PropertyType.NUMBER.name()));
     }
 
     if (rules.minValue() != null && rules.maxValue() != null
         && rules.minValue() > rules.maxValue()) {
-      throw new PropertyDefinitionRulesConflictException(propertyName, PropertyType.NUMBER,
+      throw new PropertyDefinitionRulesConflictException(propertyName, PropertyType.NUMBER.name(),
           minMaxConstraintViolated(VALUE));
     }
   }
@@ -299,7 +300,7 @@ public class PropertyDefinitionValidationService {
         || rules.maxLength() != null || rules.minLength() != null || rules.maxValue() != null
         || rules.minValue() != null) {
 
-      throw new PropertyDefinitionRulesConflictException(propertyName, PropertyType.BOOLEAN,
+      throw new PropertyDefinitionRulesConflictException(propertyName, PropertyType.BOOLEAN.name(),
           PROPERTY_RULES_BOOLEAN_NOT_ALLOWED);
     }
   }

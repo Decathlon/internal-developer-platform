@@ -13,6 +13,7 @@ import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.test.context.support.WithMockUser;
+import org.springframework.test.context.jdbc.Sql;
 import org.springframework.test.web.servlet.MockMvc;
 
 import com.decathlon.idp_core.AbstractIntegrationTest;
@@ -31,6 +32,11 @@ import com.decathlon.idp_core.AbstractIntegrationTest;
 /// - Filter "monitors": only a→b returned; c is unreachable via "monitors" edges
 /// - 404 for unknown entity
 /// - 401 without authentication
+// R__3 is idempotent (ON CONFLICT DO NOTHING) so it is safe to re-run it
+// before this test class even when Flyway already applied it at startup.
+// This guarantees the graph entities are always present regardless of which
+// other test class ran before this one and may have deleted them.
+@Sql(scripts = "/db/test/R__3_Insert_graph_entities_test_data.sql", executionPhase = Sql.ExecutionPhase.BEFORE_TEST_CLASS)
 @DisplayName("GET /api/v1/entities/{templateIdentifier}/{entityIdentifier}/graph")
 public class EntityGraphControllerTest extends AbstractIntegrationTest {
 
