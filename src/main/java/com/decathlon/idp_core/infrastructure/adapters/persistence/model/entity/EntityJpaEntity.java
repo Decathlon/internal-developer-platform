@@ -16,6 +16,7 @@ import jakarta.persistence.Table;
 import jakarta.persistence.UniqueConstraint;
 
 import org.hibernate.annotations.BatchSize;
+import org.hibernate.envers.Audited;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -26,6 +27,7 @@ import lombok.NoArgsConstructor;
 @Data
 @Table(name = "entity", uniqueConstraints = {
     @UniqueConstraint(columnNames = {"identifier", "template_identifier"})})
+@Audited(withModifiedFlag = true)
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
@@ -53,4 +55,7 @@ public class EntityJpaEntity {
   @JoinTable(name = "entity_relations", joinColumns = @JoinColumn(name = "entity_id"), inverseJoinColumns = @JoinColumn(name = "relation_id"), uniqueConstraints = @UniqueConstraint(columnNames = {
       "entity_id", "relation_id"}), indexes = @Index(columnList = "entity_id"))
   private List<RelationJpaEntity> relations;
+
+  @Column(name = "updated_at")
+  private Long updatedAt;
 }

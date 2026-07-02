@@ -19,9 +19,23 @@ spring:
   jpa:
     hibernate:
       ddl-auto: none # Disable JPA schema auto-generation, use Flyway instead
-
-
+  security:
+    type: oauth2
+    oauth2:
+      client:
+        registration:
+          idp-core:
+            client-id: local-client-id
+            client-secret: local-client-secret
+        provider:
+          idp-core:
+            token-uri: http://localhost:8080/auth/token
+      resourceserver:
+        jwt:
+          jwk-set-uri: http://localhost:8080/auth/.well-known/jwks.json
 app:
+  security:
+    mock-enabled: true
   full-refresh-at-startup: true
   idp-core-prefix-url: http://localhost:8084
 logging:

@@ -1,9 +1,9 @@
 ---
 title: Core Concepts
-description: Understand the fundamental concepts of IDP-Core - Entity Templates, Entities, Properties, Relations
+description: Understand the fundamental concepts of IDP-Core - Entity Templates, Entities, Properties, Relations, and Audit tracking
 ---
 
-IDP-Core sits at the center of a flexible, runtime-configurable data model. This section explains the fundamental concepts you need to understand.
+IDP-Core sits at the center of a flexible, runtime-configurable data model. This section explains the fundamental concepts you need to understand, including entity management and comprehensive audit tracking.
 
 ## Overview
 
@@ -54,6 +54,12 @@ graph TB
     ---
 
     Query entities by attributes, property values, and relations using the filter DSL.
+
+- 📜 **[Audit](audit.md)**
+
+    ---
+
+    Track all changes over time with comprehensive revision history and user attribution.
 
 </div>
 

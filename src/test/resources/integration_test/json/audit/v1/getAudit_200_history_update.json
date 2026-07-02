@@ -1,0 +1,9 @@
+{
+  "name": "Audit Test Entity Updated",
+  "properties": {
+    "applicationName": "catalog-api",
+    "ownerEmail": "owner@example.com",
+    "environment": "PROD",
+    "version": "2.0.0"
+  }
+}
