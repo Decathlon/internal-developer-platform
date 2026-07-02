@@ -15,6 +15,7 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import com.decathlon.idp_core.domain.model.entity.EntitySummary;
+import com.decathlon.idp_core.infrastructure.adapters.persistence.model.LineageIdProjection;
 import com.decathlon.idp_core.infrastructure.adapters.persistence.model.entity.EntityJpaEntity;
 
 @Repository
@@ -252,4 +253,63 @@ public interface JpaEntityRepository
   List<UUID> findEntityGraphIdsByTemplate(@Param("rootIds") Collection<UUID> rootIds,
       @Param("depth") int depth, @Param("startTemplate") String startTemplate,
       @Param("size") int size, @Param("offset") int offset);
+
+  @Query(value = """
+      WITH RECURSIVE
+              -- 1. ANCHOR: Map incoming root IDs to their parallel validation groups
+              input_criteria(id, group_id) AS (
+                  SELECT t.root_id, t.grp_id
+                  FROM UNNEST(CAST(:rootIds AS uuid[]), CAST(:groupIds AS text[])) AS t(root_id, grp_id)
+              ),
+
+              -- 2. RECURSIVE PATH SEARCH: Carry group tokens AND enforce direct lineage flows
+              agnostic_discovery(id, group_id, flow, depth) AS (
+                  -- Initialize every path starting from the filtered targets as an INBOUND flow
+                  SELECT ic.id, ic.group_id, 'INBOUND' AS flow, 0
+                  FROM input_criteria ic
+
+                  UNION
+
+                  -- Propagate paths only where the edge direction matches the current flow lane
+                  SELECT combined.id, ad.group_id, ad.flow, ad.depth + 1
+                  FROM agnostic_discovery ad
+                  JOIN (
+                      -- Inbound Paths: Moving backward from Target to Source
+                      SELECT rte.target_entity_uuid AS anchor_id, er.entity_id AS id, 'INBOUND' AS flow_match
+                      FROM idp_core.relation_target_entities rte
+                      JOIN idp_core.entity_relations er ON er.relation_id = rte.relation_id
+
+                      UNION ALL
+
+                      -- Outbound Paths: Moving forward from Source to Target
+                      SELECT er.entity_id AS anchor_id, rte.target_entity_uuid AS id, 'OUTBOUND' AS flow_match
+                      FROM idp_core.entity_relations er
+                      JOIN idp_core.relation_target_entities rte ON rte.relation_id = er.relation_id
+                      WHERE rte.target_entity_uuid IS NOT NULL
+                  ) combined ON combined.anchor_id = ad.id AND combined.flow_match = ad.flow
+                  WHERE ad.depth < :depth
+              ),
+
+              -- 3. INTERSECTION CORE: Group by entity and assert all distinct tokens were collected
+              matched_candidates AS (
+                  SELECT ad.id
+                  FROM agnostic_discovery ad
+                  JOIN idp_core.entity e ON e.id = ad.id
+                  WHERE e.template_identifier = :startTemplate
+                  GROUP BY ad.id
+                  HAVING COUNT(DISTINCT ad.group_id) = :expectedGroupCount
+              )
+
+              -- 4. PAGINATED OUTPUT: Return the clean sorted chunk slice
+              SELECT id FROM matched_candidates
+              ORDER BY id ASC
+              LIMIT :size OFFSET :offset
+            """, nativeQuery = true)
+  List<UUID> findEntityGraphIdsAgnosticIntersect(@Param("rootIds") UUID[] rootIds,
+      @Param("groupIds") String[] groupIds, @Param("expectedGroupCount") long expectedGroupCount,
+      @Param("depth") int depth, @Param("startTemplate") String startTemplate,
+      @Param("size") int size, @Param("offset") int offset);
+
+
+
 }

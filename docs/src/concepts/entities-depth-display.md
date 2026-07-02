@@ -29,31 +29,31 @@ graph TB
 
     A -->|1. Validate template<br/>2. Parse relations_filter| C
     C -->|Template exists?| B
-    
+
     A -->|3. Extract entity identifiers<br/>4. Call service with depth| B
-    
+
     B -->|5. Isolate per-root reachable<br/>footprint via computeReachableSubGraph| B
-    
+
     B -->|6. Filter localized entity map<br/>7. Rebuild localized indices| D
-    
+
     D -->|8. Batch load graph<br/>up to depth| E
-    
+
     E -->|9. Execute recursive CTE| F
-    
+
     F -->|10. Traverse all paths<br/>OUTBOUND + INBOUND| G
-    
+
     G -->|11. Return entity UUIDs| E
-    
+
     E -->|12. Batch fetch entities<br/>with relations| D
-    
+
     D -->|13. Domain entities| B
-    
+
     B -->|14. For each entity:<br/>collect outbound + inbound<br/>relations from all depths| H
-    
+
     H -->|15. Merge relations by name<br/>Dedup targets per relation| H
-    
+
     H -->|16. EntityDepDtoOut| I
-    
+
     I -->|17. Paginated response| A
 
     style A fill:#4A90E2,stroke:#2E5C8A,color:#fff

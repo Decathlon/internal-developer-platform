@@ -254,6 +254,57 @@ public class EntityGraphService {
   }
 
   @Transactional(readOnly = true)
+  public Map<String, EntityGraphNode> getBatchEntityGraphsByAgnosticFilter(UUID[] rootUuids,
+      String[] groupIds, long expectedGroupCount, int depth, String startTemplate, int size,
+      int offset) {
+
+    EntityGraphTraversalMode mode = EntityGraphTraversalMode.DIRECT_LINEAGE;
+
+    if (rootUuids == null || rootUuids.length == 0) {
+      return Map.of();
+    }
+
+    int effectiveDepth = Math.clamp(depth, 1, MAX_DEPTH);
+
+    Map<UUID, Entity> entityGraphs = entityGraphRepositoryPort.findEntityGraphByAgnosticTemplate(
+        rootUuids, groupIds, expectedGroupCount, depth, startTemplate, size, offset);
+
+    if (entityGraphs == null || entityGraphs.isEmpty()) {
+      return Map.of();
+    }
+
+    IndexBundle globalIndices = buildIndices(entityGraphs, mode);
+    Map<String, EntityGraphNode> result = new HashMap<>();
+
+    for (Map.Entry<UUID, Entity> entry : entityGraphs.entrySet()) {
+      UUID entityUuid = entry.getKey();
+
+      if (entityUuid != null) {
+        Set<UUID> reachableFootprint = computeReachableSubGraph(entityUuid, entityGraphs,
+            globalIndices, effectiveDepth, mode);
+
+        Map<UUID, Entity> localizedEntityMap = entityGraphs.entrySet().stream()
+            .filter(e -> reachableFootprint.contains(e.getKey()))
+            .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
+
+        IndexBundle localizedIndices = buildIndices(localizedEntityMap, mode);
+
+        Set<String> isolatedStack = new HashSet<>();
+        Map<String, EntityGraphNode> isolatedCache = new HashMap<>();
+
+        GraphTraversalContext localizedCtx = new GraphTraversalContext(localizedEntityMap,
+            localizedIndices.textToUuidLookup(), localizedIndices.inboundIndex(), false, Set.of(),
+            Set.of(), isolatedStack, isolatedCache, mode);
+
+        EntityGraphNode node = buildGraphNode(entityUuid, localizedCtx);
+        result.put(entityUuid.toString(), node);
+      }
+    }
+
+    return result;
+  }
+
+  @Transactional(readOnly = true)
   public Map<String, EntityGraphNode> getBatchEntityGraphsByTemplate(String templateIdentifier,
       List<String> entityIdentifiers, int depth, String startTemplate, int size, int offset) {
 
@@ -288,12 +339,6 @@ public class EntityGraphService {
 
     for (Map.Entry<UUID, Entity> entry : entityGraphs.entrySet()) {
       UUID entityUuid = entry.getKey();
-      // for (Map.Entry<UUID, Entity> entry : entityGraphs.entrySet()) {
-      // if (entry.getValue().identifier().equals(identifier)) {
-      // entityUuid = entry.getKey();
-      // break;
-      // }
-      // }
 
       if (entityUuid != null) {
         Set<UUID> reachableFootprint = computeReachableSubGraph(entityUuid, entityGraphs,

@@ -46,8 +46,12 @@ import static org.springframework.http.HttpStatus.CREATED;
 import static org.springframework.http.HttpStatus.NO_CONTENT;
 import static org.springframework.http.HttpStatus.OK;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
+import java.util.UUID;
+import java.util.stream.Collectors;
 
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
@@ -56,6 +60,8 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -82,8 +88,10 @@ import com.decathlon.idp_core.domain.service.filter.EntityFilterDslParser;
 import com.decathlon.idp_core.domain.service.search.SearchFilterParser;
 import com.decathlon.idp_core.infrastructure.adapters.api.configuration.SwaggerConfiguration.EntityPageResponse;
 import com.decathlon.idp_core.infrastructure.adapters.api.dto.in.EntityCreateDtoIn;
+import com.decathlon.idp_core.infrastructure.adapters.api.dto.in.EntitySearchDepthRequestDtoIn;
 import com.decathlon.idp_core.infrastructure.adapters.api.dto.in.EntitySearchRequestDtoIn;
 import com.decathlon.idp_core.infrastructure.adapters.api.dto.in.EntityUpdateDtoIn;
+import com.decathlon.idp_core.infrastructure.adapters.api.dto.in.FilterNodeDtoIn;
 import com.decathlon.idp_core.infrastructure.adapters.api.dto.out.entity.EntityDepDtoOut;
 import com.decathlon.idp_core.infrastructure.adapters.api.dto.out.entity.EntityDtoOut;
 import com.decathlon.idp_core.infrastructure.adapters.api.handler.ApiExceptionHandler;
@@ -299,23 +307,24 @@ public class EntityController {
   /// control
   /// @param templateIdentifier template filter for entity scope limitation
   /// @param depth maximum relation traversal depth (default 1,
-  /// Retrieves paginated entities with their dependency graphs up to specified
-  /// depth.
+  /// Retrieves paginated entities with their dependency
+  /// graphs up to specified depth.
   ///
-  /// **API contract:** Returns a paginated list of entities with their outbound
-  /// and
-  /// inbound relations merged into a single relations object. Each entity
-  /// includes all
-  /// reachable nodes up to the specified depth using DIRECT_LINEAGE traversal
-  /// mode.
-  /// Results are returned as EntityDepDtoOut DTOs with relations merged from both
-  /// directions. Supports filtering relations by name using a comma-separated
-  /// list.
+  /// **API contract:** Returns a paginated list of
+  /// entities with their outbound and inbound relations
+  /// merged into a single relations object. Each entity
+  /// includes all reachable nodes up to the specified
+  /// depth using DIRECT_LINEAGE traversal mode. Results
+  /// are returned as EntityDepDtoOut DTOs with relations
+  /// merged from both directions. Supports filtering
+  /// relations by name using a comma-separated list.
   ///
   /// @param page zero-based page index for pagination navigation
-  /// @param size number of entities per page for response size control
+  /// @param size number of entities per page for response size
+  /// control
   /// @param templateIdentifier template filter for entity scope limitation
-  /// @param depth maximum relation traversal depth (default 1, clamped to 1-6)
+  /// @param depth maximum relation traversal depth (default 1,
+  /// clamped to 1-6)
   /// @param relationsFilter comma-separated list of relation names to include
   /// (optional, empty means all relations)
   /// @param q optional filter query string for entity filtering
@@ -437,6 +446,79 @@ public class EntityController {
     Page<Entity> page = toPageResponse(result.content(), paginationCriteria,
         result.totalElements());
     return entityDtoOutMapper.fromEntitiesSearchPageToDtoPage(page);
+  }
+
+  // @PostMapping("/search")
+  // public ResponseEntity<EntityPageResponse> searchEntities(@RequestBody
+  // EntitySearchDepthRequestDtoIn request) {
+
+  // // 1. Establish the global execution strategy up front
+  // int globalDepth = (request.depth() != null) ? request.depth() : 1;
+  // List<String> globalWhitelist = request.allowedRelations() != null ?
+  // request.allowedRelations() : List.of();
+
+  // // 2. Pass these global parameters down into your criteria evaluation loop
+  // Set<UUID> matchingRootIds = filterEngine.resolveAllCriteria(
+  // request.filter(),
+  // globalDepth,
+  // globalWhitelist);
+
+  // // 3. Complete the execution with the standard pagination and hydration pass
+  // return ResponseEntity
+  // .ok(hydrationService.buildPage(matchingRootIds, request.page(),
+  // request.size(), globalDepth));
+  // }
+
+  @Operation(summary = "Search entities by lineage constraints", description = "Execute a paginated cross-template intersection search via graph lineage pipelines")
+  @ApiResponse(responseCode = "200", description = "Lineage search executed successfully", content = @Content(schema = @Schema(implementation = EntityPageResponse.class)))
+  @ApiResponse(responseCode = "400", description = "Invalid criteria filter tree arguments payload", content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
+  @PostMapping("/{templateIdentifier}/search")
+  @ResponseStatus(HttpStatus.OK)
+  public Page<EntityDepDtoOut> searchEntitiesByLineage(@PathVariable String templateIdentifier,
+      @Valid @RequestBody EntitySearchDepthRequestDtoIn searchRequest) {
+
+    // Combine results from all filters into parallel arrays for cross-template
+    // intersection
+    List<UUID> combinedRoots = new ArrayList<>();
+    List<String> rootGroupMapping = new ArrayList<>(); // Track which group each root belongs to
+
+    // Iterate through each filter in the request
+    for (int groupIndex = 0; groupIndex < searchRequest.filters().size(); groupIndex++) {
+      FilterNodeDtoIn filterDto = searchRequest.filters().get(groupIndex);
+      String groupId = "GRP_" + (groupIndex + 1); // GRP_1, GRP_2, etc.
+
+      // Parse and evaluate each filter
+      RawSearchFilterNode rawFilter = searchFilterMapper.toRaw(filterDto);
+      SearchFilterNode filter = searchFilterParser.parse(rawFilter);
+
+      // Search for entities matching this filter with pagination
+      PaginationCriteria paginationCriteria = new PaginationCriteria(0, 100, null);
+      PaginatedResult<Entity> result = entityService.searchEntities(filter, "", paginationCriteria);
+
+      // Collect all matching entity IDs and their group identifier
+      // All entities in a group share the same GRP_N identifier (Logical OR within
+      // this axis)
+      for (Entity entity : result.content()) {
+        UUID entityId = entity.id();
+        combinedRoots.add(entityId);
+        rootGroupMapping.add(groupId);
+      }
+    }
+
+    UUID[] rootArray = combinedRoots.toArray(new UUID[0]);
+    String[] groupArray = rootGroupMapping.toArray(new String[0]);
+
+    // Load full Entity objects for the paginated results
+    Map<String, EntityGraphNode> entityGraphs = entityGraphService
+        .getBatchEntityGraphsByAgnosticFilter(rootArray, groupArray, searchRequest.filters().size(),
+            searchRequest.depth(), templateIdentifier, searchRequest.size(), searchRequest.page());
+
+    List<EntityDepDtoOut> dtoOutList = entityGraphs.values().stream()
+        .map(entityNode -> entityDepDtoOutMapper.toDto(entityNode)).toList();
+
+    Pageable pageable = PageRequest.of(searchRequest.page(), searchRequest.size());
+
+    return new PageImpl<>(dtoOutList, pageable, entityGraphs.size());
   }
 
   private <T> Page<T> toPageResponse(List<T> content, PaginationCriteria criteria,
