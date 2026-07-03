@@ -191,7 +191,7 @@ public class PostgresEntityGraphAdapter implements EntityGraphRepositoryPort {
     // The two-query split also avoids Hibernate's MultipleBagFetchException.
     List<EntityJpaEntity> jpaEntities = jpaEntityRepository.findAllByIdinWithRelations(entitiesIds);
     // if (includeProperties) {
-    // jpaEntityRepository.findAllByIdInWithProperties(entitiesIds);
+    jpaEntityRepository.findAllByIdInWithProperties(entitiesIds);
     // }
 
     // Step 4: map to domain and key by UUID for O(1) lookup

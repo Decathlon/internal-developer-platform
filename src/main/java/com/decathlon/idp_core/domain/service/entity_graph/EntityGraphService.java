@@ -91,8 +91,8 @@ public class EntityGraphService {
     return buildGraphNode(rootEntity.id(), ctx);
   }
 
-  /// Retrieves entity graphs for multiple root entities in a single batch
-  /// operation.
+  /// Retrieves entity graphs for multiple root entities in a single
+  /// batch operation.
   @Transactional(readOnly = true)
   public Map<String, EntityGraphNode> getBatchEntityGraphsByIdentifiers(
       Map<UUID, Entity> entityGraphs, int depth, boolean includeProperties,
@@ -136,8 +136,8 @@ public class EntityGraphService {
     return result;
   }
 
-  /// Loads and builds entity graphs for multiple entity IDs in a single batch
-  /// operation.
+  /// Loads and builds entity graphs for multiple entity IDs in a single
+  /// batch operation.
   @Transactional(readOnly = true)
   public Map<String, EntityGraphNode> loadAndBuildEntityGraphs(List<UUID> entityIds, int depth,
       boolean includeProperties, Set<String> relationFilter, Set<String> propertyFilter,
@@ -185,8 +185,8 @@ public class EntityGraphService {
     return result;
   }
 
-  /// Builds entity graphs for multiple entity string identifiers within a
-  /// template.
+  /// Builds entity graphs for multiple entity string identifiers within
+  /// a template.
   @Transactional(readOnly = true)
   public Map<String, EntityGraphNode> getBatchEntityGraphsByIdentifiers(String templateIdentifier,
       List<String> entityIdentifiers, int depth, boolean includeProperties,
@@ -266,42 +266,120 @@ public class EntityGraphService {
 
     int effectiveDepth = Math.clamp(depth, 1, MAX_DEPTH);
 
-    Map<UUID, Entity> entityGraphs = entityGraphRepositoryPort.findEntityGraphByAgnosticTemplate(
-        rootUuids, groupIds, expectedGroupCount, depth, startTemplate, size, offset);
+    // Map<UUID, Entity> entityGraphs =
+    // entityGraphRepositoryPort.findEntityGraphByAgnosticTemplate(
+    // rootUuids, groupIds, expectedGroupCount, depth, startTemplate, size, offset);
+
+    // if (entityGraphs == null || entityGraphs.isEmpty()) {
+    // return Map.of();
+    // }
+
+    // IndexBundle globalIndices = buildIndices(entityGraphs, mode);
+    // Map<String, EntityGraphNode> result = new HashMap<>();
+
+    // for (Map.Entry<UUID, Entity> entry : entityGraphs.entrySet()) {
+    // UUID entityUuid = entry.getKey();
+
+    // if (entityUuid != null) {
+    // Set<UUID> reachableFootprint = computeReachableSubGraph(entityUuid,
+    // entityGraphs,
+    // globalIndices, effectiveDepth, mode);
+
+    // Map<UUID, Entity> localizedEntityMap = entityGraphs.entrySet().stream()
+    // .filter(e -> reachableFootprint.contains(e.getKey()))
+    // .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
+
+    // IndexBundle localizedIndices = buildIndices(localizedEntityMap, mode);
+
+    // Set<String> isolatedStack = new HashSet<>();
+    // Map<String, EntityGraphNode> isolatedCache = new HashMap<>();
+
+    // GraphTraversalContext localizedCtx = new
+    // GraphTraversalContext(localizedEntityMap,
+    // localizedIndices.textToUuidLookup(), localizedIndices.inboundIndex(), true,
+    // Set.of(),
+    // Set.of(), isolatedStack, isolatedCache, mode);
+
+    // EntityGraphNode node = buildGraphNode(entityUuid, localizedCtx);
+    // result.put(entityUuid.toString(), node);
+    // }
+    // }
+
+    // return result;
+
+    // PHASE 1: Resolve strictly the paginated window of component pivots matching
+    // the filter
+    Map<UUID, Entity> paginatedPivots = entityGraphRepositoryPort.findEntityGraphByAgnosticTemplate(
+        rootUuids, groupIds, expectedGroupCount, effectiveDepth, startTemplate, size, offset);
+
+    if (paginatedPivots == null || paginatedPivots.isEmpty()) {
+      return Map.of();
+    }
+
+    // Isolate only the exact target winner UUIDs matching the startTemplate to
+    // secure page boundaries
+    List<UUID> strictWinnerIds = paginatedPivots.entrySet().stream()
+        .filter(
+            entry -> entry.getValue() != null && Objects.equals(startTemplate, entry.getValue().templateIdentifier()))
+        .map(Map.Entry::getKey)
+        .toList();
+
+    if (strictWinnerIds.isEmpty()) {
+      return Map.of();
+    }
+
+    // PHASE 2: Fully hydrate the surrounding ecosystem using your working
+    // DIRECT_LINEAGE mode
+    Map<UUID, Entity> entityGraphs = entityGraphRepositoryPort.findEntityGraphBatch(
+        strictWinnerIds, effectiveDepth, true, mode);
 
     if (entityGraphs == null || entityGraphs.isEmpty()) {
       return Map.of();
     }
 
+    // Build the global index bundle over the entire hydrated batch
     IndexBundle globalIndices = buildIndices(entityGraphs, mode);
     Map<String, EntityGraphNode> result = new HashMap<>();
 
-    for (Map.Entry<UUID, Entity> entry : entityGraphs.entrySet()) {
-      UUID entityUuid = entry.getKey();
+    // PHASE 3: Mirror your working batch endpoints by isolating the footprint per
+    // component pivot!
+    for (UUID entityUuid : strictWinnerIds) {
+      Entity entity = entityGraphs.get(entityUuid);
+      if (entity != null) {
+        // 1. Isolate the footprint reachable strictly from THIS component pivot
+        Set<UUID> reachableFootprint = computeReachableSubGraph(
+            entityUuid, entityGraphs, globalIndices, effectiveDepth, mode);
 
-      if (entityUuid != null) {
-        Set<UUID> reachableFootprint = computeReachableSubGraph(entityUuid, entityGraphs,
-            globalIndices, effectiveDepth, mode);
-
+        // 2. Filter down to a localized sub-map for this component's tree
         Map<UUID, Entity> localizedEntityMap = entityGraphs.entrySet().stream()
             .filter(e -> reachableFootprint.contains(e.getKey()))
             .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
 
+        // 3. Rebuild fresh, isolated indices to prevent cross-contamination
         IndexBundle localizedIndices = buildIndices(localizedEntityMap, mode);
 
         Set<String> isolatedStack = new HashSet<>();
-        Map<String, EntityGraphNode> isolatedCache = new HashMap<>();
+        Map<String, EntityGraphNode> isolatedCache = new HashMap<>(); // <--- THE FIX: FRESH CACHE PER PIVOT
 
-        GraphTraversalContext localizedCtx = new GraphTraversalContext(localizedEntityMap,
-            localizedIndices.textToUuidLookup(), localizedIndices.inboundIndex(), false, Set.of(),
-            Set.of(), isolatedStack, isolatedCache, mode);
+        GraphTraversalContext localizedCtx = new GraphTraversalContext(
+            localizedEntityMap,
+            localizedIndices.textToUuidLookup(),
+            localizedIndices.inboundIndex(),
+            true, // includeProperties
+            Set.of(), // propertyFilter
+            Set.of(), // relationFilter
+            isolatedStack,
+            isolatedCache,
+            mode);
 
+        // Build the clean node tree and store it under the component identifier
         EntityGraphNode node = buildGraphNode(entityUuid, localizedCtx);
-        result.put(entityUuid.toString(), node);
+        result.put(entity.identifier(), node);
       }
     }
 
     return result;
+
   }
 
   @Transactional(readOnly = true)
@@ -490,8 +568,8 @@ public class EntityGraphService {
   private static record ReachableState(UUID id, String flow) {
   }
 
-  /// Computes a precise sub-graph footprint matching the recursive database query
-  /// logic.
+  /// Computes a precise sub-graph footprint matching the recursive database
+  /// query logic.
   private Set<UUID> computeReachableSubGraph(UUID rootId, Map<UUID, Entity> entityMap,
       IndexBundle globalIndices, int maxDepth, EntityGraphTraversalMode mode) {
 

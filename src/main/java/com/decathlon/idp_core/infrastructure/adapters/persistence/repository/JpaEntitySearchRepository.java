@@ -79,8 +79,7 @@ public class JpaEntitySearchRepository {
     query.setParameter("size", size);
     query.setParameter("offset", offset);
 
-    // Map the raw database object tuples back into your clean Java projection
-    // interface
+    // Map the raw database object tuples back into your clean Java projection interface
     List<Object[]> rawResults = query.getResultList();
     return rawResults.stream().map(record -> new LineageIdProjection() {
       @Override

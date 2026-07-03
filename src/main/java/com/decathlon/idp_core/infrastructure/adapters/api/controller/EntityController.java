@@ -492,7 +492,7 @@ public class EntityController {
       SearchFilterNode filter = searchFilterParser.parse(rawFilter);
 
       // Search for entities matching this filter with pagination
-      PaginationCriteria paginationCriteria = new PaginationCriteria(0, 100, null);
+      PaginationCriteria paginationCriteria = new PaginationCriteria(0, searchRequest.size(), null);
       PaginatedResult<Entity> result = entityService.searchEntities(filter, "", paginationCriteria);
 
       // Collect all matching entity IDs and their group identifier
@@ -515,6 +515,7 @@ public class EntityController {
 
     List<EntityDepDtoOut> dtoOutList = entityGraphs.values().stream()
         .map(entityNode -> entityDepDtoOutMapper.toDto(entityNode)).toList();
+
 
     Pageable pageable = PageRequest.of(searchRequest.page(), searchRequest.size());
 
