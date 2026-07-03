@@ -256,7 +256,7 @@ public class EntityGraphService {
   @Transactional(readOnly = true)
   public Map<String, EntityGraphNode> getBatchEntityGraphsByAgnosticFilter(UUID[] rootUuids,
       String[] groupIds, long expectedGroupCount, int depth, String startTemplate, int size,
-      int offset) {
+      int offset, List<String> allowedRelations) {
 
     EntityGraphTraversalMode mode = EntityGraphTraversalMode.DIRECT_LINEAGE;
 
@@ -367,7 +367,7 @@ public class EntityGraphService {
             localizedIndices.inboundIndex(),
             true, // includeProperties
             Set.of(), // propertyFilter
-            Set.of(), // relationFilter
+            allowedRelations != null ? new HashSet<>(allowedRelations) : Set.of(), // relationFilter
             isolatedStack,
             isolatedCache,
             mode);

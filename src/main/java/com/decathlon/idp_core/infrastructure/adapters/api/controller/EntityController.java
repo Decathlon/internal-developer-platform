@@ -511,7 +511,7 @@ public class EntityController {
     // Load full Entity objects for the paginated results
     Map<String, EntityGraphNode> entityGraphs = entityGraphService
         .getBatchEntityGraphsByAgnosticFilter(rootArray, groupArray, searchRequest.filters().size(),
-            searchRequest.depth(), templateIdentifier, searchRequest.size(), searchRequest.page());
+            searchRequest.depth(), templateIdentifier, searchRequest.size(), searchRequest.page(), searchRequest.allowedRelations());
 
     List<EntityDepDtoOut> dtoOutList = entityGraphs.values().stream()
         .map(entityNode -> entityDepDtoOutMapper.toDto(entityNode)).toList();
