@@ -201,8 +201,8 @@ public class EntityDtoOutMapper {
     if (entity.relations() != null) {
       entity.relations().forEach(relation -> {
         var relationKey = relation.name();
-        var targets = relation.targetEntityIdentifiers().stream()
-            .map(relatedEntitiesSummaries::get).filter(Objects::nonNull).toList();
+        var targets = relation.targetEntityIdentifiers().stream().map(relatedEntitiesSummaries::get)
+            .filter(Objects::nonNull).toList();
         unifiedRelations.merge(relationKey, new ArrayList<>(targets), (existing, incoming) -> {
           var merged = new ArrayList<>(existing);
           merged.addAll(incoming);
