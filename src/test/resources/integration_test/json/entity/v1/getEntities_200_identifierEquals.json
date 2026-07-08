@@ -6,13 +6,12 @@
       "properties": { "environment": "PROD", "programmingLanguage": "JAVA", "port": 8080 },
       "relations": {
         "database": [
-          { "identifier": "database-service-1", "name": "Database Service 1" }
+          { "identifier": "database-service-1", "name": "Database Service 1", "template_identifier": "database-service" }
         ],
         "api-link": [
-          { "identifier": "microservice-1", "name": "Microservice 1" }
+          { "identifier": "microservice-1", "name": "Microservice 1", "template_identifier": "microservice" }
         ]
       },
-      "relations_as_target": {},
       "template_identifier": "web-service"
     }
   ],

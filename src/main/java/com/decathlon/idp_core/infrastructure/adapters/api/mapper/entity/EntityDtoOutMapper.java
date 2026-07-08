@@ -15,7 +15,6 @@ import org.springframework.stereotype.Component;
 import com.decathlon.idp_core.domain.model.entity.Entity;
 import com.decathlon.idp_core.domain.model.entity.EntitySummary;
 import com.decathlon.idp_core.domain.model.entity.Property;
-import com.decathlon.idp_core.domain.model.entity.Relation;
 import com.decathlon.idp_core.domain.model.entity.RelationAsTargetSummary;
 import com.decathlon.idp_core.domain.model.entity_template.EntityTemplate;
 import com.decathlon.idp_core.domain.model.entity_template.PropertyDefinition;
@@ -99,23 +98,21 @@ public class EntityDtoOutMapper {
   ///
   /// @param entity the entity to map
   /// @param entityTemplate the template for property type mapping
-  /// @return the mapped DTO
+  /// @return the mapped DTO with unified relations
   private EntityDtoOut fromEntityUsingEntityTemplate(Entity entity, EntityTemplate entityTemplate) {
     Map<String, Object> props = mapPropertiesDto(entity, entityTemplate);
 
     List<String> allTargetIdentifiers = getAllTargetIdentifiersFromEntityRelations(entity);
     Map<String, EntitySummaryDto> relatedEntitiesSummaryMap = buildEntitiesSummariesMap(
         allTargetIdentifiers);
-    Map<String, List<EntitySummaryDto>> relationMap = mapRelationsDto(entity,
-        relatedEntitiesSummaryMap);
     Map<String, List<RelationAsTargetSummary>> relatedEntitiesByTargetSummaryMap = buildRelationsAsTargetSummaryMapByEntity(
         entity);
-    Map<String, List<EntitySummaryDto>> relationAsTargetMap = mapRelationsAsTargetDto(entity,
-        relatedEntitiesByTargetSummaryMap);
 
-    return EntityDtoOut.builder().templateIdentifier(entity.templateIdentifier())
-        .name(entity.name()).identifier(entity.identifier()).properties(props)
-        .relations(relationMap).relationsAsTarget(relationAsTargetMap).build();
+    Map<String, List<EntitySummaryDto>> unifiedRelations = buildUnifiedRelationsMap(entity,
+        relatedEntitiesSummaryMap, relatedEntitiesByTargetSummaryMap);
+
+    return new EntityDtoOut(entity.identifier(), entity.name(), entity.templateIdentifier(),
+        props, unifiedRelations);
   }
 
   /// Maps a single entity to its DTO using pre-built summary and
@@ -125,20 +122,17 @@ public class EntityDtoOutMapper {
   /// @param entityTemplate the template for property type mapping
   /// @param relatedEntitiesSummaries map of entity summaries for relation targets
   /// @param relationTargetOwnershipsMap map of relations-as-target for the entity
-  /// @return the mapped DTO
+  /// @return the mapped DTO with unified relations
   private EntityDtoOut fromEntityUsingEntityTemplateAndSummaryMap(Entity entity,
       EntityTemplate entityTemplate, Map<String, EntitySummaryDto> relatedEntitiesSummaries,
       Map<String, List<RelationAsTargetSummary>> relationTargetOwnershipsMap) {
 
     Map<String, Object> props = mapPropertiesDto(entity, entityTemplate);
-    Map<String, List<EntitySummaryDto>> relationMap = mapRelationsDto(entity,
-        relatedEntitiesSummaries);
-    Map<String, List<EntitySummaryDto>> relationAsTargetMap = mapRelationsAsTargetDto(entity,
-        relationTargetOwnershipsMap);
+    Map<String, List<EntitySummaryDto>> unifiedRelations = buildUnifiedRelationsMap(entity,
+        relatedEntitiesSummaries, relationTargetOwnershipsMap);
 
-    return EntityDtoOut.builder().templateIdentifier(entity.templateIdentifier())
-        .name(entity.name()).identifier(entity.identifier()).properties(props)
-        .relations(relationMap).relationsAsTarget(relationAsTargetMap).build();
+    return new EntityDtoOut(entity.identifier(), entity.name(), entity.templateIdentifier(),
+        props, unifiedRelations);
   }
 
   /// Maps the properties of an entity to a map of property names to typed values,
@@ -185,42 +179,51 @@ public class EntityDtoOutMapper {
     return value;
   }
 
-  /// Maps the relations of an entity to a map of relation names to lists of
-  /// target
-  /// entity summaries.
+  /// Builds a unified relations map combining outbound and inbound relations.
   ///
-  /// @param entity the entity whose relations to map
-  /// @param relatedEntitiesSummaries map of entity summaries for relation targets
-  /// @return a map of relation names to lists of target entity summaries
-  private Map<String, List<EntitySummaryDto>> mapRelationsDto(Entity entity,
-      Map<String, EntitySummaryDto> relatedEntitiesSummaries) {
-    return entity.relations() == null
-        ? Collections.emptyMap()
-        : entity.relations().stream().collect(Collectors.groupingBy(Relation::name,
-            Collectors.flatMapping(rel -> rel.targetEntityIdentifiers().stream()
-                .map(relatedEntitiesSummaries::get).filter(Objects::nonNull),
-                Collectors.toList())));
-  }
-
-  /// Maps the relations-as-target for an entity to a map of relation names to
-  /// lists of source entity summaries.
+  /// **Unification logic:**
+  /// - Outbound relations: keyed by relation name, values are target summaries
+  /// - Inbound relations: keyed by relation name, values are source summaries
+  /// - Both directions merged under the same relation key
   ///
-  /// @param entity the entity whose relations-as-target to map
-  /// @param relationTargetOwnershipsMap map of relations-as-target for the entity
-  /// @return a map of relation names to lists of source entity summaries
-  private Map<String, List<EntitySummaryDto>> mapRelationsAsTargetDto(Entity entity,
+  /// @param entity the entity whose relations to unify
+  /// @param relatedEntitiesSummaries map of target entity summaries (for outbound)
+  /// @param relationTargetOwnershipsMap map of inbound relations
+  /// @return unified relations map with combined outbound and inbound relations
+  private Map<String, List<EntitySummaryDto>> buildUnifiedRelationsMap(Entity entity,
+      Map<String, EntitySummaryDto> relatedEntitiesSummaries,
       Map<String, List<RelationAsTargetSummary>> relationTargetOwnershipsMap) {
-    List<RelationAsTargetSummary> relationAsTargetSummaries = relationTargetOwnershipsMap
-        .get(entity.identifier());
-    if (relationAsTargetSummaries == null) {
-      return Collections.emptyMap();
+
+    java.util.HashMap<String, List<EntitySummaryDto>> unifiedRelations = new java.util.HashMap<>();
+
+    // Add outbound relations (entity is source)
+    if (entity.relations() != null) {
+      entity.relations().forEach(relation -> {
+        String relationKey = relation.name();
+        List<EntitySummaryDto> targets = relation.targetEntityIdentifiers().stream()
+            .map(relatedEntitiesSummaries::get).filter(Objects::nonNull).toList();
+        unifiedRelations.put(relationKey, new ArrayList<>(targets));
+      });
     }
 
-    return relationAsTargetSummaries.stream()
-        .collect(Collectors.groupingBy(RelationAsTargetSummary::relationName,
-            Collectors.mapping(
-                r -> new EntitySummaryDto(r.sourceEntityIdentifier(), r.sourceEntityName()),
-                Collectors.toList())));
+    // Add inbound relations (entity is target) — merge if key exists
+    List<RelationAsTargetSummary> inboundRelations = relationTargetOwnershipsMap
+        .get(entity.identifier());
+    if (inboundRelations != null) {
+      inboundRelations.forEach(inboundRelation -> {
+        String relationKey = inboundRelation.relationName();
+        EntitySummaryDto source = new EntitySummaryDto(inboundRelation.sourceEntityIdentifier(),
+            inboundRelation.sourceEntityName(), inboundRelation.sourceTemplateIdentifier());
+
+        unifiedRelations.merge(relationKey, List.of(source), (existing, incoming) -> {
+          List<EntitySummaryDto> merged = new ArrayList<>(existing);
+          merged.addAll(incoming);
+          return merged;
+        });
+      });
+    }
+
+    return unifiedRelations;
   }
 
   /// Builds a map of relation target ownerships for a page of entities, grouping
@@ -296,14 +299,17 @@ public class EntityDtoOutMapper {
 
   /// Builds a map of entity summaries for a list of target identifiers.
   ///
+  /// Includes template identifier for each entity, enabling frontend to determine
+  /// relation direction without additional queries.
+  ///
   /// @param targetIdentifiers the list of target entity identifiers
-  /// @return a map from entity identifier to summary DTO
+  /// @return a map from entity identifier to summary DTO with template info
   private Map<String, EntitySummaryDto> buildEntitiesSummariesMap(List<String> targetIdentifiers) {
     return targetIdentifiers.isEmpty()
         ? Collections.emptyMap()
         : entityService.getEntitiesSummariesByIdentifiers(targetIdentifiers).stream()
             .collect(Collectors.toMap(EntitySummary::identifier,
-                es -> new EntitySummaryDto(es.identifier(), es.name())));
+                es -> new EntitySummaryDto(es.identifier(), es.name(), es.templateIdentifier())));
   }
 
   /// Maps paginated search results to API DTOs with optimized bulk operations.
@@ -342,10 +348,10 @@ public class EntityDtoOutMapper {
 
   private EntityDtoOut entityDtoOutMapper(Entity entity, Map<String, EntitySummaryDto> summaries,
       Map<String, List<RelationAsTargetSummary>> relationsAsTargetMap) {
-    return EntityDtoOut.builder().templateIdentifier(entity.templateIdentifier())
-        .name(entity.name()).identifier(entity.identifier()).properties(Collections.emptyMap())
-        .relations(mapRelationsDto(entity, summaries))
-        .relationsAsTarget(mapRelationsAsTargetDto(entity, relationsAsTargetMap)).build();
+    Map<String, List<EntitySummaryDto>> unifiedRelations = buildUnifiedRelationsMap(entity,
+        summaries, relationsAsTargetMap);
+    return new EntityDtoOut(entity.identifier(), entity.name(), entity.templateIdentifier(),
+        Collections.emptyMap(), unifiedRelations);
   }
 
 }

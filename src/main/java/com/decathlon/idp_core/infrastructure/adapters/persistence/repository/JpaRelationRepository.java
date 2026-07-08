@@ -23,6 +23,8 @@ public interface JpaRelationRepository
    * a native query to efficiently join through the relation_target_entities
    * table.
    *
+   * Includes source entity template identifier for unified relations API response.
+   *
    * @param targetEntityIdentifiers
    *          List of entity identifiers to search for
    * @return List of relation summaries where these entities are targets
@@ -32,7 +34,8 @@ public interface JpaRelationRepository
           rte.target_entity_identifier AS targetEntityIdentifier,
           r.name AS relationName,
           e.identifier AS sourceEntityIdentifier,
-          e.name AS sourceEntityName
+          e.name AS sourceEntityName,
+          e.template_identifier AS sourceTemplateIdentifier
       FROM idp_core.entity e
       JOIN idp_core.entity_relations er ON er.entity_id = e.id
       JOIN idp_core.relation r ON r.id = er.relation_id
