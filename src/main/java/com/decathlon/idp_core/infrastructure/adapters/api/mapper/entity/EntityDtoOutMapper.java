@@ -111,8 +111,8 @@ public class EntityDtoOutMapper {
     Map<String, List<EntitySummaryDto>> unifiedRelations = buildUnifiedRelationsMap(entity,
         relatedEntitiesSummaryMap, relatedEntitiesByTargetSummaryMap);
 
-    return new EntityDtoOut(entity.identifier(), entity.name(), entity.templateIdentifier(),
-        props, unifiedRelations);
+    return new EntityDtoOut(entity.identifier(), entity.name(), entity.templateIdentifier(), props,
+        unifiedRelations);
   }
 
   /// Maps a single entity to its DTO using pre-built summary and
@@ -131,8 +131,8 @@ public class EntityDtoOutMapper {
     Map<String, List<EntitySummaryDto>> unifiedRelations = buildUnifiedRelationsMap(entity,
         relatedEntitiesSummaries, relationTargetOwnershipsMap);
 
-    return new EntityDtoOut(entity.identifier(), entity.name(), entity.templateIdentifier(),
-        props, unifiedRelations);
+    return new EntityDtoOut(entity.identifier(), entity.name(), entity.templateIdentifier(), props,
+        unifiedRelations);
   }
 
   /// Maps the properties of an entity to a map of property names to typed values,
@@ -187,7 +187,8 @@ public class EntityDtoOutMapper {
   /// - Both directions merged under the same relation key
   ///
   /// @param entity the entity whose relations to unify
-  /// @param relatedEntitiesSummaries map of target entity summaries (for outbound)
+  /// @param relatedEntitiesSummaries map of target entity summaries (for
+  /// outbound)
   /// @param relationTargetOwnershipsMap map of inbound relations
   /// @return unified relations map with combined outbound and inbound relations
   private Map<String, List<EntitySummaryDto>> buildUnifiedRelationsMap(Entity entity,

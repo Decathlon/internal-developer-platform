@@ -11,8 +11,7 @@ import com.fasterxml.jackson.databind.annotation.JsonNaming;
  * listings and unified relation structures.
  */
 @JsonNaming(SnakeCaseStrategy.class)
-public record EntitySummaryDto(
-    String identifier,
+public record EntitySummaryDto(String identifier,
 
     String name,
 
