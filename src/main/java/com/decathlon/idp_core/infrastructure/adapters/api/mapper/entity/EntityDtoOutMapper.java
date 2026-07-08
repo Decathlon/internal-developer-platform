@@ -200,10 +200,14 @@ public class EntityDtoOutMapper {
     // Add outbound relations (entity is source)
     if (entity.relations() != null) {
       entity.relations().forEach(relation -> {
-        String relationKey = relation.name();
-        List<EntitySummaryDto> targets = relation.targetEntityIdentifiers().stream()
+        var relationKey = relation.name();
+        var targets = relation.targetEntityIdentifiers().stream()
             .map(relatedEntitiesSummaries::get).filter(Objects::nonNull).toList();
-        unifiedRelations.put(relationKey, new ArrayList<>(targets));
+        unifiedRelations.merge(relationKey, new ArrayList<>(targets), (existing, incoming) -> {
+          var merged = new ArrayList<>(existing);
+          merged.addAll(incoming);
+          return merged;
+        });
       });
     }
 
@@ -300,9 +304,8 @@ public class EntityDtoOutMapper {
 
   /// Builds a map of entity summaries for a list of target identifiers.
   ///
-  /// Includes template identifier for each entity, enabling frontend to determine
-  /// relation direction without additional queries.
-  ///
+  /// Includes template identifier for each entity, enabling frontend clients to
+  /// distinguish related entity types without additional queries.
   /// @param targetIdentifiers the list of target entity identifiers
   /// @return a map from entity identifier to summary DTO with template info
   private Map<String, EntitySummaryDto> buildEntitiesSummariesMap(List<String> targetIdentifiers) {
