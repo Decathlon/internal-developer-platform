@@ -50,7 +50,7 @@ CREATE TABLE property_aud
     revtype   SMALLINT,
     name      VARCHAR(255),
     name_mod  BOOLEAN,
-    value     VARCHAR(255),
+    value     TEXT,
     value_mod BOOLEAN,
     PRIMARY KEY (id, rev),
     CONSTRAINT fk_property_aud_revinfo FOREIGN KEY (rev) REFERENCES envers_transaction_log (rev) ON DELETE CASCADE
