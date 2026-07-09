@@ -8,6 +8,7 @@ import java.util.Objects;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
+import java.util.HashMap;
 
 import org.springframework.data.domain.Page;
 import org.springframework.stereotype.Component;
@@ -195,7 +196,7 @@ public class EntityDtoOutMapper {
       Map<String, EntitySummaryDto> relatedEntitiesSummaries,
       Map<String, List<RelationAsTargetSummary>> relationTargetOwnershipsMap) {
 
-    java.util.HashMap<String, List<EntitySummaryDto>> unifiedRelations = new java.util.HashMap<>();
+    HashMap<String, List<EntitySummaryDto>> unifiedRelations = new HashMap<>();
 
     // Add outbound relations (entity is source)
     if (entity.relations() != null) {
