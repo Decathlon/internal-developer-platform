@@ -54,8 +54,7 @@ Here's an entity instantiated from the `web-service` template:
         "name": "Web API 1"
       }
     ]
-  },
-  "relations_as_target": {}
+  }
 }
 ```
 
@@ -237,34 +236,7 @@ In API responses, relations are grouped by name and include summary information 
         "name": "Web API 2"
       }
     ]
-  },
-  "relations_as_target": {
-    "depends-on": [
-      {
-        "identifier": "frontend-app",
-        "name": "Frontend App"
-      }
-    ]
   }
-}
-```
-
-The `relations_as_target` field shows reverse relationships—other entities that reference this entity.
-
-### One-to-One Relations (`to_many: false`)
-
-For consistency, even single relations are represented as arrays:
-
-```json
-{
-  "relations": [
-    {
-      "name": "owned_by",
-      "target_entity_identifiers": [
-        "platform-team"
-      ]
-    }
-  ]
 }
 ```
 
@@ -386,8 +358,7 @@ curl -X PUT http://localhost:8084/api/v1/entities/web-service/my-web-service \
     "protocol": "HTTP",
     "programmingLanguage": "JAVA"
   },
-  "relations": {},
-  "relations_as_target": {}
+  "relations": {}
 }
 ```
 
