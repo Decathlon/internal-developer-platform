@@ -219,6 +219,25 @@ When creating an entity, you specify relations as an array of objects, each with
 }
 ```
 
+### One-to-Many Relations (`to_many: true`)
+
+When multiple related entities are allowed, list several identifiers:
+
+```json
+{
+  "relations": [
+    {
+      "name": "components",
+      "target_entity_identifiers": [
+        "frontend",
+        "backend",
+        "database"
+      ]
+    }
+  ]
+}
+```
+
 ### Relations in Responses
 
 In API responses, relations are grouped by name and include summary information about each target entity:
@@ -237,25 +256,6 @@ In API responses, relations are grouped by name and include summary information 
       }
     ]
   }
-}
-```
-
-### One-to-Many Relations (`to_many: true`)
-
-When multiple related entities are allowed, list several identifiers:
-
-```json
-{
-  "relations": [
-    {
-      "name": "components",
-      "target_entity_identifiers": [
-        "frontend",
-        "backend",
-        "database"
-      ]
-    }
-  ]
 }
 ```
 
