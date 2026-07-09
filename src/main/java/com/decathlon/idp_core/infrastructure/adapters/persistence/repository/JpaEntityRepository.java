@@ -15,7 +15,6 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import com.decathlon.idp_core.domain.model.entity.EntitySummary;
-import com.decathlon.idp_core.infrastructure.adapters.persistence.model.LineageIdProjection;
 import com.decathlon.idp_core.infrastructure.adapters.persistence.model.entity.EntityJpaEntity;
 
 @Repository
