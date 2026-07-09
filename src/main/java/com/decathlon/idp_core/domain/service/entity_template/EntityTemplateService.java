@@ -156,19 +156,23 @@ public class EntityTemplateService {
     return savedTemplate;
   }
 
-  /// Deletes an entity template by business identifier with existence validation.
+  /// Deletes an entity template by business identifier with existence validation
+  /// and cascade purge of all its entities.
   ///
-  /// **Contract:** Validates template existence before deletion to ensure
-  /// referential
-  /// integrity. Deletion cascades through persistence layer according to
-  /// configured
-  /// relationships. This operation is irreversible once committed.
+  /// **Contract:** Validates that the template exists and is not referenced as a
+  /// relation target in another template. Then purges all entities belonging to
+  /// the template before deleting the template itself. Both the entity purge and
+  /// the template deletion happen within the same transaction so any failure
+  /// rolls back the entire operation.
   ///
   /// @param identifier unique business identifier of template to delete
   /// @throws EntityTemplateNotFoundException when template doesn't exist
+  /// @throws EntityTemplateIsRelationTargetException when another template
+  /// references this template as a relation target
   @Transactional
   public void deleteEntityTemplate(String identifier) {
     entityTemplateValidationService.validateForDeletion(identifier);
+    entityRepositoryPort.deleteAllByTemplateIdentifier(identifier);
     entityTemplateRepositoryPort.deleteByIdentifier(identifier);
   }
 

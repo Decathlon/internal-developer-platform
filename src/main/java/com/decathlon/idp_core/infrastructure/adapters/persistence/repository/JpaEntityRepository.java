@@ -13,6 +13,7 @@ import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
+import org.springframework.transaction.annotation.Transactional;
 
 import com.decathlon.idp_core.domain.model.entity.EntitySummary;
 import com.decathlon.idp_core.infrastructure.adapters.persistence.model.entity.EntityJpaEntity;
@@ -156,5 +157,13 @@ public interface JpaEntityRepository
   void deleteByTemplateIdentifierAndIdentifier(
       @Param("templateIdentifier") String templateIdentifier,
       @Param("entityIdentifier") String entityIdentifier);
+
+  /// Deletes all entities belonging to the given template.
+  ///
+  /// Spring Data loads each entity and removes it via `em.remove()`, which triggers
+  /// JPA cascade (`CascadeType.ALL`, `orphanRemoval = true`) so entity-owned properties
+  /// and relations are also removed.
+  @Transactional
+  void deleteAllByTemplateIdentifier(String templateIdentifier);
 
 }
