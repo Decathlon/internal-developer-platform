@@ -261,4 +261,27 @@ class EntityTemplateServiceTest {
           .deletePropertiesByTemplateIdentifierAndPropertyName(anyString(), any());
     }
   }
+
+  @Nested
+  @DisplayName("deleteEntityTemplate - cascade delete")
+  class DeleteTemplateTests {
+
+    private static final String TEMPLATE_IDENTIFIER = "web-service";
+
+    /// Tests that deleteEntityTemplate validates and then cascades to entities
+    @Test
+    @DisplayName("Should call deleteAllByTemplateIdentifier before deleting template")
+    void shouldCascadeDeleteEntitiesBeforeTemplate() {
+      entityTemplateService.deleteEntityTemplate(TEMPLATE_IDENTIFIER);
+
+      // Verify validation was called
+      verify(entityTemplateValidationService).validateForDeletion(TEMPLATE_IDENTIFIER);
+
+      // Verify entity cascade-delete was called first
+      verify(entityRepositoryPort).deleteAllByTemplateIdentifier(TEMPLATE_IDENTIFIER);
+
+      // Verify template deletion was called
+      verify(entityTemplateRepositoryPort).deleteByIdentifier(TEMPLATE_IDENTIFIER);
+    }
+  }
 }

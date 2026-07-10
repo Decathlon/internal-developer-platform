@@ -26,6 +26,7 @@ import com.decathlon.idp_core.domain.exception.entity.EntityNotFoundException;
 import com.decathlon.idp_core.domain.exception.entity.EntityValidationException;
 import com.decathlon.idp_core.domain.exception.entity_template.EntityTemplateAlreadyExistsException;
 import com.decathlon.idp_core.domain.exception.entity_template.EntityTemplateIdentifierCannotChangeException;
+import com.decathlon.idp_core.domain.exception.entity_template.EntityTemplateIsRelationTargetException;
 import com.decathlon.idp_core.domain.exception.entity_template.EntityTemplateNameAlreadyExistsException;
 import com.decathlon.idp_core.domain.exception.entity_template.EntityTemplateNotFoundException;
 import com.decathlon.idp_core.domain.exception.entity_template.PropertyDefinitionRulesConflictException;
@@ -183,6 +184,19 @@ public class ApiExceptionHandler {
   public ResponseEntity<ErrorResponse> handleTargetTemplateNotFoundException(
       TargetTemplateNotFoundException ex) {
     log.warn("Target template not found: {}", ex.getMessage());
+    return createErrorResponse(HttpStatus.BAD_REQUEST, ex.getMessage());
+  }
+
+  /// Handles domain exception when attempting to delete a template that is still
+  /// referenced as a relation target in another template.
+  ///
+  /// **HTTP mapping:** Maps domain [EntityTemplateIsRelationTargetException] to
+  /// HTTP 400 Bad Request to signal a business rule violation that must be
+  /// resolved by the caller before retrying the deletion.
+  @ExceptionHandler(EntityTemplateIsRelationTargetException.class)
+  public ResponseEntity<ErrorResponse> handleEntityTemplateIsRelationTargetException(
+      EntityTemplateIsRelationTargetException ex) {
+    log.warn("Template deletion blocked – still a relation target: {}", ex.getMessage());
     return createErrorResponse(HttpStatus.BAD_REQUEST, ex.getMessage());
   }
 

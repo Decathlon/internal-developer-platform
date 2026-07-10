@@ -57,6 +57,7 @@ public class ValidationMessages {
   public static final String RELATION_TARGET_ENTITY_NOT_FOUND = "Relation '%s': target entity '%s' does not exist";
   public static final String RELATION_TARGET_TEMPLATE_CANNOT_CHANGE = "Cannot change target template of relation '%s' from '%s' to '%s'. Target template cannot be modified after creation. Please delete and recreate the relation instead.";
   public static final String RELATION_CANNOT_TARGET_ITSELF = "Relation '%s' cannot reference its own template '%s' as the target.";
+  public static final String TEMPLATE_IS_RELATION_TARGET = "Cannot delete template '%s': it is referenced as a target in another template's relation definition.";
 
   // Entity input validation messages
   public static final String ENTITY_NAME_MANDATORY = "Entity name is mandatory and cannot be blank";

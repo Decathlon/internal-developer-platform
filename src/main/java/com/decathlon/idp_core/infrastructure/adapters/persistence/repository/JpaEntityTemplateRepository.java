@@ -7,6 +7,8 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -35,4 +37,17 @@ public interface JpaEntityTemplateRepository extends JpaRepository<EntityTemplat
 
   @Transactional
   void deleteByIdentifier(String identifier);
+
+  /// Counts templates (excluding the one identified by `identifier` itself) that have
+  /// at least one relation definition whose `targetTemplateIdentifier` equals `identifier`.
+  ///
+  /// Used to enforce the template relation-target integrity business rule before deletion.
+  @Query("""
+      SELECT COUNT(et)
+      FROM EntityTemplateJpaEntity et
+      JOIN et.relationsDefinitions rd
+      WHERE rd.targetTemplateIdentifier = :identifier
+        AND et.identifier <> :identifier
+      """)
+  long countRelationTargetingTemplate(@Param("identifier") String identifier);
 }

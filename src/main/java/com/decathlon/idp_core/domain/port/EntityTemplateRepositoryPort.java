@@ -35,4 +35,14 @@ public interface EntityTemplateRepositoryPort {
   EntityTemplate save(EntityTemplate entityTemplate);
 
   void deleteByIdentifier(String identifier);
+
+  /// Returns `true` if any template **other than** the one identified by `identifier`
+  /// declares a relation definition whose `targetTemplateIdentifier` equals `identifier`.
+  ///
+  /// Self-referential relation definitions (a template pointing to itself) are excluded
+  /// because they are removed as part of the cascade when the template itself is deleted.
+  ///
+  /// @param identifier the business identifier of the template to check
+  /// @return `true` when at least one other template targets this template in a relation
+  boolean existsRelationTargetingTemplate(String identifier);
 }
