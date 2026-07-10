@@ -37,6 +37,36 @@ public class PropertyJpaEntity {
 }
 ```
 
+### Collection Type Considerations for Auditing
+
+When your entity contains collections (`@ElementCollection` or `@OneToMany`), choose the appropriate collection type:
+
+**Use `Set` (Recommended):**
+
+```java
+@ElementCollection(fetch = FetchType.EAGER)
+@CollectionTable(name = "related_items", joinColumns = @JoinColumn(name = "parent_id"))
+@Audited(withModifiedFlag = true)
+private Set<RelatedItemEntity> relatedItems;  // Order doesn't matter
+```
+
+**Use `List` (Only When Order Matters):**
+
+```java
+@ElementCollection(fetch = FetchType.EAGER)
+@CollectionTable(name = "ordered_items", joinColumns = @JoinColumn(name = "parent_id"))
+@OrderColumn(name = "item_order")  // <--- Explicitly track order
+@Audited(withModifiedFlag = true)
+private List<OrderedItemEntity> orderedItems;  // Order is significant
+```
+
+**Key Difference in Audit Schema:**
+
+- **Set**: Composite PK is `(parent_id, rev, item_id)` - simpler
+- **List**: Composite PK is `(parent_id, rev, item_order)` - adds order tracking column
+
+See Infrastructure Layer instructions for complete Set vs List guidance and when to use each type.
+
 ## Step 2: Create the Flyway Migration
 
 Create a new Flyway migration script (for example `V4_2__audit_property.sql`) in `src/main/resources/db/migration/` to define the specific `_aud` table for your entity.

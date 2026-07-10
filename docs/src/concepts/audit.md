@@ -439,6 +439,153 @@ The audit system automatically retrieves modification flags from audit tables du
 - **Graceful Degradation** - If modification flag retrieval fails, the audit history is still returned without the granular field-level tracking
 - **Logging** - Failures to retrieve modification flags are logged as warnings, allowing operators to monitor optional feature availability
 
+### Collection Auditing: Set vs List
+
+Hibernate Envers handles collections differently depending on whether you use `java.util.Set` or `java.util.List`. This impacts your audit table structure and schema design.
+
+#### Set Collections (Recommended)
+
+Use `Set` when **element order is not significant** and you want the cleanest audit table structure.
+
+**Behavior:**
+
+- Envers treats collection members as part of the composite primary key
+- No additional ordinal/index column is introduced
+- Composite primary key: `(entity_id, rev, element_id)`
+- Simpler schema, better performance
+- Ideal for many-to-many relationships and unordered collections
+
+**JPA Definition:**
+
+```java
+@ElementCollection(fetch = FetchType.EAGER)
+@CollectionTable(name = "relation_targets", joinColumns = @JoinColumn(name = "relation_id"))
+@Audited(withModifiedFlag = true)
+private Set<TargetEntity> targetEntities;
+```
+
+**Audit Table Schema:**
+
+```sql
+CREATE TABLE relation_targets_aud (
+    relation_id UUID NOT NULL,
+    target_id UUID NOT NULL,
+    rev BIGINT NOT NULL,
+    revtype SMALLINT,
+    -- additional audited columns here
+    PRIMARY KEY (relation_id, target_id, rev),
+    FOREIGN KEY (rev) REFERENCES envers_transaction_log (rev) ON DELETE CASCADE
+);
+```
+
+#### List Collections (Order Must Be Tracked)
+
+Use `List` **only when element order must be preserved** and tracked in the audit trail.
+
+**Behavior:**
+
+- Envers automatically introduces an order-tracking column (e.g., `SETORDINAL`, or your custom `@OrderColumn` name)
+- Order column becomes part of the composite primary key
+- Composite primary key: `(entity_id, rev, order_column)`
+- More complex schema, higher storage overhead
+- Use `@OrderColumn` to explicitly define the order column name
+
+**JPA Definition:**
+
+```java
+@ElementCollection(fetch = FetchType.EAGER)
+@CollectionTable(name = "ordered_targets", joinColumns = @JoinColumn(name = "relation_id"))
+@OrderColumn(name = "item_index")  // Explicitly track order
+@Audited(withModifiedFlag = true)
+private List<TargetEntity> targetEntities;
+```
+
+**Audit Table Schema (Note the order column in composite PK):**
+
+```sql
+CREATE TABLE ordered_targets_aud (
+    relation_id UUID NOT NULL,
+    item_index INT NOT NULL,
+    rev BIGINT NOT NULL,
+    revtype SMALLINT,
+    target_id UUID,
+    -- additional audited columns here
+    PRIMARY KEY (relation_id, item_index, rev),
+    FOREIGN KEY (rev) REFERENCES envers_transaction_log (rev) ON DELETE CASCADE
+);
+```
+
+#### Decision Matrix
+
+| Business Requirement          | Collection Type | Why                     | Schema Impact                           |
+|-------------------------------|-----------------|-------------------------|-----------------------------------------|
+| Members are unordered         | `Set`           | Natural fit             | Simpler PK: (entity_id, rev, member_id) |
+| Many-to-many relationship     | `Set`           | Standard pattern        | Cleaner schema                          |
+| Order not significant         | `Set`           | Reduces overhead        | Better query performance                |
+| Must track insertion order    | `List`          | Business requirement    | Order column in PK                      |
+| Ranked/prioritized items      | `List`          | Order is critical       | Complex PK: (entity_id, rev, order)     |
+| Sequence matters historically | `List`          | Audit trail needs order | More storage required                   |
+
+#### Common Issues and Solutions
+
+> [!WARNING]
+> **Changing collection types after data exists:** Migrating from `List` to `Set` or vice versa requires:
+>
+> - Altering the audit table structure
+> - Modifying the composite primary key
+> - Updating all related Flyway migrations
+> - **Avoid this if possible** - choose the collection type early in development
+>
+> [!NOTE]
+> **Audit Table Primary Key Mismatch:** If your Flyway script doesn't match Envers expectations for the collection type:
+>
+> - **Set** but missing element ID in PK → Envers will fail or create duplicate rows
+> - **List** but missing order column in PK → Envers will fail to track ordering
+> - Always verify migration scripts align with collection type
+
+#### Best Practices
+
+- **Default to `Set`** unless you have a specific business requirement to track order
+- **Use `@OrderColumn` explicitly** when defining `List` collections to make ordering intent clear
+- **Align database schema** with your collection type choice before data accumulates
+- **Test audit retrieval** for collections to ensure proper historical reconstruction
+- **Document the rationale** for using `List` collections so future maintainers understand why ordering is critical
+- **Use defensive copy patterns** for mutable collection getters/setters (see Infrastructure instructions)
+
+#### Example: When Set is Right
+
+```java
+@Entity
+@Audited(withModifiedFlag = true)
+public class RelationJpaEntity {
+    @Id
+    private UUID id;
+
+    // No order needed - targets are just members of this relation
+    @ElementCollection(fetch = FetchType.EAGER)
+    @CollectionTable(name = "relation_targets", schema = "idp_core",
+                     joinColumns = @JoinColumn(name = "relation_id"))
+    private Set<RelationTargetJpaEntity> targetEntities;  // ✅ Set - simple and efficient
+}
+```
+
+#### Example: When List is Right
+
+```java
+@Entity
+@Audited(withModifiedFlag = true)
+public class PriorityListEntity {
+    @Id
+    private UUID id;
+
+    // Order is critical - items are prioritized
+    @ElementCollection(fetch = FetchType.EAGER)
+    @CollectionTable(name = "priority_items", joinColumns = @JoinColumn(name = "list_id"))
+    @OrderColumn(name = "priority_order")
+    private List<PriorityItemEntity> items;  // ✅ List - order must be tracked
+}
+```
+
 ### Performance Considerations
 
 The audit system is designed for efficiency:
