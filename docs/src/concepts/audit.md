@@ -484,7 +484,7 @@ Use `List` **only when element order must be preserved** and tracked in the audi
 
 **Behavior:**
 
-- Envers automatically introduces an order-tracking column (e.g., `SETORDINAL`, or your custom `@OrderColumn` name)
+- Envers automatically introduces an order-tracking column (`SETORDINAL`, or your custom `@OrderColumn` name)
 - Order column becomes part of the composite primary key
 - Composite primary key: `(entity_id, rev, order_column)`
 - More complex schema, higher storage overhead
@@ -517,14 +517,14 @@ CREATE TABLE ordered_targets_aud (
 
 #### Decision Matrix
 
-| Business Requirement          | Collection Type | Why                     | Schema Impact                           |
-|-------------------------------|-----------------|-------------------------|-----------------------------------------|
-| Members are unordered         | `Set`           | Natural fit             | Simpler PK: (entity_id, rev, member_id) |
-| Many-to-many relationship     | `Set`           | Standard pattern        | Cleaner schema                          |
-| Order not significant         | `Set`           | Reduces overhead        | Better query performance                |
-| Must track insertion order    | `List`          | Business requirement    | Order column in PK                      |
-| Ranked/prioritized items      | `List`          | Order is critical       | Complex PK: (entity_id, rev, order)     |
-| Sequence matters historically | `List`          | Audit trail needs order | More storage required                   |
+| Business Requirement          | Collection Type | Why                     | Schema Impact            |
+|-------------------------------|-----------------|-------------------------|--------------------------|
+| Members are unordered         | `Set`           | Natural fit             | Simpler PK               |
+| Many-to-many relationship     | `Set`           | Standard pattern        | Cleaner schema           |
+| Order not significant         | `Set`           | Reduces overhead        | Better query performance |
+| Must track insertion order    | `List`          | Business requirement    | Order column in PK       |
+| Ranked/prioritized items      | `List`          | Order is critical       | Complex PK               |
+| Sequence matters historically | `List`          | Audit trail needs order | More storage required    |
 
 #### Common Issues and Solutions
 
@@ -536,7 +536,6 @@ CREATE TABLE ordered_targets_aud (
 > - Updating all related Flyway migrations
 > - **Avoid this if possible** - choose the collection type early in development
 >
-> [!NOTE]
 > **Audit Table Primary Key Mismatch:** If your Flyway script doesn't match Envers expectations for the collection type:
 >
 > - **Set** but missing element ID in PK → Envers will fail or create duplicate rows
