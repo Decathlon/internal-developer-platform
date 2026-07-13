@@ -63,6 +63,43 @@ applyTo: '**/infrastructure/**/*.java'
 - Prefer `UUID` identifiers and align `@Table`/`@Column` names with the Flyway-created schema (`snake_case`).
 - Avoid relying on Hibernate proxies for equality; use getClass() instead of `instanceof` in equals to prevent proxy-related bugs.
 
+### Audited Collections: Set vs List
+
+When using Hibernate Envers (`@Audited`), the collection type significantly impacts your audit table schema design:
+
+**Use `Set` (Recommended)**
+
+- Order of elements does not need to be tracked
+- Simpler audit table structure: composite primary key is `(entity_id, rev, element_id)`
+- Better query performance on audit tables
+- No additional tracking columns required
+- Example: `private Set<TargetEntity> targets;`
+
+**Use `List` (Only When Order Matters)**
+
+- Element order must be preserved and tracked in audit history
+- Hibernate Envers adds a `SETORDINAL` column to track position
+- Composite primary key becomes: `(entity_id, rev, setordinal)`
+- Higher storage overhead and more complex schema
+- Always use `@OrderColumn(name="column_name")` to explicitly define the order column
+- Example: `@OrderColumn(name="item_index") private List<TargetEntity> targets;`
+
+### Schema Alignment
+
+- Flyway migration must match Envers expectations for the chosen collection type
+- Changing from `List` to `Set` or vice versa after data exists requires audit table restructuring
+- Plan collection types early; retrofitting is costly and error-prone
+- Audit table primary key structure must include order column only for `List` collections
+
+**Decision Matrix:**
+
+| Use Case                    | Collection Type | Rationale                             |
+|-----------------------------|-----------------|---------------------------------------|
+| Many-to-many relationships  | `Set`           | Natural fit, no order tracking needed |
+| Element order insignificant | `Set`           | Simpler schema, better performance    |
+| Preserve insertion order    | `List`          | Use with `@OrderColumn`               |
+| Ranked/prioritized items    | `List`          | Order is business-critical            |
+
 ### Relationships & Fetching
 
 - Prefer `LAZY` relationships by default; avoid `EAGER` unless you have a proven reason.

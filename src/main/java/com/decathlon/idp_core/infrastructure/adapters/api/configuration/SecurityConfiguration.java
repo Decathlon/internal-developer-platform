@@ -4,6 +4,7 @@ import static org.springframework.security.config.Customizer.withDefaults;
 
 import java.util.List;
 
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -24,12 +25,13 @@ import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 ///
 /// **Infrastructure specifics:**
 /// - CORS origins externalized via `spring.web.cors.allowed-origins` in `application.yml`
-/// - JWT resource server auto-configured with Spring Security OAuth2
+/// - JWT resource server autoconfigured with Spring Security OAuth2
 /// - Security filter chain processes authentication before reaching controllers
 
 @Configuration
 @EnableWebSecurity
 @EnableConfigurationProperties(CorsProperties.class)
+@ConditionalOnProperty(name = "app.security.mock-enabled", havingValue = "false", matchIfMissing = true)
 public class SecurityConfiguration {
 
   private final CorsProperties corsProperties;

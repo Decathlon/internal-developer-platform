@@ -5,6 +5,7 @@ import java.util.UUID;
 
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.history.RevisionRepository;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
@@ -12,7 +13,10 @@ import com.decathlon.idp_core.domain.model.entity.RelationAsTargetSummary;
 import com.decathlon.idp_core.infrastructure.adapters.persistence.model.entity.RelationJpaEntity;
 
 @Repository
-public interface JpaRelationRepository extends JpaRepository<RelationJpaEntity, UUID> {
+public interface JpaRelationRepository
+    extends
+      JpaRepository<RelationJpaEntity, UUID>,
+      RevisionRepository<RelationJpaEntity, UUID, Long> {
 
   /**
    * Find relation summaries where the given entity identifiers are targets. Uses
