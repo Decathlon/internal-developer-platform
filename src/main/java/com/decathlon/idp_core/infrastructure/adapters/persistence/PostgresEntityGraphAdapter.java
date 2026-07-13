@@ -41,13 +41,13 @@ public class PostgresEntityGraphAdapter implements EntityGraphRepositoryPort {
 
   private static final Logger log = LoggerFactory.getLogger(PostgresEntityGraphAdapter.class);
 
+  @SuppressWarnings("null")
   @Override
   @Transactional(readOnly = true)
   public Map<UUID, Entity> findEntityGraph(UUID entityId, int depth, boolean includeProperties,
       EntityGraphTraversalMode mode) {
 
-    // Step 1: collect all (identifier, template_identifier) pairs via recursive
-    // CTE.
+    // Step 1: collect all (identifier, template_identifier) pairs via recursive CTE.
     // The CTE always traverses ALL relation types to discover all reachable nodes.
     // Relation name filtering is applied at the service level when building edges,
     // so nodes reachable via any path are included even if the filter only matches
@@ -74,6 +74,47 @@ public class PostgresEntityGraphAdapter implements EntityGraphRepositoryPort {
     }
 
     // Step 4: map to domain and key by composite key for O(1) lookup
+    return jpaEntities.stream().map(mapper::toDomain)
+        .filter(entity -> entity.id() != null)
+        .collect(Collectors.toMap(Entity::id, Function.identity()));
+
+  }
+
+  @Override
+  @Transactional(readOnly = true)
+  public Map<UUID, Entity> findEntityGraphBatch(List<UUID> rootIds, int depth,
+      boolean includeProperties, EntityGraphTraversalMode mode) {
+
+    if (rootIds == null || rootIds.isEmpty()) {
+      log.debug("[EntityGraphAdapter] Empty root IDs list provided, returning empty map");
+      return Map.of();
+    }
+
+    // Step 1: collect all entity IDs in the graph for all root IDs via batch
+    // recursive CTE
+    // Execute the native call safely
+    List<UUID> graphIds = jpaEntityRepository.findEntityGraphIdentifiersBatch(rootIds, depth, mode.name());
+
+    if (graphIds == null || graphIds.isEmpty()) {
+      log.debug(
+          "[EntityGraphAdapter] No graph identifiers found for batch roots (null or empty), returning empty map");
+      return Map.of();
+    }
+
+    // Step 2: extract unique identifiers for batch loading
+    List<UUID> entitiesIds = graphIds.stream().distinct().toList();
+
+    // Step 3: batch-load entities with relations, then optionally properties in a
+    // separate query.
+    // Properties are skipped when not requested to avoid the extra round-trip and
+    // keep payloads lean.
+    // The two-query split also avoids Hibernate's MultipleBagFetchException.
+    List<EntityJpaEntity> jpaEntities = jpaEntityRepository.findAllByIdinWithRelations(entitiesIds);
+    if (includeProperties) {
+      jpaEntityRepository.findAllByIdInWithProperties(entitiesIds);
+    }
+
+    // Step 4: map to domain and key by UUID for O(1) lookup
     return jpaEntities.stream().map(mapper::toDomain)
         .collect(Collectors.toMap(Entity::id, Function.identity()));
 

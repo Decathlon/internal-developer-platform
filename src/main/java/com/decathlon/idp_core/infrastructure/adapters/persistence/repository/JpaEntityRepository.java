@@ -11,152 +11,210 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
-import org.springframework.data.repository.history.RevisionRepository;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import com.decathlon.idp_core.domain.model.entity.EntitySummary;
 import com.decathlon.idp_core.infrastructure.adapters.persistence.model.entity.EntityJpaEntity;
 
+import jakarta.persistence.QueryHint;
+
 @Repository
 public interface JpaEntityRepository
-    extends
-      JpaRepository<EntityJpaEntity, UUID>,
-      JpaSpecificationExecutor<EntityJpaEntity>,
-      RevisionRepository<EntityJpaEntity, UUID, Long> {
+        extends
+        JpaRepository<EntityJpaEntity, UUID>,
+        JpaSpecificationExecutor<EntityJpaEntity> {
 
-  @Query("SELECT e.identifier AS identifier, e.name AS name, e.templateIdentifier AS templateIdentifier FROM EntityJpaEntity e WHERE e.identifier IN :identifiers")
-  List<EntitySummary> findByIdentifierIn(List<String> identifiers);
+    @Query("SELECT e.identifier AS identifier, e.name AS name, e.templateIdentifier AS templateIdentifier FROM EntityJpaEntity e WHERE e.identifier IN :identifiers")
+    List<EntitySummary> findByIdentifierIn(List<String> identifiers);
 
-  @Query("SELECT e.identifier AS identifier, e.name AS name, e.templateIdentifier AS templateIdentifier FROM EntityJpaEntity e JOIN e.relations r WHERE r.id IN :relationIds")
-  List<EntitySummary> findByRelationIdIn(List<UUID> relationIds);
+    @Query("SELECT e.identifier AS identifier, e.name AS name, e.templateIdentifier AS templateIdentifier FROM EntityJpaEntity e JOIN e.relations r WHERE r.id IN :relationIds")
+    List<EntitySummary> findByRelationIdIn(List<UUID> relationIds);
 
-  Optional<EntityJpaEntity> findByTemplateIdentifierAndIdentifier(String templateIdentifier,
-      String identifier);
+    Optional<EntityJpaEntity> findByTemplateIdentifierAndIdentifier(String templateIdentifier,
+            String identifier);
 
-  Optional<EntityJpaEntity> findByTemplateIdentifierAndName(String templateIdentifier, String name);
+    Optional<EntityJpaEntity> findByTemplateIdentifierAndName(String templateIdentifier, String name);
 
-  Page<EntityJpaEntity> findByTemplateIdentifier(String templateIdentifier, Pageable pageable);
+    Page<EntityJpaEntity> findByTemplateIdentifier(String templateIdentifier, Pageable pageable);
 
-  /// Batch fetch entities by identifiers with eager loading of relations and
-  /// properties. Uses two separate queries to avoid Hibernate's
-  /// MultipleBagFetchException. First fetches entities with relations, then
-  /// fetches properties separately.
-  @Query("""
-      SELECT DISTINCT e
-      FROM EntityJpaEntity e
-      LEFT JOIN FETCH e.relations r
-      WHERE e.id IN :ids
-      """)
-  List<EntityJpaEntity> findAllByIdinWithRelations(@Param("ids") Collection<UUID> ids);
+    /// Batch fetch entities by identifiers with eager loading of relations and
+    /// properties. Uses two separate queries to avoid Hibernate's
+    /// MultipleBagFetchException. First fetches entities with relations, then
+    /// fetches properties separately.
+    @Query("""
+            SELECT DISTINCT e
+            FROM EntityJpaEntity e
+            LEFT JOIN FETCH e.relations r
+            WHERE e.id IN :ids
+            """)
+    List<EntityJpaEntity> findAllByIdinWithRelations(@Param("ids") Collection<UUID> ids);
 
-  /// Fetch properties for entities that were already loaded. This is called after
-  /// findAllByIdInWithRelations to complete the entity graph.
-  @Query("SELECT DISTINCT e FROM EntityJpaEntity e LEFT JOIN FETCH e.properties WHERE e.id IN :ids")
-  List<EntityJpaEntity> findAllByIdInWithProperties(@Param("ids") Collection<UUID> ids);
+    /// Fetch properties for entities that were already loaded. This is called after
+    /// findAllByIdInWithRelations to complete the entity graph.
+    @Query("SELECT DISTINCT e FROM EntityJpaEntity e LEFT JOIN FETCH e.properties WHERE e.id IN :ids")
+    List<EntityJpaEntity> findAllByIdInWithProperties(@Param("ids") Collection<UUID> ids);
 
-  @Query(value = """
-      WITH RECURSIVE entity_graph(id, depth, flow) AS (
-          -- 1. ANCHOR MEMBER: Initialize state tokens for a single root entity
-          SELECT e.id, 0, 'OUTBOUND' AS flow
-          FROM idp_core.entity e
-          WHERE e.id = :rootId AND :mode IN ('DIRECT_LINEAGE', 'OUTBOUND_ONLY')
+    @Modifying(clearAutomatically = true, flushAutomatically = true)
+    @Query("""
+            DELETE FROM PropertyJpaEntity p
+            WHERE p IN (
+              SELECT p2 FROM EntityJpaEntity e JOIN e.properties p2
+              WHERE e.templateIdentifier = :templateIdentifier
+              AND p2.name IN :propertyNames
+            )
+            """)
+    void deletePropertiesByTemplateIdentifierAndPropertyName(
+            @Param("templateIdentifier") String templateIdentifier,
+            @Param("propertyNames") Collection<String> propertyNames);
 
-          UNION
+    @Modifying(clearAutomatically = true, flushAutomatically = true)
+    @Query("""
+            DELETE FROM RelationJpaEntity r
+            WHERE r IN (
+              SELECT r2 FROM EntityJpaEntity e JOIN e.relations r2
+              WHERE e.templateIdentifier = :templateIdentifier
+              AND r2.name IN :relationNames
+            )
+            """)
+    void deleteRelationsByTemplateIdentifierAndRelationName(
+            @Param("templateIdentifier") String templateIdentifier,
+            @Param("relationNames") Collection<String> relationNames);
 
-          SELECT e.id, 0, 'INBOUND' AS flow
-          FROM idp_core.entity e
-          WHERE e.id = :rootId AND :mode = 'DIRECT_LINEAGE'
+    void deleteByTemplateIdentifierAndIdentifier(
+            @Param("templateIdentifier") String templateIdentifier,
+            @Param("entityIdentifier") String entityIdentifier);
 
-          UNION
+    List<EntityJpaEntity> findAllByTemplateIdentifierAndIdentifierIn(String templateIdentifier,
+            List<String> identifiers);
 
-          SELECT e.id, 0, 'ANY' AS flow
-          FROM idp_core.entity e
-          WHERE e.id = :rootId AND :mode = 'BIDIRECTIONAL'
+    // Find all entities that have relations pointing to the given target
+    // identifier. Uses a native query for better control over the join strategy.
+    @Query(value = """
+            SELECT DISTINCT e.*
+            FROM idp_core.entity e
+            JOIN idp_core.entity_relations er ON er.entity_id = e.id
+            JOIN idp_core.relation_target_entities rte ON rte.relation_id = er.relation_id
+            JOIN idp_core.entity target ON target.id = rte.target_entity_uuid
+            WHERE target.identifier = :targetIdentifier
+            """, nativeQuery = true)
+    List<EntityJpaEntity> findEntitiesRelated(@Param("targetIdentifier") String targetIdentifier);
 
-          UNION
+    @Query(value = """
+            WITH RECURSIVE entity_graph(id, depth, flow) AS (
+                -- 1. ANCHOR MEMBER: Initialize state tokens for a single root entity
+                SELECT e.id, 0, 'OUTBOUND' AS flow
+                FROM idp_core.entity e
+                WHERE e.id = :rootId AND :mode IN ('DIRECT_LINEAGE', 'OUTBOUND_ONLY')
 
-          -- 2. RECURSIVE MEMBER: Propagate isolated pathways down the graph footprint
-          SELECT combined.id, eg.depth + 1, eg.flow
-          FROM entity_graph eg
-          JOIN (
-              -- Outbound Paths
-              SELECT er.entity_id AS source_id, rte.target_entity_uuid AS id, 'OUTBOUND' AS flow_match
-              FROM idp_core.entity_relations er
-              JOIN idp_core.relation_target_entities rte ON rte.relation_id = er.relation_id
-              WHERE rte.target_entity_uuid IS NOT NULL
+                UNION
 
-              UNION ALL
+                SELECT e.id, 0, 'INBOUND' AS flow
+                FROM idp_core.entity e
+                WHERE e.id = :rootId AND :mode = 'DIRECT_LINEAGE'
 
-              SELECT er.entity_id AS source_id, rte.target_entity_uuid AS id, 'ANY' AS flow_match
-              FROM idp_core.entity_relations er
-              JOIN idp_core.relation_target_entities rte ON rte.relation_id = er.relation_id
-              WHERE rte.target_entity_uuid IS NOT NULL
+                UNION
 
-              UNION ALL
+                SELECT e.id, 0, 'ANY' AS flow
+                FROM idp_core.entity e
+                WHERE e.id = :rootId AND :mode = 'BIDIRECTIONAL'
 
-              -- Inbound Paths
-              SELECT rte.target_entity_uuid AS source_id, er.entity_id AS id, 'INBOUND' AS flow_match
-              FROM idp_core.relation_target_entities rte
-              JOIN idp_core.entity_relations er ON er.relation_id = rte.relation_id
+                UNION
 
-              UNION ALL
+                -- 2. RECURSIVE MEMBER: Propagate isolated pathways down the graph footprint
+                SELECT combined.id, eg.depth + 1, eg.flow
+                FROM entity_graph eg
+                JOIN (
+                    -- Outbound Paths
+                    SELECT er.entity_id AS source_id, rte.target_entity_uuid AS id, 'OUTBOUND' AS flow_match
+                    FROM idp_core.entity_relations er
+                    JOIN idp_core.relation_target_entities rte ON rte.relation_id = er.relation_id
+                    WHERE rte.target_entity_uuid IS NOT NULL
 
-              SELECT rte.target_entity_uuid AS source_id, er.entity_id AS id, 'ANY' AS flow_match
-              FROM idp_core.relation_target_entities rte
-              JOIN idp_core.entity_relations er ON er.relation_id = rte.relation_id
-          ) combined ON combined.source_id = eg.id AND combined.flow_match = eg.flow
-          WHERE eg.depth < :depth
-      )
-      -- 3. Return the clean deduplicated set of structural skeleton UUIDs
-      SELECT DISTINCT id FROM entity_graph;
-      """, nativeQuery = true)
-  List<UUID> findEntityIdsInGraph(@Param("rootId") UUID rootId, @Param("depth") int depth,
-      @Param("mode") String mode);
+                    UNION ALL
 
-  @Modifying(clearAutomatically = true, flushAutomatically = true)
-  @Query("""
-      DELETE FROM PropertyJpaEntity p
-      WHERE p IN (
-        SELECT p2 FROM EntityJpaEntity e JOIN e.properties p2
-        WHERE e.templateIdentifier = :templateIdentifier
-        AND p2.name IN :propertyNames
-      )
-      """)
-  void deletePropertiesByTemplateIdentifierAndPropertyName(
-      @Param("templateIdentifier") String templateIdentifier,
-      @Param("propertyNames") Collection<String> propertyNames);
+                    SELECT er.entity_id AS source_id, rte.target_entity_uuid AS id, 'ANY' AS flow_match
+                    FROM idp_core.entity_relations er
+                    JOIN idp_core.relation_target_entities rte ON rte.relation_id = er.relation_id
+                    WHERE rte.target_entity_uuid IS NOT NULL
 
-  @Modifying(clearAutomatically = true, flushAutomatically = true)
-  @Query("""
-      DELETE FROM RelationJpaEntity r
-      WHERE r IN (
-        SELECT r2 FROM EntityJpaEntity e JOIN e.relations r2
-        WHERE e.templateIdentifier = :templateIdentifier
-        AND r2.name IN :relationNames
-      )
-      """)
-  void deleteRelationsByTemplateIdentifierAndRelationName(
-      @Param("templateIdentifier") String templateIdentifier,
-      @Param("relationNames") Collection<String> relationNames);
+                    UNION ALL
 
-  List<EntityJpaEntity> findAllByTemplateIdentifierAndIdentifierIn(String templateIdentifier,
-      List<String> identifiers);
+                    -- Inbound Paths
+                    SELECT rte.target_entity_uuid AS source_id, er.entity_id AS id, 'INBOUND' AS flow_match
+                    FROM idp_core.relation_target_entities rte
+                    JOIN idp_core.entity_relations er ON er.relation_id = rte.relation_id
 
-  // Find all entities that have relations pointing to the given target
-  // identifier. Uses a native query for better control over the join strategy.
-  @Query(value = """
-      SELECT DISTINCT e.*
-      FROM idp_core.entity e
-      JOIN idp_core.entity_relations er ON er.entity_id = e.id
-      JOIN idp_core.relation_target_entities rte ON rte.relation_id = er.relation_id
-      JOIN idp_core.entity target ON target.id = rte.target_entity_uuid
-      WHERE target.identifier = :targetIdentifier
-      """, nativeQuery = true)
-  List<EntityJpaEntity> findEntitiesRelated(@Param("targetIdentifier") String targetIdentifier);
+                    UNION ALL
 
-  void deleteByTemplateIdentifierAndIdentifier(
-      @Param("templateIdentifier") String templateIdentifier,
-      @Param("entityIdentifier") String entityIdentifier);
+                    SELECT rte.target_entity_uuid AS source_id, er.entity_id AS id, 'ANY' AS flow_match
+                    FROM idp_core.relation_target_entities rte
+                    JOIN idp_core.entity_relations er ON er.relation_id = rte.relation_id
+                ) combined ON combined.source_id = eg.id AND combined.flow_match = eg.flow
+                WHERE eg.depth < :depth
+            )
+            -- 3. Return the clean deduplicated set of structural skeleton UUIDs
+            SELECT DISTINCT id FROM entity_graph;
+            """, nativeQuery = true)
+    List<UUID> findEntityIdsInGraph(@Param("rootId") UUID rootId, @Param("depth") int depth,
+            @Param("mode") String mode);
 
+    @Query(value = """
+            WITH RECURSIVE entity_graph(id, depth, flow) AS (
+                -- 1. ANCHOR MEMBER: Initialize state tokens for multiple root entities
+                SELECT e.id, 0, 'OUTBOUND' AS flow
+                FROM idp_core.entity e
+                WHERE e.id IN :rootIds AND :mode IN ('DIRECT_LINEAGE', 'OUTBOUND_ONLY')
+
+                UNION
+
+                SELECT e.id, 0, 'INBOUND' AS flow
+                FROM idp_core.entity e
+                WHERE e.id IN :rootIds AND :mode = 'DIRECT_LINEAGE'
+
+                UNION
+
+                SELECT e.id, 0, 'ANY' AS flow
+                FROM idp_core.entity e
+                WHERE e.id IN :rootIds AND :mode = 'BIDIRECTIONAL'
+
+                UNION
+
+                -- 2. RECURSIVE MEMBER: Propagate isolated pathways down the graph footprint
+                SELECT combined.id, eg.depth + 1, eg.flow
+                FROM entity_graph eg
+                JOIN (
+                    -- Outbound Paths
+                    SELECT er.entity_id AS source_id, rte.target_entity_uuid AS id, 'OUTBOUND' AS flow_match
+                    FROM idp_core.entity_relations er
+                    JOIN idp_core.relation_target_entities rte ON rte.relation_id = er.relation_id
+                    WHERE rte.target_entity_uuid IS NOT NULL
+
+                    UNION ALL
+
+                    SELECT er.entity_id AS source_id, rte.target_entity_uuid AS id, 'ANY' AS flow_match
+                    FROM idp_core.entity_relations er
+                    JOIN idp_core.relation_target_entities rte ON rte.relation_id = er.relation_id
+                    WHERE rte.target_entity_uuid IS NOT NULL
+
+                    UNION ALL
+
+                    -- Inbound Paths
+                    SELECT rte.target_entity_uuid AS source_id, er.entity_id AS id, 'INBOUND' AS flow_match
+                    FROM idp_core.relation_target_entities rte
+                    JOIN idp_core.entity_relations er ON er.relation_id = rte.relation_id
+
+                    UNION ALL
+
+                    SELECT rte.target_entity_uuid AS source_id, er.entity_id AS id, 'ANY' AS flow_match
+                    FROM idp_core.relation_target_entities rte
+                    JOIN idp_core.entity_relations er ON er.relation_id = rte.relation_id
+                ) combined ON combined.source_id = eg.id AND combined.flow_match = eg.flow
+                WHERE eg.depth < :depth
+            )
+            -- 3. Return the clean deduplicated set of structural skeleton UUIDs
+            SELECT DISTINCT id FROM entity_graph;
+            """, nativeQuery = true)
+    List<UUID> findEntityGraphIdentifiersBatch(@Param("rootIds") Collection<UUID> rootIds,
+            @Param("depth") int depth, @Param("mode") String mode);
 }

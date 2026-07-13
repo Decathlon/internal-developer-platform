@@ -69,11 +69,13 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.decathlon.idp_core.domain.model.entity.Entity;
 import com.decathlon.idp_core.domain.model.entity.EntityFilter;
+import com.decathlon.idp_core.domain.model.entity_graph.EntityGraphNode;
 import com.decathlon.idp_core.domain.model.search.PaginatedResult;
 import com.decathlon.idp_core.domain.model.search.PaginationCriteria;
 import com.decathlon.idp_core.domain.model.search.RawSearchFilterNode;
 import com.decathlon.idp_core.domain.model.search.SearchFilterNode;
 import com.decathlon.idp_core.domain.service.entity.EntityService;
+import com.decathlon.idp_core.domain.service.entity_graph.EntityGraphService;
 import com.decathlon.idp_core.domain.service.filter.EntityFilterDslParser;
 import com.decathlon.idp_core.domain.service.search.SearchFilterParser;
 import com.decathlon.idp_core.infrastructure.adapters.api.configuration.SwaggerConfiguration.EntityPageResponse;
@@ -117,6 +119,7 @@ public class EntityController {
   private final EntityFilterDslParser entityFilterDslParser;
   private final SearchFilterMapper searchFilterMapper;
   private final SearchFilterParser searchFilterParser;
+  private final EntityGraphService entityGraphService;
 
   /// Returns paginated entities filtered by template with HTTP pagination
   /// support.
@@ -133,7 +136,8 @@ public class EntityController {
   /// @param q optional filter query string (e.g.
   /// `name:API;property.language=JAVA`)
   /// @return paginated entity DTOs matching the template and optional filter
-  @Operation(summary = ENDPOINT_GET_ENTITIES_SUMMARY, description = ENDPOINT_GET_ENTITIES_PAGINATED_DESCRIPTION)
+@SuppressWarnings("null")
+@Operation(summary = ENDPOINT_GET_ENTITIES_SUMMARY, description = ENDPOINT_GET_ENTITIES_PAGINATED_DESCRIPTION)
   @ApiResponse(responseCode = OK_CODE, description = RESPONSE_ENTITIES_PAGINATED_SUCCESS, content = @Content(schema = @Schema(implementation = EntityPageResponse.class)))
   @ApiResponse(responseCode = BAD_REQUEST_CODE, description = RESPONSE_INVALID_PAGINATION, content = {
       @Content(schema = @Schema(implementation = ApiExceptionHandler.ErrorResponse.class))})
@@ -150,9 +154,10 @@ public class EntityController {
       @RequestParam(required = false) String q) {
     Pageable pageable = PageRequest.of(page, size);
     EntityFilter filter = entityFilterDslParser.parse(q);
-    Page<Entity> entities = entityService.getEntitiesByTemplateIdentifier(pageable,
+    // Single transaction: pagination + batch relation fetch in one DB round trip
+    Page<EntityGraphNode> graphNodes = entityGraphService.getEntityGraphPageByTemplate(pageable,
         templateIdentifier, filter);
-    return entityDtoOutMapper.fromEntitiesPageToDtoPage(entities, templateIdentifier);
+    return entityDtoOutMapper.fromGraphNodesPage(graphNodes, templateIdentifier);
   }
 
   /// Retrieves a single entity by template and entity identifiers.

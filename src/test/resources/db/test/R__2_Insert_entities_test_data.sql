@@ -94,9 +94,9 @@ INSERT INTO idp_core.relation (id, name, target_template_identifier)
 VALUES
   ('bb000000-0000-0000-0000-000000000001', 'database', 'database-service');
 
-INSERT INTO idp_core.relation_target_entities (relation_id, target_entity_identifier)
+INSERT INTO idp_core.relation_target_entities (relation_id, target_entity_identifier, target_entity_uuid)
 VALUES
-  ('bb000000-0000-0000-0000-000000000001', 'database-service-1');
+  ('bb000000-0000-0000-0000-000000000001', 'database-service-1', '550e8400-e29b-41d4-a716-446655440107');
 
 INSERT INTO idp_core.entity_relations (entity_id, relation_id)
 VALUES
@@ -107,9 +107,9 @@ INSERT INTO idp_core.relation (id, name, target_template_identifier)
 VALUES
   ('bb000000-0000-0000-0000-000000000002', 'database', 'cache-service');
 
-INSERT INTO idp_core.relation_target_entities (relation_id, target_entity_identifier)
+INSERT INTO idp_core.relation_target_entities (relation_id, target_entity_identifier, target_entity_uuid)
 VALUES
-  ('bb000000-0000-0000-0000-000000000002', 'cache-service-1');
+  ('bb000000-0000-0000-0000-000000000002', 'cache-service-1', '550e8400-e29b-41d4-a716-446655440108');
 
 INSERT INTO idp_core.entity_relations (entity_id, relation_id)
 VALUES
@@ -120,9 +120,9 @@ INSERT INTO idp_core.relation (id, name, target_template_identifier)
 VALUES
   ('bb000000-0000-0000-0000-000000000003', 'api-link', 'microservice');
 
-INSERT INTO idp_core.relation_target_entities (relation_id, target_entity_identifier)
+INSERT INTO idp_core.relation_target_entities (relation_id, target_entity_identifier, target_entity_uuid)
 VALUES
-  ('bb000000-0000-0000-0000-000000000003', 'microservice-1');
+  ('bb000000-0000-0000-0000-000000000003', 'microservice-1', '550e8400-e29b-41d4-a716-446655440102');
 
 INSERT INTO idp_core.entity_relations (entity_id, relation_id)
 VALUES
@@ -133,9 +133,9 @@ INSERT INTO idp_core.relation (id, name, target_template_identifier)
 VALUES
   ('bb000000-0000-0000-0000-000000000006', 'required_team', 'team');
 
-INSERT INTO idp_core.relation_target_entities (relation_id, target_entity_identifier)
+INSERT INTO idp_core.relation_target_entities (relation_id, target_entity_identifier, target_entity_uuid)
 VALUES
-  ('bb000000-0000-0000-0000-000000000006', 'test-team-required');
+  ('bb000000-0000-0000-0000-000000000006', 'test-team-required', '550e8400-e29b-41d4-a716-446655440116');
 
 INSERT INTO idp_core.entity_relations (entity_id, relation_id)
 VALUES

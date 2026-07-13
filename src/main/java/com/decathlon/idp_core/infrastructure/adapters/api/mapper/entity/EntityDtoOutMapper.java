@@ -17,10 +17,13 @@ import com.decathlon.idp_core.domain.model.entity.Entity;
 import com.decathlon.idp_core.domain.model.entity.EntitySummary;
 import com.decathlon.idp_core.domain.model.entity.Property;
 import com.decathlon.idp_core.domain.model.entity.RelationAsTargetSummary;
+import com.decathlon.idp_core.domain.model.entity_graph.EntityGraphNode;
+import com.decathlon.idp_core.domain.model.entity_graph.EntityGraphRelation;
 import com.decathlon.idp_core.domain.model.entity_template.EntityTemplate;
 import com.decathlon.idp_core.domain.model.entity_template.PropertyDefinition;
 import com.decathlon.idp_core.domain.model.enums.PropertyType;
 import com.decathlon.idp_core.domain.service.entity.EntityService;
+import com.decathlon.idp_core.domain.service.entity_graph.EntityGraphService;
 import com.decathlon.idp_core.domain.service.entity_template.EntityTemplateService;
 import com.decathlon.idp_core.domain.service.relation.RelationService;
 import com.decathlon.idp_core.infrastructure.adapters.api.dto.out.entity.EntityDtoOut;
@@ -70,29 +73,91 @@ public class EntityDtoOutMapper {
     return fromEntityUsingEntityTemplate(entity, entityTemplate);
   }
 
-  /// Maps paginated domain entities to API DTOs with optimized bulk operations.
+  /// Maps a page of pre-fetched graph nodes to paginated [EntityDtoOut] DTOs.
   ///
-  /// **Performance optimization:** Batches template resolution and relationship
-  /// lookups
-  /// to minimize database queries. Builds summary maps for efficient relationship
-  /// resolution across the entire page.
+  /// **Pure mapping:** All DB queries were already executed inside
+  /// [EntityGraphService#getEntityGraphPageByTemplate] within a single
+  /// transaction. This method only transforms domain models to API DTOs —
+  /// no further repository calls are made.
   ///
-  /// @param entities paginated domain entities from repository layer
-  /// @param entityTemplateIdentifier template identifier for batch template
-  /// resolution
-  /// @return paginated API DTOs with complete relationship data
-  public Page<EntityDtoOut> fromEntitiesPageToDtoPage(Page<Entity> entities,
+  /// @param graphNodes paginated graph nodes with resolved bidirectional
+  /// relations
+  /// @param entityTemplateIdentifier template identifier for property type
+  /// mapping
+  /// @return paginated API DTOs with unified outbound and inbound relations
+  public Page<EntityDtoOut> fromGraphNodesPage(Page<EntityGraphNode> graphNodes,
       String entityTemplateIdentifier) {
 
-    Map<String, EntitySummaryDto> pageEntitiesSummaries = buildRelatedEntitiesSummaryMapByPage(
-        entities);
-    Map<String, List<RelationAsTargetSummary>> relationTargetOwnershipsMap = buildRelationsAsTargetSummaryMapByPage(
-        entities);
-
-    EntityTemplate pageEntityTemplate = entityTemplateService
+    EntityTemplate template = entityTemplateService
         .getEntityTemplateByIdentifier(entityTemplateIdentifier);
-    return entities.map(entity -> fromEntityUsingEntityTemplateAndSummaryMap(entity,
-        pageEntityTemplate, pageEntitiesSummaries, relationTargetOwnershipsMap));
+
+    return graphNodes.map(graphNode -> fromGraphNode(graphNode, template));
+  }
+
+  /// Maps a single [EntityGraphNode] to an [EntityDtoOut].
+  ///
+  /// **Unification:** Merges `graphNode.relations()` (outbound) and
+  /// `graphNode.relationsAsTarget()` (inbound) into a single `relations` map
+  /// keyed by relation name. When both directions share the same relation name,
+  /// their entity summaries are merged into one list.
+  ///
+  /// @param graphNode domain graph node with bidirectional relation data
+  /// @param template entity template for property type resolution
+  /// @return API DTO with unified relations map
+  private EntityDtoOut fromGraphNode(EntityGraphNode graphNode, EntityTemplate template) {
+    Map<String, Object> props = mapPropertiesFromGraphNode(graphNode, template);
+    Map<String, List<EntitySummaryDto>> unifiedRelations = buildUnifiedRelationsFromGraphNode(
+        graphNode);
+
+    return new EntityDtoOut(graphNode.identifier(), graphNode.name(),
+        graphNode.templateIdentifier(), props, unifiedRelations);
+  }
+
+  /// Maps properties from a graph node using the template for type conversion.
+  private Map<String, Object> mapPropertiesFromGraphNode(EntityGraphNode graphNode,
+      EntityTemplate template) {
+    if (graphNode.properties() == null || graphNode.properties().isEmpty()) {
+      return Collections.emptyMap();
+    }
+
+    Map<String, PropertyDefinition> definitions = template.propertiesDefinitions().stream()
+        .collect(Collectors.toMap(PropertyDefinition::name, Function.identity()));
+
+    return graphNode.properties().stream().filter(prop -> prop.value() != null)
+        .collect(Collectors.toMap(Property::name,
+            prop -> convertPropertyValue(prop, definitions.get(prop.name()))));
+  }
+
+  /// Builds a unified relations map from a graph node combining both directions.
+  ///
+  /// Outbound relations (`graphNode.relations()`) and inbound relations
+  /// (`graphNode.relationsAsTarget()`) are merged under the same relation name
+  /// key when present.
+  private Map<String, List<EntitySummaryDto>> buildUnifiedRelationsFromGraphNode(
+      EntityGraphNode graphNode) {
+
+    Map<String, List<EntitySummaryDto>> unified = new HashMap<>();
+
+    // Outbound: this entity is the source
+    graphNode.relations().forEach(relation -> unified.put(relation.name(),
+        toEntitySummaryDtos(relation)));
+
+    // Inbound: this entity is the target — merge under the same key if present
+    graphNode.relationsAsTarget().forEach(relation -> unified.merge(relation.name(),
+        toEntitySummaryDtos(relation), (existing, incoming) -> {
+          var merged = new ArrayList<>(existing);
+          merged.addAll(incoming);
+          return merged;
+        }));
+
+    return unified;
+  }
+
+  /// Converts the target nodes of an [EntityGraphRelation] to [EntitySummaryDto]
+  /// list.
+  private List<EntitySummaryDto> toEntitySummaryDtos(EntityGraphRelation relation) {
+    return relation.targets().stream().map(target -> new EntitySummaryDto(target.identifier(),
+        target.name(), target.templateIdentifier())).toList();
   }
 
   /// Maps a single entity to its DTO using the provided entity template.
