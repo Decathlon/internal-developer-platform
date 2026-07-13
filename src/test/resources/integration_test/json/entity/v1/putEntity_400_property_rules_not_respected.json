@@ -1,0 +1,14 @@
+{
+  "name": "Web API 2 Updated",
+  "properties": {
+    "applicationName": "catalog-api",
+    "ownerEmail": "invalid-email",
+    "port": "80",
+    "environment": "DEV",
+    "version": "1.2.3",
+    "teamName": "platform-team",
+    "baseUrl": "invalid-url",
+    "protocol": "HTTP",
+    "programmingLanguage": "JAVA"
+  }
+}
