@@ -123,9 +123,8 @@ public class EntityDtoOutMapper {
     Map<String, PropertyDefinition> definitions = template.propertiesDefinitions().stream()
         .collect(Collectors.toMap(PropertyDefinition::name, Function.identity()));
 
-    return graphNode.properties().stream().filter(prop -> prop.value() != null)
-        .collect(Collectors.toMap(Property::name,
-            prop -> convertPropertyValue(prop, definitions.get(prop.name()))));
+    return graphNode.properties().stream().filter(prop -> prop.value() != null).collect(Collectors
+        .toMap(Property::name, prop -> convertPropertyValue(prop, definitions.get(prop.name()))));
   }
 
   /// Builds a unified relations map from a graph node combining both directions.
@@ -139,8 +138,8 @@ public class EntityDtoOutMapper {
     Map<String, List<EntitySummaryDto>> unified = new HashMap<>();
 
     // Outbound: this entity is the source
-    graphNode.relations().forEach(relation -> unified.put(relation.name(),
-        toEntitySummaryDtos(relation)));
+    graphNode.relations()
+        .forEach(relation -> unified.put(relation.name(), toEntitySummaryDtos(relation)));
 
     // Inbound: this entity is the target — merge under the same key if present
     graphNode.relationsAsTarget().forEach(relation -> unified.merge(relation.name(),

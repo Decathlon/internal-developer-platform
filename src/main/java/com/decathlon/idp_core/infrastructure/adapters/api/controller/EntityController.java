@@ -136,8 +136,8 @@ public class EntityController {
   /// @param q optional filter query string (e.g.
   /// `name:API;property.language=JAVA`)
   /// @return paginated entity DTOs matching the template and optional filter
-@SuppressWarnings("null")
-@Operation(summary = ENDPOINT_GET_ENTITIES_SUMMARY, description = ENDPOINT_GET_ENTITIES_PAGINATED_DESCRIPTION)
+  @SuppressWarnings("null")
+  @Operation(summary = ENDPOINT_GET_ENTITIES_SUMMARY, description = ENDPOINT_GET_ENTITIES_PAGINATED_DESCRIPTION)
   @ApiResponse(responseCode = OK_CODE, description = RESPONSE_ENTITIES_PAGINATED_SUCCESS, content = @Content(schema = @Schema(implementation = EntityPageResponse.class)))
   @ApiResponse(responseCode = BAD_REQUEST_CODE, description = RESPONSE_INVALID_PAGINATION, content = {
       @Content(schema = @Schema(implementation = ApiExceptionHandler.ErrorResponse.class))})
