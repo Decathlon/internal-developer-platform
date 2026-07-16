@@ -221,8 +221,8 @@ class EntityGraphServiceTest {
       entityGraphService.getEntityGraph(TEMPLATE, "api", 0, false, Set.of(), Set.of(),
           EntityGraphTraversalMode.BIDIRECTIONAL);
 
-      verify(entityGraphRepositoryPort).findEntityGraph(any(), anyInt(), anyBoolean(),
-          any(EntityGraphTraversalMode.class));
+      verify(entityGraphRepositoryPort).findEntityGraph(Set.of(api.id()), 1, false,
+          EntityGraphTraversalMode.BIDIRECTIONAL);
     }
 
     @Test

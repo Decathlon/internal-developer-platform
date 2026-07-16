@@ -72,7 +72,7 @@ public class EntityGraphHelper {
             propertyFilter, relationFilter, isolatedStack, isolatedCache, mode);
 
         EntityGraphNode node = buildGraphNode(entry.getKey(), localizedCtx);
-        result.put(entity.id(), node);
+        result.put(entry.getKey(), node);
       }
     }
 
