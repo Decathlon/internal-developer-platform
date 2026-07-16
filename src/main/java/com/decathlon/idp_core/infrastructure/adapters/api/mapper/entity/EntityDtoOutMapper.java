@@ -23,7 +23,6 @@ import com.decathlon.idp_core.domain.model.entity_template.EntityTemplate;
 import com.decathlon.idp_core.domain.model.entity_template.PropertyDefinition;
 import com.decathlon.idp_core.domain.model.enums.PropertyType;
 import com.decathlon.idp_core.domain.service.entity.EntityService;
-import com.decathlon.idp_core.domain.service.entity_graph.EntityGraphService;
 import com.decathlon.idp_core.domain.service.entity_template.EntityTemplateService;
 import com.decathlon.idp_core.domain.service.relation.RelationService;
 import com.decathlon.idp_core.infrastructure.adapters.api.dto.out.entity.EntityDtoOut;
@@ -137,10 +136,13 @@ public class EntityDtoOutMapper {
 
     Map<String, List<EntitySummaryDto>> unified = new HashMap<>();
 
-    // Outbound: this entity is the source
-    graphNode.relations()
-        .forEach(relation -> unified.put(relation.name(), toEntitySummaryDtos(relation)));
-
+    // Outbound: this entity is the source — merge under the same key if present
+    graphNode.relations().forEach(relation -> unified.merge(relation.name(),
+        toEntitySummaryDtos(relation), (existing, incoming) -> {
+          var merged = new ArrayList<>(existing);
+          merged.addAll(incoming);
+          return merged;
+        }));
     // Inbound: this entity is the target — merge under the same key if present
     graphNode.relationsAsTarget().forEach(relation -> unified.merge(relation.name(),
         toEntitySummaryDtos(relation), (existing, incoming) -> {

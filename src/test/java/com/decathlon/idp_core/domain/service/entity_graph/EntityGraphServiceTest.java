@@ -236,8 +236,8 @@ class EntityGraphServiceTest {
       entityGraphService.getEntityGraph(TEMPLATE, "api", 99, false, Set.of(), Set.of(),
           EntityGraphTraversalMode.BIDIRECTIONAL);
 
-      verify(entityGraphRepositoryPort).findEntityGraph(any(), anyInt(), anyBoolean(),
-          any(EntityGraphTraversalMode.class));
+      verify(entityGraphRepositoryPort).findEntityGraph(Set.of(api.id()), 6, false,
+          EntityGraphTraversalMode.BIDIRECTIONAL);
     }
   }
 
@@ -601,9 +601,13 @@ class EntityGraphServiceTest {
       entityGraphService.getEntityGraph(TEMPLATE, "api", 1, false, Set.of(), Set.of(),
           EntityGraphTraversalMode.BIDIRECTIONAL);
 
-      // Repository must be called once per invocation — 3 calls total
-      verify(entityGraphRepositoryPort, times(3)).findEntityGraph(any(), anyInt(), anyBoolean(),
-          any(EntityGraphTraversalMode.class));
+      var inOrder = org.mockito.Mockito.inOrder(entityGraphRepositoryPort);
+      inOrder.verify(entityGraphRepositoryPort).findEntityGraph(Set.of(api.id()), 1, false,
+          EntityGraphTraversalMode.OUTBOUND_ONLY);
+      inOrder.verify(entityGraphRepositoryPort).findEntityGraph(Set.of(api.id()), 1, false,
+          EntityGraphTraversalMode.DIRECT_LINEAGE);
+      inOrder.verify(entityGraphRepositoryPort).findEntityGraph(Set.of(api.id()), 1, false,
+          EntityGraphTraversalMode.BIDIRECTIONAL);
     }
 
     @Test

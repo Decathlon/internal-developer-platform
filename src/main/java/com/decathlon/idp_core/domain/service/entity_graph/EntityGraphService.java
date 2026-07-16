@@ -12,7 +12,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.decathlon.idp_core.domain.exception.entity.EntityNotFoundException;
-import com.decathlon.idp_core.domain.exception.entity_template.EntityTemplateNotFoundException;
 import com.decathlon.idp_core.domain.model.entity.Entity;
 import com.decathlon.idp_core.domain.model.entity.EntityFilter;
 import com.decathlon.idp_core.domain.model.entity_graph.EntityGraphNode;
@@ -35,8 +34,8 @@ import lombok.RequiredArgsConstructor;
 /// possibly related entities from the database within a single transaction.
 /// Phase 2 - Reachability Pruning (Breadth-First Propagation): It computes a
 /// precise reachable footprint to ensure we only traverse nodes that actually
-/// connect to our root in the selected direction Phase 3 - Recursive
-/// Construction (DFS with Safety Nets):The helper runs a depth-first traversal
+/// connect to our root in the selected direction.
+/// Phase 3 - Recursive Construction (DFS with Safety Nets): The helper runs a depth-first traversal
 /// starting at the root entity to build the nested EntityGraphNode tree. It
 /// prevents stack overflows from circular references and avoid re-evaluating the
 /// same nodes via different paths.
@@ -47,7 +46,7 @@ import lombok.RequiredArgsConstructor;
 ///   infrastructure)
 /// - Providing hierarchical views for impact analysis and change propagation
 ///
-/// /// **Design decisions:**
+/// **Design decisions:**
 /// - Uses depth-limited traversal to prevent unbounded recursion
 /// - Optimized with recursive CTE and batch loading to minimize database queries
 /// - A per-request `visitedNodeIds` set prevents exponential recursion: without
