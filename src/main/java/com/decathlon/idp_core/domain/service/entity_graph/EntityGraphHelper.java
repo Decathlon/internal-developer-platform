@@ -33,16 +33,16 @@ public class EntityGraphHelper {
   /// triggering a new transaction via the Spring proxy.
   ///
   /// @param entityIds UUIDs of the root entities to build graphs for
-  /// @param depth traversal depth clamped to [1, MAX_DEPTH]
   /// @param includeProperties whether to include property data in the nodes
   /// @param relationFilter relation names to include; empty means all
   /// @param propertyFilter property names to include; empty means all
   /// @param mode traversal direction (OUTBOUND, BIDIRECTIONAL, etc.)
+  /// @param depth traversal depth
   /// @return map of entity identifier to its fully resolved EntityGraphNode
   @SuppressWarnings("null")
   public Map<UUID, EntityGraphNode> buildGraphNodesForEntityIds(Map<UUID, Entity> entityGraphs,
-      int depth, boolean includeProperties, Set<String> relationFilter, Set<String> propertyFilter,
-      EntityGraphTraversalMode mode, int effectiveDepth) {
+      boolean includeProperties, Set<String> relationFilter, Set<String> propertyFilter,
+      EntityGraphTraversalMode mode, int depth) {
 
     if (entityGraphs == null || entityGraphs.isEmpty()) {
       return Map.of();
@@ -56,7 +56,7 @@ public class EntityGraphHelper {
       if (entity != null) {
 
         Set<UUID> reachableFootprint = computeReachableSubGraph(entry.getKey(), entityGraphs,
-            globalIndices, effectiveDepth, mode);
+            globalIndices, depth, mode);
 
         Map<UUID, Entity> localizedEntityMap = entityGraphs.entrySet().stream()
             .filter(e -> reachableFootprint.contains(e.getKey()))

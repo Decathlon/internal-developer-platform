@@ -120,7 +120,7 @@ public class EntityGraphService {
 
     // 3. Delegate to helper for graph building
     Map<UUID, EntityGraphNode> graphNodes = entityGraphHelper.buildGraphNodesForEntityIds(entityMap,
-        depth, includeProperties, relationFilter, propertyFilter, mode, effectiveDepth);
+        includeProperties, relationFilter, propertyFilter, mode, effectiveDepth);
 
     return graphNodes.getOrDefault(rootEntity.id(),
         new EntityGraphNode(rootEntity.templateIdentifier(), rootEntity.identifier(),
@@ -169,7 +169,7 @@ public class EntityGraphService {
 
     // Call the helper to build graph nodes
     Map<UUID, EntityGraphNode> graphsByUuid = entityGraphHelper.buildGraphNodesForEntityIds(
-        entityGraphs, 1, true, Set.of(), Set.of(), EntityGraphTraversalMode.DIRECT_LINEAGE, 1);
+        entityGraphs, true, Set.of(), Set.of(), EntityGraphTraversalMode.DIRECT_LINEAGE, 1);
 
     // Map each Entity to its EntityGraphNode, falling back gracefully if missing
     return entityPage.map(entity -> graphsByUuid.getOrDefault(entity.id(),
