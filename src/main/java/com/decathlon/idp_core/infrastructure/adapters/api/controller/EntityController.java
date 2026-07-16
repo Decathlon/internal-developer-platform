@@ -156,7 +156,7 @@ public class EntityController {
     EntityFilter filter = entityFilterDslParser.parse(q);
     // Single transaction: pagination + batch relation fetch in one DB round trip
     Page<EntityGraphNode> graphNodes = entityGraphService.getEntityGraphPageByTemplate(pageable,
-        templateIdentifier, filter);
+        templateIdentifier, filter, 1);
     return entityDtoOutMapper.fromGraphNodesPage(graphNodes, templateIdentifier);
   }
 

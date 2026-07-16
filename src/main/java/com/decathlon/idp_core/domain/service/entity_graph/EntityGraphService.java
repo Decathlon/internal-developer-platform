@@ -12,6 +12,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.decathlon.idp_core.domain.exception.entity.EntityNotFoundException;
+import com.decathlon.idp_core.domain.exception.entity_template.EntityTemplateNotFoundException;
 import com.decathlon.idp_core.domain.model.entity.Entity;
 import com.decathlon.idp_core.domain.model.entity.EntityFilter;
 import com.decathlon.idp_core.domain.model.entity_graph.EntityGraphNode;
@@ -141,12 +142,13 @@ public class EntityGraphService {
   /// @param pageable pagination and sorting configuration
   /// @param templateIdentifier template to scope the entity list
   /// @param entityFilter optional filter criteria; `null` means no filtering
+  /// @param depth the requested depth of relationship traversal
   /// @return paginated graph nodes with outbound and inbound relations resolved
   /// @throws EntityTemplateNotFoundException when the template does not exist
   @SuppressWarnings("null")
   @Transactional(readOnly = true)
   public Page<EntityGraphNode> getEntityGraphPageByTemplate(Pageable pageable,
-      String templateIdentifier, EntityFilter entityFilter) {
+      String templateIdentifier, EntityFilter entityFilter, int depth) {
 
     // Fetch paginated entities — template existence is validated inside this call
     Page<Entity> entityPage = entityService.getEntitiesByTemplateIdentifier(pageable,
@@ -162,9 +164,10 @@ public class EntityGraphService {
     var entityUuids = entityPage.getContent().stream().map(Entity::id).filter(Objects::nonNull)
         .toList();
 
-    // Load entity graphs in batch
-    Map<UUID, Entity> entityGraphs = entityGraphRepositoryPort.findEntityGraph(entityUuids, 1, true,
-        EntityGraphTraversalMode.DIRECT_LINEAGE);
+    // Load entity graphs in batch (includes roots + neighbors for relation
+    // resolution)
+    Map<UUID, Entity> entityGraphs = entityGraphRepositoryPort.findEntityGraph(entityUuids, depth,
+        true, EntityGraphTraversalMode.DIRECT_LINEAGE);
 
     // Call the helper to build graph nodes
     Map<UUID, EntityGraphNode> graphsByUuid = entityGraphHelper.buildGraphNodesForEntityIds(
