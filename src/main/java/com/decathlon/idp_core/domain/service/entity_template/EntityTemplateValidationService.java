@@ -1,21 +1,17 @@
 package com.decathlon.idp_core.domain.service.entity_template;
 
+import static com.decathlon.idp_core.domain.constant.ValidationMessages.TEMPLATE_ALREADY_MAPPED;
+
+import java.util.List;
 import java.util.Objects;
 
 import org.springframework.stereotype.Service;
 
-import com.decathlon.idp_core.domain.exception.entity_template.EntityTemplateAlreadyExistsException;
-import com.decathlon.idp_core.domain.exception.entity_template.EntityTemplateIdentifierCannotChangeException;
-import com.decathlon.idp_core.domain.exception.entity_template.EntityTemplateNameAlreadyExistsException;
-import com.decathlon.idp_core.domain.exception.entity_template.EntityTemplateNotFoundException;
-import com.decathlon.idp_core.domain.exception.entity_template.PropertyDefinitionRulesConflictException;
-import com.decathlon.idp_core.domain.exception.entity_template.PropertyNameAlreadyExistsException;
-import com.decathlon.idp_core.domain.exception.entity_template.RelationCannotTargetItselfException;
-import com.decathlon.idp_core.domain.exception.entity_template.RelationNameAlreadyExistsException;
-import com.decathlon.idp_core.domain.exception.entity_template.RelationTargetTemplateChangeException;
-import com.decathlon.idp_core.domain.exception.entity_template.TargetTemplateNotFoundException;
+import com.decathlon.idp_core.domain.exception.entity_template.*;
+import com.decathlon.idp_core.domain.model.entity_mapping.EntityDynamicMapping;
 import com.decathlon.idp_core.domain.model.entity_template.EntityTemplate;
 import com.decathlon.idp_core.domain.model.entity_template.PropertyDefinition;
+import com.decathlon.idp_core.domain.port.EntityDynamicMappingPort;
 import com.decathlon.idp_core.domain.port.EntityTemplateRepositoryPort;
 
 import lombok.RequiredArgsConstructor;
@@ -34,6 +30,7 @@ public class EntityTemplateValidationService {
   private final EntityTemplateRepositoryPort entityTemplateRepositoryPort;
   private final PropertyDefinitionValidationService propertyDefinitionValidationService;
   private final RelationDefinitionValidationService relationDefinitionValidationService;
+  private final EntityDynamicMappingPort entityDynamicMappingPort;
 
   /// Validates all business rules before creating a new entity template.
   ///
@@ -139,6 +136,33 @@ public class EntityTemplateValidationService {
       throw new EntityTemplateNotFoundException("identifier", "null");
     }
     validateTemplateExists(identifier);
+    validateTemplateIsNotUsedInEntityDynamicMapper(identifier);
+  }
+
+  /// Validates that the entity template is not currently referenced by any
+  /// dynamic mapping.
+  ///
+  /// Design Note: This check relies directly on the `EntityDynamicMappingPort`
+  /// rather than
+  /// injecting `DynamicMappingService`. This is a deliberate architectural choice
+  /// to prevent
+  /// a circular dependency between our domain services (TemplateValidation ->
+  /// DynamicMapping -> TemplateValidation).
+  /// It allows the template domain to enforce its own referential integrity
+  /// before deletion
+  /// while remaining loosely coupled.
+  ///
+  /// **Precondition:** Template existence must be validated before calling this
+  /// method (via [#validateTemplateExists]).
+  public void validateTemplateIsNotUsedInEntityDynamicMapper(String entityTemplateIdentifier) {
+    List<EntityDynamicMapping> mappings = entityDynamicMappingPort
+        .findByEntityTemplateIdentifier(entityTemplateIdentifier);
+    if (!mappings.isEmpty()) {
+      List<String> mappingIdentifiers = mappings.stream().map(EntityDynamicMapping::identifier)
+          .toList();
+      throw new EntityTemplateUsedByDynamicMappingException(
+          TEMPLATE_ALREADY_MAPPED.formatted(mappingIdentifiers));
+    }
   }
 
   /// Checks that the entity template exists.

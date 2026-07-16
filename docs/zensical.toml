@@ -37,7 +37,8 @@ nav = [
         "concepts/entity-filtering.md"
     ]},
     "concepts/properties.md",
-    "concepts/relations.md"
+    "concepts/relations.md",
+    "concepts/webhooks.md"
   ]},
   { "Features" = [
     "features/index.md",

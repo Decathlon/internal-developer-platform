@@ -1,4 +1,6 @@
 package com.decathlon.idp_core.domain.service.relation;
+
+import static com.decathlon.idp_core.domain.constant.ValidationMessages.ENTITY_DYNAMIC_MAPPING_ENTITY_RELATIONS_MISSING;
 import static com.decathlon.idp_core.domain.constant.ValidationMessages.RELATION_NOT_DEFINED_IN_TEMPLATE;
 import static com.decathlon.idp_core.domain.constant.ValidationMessages.RELATION_REQUIRED_MISSING;
 import static com.decathlon.idp_core.domain.constant.ValidationMessages.RELATION_TARGET_ENTITY_NOT_FOUND;
@@ -11,6 +13,8 @@ import java.util.stream.Collectors;
 
 import org.springframework.stereotype.Service;
 
+import com.decathlon.idp_core.domain.exception.entity_dynamic_mapping.EntityDynamicMappingHasNoRelationsException;
+import com.decathlon.idp_core.domain.exception.entity_template.RelationNameNotFoundEntityTemplateRelationsException;
 import com.decathlon.idp_core.domain.model.entity.EntitySummary;
 import com.decathlon.idp_core.domain.model.entity.Relation;
 import com.decathlon.idp_core.domain.model.entity_template.EntityTemplate;
@@ -21,11 +25,89 @@ import com.decathlon.idp_core.domain.service.entity.Violations;
 import lombok.RequiredArgsConstructor;
 
 /// Domain service validating entity relations against template relation definitions.
+///
+/// This service provides two levels of validation:
+/// 1. **Mapping validation** ([#validateMappingRelationsAgainstTemplate]): validates that
+///    relation names exist in the template and required relations are mapped.
+///    Used by dynamic mapping validation.
+/// 2. **Full relation validation** ([#validateRelationsAgainstTemplate]): validates complete
+///    [Relation] objects including cardinality and target existence. Used by entity validation.
 @Service
 @RequiredArgsConstructor
 public class RelationValidationService {
 
   private final EntityRepositoryPort entityRepository;
+
+  /// Validates mapping relation names against the template's relation
+  /// definitions.
+  ///
+  /// This is the **unified validation method for dynamic mappings**, similar to
+  /// `PropertyValidationService.validateAgainstTemplate()`.
+  ///
+  /// **Validations performed:**
+  /// 1. All relation names must exist in the template
+  /// 2. All required relations must have mappings
+  ///
+  /// **Fail-fast:** Throws on the first validation error encountered.
+  ///
+  /// @param template the target template whose relation definitions are the
+  /// source of truth
+  /// @param mappedRelationNames the relation names that have mappings
+  /// @throws RelationNameNotFoundEntityTemplateRelationsException when a name is
+  /// not declared
+  /// in the template
+  /// @throws EntityDynamicMappingHasNoRelationsException when required relations
+  /// are missing
+  public void validateMappingRelationsAgainstTemplate(EntityTemplate template,
+      List<String> mappedRelationNames) {
+    validateNamesExistInTemplate(template, mappedRelationNames);
+    validateRequiredRelationsAreMapped(template, mappedRelationNames);
+  }
+
+  /// Validates that all relation names in the provided list exist in the
+  /// template.
+  ///
+  /// **Fail-fast:** Throws on the first unknown relation name encountered.
+  private void validateNamesExistInTemplate(EntityTemplate template, List<String> relationNames) {
+    if (relationNames == null || relationNames.isEmpty()) {
+      return;
+    }
+
+    Set<String> definedRelationNames = getDefinedRelationNames(template);
+
+    relationNames.stream().filter(name -> !definedRelationNames.contains(name)).findFirst()
+        .ifPresent(name -> {
+          throw new RelationNameNotFoundEntityTemplateRelationsException(
+              String.format(RELATION_NOT_DEFINED_IN_TEMPLATE, name, template.identifier()));
+        });
+  }
+
+  /// Validates that all required relation definitions in the template are mapped.
+  private void validateRequiredRelationsAreMapped(EntityTemplate template,
+      List<String> mappedRelationNames) {
+    List<RelationDefinition> definitions = template.relationsDefinitions() != null
+        ? template.relationsDefinitions()
+        : List.of();
+
+    List<String> mappedNames = mappedRelationNames != null ? mappedRelationNames : List.of();
+
+    List<String> missingRelations = definitions.stream().filter(RelationDefinition::required)
+        .map(RelationDefinition::name).filter(requiredName -> !mappedNames.contains(requiredName))
+        .toList();
+
+    if (!missingRelations.isEmpty()) {
+      throw new EntityDynamicMappingHasNoRelationsException(
+          String.format(ENTITY_DYNAMIC_MAPPING_ENTITY_RELATIONS_MISSING, missingRelations));
+    }
+  }
+
+  private Set<String> getDefinedRelationNames(EntityTemplate template) {
+    if (template.relationsDefinitions() == null) {
+      return Set.of();
+    }
+    return template.relationsDefinitions().stream().map(RelationDefinition::name)
+        .collect(Collectors.toSet());
+  }
 
   /// Validates entity relations against the template's relation definitions,
   /// enforcing required relations and cardinality constraints.

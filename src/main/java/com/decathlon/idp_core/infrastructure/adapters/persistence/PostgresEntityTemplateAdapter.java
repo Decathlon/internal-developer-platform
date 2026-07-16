@@ -90,6 +90,11 @@ public class PostgresEntityTemplateAdapter implements EntityTemplateRepositoryPo
     jpaEntityTemplateRepository.deleteByIdentifier(identifier);
   }
 
+  @Override
+  public boolean existsById(UUID id) {
+    return jpaEntityTemplateRepository.existsById(id);
+  }
+
   // ── Merge helpers to update a managed JPA entity from domain values ──
 
   private void mergeIntoExisting(EntityTemplateJpaEntity jpa, EntityTemplate domain) {

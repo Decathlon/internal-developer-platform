@@ -35,4 +35,6 @@ public interface EntityTemplateRepositoryPort {
   EntityTemplate save(EntityTemplate entityTemplate);
 
   void deleteByIdentifier(String identifier);
+
+  boolean existsById(UUID id);
 }

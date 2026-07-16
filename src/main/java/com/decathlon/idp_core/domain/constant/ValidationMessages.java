@@ -15,6 +15,7 @@ public class ValidationMessages {
   public static final String TEMPLATE_NAME_MANDATORY = "Entity template name is mandatory and cannot be blank";
   public static final String TEMPLATE_NAME_MAX_SIZE = "Entity template name must not exceed 255 characters";
   public static final String TEMPLATE_NAME_FORMAT = "Entity template name must only use alphanumeric characters, spaces, hyphens or underscores";
+  public static final String TEMPLATE_ALREADY_MAPPED = "Cannot delete template because it is currently mapped to '%s' entity dynamic mappings. Please remove the associated entity dynamic mappings before deleting the template.";
 
   // Property Definition validation messages
   public static final String PROPERTY_NAME_MANDATORY = "Property name is mandatory and cannot be blank";
@@ -61,6 +62,15 @@ public class ValidationMessages {
   // Entity input validation messages
   public static final String ENTITY_NAME_MANDATORY = "Entity name is mandatory and cannot be blank";
   public static final String ENTITY_IDENTIFIER_MANDATORY = "Entity identifier is mandatory and cannot be blank";
+
+  // Webhook connector validation messages
+  public static final String WEBHOOK_CONNECTOR_ALREADY_EXIST = "Webhook Connector already exists with the same identifier";
+  public static final String WEBHOOK_CONNECTOR_IDENTIFIER_MANDATORY = "Webhook Connector identifier is mandatory and cannot be blank";
+  public static final String WEBHOOK_CONNECTOR_TITLE_ALREADY_EXIST = "Webhook Connector already exist with the same name";
+  public static final String WEBHOOK_IDENTIFIER_NOT_FOUND = "Target webhook with identifier '%s' does not exist";
+  public static final String ENTITY_DYNAMIC_MAPPING_NOT_FOUND = "Entity dynamic mapping with identifier '%s' does not exist";
+  public static final String ENTITY_DYNAMIC_MAPPING_ALREADY_EXISTS = "Entity dynamic mapping already exists with the same identifier '%s'";
+  public static final String ENTITY_DYNAMIC_MAPPING_ALREADY_IN_USE = "Entity dynamic mapping already in use, please remove it from the associated webhook connector '%s' before deleting it";
 
   // Entity creation validation messages
   public static final String ENTITY_NOT_FOUND = "Entity not found with template identifier %s and entity identifier '%s'";
@@ -113,5 +123,25 @@ public class ValidationMessages {
   public static final String SEARCH_SIZE_INVALID = "Page size must be greater than 0";
   public static final String SEARCH_NUMERIC_OPERATOR_INVALID_VALUE = "Value '%s' is not a valid number for operator '%s'";
   public static final String SEARCH_NUMERIC_OPERATOR_PROPERTY_TYPE_MISMATCH = "Property '%s' in template '%s' is of type %s; operators GT, GTE, LT, LTE require type NUMBER";
+
+  // Entity Dynamic mapping validation messages
+  public static final String ENTITY_DYNAMIC_MAPPING_FILTER_MANDATORY = "Webhook mapping filter is mandatory";
+  public static final String ENTITY_DYNAMIC_MAPPING_IDENTIFIER_MANDATORY = "Entity dynamic mapping identifier is mandatory";
+  public static final String ENTITY_DYNAMIC_MAPPING_NAME_MANDATORY = "Entity dynamic mapping name is mandatory";
+  public static final String ENTITY_DYNAMIC_MAPPING_TEMPLATE_IDENTIFIER_MANDATORY = "Entity Template Identifier is mandatory";
+  public static final String ENTITY_DYNAMIC_MAPPING_ENTITY_MANDATORY = "Dynamic mapping entity section is mandatory";
+  public static final String ENTITY_DYNAMIC_MAPPING_ENTITY_NAME_MANDATORY = "Entity name is mandatory";
+  public static final String ENTITY_DYNAMIC_MAPPING_ENTITY_IDENTIFIER_MANDATORY = "Entity identifier is mandatory";
+  public static final String ENTITY_DYNAMIC_MAPPING_ENTITY_RELATIONS_MANDATORY = "Entity relations section is mandatory";
+  public static final String ENTITY_DYNAMIC_MAPPING_ENTITY_PROPERTIES_MANDATORY = "Entity properties section is mandatory";
+
+  public static final String WEBHOOK_CONNECTOR_SECURITY_TYPE_MANDATORY = "Webhook security type is mandatory";
+  public static final String WEBHOOK_CONNECTOR_SECURITY_CONFIG_MANDATORY = "Webhook security config is mandatory";
+  public static final String WEBHOOK_CONNECTOR_IDENTIFIER_MAX_LENGTH = "Webhook identifier must not exceed 255 characters";
+  public static final String WEBHOOK_CONNECTOR_NAME_MAX_LENGTH = "Webhook name must not exceed 255 characters";
+  public static final String WEBHOOK_CONNECTOR_NAME_MANDATORY = "Webhook name is mandatory";
+  public static final String PROPERTY_NOT_EXPECTED_FORMAT = "Property '%s' does not match expected format";
+  public static final String ENTITY_DYNAMIC_MAPPING_ENTITY_PROPERTIES_MISSING = "The mapping is missing required properties: %s";
+  public static final String ENTITY_DYNAMIC_MAPPING_ENTITY_RELATIONS_MISSING = "The mapping is missing required relations: %s";
 
 }

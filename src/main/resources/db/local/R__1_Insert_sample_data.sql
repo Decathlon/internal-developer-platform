@@ -117,7 +117,7 @@ INSERT INTO entity_template (id, identifier, name, description) VALUES
 ('550e8400-e29b-41d4-a716-446655440078', 'cache-service', 'Cache Service', 'Template for caching services'),
 ('550e8400-e29b-41d4-a716-446655440079', 'monitoring-service', 'Monitoring Service', 'Template for monitoring and observability services');
 
--- Link web-service template (comprehensive web API)
+-- Link web-service entityTemplateIdentifier (comprehensive web API)
 INSERT INTO entity_template_properties_definitions (entity_template_id, properties_definitions_id) VALUES
 ('550e8400-e29b-41d4-a716-446655440070', '550e8400-e29b-41d4-a716-446655440020'), -- applicationName
 ('550e8400-e29b-41d4-a716-446655440070', '550e8400-e29b-41d4-a716-446655440021'), -- ownerEmail
@@ -139,7 +139,7 @@ INSERT INTO entity_template_relations_definitions (entity_template_id, relations
 ('550e8400-e29b-41d4-a716-446655440070', '550e8400-e29b-41d4-a716-446655440059'), -- monitoring
 ('550e8400-e29b-41d4-a716-446655440070', '550e8400-e29b-41d4-a716-446655440061'); -- secrets
 
--- Link microservice template (lightweight service)
+-- Link microservice entityTemplateIdentifier (lightweight service)
 INSERT INTO entity_template_properties_definitions (entity_template_id, properties_definitions_id) VALUES
 ('550e8400-e29b-41d4-a716-446655440071', '550e8400-e29b-41d4-a716-446655440020'), -- applicationName
 ('550e8400-e29b-41d4-a716-446655440071', '550e8400-e29b-41d4-a716-446655440021'), -- ownerEmail
