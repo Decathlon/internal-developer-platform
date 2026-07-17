@@ -32,6 +32,7 @@ for file in "$@"; do
     printf '%s\n' "$matches" | sed 's/^/  /'
     status=1
   else
+    # grep exits 1 for "no matches" and >1 for runtime errors.
     grep_status=$?
     if [[ "$grep_status" -gt 1 ]]; then
       echo "Error: failed to scan ${file} for rejected terms." >&2
