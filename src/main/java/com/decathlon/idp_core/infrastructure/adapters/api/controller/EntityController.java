@@ -47,6 +47,7 @@ import static org.springframework.http.HttpStatus.NO_CONTENT;
 import static org.springframework.http.HttpStatus.OK;
 
 import java.util.List;
+import java.util.Set;
 
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
@@ -70,6 +71,7 @@ import org.springframework.web.bind.annotation.RestController;
 import com.decathlon.idp_core.domain.model.entity.Entity;
 import com.decathlon.idp_core.domain.model.entity.EntityFilter;
 import com.decathlon.idp_core.domain.model.entity_graph.EntityGraphNode;
+import com.decathlon.idp_core.domain.model.entity_graph.EntityGraphTraversalMode;
 import com.decathlon.idp_core.domain.model.search.PaginatedResult;
 import com.decathlon.idp_core.domain.model.search.PaginationCriteria;
 import com.decathlon.idp_core.domain.model.search.RawSearchFilterNode;
@@ -86,6 +88,7 @@ import com.decathlon.idp_core.infrastructure.adapters.api.dto.out.entity.EntityD
 import com.decathlon.idp_core.infrastructure.adapters.api.handler.ApiExceptionHandler;
 import com.decathlon.idp_core.infrastructure.adapters.api.handler.ApiExceptionHandler.ErrorResponse;
 import com.decathlon.idp_core.infrastructure.adapters.api.mapper.entity.EntityDtoInMapper;
+import com.decathlon.idp_core.infrastructure.adapters.api.mapper.entity.EntityDtoOutFromEntityNodeMapper;
 import com.decathlon.idp_core.infrastructure.adapters.api.mapper.entity.EntityDtoOutMapper;
 import com.decathlon.idp_core.infrastructure.adapters.api.mapper.entity.SearchFilterMapper;
 
@@ -125,13 +128,12 @@ public class EntityController {
   /// support.
   ///
   /// **API contract:** Provides paginated entity listings for template-specific
-  /// views.
-  /// Supports standard REST pagination parameters and an optional `q` filter
-  /// query.
-  /// Template validation is handled by the domain service layer.
+  /// views. Supports standard REST pagination parameters and an optional `q`
+  /// filter query. Template validation is handled by the domain service layer.
   ///
   /// @param page zero-based page index for pagination navigation
-  /// @param size number of entities per page for response size control
+  /// @param size number of entities per page for response size
+  /// control
   /// @param templateIdentifier template filter for entity scope limitation
   /// @param q optional filter query string (e.g.
   /// `name:API;property.language=JAVA`)
@@ -163,9 +165,8 @@ public class EntityController {
   /// Retrieves a single entity by template and entity identifiers.
   ///
   /// **API contract:** Provides specific entity lookup using compound identifier
-  /// pattern.
-  /// Returns HTTP 404 if either template or entity doesn't exist, maintaining
-  /// REST semantics.
+  /// pattern. Returns HTTP 404 if either template or entity doesn't exist,
+  /// maintaining REST semantics.
   ///
   /// @param templateIdentifier business template identifier for entity scope
   /// @param entityIdentifier unique business identifier within template context
@@ -178,19 +179,20 @@ public class EntityController {
   @GetMapping("/{templateIdentifier}/{entityIdentifier}")
   @ResponseStatus(OK)
   public EntityDtoOut getEntity(@PathVariable String templateIdentifier,
-      @PathVariable String entityIdentifier) {
-    Entity entity = entityService.getEntityByTemplateIdentifierAndIdentifier(templateIdentifier,
-        entityIdentifier);
-    return entityDtoOutMapper.fromEntity(entity);
+      @PathVariable String entityIdentifier,
+      @RequestParam(name = "relations_depth", required = false, defaultValue = "1") Integer relationsDepth,
+      @RequestParam(name = "relations_to_display", required = false, defaultValue = "") Set<String> relationsToDisplay) {
+    EntityGraphNode entityGraphNode = entityGraphService.getEntityGraph(templateIdentifier,
+        entityIdentifier, relationsDepth, true, relationsToDisplay, Set.of(),
+        EntityGraphTraversalMode.DIRECT_LINEAGE);
+    return EntityDtoOutFromEntityNodeMapper.toDto(entityGraphNode);
   }
 
   /// Creates a new entity for the specified template with validation.
   ///
   /// **API contract:** Accepts entity creation payload and returns created entity
-  /// with
-  /// generated identifiers. Validates entity structure against template
-  /// constraints
-  /// and returns HTTP 201 on success, HTTP 400 for validation errors.
+  /// with generated identifiers. Validates entity structure against template
+  /// constraints and returns HTTP 201 on success, HTTP 400 for validation errors.
   ///
   /// @param templateIdentifier target template identifier for entity creation
   /// context
@@ -224,10 +226,9 @@ public class EntityController {
   /// Updates an existing entity for the specified template.
   ///
   /// **API contract:** Accepts entity update payload and returns updated entity.
-  /// Validates
-  /// that the entity exists and that the update payload conforms to template
-  /// constraints. Returns HTTP 200 on success, HTTP 400 for validation errors,
-  /// HTTP 404 if entity doesn't exist.
+  /// Validates that the entity exists and that the update payload conforms to
+  /// template constraints. Returns HTTP 200 on success, HTTP 400 for validation
+  /// errors, HTTP 404 if entity doesn't exist.
   ///
   /// @param templateIdentifier target template identifier for entity update
   /// context
@@ -261,10 +262,10 @@ public class EntityController {
   /// Deletes an existing entity identified by template and entity identifiers.
   ///
   /// **API contract:** Validates the template and entity exist, cleans up
-  /// relations in parent
-  /// entities that reference the deleted entity, then deletes the entity.
-  /// Returns HTTP 204 on successful deletion, HTTP 404 if entity doesn't exist,
-  /// HTTP 400 if deletion is not allowed due to existing references.
+  /// relations in parent entities that reference the deleted entity, then deletes
+  /// the entity. Returns HTTP 204 on successful deletion, HTTP 404 if entity
+  /// doesn't exist, HTTP 400 if deletion is not allowed due to existing
+  /// references.
   ///
   /// @param templateIdentifier the template identifier of the entity to delete
   /// @param entityIdentifier the identifier of the entity to delete
@@ -290,11 +291,9 @@ public class EntityController {
   /// Searches for entities across all templates using a nested filter query.
   ///
   /// **API contract:** Accepts a JSON body with a nested filter tree, pagination,
-  /// and
-  /// sorting parameters. Returns a paginated list of entities matching the
-  /// filter.
-  /// No template scoping is applied by default; include a template criterion
-  /// in the filter to scope results to a specific template.
+  /// and sorting parameters. Returns a paginated list of entities matching the
+  /// filter. No template scoping is applied by default; include a template
+  /// criterion in the filter to scope results to a specific template.
   ///
   /// @param searchRequest the search request body with filter, page, size, and
   /// sort
