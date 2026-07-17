@@ -130,10 +130,13 @@ public class EntityPersistenceMapper {
 
   /// Merges relations from the incoming domain entity into the existing JPA
   /// entity.
-  /// Removes relations that are no longer present, updates existing ones, and
-  /// adds
-  /// new relations as needed. This ensures that the JPA entity accurately
-  /// reflects the current state of the domain entity.
+  /// Removes relations that are no longer present, updates existing ones only if
+  /// they changed, and adds new relations as needed. This prevents unnecessary
+  /// updates and avoids triggering Envers audit records for unchanged data.
+  ///
+  /// **Optimization:** Change detection prevents false positives where Hibernate
+  /// marks collections as modified even though their values haven't changed,
+  /// which would cause Envers to create duplicate audit table entries.
   private void mergeRelations(final Entity entity, final EntityJpaEntity existing) {
 
     existing.getRelations().removeIf(existingRel -> entity.relations().stream()
@@ -142,13 +145,45 @@ public class EntityPersistenceMapper {
     for (Relation domainRel : entity.relations()) {
       existing.getRelations().stream().filter(r -> r.getName().equals(domainRel.name())).findFirst()
           .ifPresentOrElse(existingRel -> {
-            existingRel.setTargetTemplateIdentifier(domainRel.targetTemplateIdentifier());
-            existingRel.setTargetEntities(domainRel.targetEntityIdentifiers() != null
-                ? resolveBatchTargetEntities(domainRel.targetTemplateIdentifier(),
-                    domainRel.targetEntityIdentifiers())
-                : Set.of());
+            if (hasRelationChanged(existingRel, domainRel)) {
+              existingRel.setTargetTemplateIdentifier(domainRel.targetTemplateIdentifier());
+              Set<RelationTargetJpaEntity> newTargetEntities = domainRel
+                  .targetEntityIdentifiers() != null
+                      ? resolveBatchTargetEntities(domainRel.targetTemplateIdentifier(),
+                          domainRel.targetEntityIdentifiers())
+                      : Set.of();
+              existingRel.getTargetEntities()
+                  .removeIf(target -> !newTargetEntities.contains(target));
+
+              newTargetEntities.stream()
+                  .filter(target -> !existingRel.getTargetEntities().contains(target))
+                  .forEach(existingRel.getTargetEntities()::add);
+            }
           }, () -> existing.getRelations().add(toJpa(domainRel)));
     }
+  }
+
+  /// Detects if a relation has actually changed by comparing template identifier
+  /// and target entities. Returns true only if there are actual differences,
+  /// preventing unnecessary updates to the database and Envers audit records.
+  boolean hasRelationChanged(RelationJpaEntity existingRel, Relation domainRel) {
+    if (!Objects.equals(existingRel.getTargetTemplateIdentifier(),
+        domainRel.targetTemplateIdentifier())) {
+      return true;
+    }
+
+    Set<RelationTargetJpaEntity> newTargetEntities = domainRel.targetEntityIdentifiers() != null
+        ? resolveBatchTargetEntities(domainRel.targetTemplateIdentifier(),
+            domainRel.targetEntityIdentifiers())
+        : Set.of();
+
+    var existingTargets = Objects.requireNonNullElse(existingRel.getTargetEntities(),
+        Set.<RelationTargetJpaEntity>of());
+    if (existingTargets.size() != newTargetEntities.size()) {
+      return true;
+    }
+
+    return !existingTargets.equals(newTargetEntities);
   }
 
   // =========================================================================

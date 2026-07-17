@@ -7,12 +7,14 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.inOrder;
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static org.mockito.Mockito.when;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -26,6 +28,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
+import org.springframework.test.util.ReflectionTestUtils;
 
 import com.decathlon.idp_core.domain.constant.SearchConstraints;
 import com.decathlon.idp_core.domain.constant.ValidationMessages;
@@ -38,9 +41,13 @@ import com.decathlon.idp_core.domain.exception.search.InvalidSearchQueryExceptio
 import com.decathlon.idp_core.domain.model.entity.Entity;
 import com.decathlon.idp_core.domain.model.entity.EntityFilter;
 import com.decathlon.idp_core.domain.model.entity.EntitySummary;
+import com.decathlon.idp_core.domain.model.entity.FilterCriterion;
+import com.decathlon.idp_core.domain.model.entity.Property;
 import com.decathlon.idp_core.domain.model.entity.Relation;
 import com.decathlon.idp_core.domain.model.entity_template.EntityTemplate;
 import com.decathlon.idp_core.domain.model.entity_template.RelationDefinition;
+import com.decathlon.idp_core.domain.model.enums.FilterKeyType;
+import com.decathlon.idp_core.domain.model.enums.FilterOperator;
 import com.decathlon.idp_core.domain.model.search.LogicalConnector;
 import com.decathlon.idp_core.domain.model.search.PaginatedResult;
 import com.decathlon.idp_core.domain.model.search.PaginationCriteria;
@@ -439,6 +446,41 @@ class EntityServiceTest {
         () -> entityService.searchEntities(filter, null, paginationCriteria));
   }
 
+  private Property property(String name, String value) {
+    return new Property(UUID.randomUUID(), name, value);
+  }
+
+  private Relation relation(String name, String targetTemplateIdentifier, String... targetIds) {
+    return new Relation(UUID.randomUUID(), name, targetTemplateIdentifier, List.of(targetIds));
+  }
+
+  private Relation relation(UUID id, String name, String targetTemplateIdentifier,
+      String... targetIds) {
+    return new Relation(id, name, targetTemplateIdentifier, List.of(targetIds));
+  }
+
+  private RelationDefinition relationDefinition(String name, String targetTemplateIdentifier,
+      boolean required, boolean toMany) {
+    return new RelationDefinition(UUID.randomUUID(), name, targetTemplateIdentifier, required,
+        toMany);
+  }
+
+  private EntityTemplate templateWithRelations(String identifier,
+      RelationDefinition... relationDefinitions) {
+    return new EntityTemplate(UUID.randomUUID(), identifier, identifier, "desc", List.of(),
+        List.of(relationDefinitions));
+  }
+
+  @SuppressWarnings("unchecked")
+  private <T> T invokePrivateMethod(String methodName, Object... args) {
+    return (T) ReflectionTestUtils.invokeMethod(entityService, methodName, args);
+  }
+
+  private void verifyNoCollaboratorInteractions() {
+    verifyNoInteractions(entityRepository, entityValidationService, entityTemplateValidationService,
+        entityTemplateService, entityFilterDslParser, searchFilterValidationService);
+  }
+
   @Test
   @DisplayName("Should search entities with valid parameters")
   void shouldSearchEntitiesWithValidParameters() {
@@ -504,5 +546,448 @@ class EntityServiceTest {
   @DisplayName("Should reject extra sort expression segments")
   void shouldRejectExtraSortSegments() {
     assertSearchThrows(new PaginationCriteria(0, 20, "identifier:asc:extra"));
+  }
+
+  // ---------------------------------------------------------------------------
+  // Additional coverage for EntityService private business rules
+  // ---------------------------------------------------------------------------
+
+  @Test
+  @DisplayName("Should return entities page when non-null filter is provided")
+  void shouldReturnEntitiesByTemplateIdentifierWhenFilterProvided() {
+    // Arrange
+    var pageable = Pageable.ofSize(5);
+    var filter = new EntityFilter(List.of(
+        new FilterCriterion(FilterKeyType.ATTRIBUTE, "name", FilterOperator.CONTAINS, "catalog")));
+    var template = templateWithRelations("template-a");
+    var entity = entity("template-a", "catalog-api", "Catalog API");
+    var page = new PageImpl<>(List.of(entity));
+
+    when(entityTemplateService.getEntityTemplateByIdentifier("template-a")).thenReturn(template);
+    when(entityRepository.findByTemplateIdentifierWithFilter("template-a", filter, pageable))
+        .thenReturn(page);
+
+    // Act
+    var result = entityService.getEntitiesByTemplateIdentifier(pageable, "template-a", filter);
+
+    // Assert
+    assertSame(page, result);
+    verify(entityFilterDslParser).validateFilterPropertyTypes(filter, template);
+    verify(entityRepository).findByTemplateIdentifierWithFilter("template-a", filter, pageable);
+  }
+
+  @Test
+  @DisplayName("Should enrich relation target templates when creating entity")
+  void shouldEnrichRelationTargetTemplatesWhenCreatingEntity() {
+    // Arrange
+    var ownerRelation = relation("owner", "ignored-template", "team-a");
+    var legacyRelation = relation("legacy-link", "legacy-template", "legacy-a");
+    var entity = new Entity(UUID.randomUUID(), "application", "Commerce App", "commerce-app",
+        List.of(), List.of(ownerRelation, legacyRelation));
+    var template = templateWithRelations("application",
+        relationDefinition("owner", "team", true, false));
+    var expectedSaved = new Entity(entity.id(), "application", "Commerce App", "commerce-app",
+        List.of(), List.of(relation(ownerRelation.id(), "owner", "team", "team-a"),
+            relation(legacyRelation.id(), "legacy-link", "legacy-template", "legacy-a")));
+
+    when(entityTemplateService.getEntityTemplateByIdentifier("application")).thenReturn(template);
+    when(entityRepository.save(expectedSaved)).thenReturn(expectedSaved);
+
+    // Act
+    var result = entityService.createEntity(entity);
+
+    // Assert
+    assertEquals(expectedSaved, result);
+    verify(entityValidationService).validateForCreation(expectedSaved, template);
+    verify(entityRepository).save(expectedSaved);
+  }
+
+  @Test
+  @DisplayName("Should save updated entity when properties change")
+  void shouldSaveUpdatedEntityWhenPropertiesChange() {
+    // Arrange
+    var existing = new Entity(UUID.randomUUID(), "web-service", "Catalog API", "catalog-api",
+        List.of(property("language", "java")), List.of());
+    var payload = new Entity(null, "web-service", "Catalog API", "catalog-api",
+        List.of(new Property(null, "language", "kotlin")), List.of());
+    var expectedSaved = new Entity(existing.id(), "web-service", "Catalog API", "catalog-api",
+        payload.properties(), List.of());
+    var template = templateWithRelations("web-service");
+
+    when(entityTemplateService.getEntityTemplateByIdentifier("web-service")).thenReturn(template);
+    when(entityRepository.findByTemplateIdentifierAndIdentifier("web-service", "catalog-api"))
+        .thenReturn(Optional.of(existing));
+    when(entityRepository.save(expectedSaved)).thenReturn(expectedSaved);
+
+    // Act
+    var result = entityService.updateEntity("web-service", "catalog-api", payload);
+
+    // Assert
+    assertSame(expectedSaved, result);
+    verify(entityValidationService).validateForUpdate(expectedSaved, template);
+    verify(entityRepository).save(expectedSaved);
+  }
+
+  @Test
+  @DisplayName("Should save updated entity when relations change")
+  void shouldSaveUpdatedEntityWhenRelationsChange() {
+    // Arrange
+    var existingRelation = relation("owner", "team", "team-a");
+    var payloadRelation = relation("owner", "placeholder", "team-b");
+    var existing = new Entity(UUID.randomUUID(), "application", "Commerce App", "commerce-app",
+        List.of(), List.of(existingRelation));
+    var payload = new Entity(null, "application", "Commerce App", "commerce-app", List.of(),
+        List.of(payloadRelation));
+    var template = templateWithRelations("application",
+        relationDefinition("owner", "team", true, false));
+    var expectedSaved = new Entity(existing.id(), "application", "Commerce App", "commerce-app",
+        List.of(), List.of(relation(payloadRelation.id(), "owner", "team", "team-b")));
+
+    when(entityTemplateService.getEntityTemplateByIdentifier("application")).thenReturn(template);
+    when(entityRepository.findByTemplateIdentifierAndIdentifier("application", "commerce-app"))
+        .thenReturn(Optional.of(existing));
+    when(entityRepository.save(expectedSaved)).thenReturn(expectedSaved);
+
+    // Act
+    var result = entityService.updateEntity("application", "commerce-app", payload);
+
+    // Assert
+    assertSame(expectedSaved, result);
+    verify(entityValidationService).validateForUpdate(expectedSaved, template);
+    verify(entityRepository).save(expectedSaved);
+  }
+
+  @Test
+  @DisplayName("Should return existing entity when update does not change content")
+  void shouldReturnExistingEntityWhenUpdateDoesNotChangeContent() {
+    // Arrange
+    var existing = new Entity(UUID.randomUUID(), "application", "Commerce App", "commerce-app",
+        List.of(property("language", "java")),
+        List.of(relation("owner", "team", "team-a", "team-b")));
+    var payload = new Entity(null, "application", "Commerce App", "commerce-app",
+        List.of(new Property(null, "language", "java")),
+        List.of(new Relation(null, "owner", "placeholder", List.of("team-b", "team-a"))));
+    var template = templateWithRelations("application",
+        relationDefinition("owner", "team", true, true));
+    var expectedValidated = new Entity(existing.id(), "application", "Commerce App", "commerce-app",
+        payload.properties(),
+        List.of(new Relation(null, "owner", "team", List.of("team-b", "team-a"))));
+
+    when(entityTemplateService.getEntityTemplateByIdentifier("application")).thenReturn(template);
+    when(entityRepository.findByTemplateIdentifierAndIdentifier("application", "commerce-app"))
+        .thenReturn(Optional.of(existing));
+
+    // Act
+    var result = entityService.updateEntity("application", "commerce-app", payload);
+
+    // Assert
+    assertSame(existing, result);
+    verify(entityValidationService).validateForUpdate(expectedValidated, template);
+    verify(entityRepository, never()).save(any());
+  }
+
+  @Test
+  @DisplayName("Should treat two null property lists as equal")
+  void shouldTreatTwoNullPropertyListsAsEqual() {
+    // Act
+    Boolean result = invokePrivateMethod("havePropertiesChanged", (Object) null, (Object) null);
+
+    // Assert
+    assertEquals(false, result);
+    verifyNoCollaboratorInteractions();
+  }
+
+  @Test
+  @DisplayName("Should treat one null property list as different")
+  void shouldTreatOneNullPropertyListAsDifferent() {
+    // Act
+    Boolean result = invokePrivateMethod("havePropertiesChanged", (Object) null,
+        List.of(property("language", "java")));
+
+    // Assert
+    assertEquals(true, result);
+    verifyNoCollaboratorInteractions();
+  }
+
+  @Test
+  @DisplayName("Should treat property lists with different sizes as different")
+  void shouldTreatPropertyListsWithDifferentSizesAsDifferent() {
+    // Act
+    Boolean result = invokePrivateMethod("havePropertiesChanged",
+        List.of(property("language", "java")),
+        List.of(property("language", "java"), property("tier", "backend")));
+
+    // Assert
+    assertEquals(true, result);
+    verifyNoCollaboratorInteractions();
+  }
+
+  @Test
+  @DisplayName("Should treat property lists with different values as different")
+  void shouldTreatPropertyListsWithDifferentValuesAsDifferent() {
+    // Act
+    Boolean result = invokePrivateMethod("havePropertiesChanged",
+        List.of(property("language", "java")), List.of(new Property(null, "language", "kotlin")));
+
+    // Assert
+    assertEquals(true, result);
+    verifyNoCollaboratorInteractions();
+  }
+
+  @Test
+  @DisplayName("Should treat two null relation lists as equal")
+  void shouldTreatTwoNullRelationListsAsEqual() {
+    // Act
+    Boolean result = invokePrivateMethod("haveRelationsChanged", (Object) null, (Object) null);
+
+    // Assert
+    assertEquals(false, result);
+    verifyNoCollaboratorInteractions();
+  }
+
+  @Test
+  @DisplayName("Should treat one null relation list as different")
+  void shouldTreatOneNullRelationListAsDifferent() {
+    // Act
+    Boolean result = invokePrivateMethod("haveRelationsChanged", (Object) null,
+        List.of(relation("owner", "team", "team-a")));
+
+    // Assert
+    assertEquals(true, result);
+    verifyNoCollaboratorInteractions();
+  }
+
+  @Test
+  @DisplayName("Should treat relation lists with different sizes as different")
+  void shouldTreatRelationListsWithDifferentSizesAsDifferent() {
+    // Act
+    Boolean result = invokePrivateMethod("haveRelationsChanged",
+        List.of(relation("owner", "team", "team-a")),
+        List.of(relation("owner", "team", "team-a"), relation("depends-on", "service", "svc-a")));
+
+    // Assert
+    assertEquals(true, result);
+    verifyNoCollaboratorInteractions();
+  }
+
+  @Test
+  @DisplayName("Should treat relations with different target templates as different")
+  void shouldTreatRelationsWithDifferentTargetTemplatesAsDifferent() {
+    // Act
+    Boolean result = invokePrivateMethod("haveRelationsChanged",
+        List.of(relation("owner", "team", "team-a")),
+        List.of(relation("owner", "group", "team-a")));
+
+    // Assert
+    assertEquals(true, result);
+    verifyNoCollaboratorInteractions();
+  }
+
+  @Test
+  @DisplayName("Should treat relations with different target identifiers as different")
+  void shouldTreatRelationsWithDifferentTargetIdentifiersAsDifferent() {
+    // Act
+    Boolean result = invokePrivateMethod("haveRelationsChanged",
+        List.of(relation("owner", "team", "team-a")), List.of(relation("owner", "team", "team-b")));
+
+    // Assert
+    assertEquals(true, result);
+    verifyNoCollaboratorInteractions();
+  }
+
+  @Test
+  @DisplayName("Should delete entity directly when no parent relations exist")
+  void shouldDeleteEntityDirectlyWhenNoParentRelationsExist() {
+    // Arrange
+    var targetEntity = entity("service", "catalog-api", "Catalog API");
+
+    when(entityRepository.findByTemplateIdentifierAndIdentifier("service", "catalog-api"))
+        .thenReturn(Optional.of(targetEntity));
+    when(entityRepository.findEntitiesRelated("catalog-api")).thenReturn(List.of());
+
+    // Act
+    entityService.deleteEntity("service", "catalog-api");
+
+    // Assert
+    verify(entityRepository, never()).save(any());
+    verify(entityTemplateService, never()).getEntityTemplateByIdentifier(anyString());
+    verify(entityRepository).deleteByTemplateIdentifierAndIdentifier("service", "catalog-api");
+  }
+
+  @Test
+  @DisplayName("Should return blocking relation names for required relations only")
+  void shouldReturnBlockingRelationNamesForRequiredRelationsOnly() {
+    // Arrange
+    var linkedEntity = new Entity(UUID.randomUUID(), "application", "Commerce App", "commerce-app",
+        List.of(),
+        List.of(relation("owner", "team", "team-a"), relation("backup-owner", "team", "team-a"),
+            relation("dependencies", "service", "team-a", "billing-service")));
+    var parentTemplate = templateWithRelations("application",
+        relationDefinition("owner", "team", true, false),
+        relationDefinition("backup-owner", "team", true, true),
+        relationDefinition("dependencies", "service", false, true));
+
+    // Act
+    String result = invokePrivateMethod("getBlockingRelationNames", linkedEntity, parentTemplate,
+        "team-a");
+
+    // Assert
+    assertEquals("'owner', 'backup-owner'", result);
+    verifyNoCollaboratorInteractions();
+  }
+
+  @Test
+  @DisplayName("Should return no blocking relation names when deletion remains valid")
+  void shouldReturnNoBlockingRelationNamesWhenDeletionRemainsValid() {
+    // Arrange
+    var linkedEntity = new Entity(UUID.randomUUID(), "application", "Commerce App", "commerce-app",
+        List.of(), List.of(relation("dependencies", "service", "catalog-api", "billing-api")));
+    var parentTemplate = templateWithRelations("application",
+        relationDefinition("dependencies", "service", true, true));
+
+    // Act
+    String result = invokePrivateMethod("getBlockingRelationNames", linkedEntity, parentTemplate,
+        "catalog-api");
+
+    // Assert
+    assertEquals("", result);
+    verifyNoCollaboratorInteractions();
+  }
+
+  @Test
+  @DisplayName("Should evaluate blocking relation combinations")
+  void shouldEvaluateBlockingRelationCombinations() {
+    // Arrange
+    var parentTemplate = templateWithRelations("application",
+        relationDefinition("owner", "team", true, false),
+        relationDefinition("backup-owner", "team", false, false));
+
+    // Act
+    Boolean missingTarget = invokePrivateMethod("isBlockingRelation",
+        relation("owner", "team", "team-b"), parentTemplate, "team-a");
+    Boolean stillHasOtherTargets = invokePrivateMethod("isBlockingRelation",
+        relation("owner", "team", "team-a", "team-b"), parentTemplate, "team-a");
+    Boolean optionalRelation = invokePrivateMethod("isBlockingRelation",
+        relation("backup-owner", "team", "team-a"), parentTemplate, "team-a");
+    Boolean requiredRelation = invokePrivateMethod("isBlockingRelation",
+        relation("owner", "team", "team-a"), parentTemplate, "team-a");
+
+    // Assert
+    assertEquals(false, missingTarget);
+    assertEquals(false, stillHasOtherTargets);
+    assertEquals(false, optionalRelation);
+    assertEquals(true, requiredRelation);
+    verifyNoCollaboratorInteractions();
+  }
+
+  @Test
+  @DisplayName("Should clean up relations by removing only matching targets")
+  void shouldCleanUpRelationsByRemovingOnlyMatchingTargets() {
+    // Arrange
+    var dependencyRelation = relation("dependencies", "service", "catalog-api", "billing-api");
+    var ownerRelation = relation("owner", "team", "team-a");
+    var parent = new Entity(UUID.randomUUID(), "application", "Commerce App", "commerce-app",
+        List.of(), List.of(dependencyRelation, ownerRelation));
+    var parentTemplate = templateWithRelations("application",
+        relationDefinition("dependencies", "service", false, true),
+        relationDefinition("owner", "team", true, false));
+
+    // Act
+    Entity result = invokePrivateMethod("cleanUpRelations", parent, parentTemplate, "catalog-api");
+
+    // Assert
+    assertEquals(new Entity(parent.id(), "application", "Commerce App", "commerce-app", List.of(),
+        List.of(relation(dependencyRelation.id(), "dependencies", "service", "billing-api"),
+            ownerRelation)),
+        result);
+    verifyNoCollaboratorInteractions();
+  }
+
+  @Test
+  @DisplayName("Should keep existing relation when target identifier is not linked")
+  void shouldKeepExistingRelationWhenTargetIdentifierIsNotLinked() {
+    // Arrange
+    var updatedRelations = new ArrayList<Relation>();
+    var relation = relation("dependencies", "service", "billing-api");
+
+    // Act
+    invokePrivateMethod("retrieveAndCleanTargetEntitiesAgainstRelation",
+        templateWithRelations("application",
+            relationDefinition("dependencies", "service", false, true)),
+        "catalog-api", relation, updatedRelations);
+
+    // Assert
+    assertEquals(List.of(relation), updatedRelations);
+    verifyNoCollaboratorInteractions();
+  }
+
+  @Test
+  @DisplayName("Should clean related relation when target identifier matches")
+  void shouldCleanRelatedRelationWhenTargetIdentifierMatches() {
+    // Arrange
+    var updatedRelations = new ArrayList<Relation>();
+    var relation = relation("dependencies", "service", "catalog-api", "billing-api");
+
+    // Act
+    invokePrivateMethod("retrieveAndCleanTargetEntitiesAgainstRelation",
+        templateWithRelations("application",
+            relationDefinition("dependencies", "service", false, true)),
+        "catalog-api", relation, updatedRelations);
+
+    // Assert
+    assertEquals(List.of(relation(relation.id(), "dependencies", "service", "billing-api")),
+        updatedRelations);
+    verifyNoCollaboratorInteractions();
+  }
+
+  @Test
+  @DisplayName("Should skip adding required relation when cleanup would leave it empty")
+  void shouldSkipAddingRequiredRelationWhenCleanupWouldLeaveItEmpty() {
+    // Arrange
+    var updatedRelations = new ArrayList<Relation>();
+    var relation = relation("owner", "team", "team-a");
+
+    // Act
+    invokePrivateMethod("cleanLinkedRelation",
+        templateWithRelations("application", relationDefinition("owner", "team", true, false)),
+        "team-a", relation, relation.targetEntityIdentifiers(), updatedRelations);
+
+    // Assert
+    assertEquals(List.of(), updatedRelations);
+    verifyNoCollaboratorInteractions();
+  }
+
+  @Test
+  @DisplayName("Should add empty relation when optional relation becomes empty")
+  void shouldAddEmptyRelationWhenOptionalRelationBecomesEmpty() {
+    // Arrange
+    var updatedRelations = new ArrayList<Relation>();
+    var relation = relation("watcher", "team", "team-a");
+
+    // Act
+    invokePrivateMethod("cleanLinkedRelation",
+        templateWithRelations("application", relationDefinition("watcher", "team", false, false)),
+        "team-a", relation, relation.targetEntityIdentifiers(), updatedRelations);
+
+    // Assert
+    assertEquals(List.of(new Relation(relation.id(), "watcher", "team", List.of())),
+        updatedRelations);
+    verifyNoCollaboratorInteractions();
+  }
+
+  @Test
+  @DisplayName("Should return null relation definition when template relation definitions are null")
+  void shouldReturnNullRelationDefinitionWhenTemplateRelationDefinitionsAreNull() {
+    // Arrange
+    var template = mock(EntityTemplate.class);
+    when(template.relationsDefinitions()).thenReturn(null);
+
+    // Act
+    RelationDefinition result = invokePrivateMethod("getRelationDefinition", template, "owner");
+
+    // Assert
+    assertEquals(null, result);
+    verify(template).relationsDefinitions();
+    verifyNoCollaboratorInteractions();
   }
 }

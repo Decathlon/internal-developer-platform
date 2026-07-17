@@ -402,20 +402,12 @@ public class EntityControllerTest extends AbstractIntegrationTest {
     @WithMockUser()
     @DisplayName("Should return 400 when required template properties are missing")
     void postEntity_400_when_required_properties_missing() throws Exception {
-      var payload = """
-          {
-            "name": "web-service-missing-required",
-            "identifier": "web-service-missing-required",
-            "properties": {
-              "port": "8080"
-            }
-          }
-          """;
-
       mockMvc
           .perform(MockMvcRequestBuilders
               .post(ENTITIES_BY_TEMPLATE_IDENTIFIER_PATH, TEMPLATE_IDENTIFIER)
-              .contentType(APPLICATION_JSON).accept(APPLICATION_JSON).with(csrf()).content(payload))
+              .contentType(APPLICATION_JSON).accept(APPLICATION_JSON).with(csrf())
+              .content(getJsonTestFileContent(
+                  ENTITY_JSON_FILES_TEST_PATH + "postEntity_400_required_properties_missing.json")))
           .andExpect(status().isBadRequest()).andExpect(jsonPath("$.error").value("BAD_REQUEST"))
           .andExpect(jsonPath("$.error_description").value(
               org.hamcrest.Matchers.containsString("Property 'applicationName' is required")));
@@ -425,28 +417,12 @@ public class EntityControllerTest extends AbstractIntegrationTest {
     @WithMockUser()
     @DisplayName("Should return 400 when property type does not match template")
     void postEntity_400_when_property_type_mismatch() throws Exception {
-      var payload = """
-          {
-            "name": "web-service-invalid-type",
-            "identifier": "web-service-invalid-type",
-            "properties": {
-              "applicationName": "catalog-api",
-              "ownerEmail": "owner@example.com",
-              "port": "not-a-number",
-              "environment": "DEV",
-              "version": "1.2.3",
-              "teamName": "platform-team",
-              "baseUrl": "https://catalog.example.com",
-              "protocol": "HTTP",
-              "programmingLanguage": "JAVA"
-            }
-          }
-          """;
-
       mockMvc
-          .perform(MockMvcRequestBuilders
-              .post(ENTITIES_BY_TEMPLATE_IDENTIFIER_PATH, TEMPLATE_IDENTIFIER)
-              .contentType(APPLICATION_JSON).accept(APPLICATION_JSON).with(csrf()).content(payload))
+          .perform(
+              MockMvcRequestBuilders.post(ENTITIES_BY_TEMPLATE_IDENTIFIER_PATH, TEMPLATE_IDENTIFIER)
+                  .contentType(APPLICATION_JSON).accept(APPLICATION_JSON).with(csrf())
+                  .content(getJsonTestFileContent(
+                      ENTITY_JSON_FILES_TEST_PATH + "postEntity_400_property_type_mismatch.json")))
           .andExpect(status().isBadRequest()).andExpect(jsonPath("$.error").value("BAD_REQUEST"))
           .andExpect(jsonPath("$.error_description").value(
               org.hamcrest.Matchers.containsString("Property 'port' must be of type NUMBER")));
@@ -456,28 +432,12 @@ public class EntityControllerTest extends AbstractIntegrationTest {
     @WithMockUser()
     @DisplayName("Should return 400 when property rules are not respected")
     void postEntity_400_when_property_rules_not_respected() throws Exception {
-      var payload = """
-          {
-            "name": "web-service-invalid-rules",
-            "identifier": "web-service-invalid-rules",
-            "properties": {
-              "applicationName": "catalog-api",
-              "ownerEmail": "invalid-email",
-              "port": "80",
-              "environment": "DEV",
-              "version": "1.2.3",
-              "teamName": "platform-team",
-              "baseUrl": "invalid-url",
-              "protocol": "HTTP",
-              "programmingLanguage": "JAVA"
-            }
-          }
-          """;
-
       mockMvc
-          .perform(MockMvcRequestBuilders
-              .post(ENTITIES_BY_TEMPLATE_IDENTIFIER_PATH, TEMPLATE_IDENTIFIER)
-              .contentType(APPLICATION_JSON).accept(APPLICATION_JSON).with(csrf()).content(payload))
+          .perform(
+              MockMvcRequestBuilders.post(ENTITIES_BY_TEMPLATE_IDENTIFIER_PATH, TEMPLATE_IDENTIFIER)
+                  .contentType(APPLICATION_JSON).accept(APPLICATION_JSON).with(csrf())
+                  .content(getJsonTestFileContent(ENTITY_JSON_FILES_TEST_PATH
+                      + "postEntity_400_property_rules_not_respected.json")))
           .andExpect(status().isBadRequest()).andExpect(jsonPath("$.error").value("BAD_REQUEST"))
           .andExpect(jsonPath("$.error_description").value(org.hamcrest.Matchers.allOf(
               org.hamcrest.Matchers
@@ -496,29 +456,12 @@ public class EntityControllerTest extends AbstractIntegrationTest {
     @WithMockUser()
     @DisplayName("Should return 400 when payload contains a property not defined in template")
     void postEntity_400_when_property_not_defined_in_template() throws Exception {
-      var payload = """
-          {
-            "name": "web-service-extra-property",
-            "identifier": "web-service-extra-property",
-            "properties": {
-              "applicationName": "catalog-api",
-              "ownerEmail": "owner@example.com",
-              "port": "8080",
-              "environment": "DEV",
-              "version": "1.2.3",
-              "teamName": "platform-team",
-              "baseUrl": "https://catalog.example.com",
-              "protocol": "HTTP",
-              "programmingLanguage": "JAVA",
-              "status": "deprecated"
-            }
-          }
-          """;
-
       mockMvc
-          .perform(MockMvcRequestBuilders
-              .post(ENTITIES_BY_TEMPLATE_IDENTIFIER_PATH, TEMPLATE_IDENTIFIER)
-              .contentType(APPLICATION_JSON).accept(APPLICATION_JSON).with(csrf()).content(payload))
+          .perform(
+              MockMvcRequestBuilders.post(ENTITIES_BY_TEMPLATE_IDENTIFIER_PATH, TEMPLATE_IDENTIFIER)
+                  .contentType(APPLICATION_JSON).accept(APPLICATION_JSON).with(csrf())
+                  .content(getJsonTestFileContent(ENTITY_JSON_FILES_TEST_PATH
+                      + "postEntity_400_property_not_defined_in_template.json")))
           .andExpect(status().isBadRequest()).andExpect(jsonPath("$.error").value("BAD_REQUEST"))
           .andExpect(jsonPath("$.error_description").value(org.hamcrest.Matchers
               .containsString("Property 'status' is not defined in template 'web-service'")));
@@ -528,34 +471,12 @@ public class EntityControllerTest extends AbstractIntegrationTest {
     @WithMockUser()
     @DisplayName("Should return 400 when relation target entity does not exist")
     void postEntity_400_when_relation_target_entity_does_not_exist() throws Exception {
-      var payload = """
-          {
-            "name": "web-service-missing-relation-target",
-            "identifier": "web-service-missing-relation-target",
-            "properties": {
-              "applicationName": "catalog-api",
-              "ownerEmail": "owner@example.com",
-              "port": "8080",
-              "environment": "DEV",
-              "version": "1.2.3",
-              "teamName": "platform-team",
-              "baseUrl": "https://catalog.example.com",
-              "protocol": "HTTP",
-              "programmingLanguage": "JAVA"
-            },
-            "relations": [
-              {
-                "name": "database",
-                "target_entity_identifiers": ["missing-database"]
-              }
-            ]
-          }
-          """;
-
       mockMvc
-          .perform(MockMvcRequestBuilders
-              .post(ENTITIES_BY_TEMPLATE_IDENTIFIER_PATH, TEMPLATE_IDENTIFIER)
-              .contentType(APPLICATION_JSON).accept(APPLICATION_JSON).with(csrf()).content(payload))
+          .perform(
+              MockMvcRequestBuilders.post(ENTITIES_BY_TEMPLATE_IDENTIFIER_PATH, TEMPLATE_IDENTIFIER)
+                  .contentType(APPLICATION_JSON).accept(APPLICATION_JSON).with(csrf())
+                  .content(getJsonTestFileContent(ENTITY_JSON_FILES_TEST_PATH
+                      + "postEntity_400_relation_target_entity_does_not_exist.json")))
           .andExpect(status().isBadRequest()).andExpect(jsonPath("$.error").value("BAD_REQUEST"))
           .andExpect(jsonPath("$.error_description").value(org.hamcrest.Matchers.containsString(
               "Relation 'database': target entity 'missing-database' does not exist")));
@@ -567,22 +488,8 @@ public class EntityControllerTest extends AbstractIntegrationTest {
   @DisplayName("PUT /api/v1/entities/{template-identifier}/{identifier} - Update entity")
   class PutEntitiesTests {
 
-    private static final String VALID_UPDATE_PAYLOAD = """
-        {
-          "name": "Web API 2 Updated",
-          "properties": {
-            "applicationName": "catalog-api",
-            "ownerEmail": "owner@example.com",
-            "port": "8080",
-            "environment": "DEV",
-            "version": "1.2.3",
-            "teamName": "platform-team",
-            "baseUrl": "https://catalog.example.com",
-            "protocol": "HTTP",
-            "programmingLanguage": "JAVA"
-          }
-        }
-        """;
+    private static final String VALID_UPDATE_PAYLOAD = getJsonTestFileContent(
+        ENTITY_JSON_FILES_TEST_PATH + "putEntity_200_valid_update.json");
 
     @Test
     @WithMockUser
@@ -620,18 +527,11 @@ public class EntityControllerTest extends AbstractIntegrationTest {
     @WithMockUser
     @DisplayName("Should return 400 when required template properties are missing on update")
     void putEntity_400_when_required_properties_missing() throws Exception {
-      var payload = """
-          {
-            "name": "Web API 2 Updated",
-            "properties": {
-              "port": "8080"
-            }
-          }
-          """;
-
       mockMvc
           .perform(put(ENTITIES_BY_IDENTIFIER_PATH, TEMPLATE_IDENTIFIER, ENTITY_IDENTIFIER)
-              .contentType(APPLICATION_JSON).accept(APPLICATION_JSON).with(csrf()).content(payload))
+              .contentType(APPLICATION_JSON).accept(APPLICATION_JSON).with(csrf())
+              .content(getJsonTestFileContent(
+                  ENTITY_JSON_FILES_TEST_PATH + "putEntity_400_required_properties_missing.json")))
           .andExpect(status().isBadRequest()).andExpect(jsonPath("$.error").value("BAD_REQUEST"))
           .andExpect(jsonPath("$.error_description").value(
               org.hamcrest.Matchers.containsString("Property 'applicationName' is required")));
@@ -641,26 +541,11 @@ public class EntityControllerTest extends AbstractIntegrationTest {
     @WithMockUser
     @DisplayName("Should return 400 when property type does not match template on update")
     void putEntity_400_when_property_type_mismatch() throws Exception {
-      var payload = """
-          {
-            "name": "Web API 2 Updated",
-            "properties": {
-              "applicationName": "catalog-api",
-              "ownerEmail": "owner@example.com",
-              "port": "not-a-number",
-              "environment": "DEV",
-              "version": "1.2.3",
-              "teamName": "platform-team",
-              "baseUrl": "https://catalog.example.com",
-              "protocol": "HTTP",
-              "programmingLanguage": "JAVA"
-            }
-          }
-          """;
-
       mockMvc
           .perform(put(ENTITIES_BY_IDENTIFIER_PATH, TEMPLATE_IDENTIFIER, ENTITY_IDENTIFIER)
-              .contentType(APPLICATION_JSON).accept(APPLICATION_JSON).with(csrf()).content(payload))
+              .contentType(APPLICATION_JSON).accept(APPLICATION_JSON).with(csrf())
+              .content(getJsonTestFileContent(
+                  ENTITY_JSON_FILES_TEST_PATH + "putEntity_400_property_type_mismatch.json")))
           .andExpect(status().isBadRequest()).andExpect(jsonPath("$.error").value("BAD_REQUEST"))
           .andExpect(jsonPath("$.error_description").value(
               org.hamcrest.Matchers.containsString("Property 'port' must be of type NUMBER")));
@@ -670,26 +555,11 @@ public class EntityControllerTest extends AbstractIntegrationTest {
     @WithMockUser
     @DisplayName("Should return 400 when property rules are not respected on update")
     void putEntity_400_when_property_rules_not_respected() throws Exception {
-      var payload = """
-          {
-            "name": "Web API 2 Updated",
-            "properties": {
-              "applicationName": "catalog-api",
-              "ownerEmail": "invalid-email",
-              "port": "80",
-              "environment": "DEV",
-              "version": "1.2.3",
-              "teamName": "platform-team",
-              "baseUrl": "invalid-url",
-              "protocol": "HTTP",
-              "programmingLanguage": "JAVA"
-            }
-          }
-          """;
-
       mockMvc
           .perform(put(ENTITIES_BY_IDENTIFIER_PATH, TEMPLATE_IDENTIFIER, ENTITY_IDENTIFIER)
-              .contentType(APPLICATION_JSON).accept(APPLICATION_JSON).with(csrf()).content(payload))
+              .contentType(APPLICATION_JSON).accept(APPLICATION_JSON).with(csrf())
+              .content(getJsonTestFileContent(
+                  ENTITY_JSON_FILES_TEST_PATH + "putEntity_400_property_rules_not_respected.json")))
           .andExpect(status().isBadRequest()).andExpect(jsonPath("$.error").value("BAD_REQUEST"))
           .andExpect(jsonPath("$.error_description").value(org.hamcrest.Matchers.allOf(
               org.hamcrest.Matchers
@@ -708,33 +578,11 @@ public class EntityControllerTest extends AbstractIntegrationTest {
     @WithMockUser
     @DisplayName("Should return 400 when update contains a property not defined in template and a missing relation target")
     void putEntity_400_when_property_not_defined_and_relation_target_missing() throws Exception {
-      var payload = """
-          {
-            "name": "Web API 2 Updated",
-            "properties": {
-              "applicationName": "catalog-api",
-              "ownerEmail": "owner@example.com",
-              "port": "8080",
-              "environment": "DEV",
-              "version": "1.2.3",
-              "teamName": "platform-team",
-              "baseUrl": "https://catalog.example.com",
-              "protocol": "HTTP",
-              "programmingLanguage": "JAVA",
-              "status": "deprecated"
-            },
-            "relations": [
-              {
-                "name": "database",
-                "target_entity_identifiers": ["missing-database"]
-              }
-            ]
-          }
-          """;
-
       mockMvc
           .perform(put(ENTITIES_BY_IDENTIFIER_PATH, TEMPLATE_IDENTIFIER, ENTITY_IDENTIFIER)
-              .contentType(APPLICATION_JSON).accept(APPLICATION_JSON).with(csrf()).content(payload))
+              .contentType(APPLICATION_JSON).accept(APPLICATION_JSON).with(csrf())
+              .content(getJsonTestFileContent(ENTITY_JSON_FILES_TEST_PATH
+                  + "putEntity_400_property_not_defined_and_relation_target_missing.json")))
           .andExpect(status().isBadRequest()).andExpect(jsonPath("$.error").value("BAD_REQUEST"))
           .andExpect(jsonPath("$.error_description").value(org.hamcrest.Matchers.allOf(
               org.hamcrest.Matchers
@@ -760,7 +608,213 @@ public class EntityControllerTest extends AbstractIntegrationTest {
               .contentType(APPLICATION_JSON).accept(APPLICATION_JSON).content(VALID_UPDATE_PAYLOAD))
           .andExpect(status().isForbidden());
     }
+  }
 
+  @Nested
+  @DisplayName("PUT /api/v1/entities/{template-identifier}/{identifier} - Update entity relations with merge")
+  class PutEntitiesRelationsMergeTests {
+
+    private static final String UPDATE_WITH_ADD_RELATION = getJsonTestFileContent(
+        ENTITY_JSON_FILES_TEST_PATH + "putEntity_200_update_with_add_relation.json");
+
+    private static final String UPDATE_REMOVE_ALL_RELATIONS = getJsonTestFileContent(
+        ENTITY_JSON_FILES_TEST_PATH + "putEntity_200_update_remove_all_relations.json");
+
+    @Test
+    @WithMockUser
+    @DisplayName("Should add new relation during entity update")
+    void putEntity_200_adds_new_relation() throws Exception {
+      var entityIdentifier = "web-api-update-add-relation";
+      try {
+        mockMvc.perform(
+            MockMvcRequestBuilders.post(ENTITIES_BY_TEMPLATE_IDENTIFIER_PATH, TEMPLATE_IDENTIFIER)
+                .contentType(APPLICATION_JSON).accept(APPLICATION_JSON).with(csrf()).content("""
+                    {
+                      "name": "Web API for Relation Update",
+                      "identifier": "%s",
+                      "properties": {
+                        "applicationName": "catalog-api",
+                        "ownerEmail": "owner@example.com",
+                        "port": "8080",
+                        "environment": "DEV",
+                        "version": "1.2.3",
+                        "teamName": "platform-team",
+                        "baseUrl": "https://catalog.example.com",
+                        "protocol": "HTTP",
+                        "programmingLanguage": "JAVA"
+                      }
+                    }
+                    """.formatted(entityIdentifier)))
+            .andExpect(status().isCreated());
+
+        mockMvc
+            .perform(put(ENTITIES_BY_IDENTIFIER_PATH, TEMPLATE_IDENTIFIER, entityIdentifier)
+                .contentType(APPLICATION_JSON).accept(APPLICATION_JSON).with(csrf())
+                .content(UPDATE_WITH_ADD_RELATION))
+            .andExpect(status().isOk()).andExpect(jsonPath("$.relations.database").isArray());
+      } finally {
+        mockMvc.perform(delete(ENTITIES_BY_IDENTIFIER_PATH, TEMPLATE_IDENTIFIER, entityIdentifier)
+            .accept(APPLICATION_JSON).with(csrf()));
+      }
+    }
+
+    @Test
+    @WithMockUser
+    @DisplayName("Should remove all relations during entity update when empty array provided")
+    void putEntity_200_removes_all_relations() throws Exception {
+      var entityIdentifier = "web-api-update-remove-relations";
+      try {
+        mockMvc.perform(
+            MockMvcRequestBuilders.post(ENTITIES_BY_TEMPLATE_IDENTIFIER_PATH, TEMPLATE_IDENTIFIER)
+                .contentType(APPLICATION_JSON).accept(APPLICATION_JSON).with(csrf()).content("""
+                    {
+                      "name": "Web API for Relation Removal",
+                      "identifier": "%s",
+                      "properties": {
+                        "applicationName": "catalog-api",
+                        "ownerEmail": "owner@example.com",
+                        "port": "8080",
+                        "environment": "DEV",
+                        "version": "1.2.3",
+                        "teamName": "platform-team",
+                        "baseUrl": "https://catalog.example.com",
+                        "protocol": "HTTP",
+                        "programmingLanguage": "JAVA"
+                      },
+                      "relations": [
+                        {
+                          "name": "database",
+                          "target_entity_identifiers": ["database-service-1"]
+                        }
+                      ]
+                    }
+                    """.formatted(entityIdentifier)))
+            .andExpect(status().isCreated());
+
+        mockMvc
+            .perform(put(ENTITIES_BY_IDENTIFIER_PATH, TEMPLATE_IDENTIFIER, entityIdentifier)
+                .contentType(APPLICATION_JSON).accept(APPLICATION_JSON).with(csrf())
+                .content(UPDATE_REMOVE_ALL_RELATIONS))
+            .andExpect(status().isOk()).andExpect(jsonPath("$.relations").isEmpty());
+      } finally {
+        mockMvc.perform(delete(ENTITIES_BY_IDENTIFIER_PATH, TEMPLATE_IDENTIFIER, entityIdentifier)
+            .accept(APPLICATION_JSON).with(csrf()));
+      }
+    }
+
+    @Test
+    @WithMockUser
+    @DisplayName("Should return relations after merge update")
+    void putEntity_200_returns_relations_after_merge_update() throws Exception {
+      var entityIdentifier = "web-api-preserve-relation-ids";
+      try {
+        mockMvc.perform(
+            MockMvcRequestBuilders.post(ENTITIES_BY_TEMPLATE_IDENTIFIER_PATH, TEMPLATE_IDENTIFIER)
+                .contentType(APPLICATION_JSON).accept(APPLICATION_JSON).with(csrf()).content("""
+                    {
+                      "name": "Web API for ID Preservation",
+                      "identifier": "%s",
+                      "properties": {
+                        "applicationName": "catalog-api",
+                        "ownerEmail": "owner@example.com",
+                        "port": "8080",
+                        "environment": "DEV",
+                        "version": "1.2.3",
+                        "teamName": "platform-team",
+                        "baseUrl": "https://catalog.example.com",
+                        "protocol": "HTTP",
+                        "programmingLanguage": "JAVA"
+                      },
+                      "relations": [
+                        {
+                          "name": "database",
+                          "target_entity_identifiers": ["database-service-1"]
+                        }
+                      ]
+                    }
+                    """.formatted(entityIdentifier)))
+            .andExpect(status().isCreated());
+
+        mockMvc.perform(put(ENTITIES_BY_IDENTIFIER_PATH, TEMPLATE_IDENTIFIER, entityIdentifier)
+            .contentType(APPLICATION_JSON).accept(APPLICATION_JSON).with(csrf())
+            .content(UPDATE_WITH_ADD_RELATION)).andExpect(status().isOk());
+
+        mockMvc
+            .perform(get(ENTITIES_BY_IDENTIFIER_PATH, TEMPLATE_IDENTIFIER, entityIdentifier)
+                .accept(APPLICATION_JSON))
+            .andExpect(status().isOk()).andExpect(jsonPath("$.relations.database").isArray());
+      } finally {
+        mockMvc.perform(delete(ENTITIES_BY_IDENTIFIER_PATH, TEMPLATE_IDENTIFIER, entityIdentifier)
+            .accept(APPLICATION_JSON).with(csrf()));
+      }
+    }
+
+    @Test
+    @WithMockUser
+    @DisplayName("Should preserve other properties during relation merge update")
+    void putEntity_200_preserves_properties_during_relation_merge() throws Exception {
+      var entityIdentifier = "web-api-preserve-properties";
+      try {
+        mockMvc.perform(
+            MockMvcRequestBuilders.post(ENTITIES_BY_TEMPLATE_IDENTIFIER_PATH, TEMPLATE_IDENTIFIER)
+                .contentType(APPLICATION_JSON).accept(APPLICATION_JSON).with(csrf()).content("""
+                    {
+                      "name": "Original Name",
+                      "identifier": "%s",
+                      "properties": {
+                        "applicationName": "original-app",
+                        "ownerEmail": "owner@example.com",
+                        "port": "8080",
+                        "environment": "DEV",
+                        "version": "1.0.0",
+                        "teamName": "platform-team",
+                        "baseUrl": "https://original.example.com",
+                        "protocol": "HTTP",
+                        "programmingLanguage": "JAVA"
+                      },
+                      "relations": [
+                        {
+                          "name": "database",
+                          "target_entity_identifiers": ["database-service-1"]
+                        }
+                      ]
+                    }
+                    """.formatted(entityIdentifier)))
+            .andExpect(status().isCreated());
+
+        mockMvc
+            .perform(put(ENTITIES_BY_IDENTIFIER_PATH, TEMPLATE_IDENTIFIER, entityIdentifier)
+                .contentType(APPLICATION_JSON).accept(APPLICATION_JSON).with(csrf()).content("""
+                    {
+                      "name": "Updated Name",
+                      "properties": {
+                        "applicationName": "updated-app",
+                        "ownerEmail": "owner@example.com",
+                        "port": "9090",
+                        "environment": "PROD",
+                        "version": "2.0.0",
+                        "teamName": "platform-team",
+                        "baseUrl": "https://updated.example.com",
+                        "protocol": "HTTPS",
+                        "programmingLanguage": "JAVA"
+                      },
+                      "relations": [
+                        {
+                          "name": "database",
+                          "target_entity_identifiers": ["database-service-1"]
+                        }
+                      ]
+                    }
+                    """))
+            .andExpect(status().isOk()).andExpect(jsonPath("$.name").value("Updated Name"))
+            .andExpect(jsonPath("$.properties.applicationName").value("updated-app"))
+            .andExpect(jsonPath("$.properties.port").value(9090))
+            .andExpect(jsonPath("$.relations.database").isArray());
+      } finally {
+        mockMvc.perform(delete(ENTITIES_BY_IDENTIFIER_PATH, TEMPLATE_IDENTIFIER, entityIdentifier)
+            .accept(APPLICATION_JSON).with(csrf()));
+      }
+    }
   }
 
   @Nested
@@ -1824,7 +1878,7 @@ public class EntityControllerTest extends AbstractIntegrationTest {
     }
 
     private String createWebServicePayloadWithRelation(String name, String identifier,
-        String targetEntityIdentifier) {
+        String relationName, String targetEntityIdentifier) {
       return """
           {
             "name": "%s",
@@ -1847,7 +1901,7 @@ public class EntityControllerTest extends AbstractIntegrationTest {
               }
             ]
           }
-          """.formatted(name, identifier, "database", targetEntityIdentifier);
+          """.formatted(name, identifier, relationName, targetEntityIdentifier);
     }
 
     @Test
@@ -1923,7 +1977,7 @@ public class EntityControllerTest extends AbstractIntegrationTest {
               MockMvcRequestBuilders.post(ENTITIES_BY_TEMPLATE_IDENTIFIER_PATH, TEMPLATE_IDENTIFIER)
                   .contentType(APPLICATION_JSON).accept(APPLICATION_JSON).with(csrf())
                   .content(createWebServicePayloadWithRelation("Relation Source Entity",
-                      sourceEntityIdentifier, targetEntityIdentifier)))
+                      sourceEntityIdentifier, "uses", targetEntityIdentifier)))
           .andExpect(status().isCreated());
 
       mockMvc.perform(get(ENTITIES_BY_IDENTIFIER_PATH, TEMPLATE_IDENTIFIER, targetEntityIdentifier)
@@ -1996,11 +2050,12 @@ public class EntityControllerTest extends AbstractIntegrationTest {
     void deleteEntity_204_with_properties_and_relations() throws Exception {
       var entityIdentifier = "test-entity-with-relations";
 
-      mockMvc.perform(
-          MockMvcRequestBuilders.post(ENTITIES_BY_TEMPLATE_IDENTIFIER_PATH, TEMPLATE_IDENTIFIER)
-              .contentType(APPLICATION_JSON).accept(APPLICATION_JSON).with(csrf())
-              .content(createWebServicePayloadWithRelation("Test Entity With Relations",
-                  entityIdentifier, "database-service-1")))
+      mockMvc
+          .perform(
+              MockMvcRequestBuilders.post(ENTITIES_BY_TEMPLATE_IDENTIFIER_PATH, TEMPLATE_IDENTIFIER)
+                  .contentType(APPLICATION_JSON).accept(APPLICATION_JSON).with(csrf())
+                  .content(createWebServicePayloadWithRelation("Test Entity With Relations",
+                      entityIdentifier, "database", "database-service-1")))
           .andExpect(status().isCreated());
 
       mockMvc.perform(delete(ENTITIES_BY_IDENTIFIER_PATH, TEMPLATE_IDENTIFIER, entityIdentifier)
