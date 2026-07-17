@@ -16,7 +16,7 @@ REJECT_FILE=".vale/styles/config/vocabularies/IDP/reject.txt"
 # file matches every input line, so blank lines must be stripped out.
 patterns_file="$(mktemp)"
 trap 'rm -f "$patterns_file"' EXIT
-grep -v '^[[:space:]]*$' "$REJECT_FILE" >"$patterns_file" || true
+sed '/^[[:space:]]*$/d' "$REJECT_FILE" >"$patterns_file"
 
 # No usable patterns -> nothing to check.
 [[ -s "$patterns_file" ]] || exit 0
@@ -27,10 +27,16 @@ for file in "$@"; do
 
   # -i: case-insensitive, -F: literal (substring), -I: skip binary files,
   # -n: show line numbers. grep exits 0 when at least one match is found.
-  if matches="$(grep -i -n -F -I -f "$patterns_file" -- "$file" 2>/dev/null)"; then
+  if matches="$(grep -i -n -F -I -f "$patterns_file" -- "$file")"; then
     echo "Rejected term found in ${file}:"
     printf '%s\n' "$matches" | sed 's/^/  /'
     status=1
+  else
+    grep_status=$?
+    if [[ "$grep_status" -gt 1 ]]; then
+      echo "Error: failed to scan ${file} for rejected terms." >&2
+      exit "$grep_status"
+    fi
   fi
 done
 
