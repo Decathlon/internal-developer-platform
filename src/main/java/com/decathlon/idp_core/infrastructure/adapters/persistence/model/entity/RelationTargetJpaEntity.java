@@ -5,12 +5,15 @@ import java.util.UUID;
 import jakarta.persistence.Column;
 import jakarta.persistence.Embeddable;
 
+import org.hibernate.envers.Audited;
+
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
 @Embeddable
 @Data
+@Audited
 @NoArgsConstructor
 @AllArgsConstructor
 public class RelationTargetJpaEntity {

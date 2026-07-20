@@ -1,0 +1,20 @@
+{
+  "name": "Web API Updated",
+  "properties": {
+    "applicationName": "catalog-api",
+    "ownerEmail": "owner@example.com",
+    "port": "8080",
+    "environment": "DEV",
+    "version": "1.2.3",
+    "teamName": "platform-team",
+    "baseUrl": "https://catalog.example.com",
+    "protocol": "HTTP",
+    "programmingLanguage": "JAVA"
+  },
+  "relations": [
+    {
+      "name": "database",
+      "target_entity_identifiers": ["database-service-1"]
+    }
+  ]
+}

@@ -149,7 +149,7 @@ class UserIdentityProviderHolderTest {
 
     @Test
     @DisplayName("Should allow concurrent reads after initialization")
-    void shouldAllowConcurrentReadsAfterInitialization() {
+    void shouldAllowConcurrentReadsAfterInitialization() throws InterruptedException {
       // Given
       var provider = mock(UserIdentityProvider.class);
       var holder = new UserIdentityProviderHolder(provider);
@@ -157,6 +157,7 @@ class UserIdentityProviderHolderTest {
 
       var readCount = 100;
       var barrier = new java.util.concurrent.CyclicBarrier(readCount);
+      var latch = new java.util.concurrent.CountDownLatch(readCount);
 
       // When - Read from multiple threads
       for (int i = 0; i < readCount; i++) {
@@ -167,10 +168,14 @@ class UserIdentityProviderHolderTest {
             assertThat(result).isEqualTo(provider);
           } catch (Exception e) {
             throw new RuntimeException(e);
+          } finally {
+            latch.countDown();
           }
         }).start();
       }
-      // Then - Verify provider is still accessible
+
+      latch.await();
+
       assertThat(UserIdentityProviderHolder.getUserIdentityProvider()).isEqualTo(provider);
     }
   }
