@@ -6,7 +6,7 @@ import org.apache.camel.builder.RouteBuilder;
 
 import com.decathlon.idp_core.domain.exception.webhook.WebhookConnectorNotFoundException;
 
-public class RouteExceptionHandler extends RouteBuilder {
+public class IngestionRouteExceptionHandler extends RouteBuilder {
 
     @Override
     public void configure() throws Exception {
