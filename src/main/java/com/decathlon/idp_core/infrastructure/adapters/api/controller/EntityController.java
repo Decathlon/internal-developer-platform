@@ -72,6 +72,7 @@ import com.decathlon.idp_core.domain.model.entity.Entity;
 import com.decathlon.idp_core.domain.model.entity.EntityFilter;
 import com.decathlon.idp_core.domain.model.entity_graph.EntityGraphNode;
 import com.decathlon.idp_core.domain.model.entity_graph.EntityGraphTraversalMode;
+import com.decathlon.idp_core.domain.model.entity_template.EntityTemplate;
 import com.decathlon.idp_core.domain.model.search.PaginatedResult;
 import com.decathlon.idp_core.domain.model.search.PaginationCriteria;
 import com.decathlon.idp_core.domain.model.search.RawSearchFilterNode;
@@ -116,210 +117,212 @@ import lombok.RequiredArgsConstructor;
 @RequiredArgsConstructor
 public class EntityController {
 
-  private final EntityService entityService;
-  private final EntityDtoOutMapper entityDtoOutMapper;
-  private final EntityDtoInMapper entityDtoInMapper;
-  private final EntityFilterDslParser entityFilterDslParser;
-  private final SearchFilterMapper searchFilterMapper;
-  private final SearchFilterParser searchFilterParser;
-  private final EntityGraphService entityGraphService;
+    private final EntityService entityService;
+    private final EntityDtoOutMapper entityDtoOutMapper;
+    private final EntityDtoInMapper entityDtoInMapper;
+    private final EntityDtoOutFromEntityNodeMapper entityDtoOutFromEntityNodeMapper;
+    private final EntityFilterDslParser entityFilterDslParser;
+    private final SearchFilterMapper searchFilterMapper;
+    private final SearchFilterParser searchFilterParser;
+    private final EntityGraphService entityGraphService;
 
-  /// Returns paginated entities filtered by template with HTTP pagination
-  /// support.
-  ///
-  /// **API contract:** Provides paginated entity listings for template-specific
-  /// views. Supports standard REST pagination parameters and an optional `q`
-  /// filter query. Template validation is handled by the domain service layer.
-  ///
-  /// @param page zero-based page index for pagination navigation
-  /// @param size number of entities per page for response size
-  /// control
-  /// @param templateIdentifier template filter for entity scope limitation
-  /// @param q optional filter query string (e.g.
-  /// `name:API;property.language=JAVA`)
-  /// @return paginated entity DTOs matching the template and optional filter
-  @SuppressWarnings("null")
-  @Operation(summary = ENDPOINT_GET_ENTITIES_SUMMARY, description = ENDPOINT_GET_ENTITIES_PAGINATED_DESCRIPTION)
-  @ApiResponse(responseCode = OK_CODE, description = RESPONSE_ENTITIES_PAGINATED_SUCCESS, content = @Content(schema = @Schema(implementation = EntityPageResponse.class)))
-  @ApiResponse(responseCode = BAD_REQUEST_CODE, description = RESPONSE_INVALID_PAGINATION, content = {
-      @Content(schema = @Schema(implementation = ApiExceptionHandler.ErrorResponse.class))})
-  @ApiResponse(responseCode = BAD_REQUEST_CODE, description = RESPONSE_INVALID_QUERY, content = {
-      @Content(schema = @Schema(implementation = ApiExceptionHandler.ErrorResponse.class))})
-  @Parameter(name = "page", description = PARAM_PAGE_DESCRIPTION, in = ParameterIn.QUERY, content = @Content(schema = @Schema(type = "integer", defaultValue = "0")))
-  @Parameter(name = "size", description = PARAM_SIZE_DESCRIPTION, in = ParameterIn.QUERY, content = @Content(schema = @Schema(type = "integer", defaultValue = "20")))
-  @Parameter(name = "sort", description = PARAM_SORT_DESCRIPTION, in = ParameterIn.QUERY, content = @Content(schema = @Schema(type = "string", defaultValue = "identifier,asc")))
-  @Parameter(name = "q", description = PARAM_QUERY_DESCRIPTION, in = ParameterIn.QUERY, content = @Content(schema = @Schema(type = "string")))
-  @ResponseStatus(OK)
-  @GetMapping("/{templateIdentifier}")
-  public Page<EntityDtoOut> getEntities(@RequestParam(defaultValue = "0") int page,
-      @RequestParam(defaultValue = "20") int size, @PathVariable String templateIdentifier,
-      @RequestParam(required = false) String q) {
-    Pageable pageable = PageRequest.of(page, size);
-    EntityFilter filter = entityFilterDslParser.parse(q);
-    // Single transaction: pagination + batch relation fetch in one DB round trip
-    Page<EntityGraphNode> graphNodes = entityGraphService.getEntityGraphPageByTemplate(pageable,
-        templateIdentifier, filter, 1);
-    return entityDtoOutMapper.fromGraphNodesPage(graphNodes, templateIdentifier);
-  }
+    /// Returns paginated entities filtered by template with HTTP pagination
+    /// support.
+    ///
+    /// **API contract:** Provides paginated entity listings for template-specific
+    /// views. Supports standard REST pagination parameters and an optional `q`
+    /// filter query. Template validation is handled by the domain service layer.
+    ///
+    /// @param page               zero-based page index for pagination navigation
+    /// @param size               number of entities per page for response size
+    ///                           control
+    /// @param templateIdentifier template filter for entity scope limitation
+    /// @param q                  optional filter query string (e.g.
+    ///                           `name:API;property.language=JAVA`)
+    /// @return paginated entity DTOs matching the template and optional filter
+    @SuppressWarnings("null")
+    @Operation(summary = ENDPOINT_GET_ENTITIES_SUMMARY, description = ENDPOINT_GET_ENTITIES_PAGINATED_DESCRIPTION)
+    @ApiResponse(responseCode = OK_CODE, description = RESPONSE_ENTITIES_PAGINATED_SUCCESS, content = @Content(schema = @Schema(implementation = EntityPageResponse.class)))
+    @ApiResponse(responseCode = BAD_REQUEST_CODE, description = RESPONSE_INVALID_PAGINATION, content = {
+            @Content(schema = @Schema(implementation = ApiExceptionHandler.ErrorResponse.class)) })
+    @ApiResponse(responseCode = BAD_REQUEST_CODE, description = RESPONSE_INVALID_QUERY, content = {
+            @Content(schema = @Schema(implementation = ApiExceptionHandler.ErrorResponse.class)) })
+    @Parameter(name = "page", description = PARAM_PAGE_DESCRIPTION, in = ParameterIn.QUERY, content = @Content(schema = @Schema(type = "integer", defaultValue = "0")))
+    @Parameter(name = "size", description = PARAM_SIZE_DESCRIPTION, in = ParameterIn.QUERY, content = @Content(schema = @Schema(type = "integer", defaultValue = "20")))
+    @Parameter(name = "sort", description = PARAM_SORT_DESCRIPTION, in = ParameterIn.QUERY, content = @Content(schema = @Schema(type = "string", defaultValue = "identifier,asc")))
+    @Parameter(name = "q", description = PARAM_QUERY_DESCRIPTION, in = ParameterIn.QUERY, content = @Content(schema = @Schema(type = "string")))
+    @ResponseStatus(OK)
+    @GetMapping("/{templateIdentifier}")
+    public Page<EntityDtoOut> getEntities(@RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size, @PathVariable String templateIdentifier,
+            @RequestParam(required = false) String q) {
+        Pageable pageable = PageRequest.of(page, size);
+        EntityFilter filter = entityFilterDslParser.parse(q);
+        // Single transaction: pagination + batch relation fetch in one DB round trip
+        Page<EntityGraphNode> graphNodes = entityGraphService.getEntityGraphPageByTemplate(pageable,
+                templateIdentifier, filter, 1);
+        return entityDtoOutFromEntityNodeMapper.toPageDto(graphNodes, templateIdentifier,1);
+    }
 
-  /// Retrieves a single entity by template and entity identifiers.
-  ///
-  /// **API contract:** Provides specific entity lookup using compound identifier
-  /// pattern. Returns HTTP 404 if either template or entity doesn't exist,
-  /// maintaining REST semantics.
-  ///
-  /// @param templateIdentifier business template identifier for entity scope
-  /// @param entityIdentifier unique business identifier within template context
-  /// @return entity DTO with full property and relationship data
-  @Operation(summary = ENDPOINT_GET_ENTITY_BY_IDENTIFIER_SUMMARY, description = ENDPOINT_GET_ENTITY_BY_IDENTIFIER_DESCRIPTION)
-  @ApiResponse(responseCode = OK_CODE, description = RESPONSE_ENTITY_FOUND, content = {
-      @Content(schema = @Schema(implementation = EntityDtoOut.class))})
-  @ApiResponse(responseCode = NOT_FOUND_CODE, description = RESPONSE_ENTITY_NOT_FOUND_IDENTIFIER, content = {
-      @Content(schema = @Schema(implementation = ApiExceptionHandler.ErrorResponse.class))})
-  @GetMapping("/{templateIdentifier}/{entityIdentifier}")
-  @ResponseStatus(OK)
-  public EntityDtoOut getEntity(@PathVariable String templateIdentifier,
-      @PathVariable String entityIdentifier,
-      @RequestParam(name = "relations_depth", required = false, defaultValue = "1") Integer relationsDepth,
-      @RequestParam(name = "relations_to_display", required = false, defaultValue = "") Set<String> relationsToDisplay) {
-    EntityGraphNode entityGraphNode = entityGraphService.getEntityGraph(templateIdentifier,
-        entityIdentifier, relationsDepth, true, relationsToDisplay, Set.of(),
-        EntityGraphTraversalMode.DIRECT_LINEAGE);
-    return EntityDtoOutFromEntityNodeMapper.toDto(entityGraphNode);
-  }
+    /// Retrieves a single entity by template and entity identifiers.
+    ///
+    /// **API contract:** Provides specific entity lookup using compound identifier
+    /// pattern. Returns HTTP 404 if either template or entity doesn't exist,
+    /// maintaining REST semantics.
+    ///
+    /// @param templateIdentifier business template identifier for entity scope
+    /// @param entityIdentifier   unique business identifier within template context
+    /// @return entity DTO with full property and relationship data
+    @Operation(summary = ENDPOINT_GET_ENTITY_BY_IDENTIFIER_SUMMARY, description = ENDPOINT_GET_ENTITY_BY_IDENTIFIER_DESCRIPTION)
+    @ApiResponse(responseCode = OK_CODE, description = RESPONSE_ENTITY_FOUND, content = {
+            @Content(schema = @Schema(implementation = EntityDtoOut.class)) })
+    @ApiResponse(responseCode = NOT_FOUND_CODE, description = RESPONSE_ENTITY_NOT_FOUND_IDENTIFIER, content = {
+            @Content(schema = @Schema(implementation = ApiExceptionHandler.ErrorResponse.class)) })
+    @GetMapping("/{templateIdentifier}/{entityIdentifier}")
+    @ResponseStatus(OK)
+    public EntityDtoOut getEntity(@PathVariable String templateIdentifier,
+            @PathVariable String entityIdentifier,
+            @RequestParam(name = "relations_depth", required = false, defaultValue = "1") Integer relationsDepth,
+            @RequestParam(name = "relations_to_display", required = false, defaultValue = "") Set<String> relationsToDisplay) {
 
-  /// Creates a new entity for the specified template with validation.
-  ///
-  /// **API contract:** Accepts entity creation payload and returns created entity
-  /// with generated identifiers. Validates entity structure against template
-  /// constraints and returns HTTP 201 on success, HTTP 400 for validation errors.
-  ///
-  /// @param templateIdentifier target template identifier for entity creation
-  /// context
-  /// @param entityCreateDtoIn entity creation payload with properties and
-  /// relationships
-  /// @return created entity DTO with server-generated identifiers
-  @Operation(summary = ENDPOINT_POST_ENTITY_SUMMARY, description = ENDPOINT_POST_ENTITY_DESCRIPTION)
-  @ApiResponse(responseCode = CREATED_CODE, description = RESPONSE_ENTITY_CREATED, content = {
-      @Content(schema = @Schema(implementation = EntityDtoOut.class))})
-  @ApiResponse(responseCode = BAD_REQUEST_CODE, description = RESPONSE_INVALID_ENTITY_DATA, content = {
-      @Content(schema = @Schema(implementation = ErrorResponse.class))})
-  @ApiResponse(responseCode = UNAUTHORIZED_CODE, description = RESPONSE_UNAUTHORIZED, content = @Content)
-  @ApiResponse(responseCode = FORBIDDEN_CODE, description = RESPONSE_INSUFFICIENT_RIGHTS, content = @Content)
-  @ApiResponse(responseCode = CONFLICT_CODE, description = RESPONSE_ENTITY_CONFLICT, content = {
-      @Content(schema = @Schema(implementation = ErrorResponse.class))})
-  @ApiResponse(responseCode = NOT_FOUND_CODE, description = RESPONSE_TEMPLATE_NOT_FOUND_IDENTIFIER, content = {
-      @Content(schema = @Schema(implementation = ErrorResponse.class))})
-  @ApiResponse(responseCode = INTERNAL_SERVER_ERROR_CODE, description = RESPONSE_UNEXPECTED_SERVER_ERROR, content = {
-      @Content(schema = @Schema(implementation = ErrorResponse.class))})
-  @PostMapping("/{templateIdentifier}")
-  @ResponseStatus(CREATED)
-  public EntityDtoOut createEntity(@NotBlank @PathVariable String templateIdentifier,
-      @Valid @RequestBody EntityCreateDtoIn entityCreateDtoIn) {
+        EntityGraphNode entityGraphNode = entityGraphService.getEntityGraph(templateIdentifier,
+                entityIdentifier, relationsDepth, true, relationsToDisplay, Set.of(),
+                EntityGraphTraversalMode.DIRECT_LINEAGE);
+        return entityDtoOutFromEntityNodeMapper.toDto(entityGraphNode, templateIdentifier, relationsDepth);
+    }
 
-    Entity entity = entityDtoInMapper.fromPostEntityDtoInToEntity(entityCreateDtoIn,
-        templateIdentifier);
-    Entity savedEntity = entityService.createEntity(entity);
-    return entityDtoOutMapper.fromEntity(savedEntity);
-  }
+    /// Creates a new entity for the specified template with validation.
+    ///
+    /// **API contract:** Accepts entity creation payload and returns created entity
+    /// with generated identifiers. Validates entity structure against template
+    /// constraints and returns HTTP 201 on success, HTTP 400 for validation errors.
+    ///
+    /// @param templateIdentifier target template identifier for entity creation
+    ///                           context
+    /// @param entityCreateDtoIn  entity creation payload with properties and
+    ///                           relationships
+    /// @return created entity DTO with server-generated identifiers
+    @Operation(summary = ENDPOINT_POST_ENTITY_SUMMARY, description = ENDPOINT_POST_ENTITY_DESCRIPTION)
+    @ApiResponse(responseCode = CREATED_CODE, description = RESPONSE_ENTITY_CREATED, content = {
+            @Content(schema = @Schema(implementation = EntityDtoOut.class)) })
+    @ApiResponse(responseCode = BAD_REQUEST_CODE, description = RESPONSE_INVALID_ENTITY_DATA, content = {
+            @Content(schema = @Schema(implementation = ErrorResponse.class)) })
+    @ApiResponse(responseCode = UNAUTHORIZED_CODE, description = RESPONSE_UNAUTHORIZED, content = @Content)
+    @ApiResponse(responseCode = FORBIDDEN_CODE, description = RESPONSE_INSUFFICIENT_RIGHTS, content = @Content)
+    @ApiResponse(responseCode = CONFLICT_CODE, description = RESPONSE_ENTITY_CONFLICT, content = {
+            @Content(schema = @Schema(implementation = ErrorResponse.class)) })
+    @ApiResponse(responseCode = NOT_FOUND_CODE, description = RESPONSE_TEMPLATE_NOT_FOUND_IDENTIFIER, content = {
+            @Content(schema = @Schema(implementation = ErrorResponse.class)) })
+    @ApiResponse(responseCode = INTERNAL_SERVER_ERROR_CODE, description = RESPONSE_UNEXPECTED_SERVER_ERROR, content = {
+            @Content(schema = @Schema(implementation = ErrorResponse.class)) })
+    @PostMapping("/{templateIdentifier}")
+    @ResponseStatus(CREATED)
+    public EntityDtoOut createEntity(@NotBlank @PathVariable String templateIdentifier,
+            @Valid @RequestBody EntityCreateDtoIn entityCreateDtoIn) {
 
-  /// Updates an existing entity for the specified template.
-  ///
-  /// **API contract:** Accepts entity update payload and returns updated entity.
-  /// Validates that the entity exists and that the update payload conforms to
-  /// template constraints. Returns HTTP 200 on success, HTTP 400 for validation
-  /// errors, HTTP 404 if entity doesn't exist.
-  ///
-  /// @param templateIdentifier target template identifier for entity update
-  /// context
-  /// @param entityIdentifier unique business identifier of the entity to update
-  /// @param entityUpdateDtoIn entity update payload with properties and
-  /// relationships to apply
-  /// @return updated entity DTO reflecting persisted changes
-  @Operation(summary = ENDPOINT_PUT_ENTITY_SUMMARY, description = ENDPOINT_PUT_ENTITY_DESCRIPTION)
-  @ApiResponse(responseCode = OK_CODE, description = RESPONSE_ENTITY_UPDATED, content = {
-      @Content(schema = @Schema(implementation = EntityDtoOut.class))})
-  @ApiResponse(responseCode = BAD_REQUEST_CODE, description = RESPONSE_INVALID_ENTITY_DATA, content = {
-      @Content(schema = @Schema(implementation = ErrorResponse.class))})
-  @ApiResponse(responseCode = UNAUTHORIZED_CODE, description = RESPONSE_UNAUTHORIZED, content = @Content)
-  @ApiResponse(responseCode = FORBIDDEN_CODE, description = RESPONSE_INSUFFICIENT_RIGHTS, content = @Content)
-  @ApiResponse(responseCode = NOT_FOUND_CODE, description = RESPONSE_ENTITY_NOT_FOUND_IDENTIFIER, content = {
-      @Content(schema = @Schema(implementation = ErrorResponse.class))})
-  @ApiResponse(responseCode = INTERNAL_SERVER_ERROR_CODE, description = RESPONSE_UNEXPECTED_SERVER_ERROR, content = {
-      @Content(schema = @Schema(implementation = ErrorResponse.class))})
-  @PutMapping("/{templateIdentifier}/{entityIdentifier}")
-  @ResponseStatus(OK)
-  public EntityDtoOut updateEntity(@NotBlank @PathVariable String templateIdentifier,
-      @NotBlank @PathVariable String entityIdentifier,
-      @Valid @RequestBody EntityUpdateDtoIn entityUpdateDtoIn) {
+        Entity entity = entityDtoInMapper.fromPostEntityDtoInToEntity(entityCreateDtoIn,
+                templateIdentifier);
+        Entity savedEntity = entityService.createEntity(entity);
+        return entityDtoOutMapper.fromEntity(savedEntity);
+    }
 
-    Entity entity = entityDtoInMapper.fromPutEntityDtoInToEntity(entityUpdateDtoIn,
-        templateIdentifier, entityIdentifier);
-    Entity updatedEntity = entityService.updateEntity(templateIdentifier, entityIdentifier, entity);
-    return entityDtoOutMapper.fromEntity(updatedEntity);
-  }
+    /// Updates an existing entity for the specified template.
+    ///
+    /// **API contract:** Accepts entity update payload and returns updated entity.
+    /// Validates that the entity exists and that the update payload conforms to
+    /// template constraints. Returns HTTP 200 on success, HTTP 400 for validation
+    /// errors, HTTP 404 if entity doesn't exist.
+    ///
+    /// @param templateIdentifier target template identifier for entity update
+    ///                           context
+    /// @param entityIdentifier   unique business identifier of the entity to update
+    /// @param entityUpdateDtoIn  entity update payload with properties and
+    ///                           relationships to apply
+    /// @return updated entity DTO reflecting persisted changes
+    @Operation(summary = ENDPOINT_PUT_ENTITY_SUMMARY, description = ENDPOINT_PUT_ENTITY_DESCRIPTION)
+    @ApiResponse(responseCode = OK_CODE, description = RESPONSE_ENTITY_UPDATED, content = {
+            @Content(schema = @Schema(implementation = EntityDtoOut.class)) })
+    @ApiResponse(responseCode = BAD_REQUEST_CODE, description = RESPONSE_INVALID_ENTITY_DATA, content = {
+            @Content(schema = @Schema(implementation = ErrorResponse.class)) })
+    @ApiResponse(responseCode = UNAUTHORIZED_CODE, description = RESPONSE_UNAUTHORIZED, content = @Content)
+    @ApiResponse(responseCode = FORBIDDEN_CODE, description = RESPONSE_INSUFFICIENT_RIGHTS, content = @Content)
+    @ApiResponse(responseCode = NOT_FOUND_CODE, description = RESPONSE_ENTITY_NOT_FOUND_IDENTIFIER, content = {
+            @Content(schema = @Schema(implementation = ErrorResponse.class)) })
+    @ApiResponse(responseCode = INTERNAL_SERVER_ERROR_CODE, description = RESPONSE_UNEXPECTED_SERVER_ERROR, content = {
+            @Content(schema = @Schema(implementation = ErrorResponse.class)) })
+    @PutMapping("/{templateIdentifier}/{entityIdentifier}")
+    @ResponseStatus(OK)
+    public EntityDtoOut updateEntity(@NotBlank @PathVariable String templateIdentifier,
+            @NotBlank @PathVariable String entityIdentifier,
+            @Valid @RequestBody EntityUpdateDtoIn entityUpdateDtoIn) {
 
-  /// Deletes an existing entity identified by template and entity identifiers.
-  ///
-  /// **API contract:** Validates the template and entity exist, cleans up
-  /// relations in parent entities that reference the deleted entity, then deletes
-  /// the entity. Returns HTTP 204 on successful deletion, HTTP 404 if entity
-  /// doesn't exist, HTTP 400 if deletion is not allowed due to existing
-  /// references.
-  ///
-  /// @param templateIdentifier the template identifier of the entity to delete
-  /// @param entityIdentifier the identifier of the entity to delete
-  @Operation(summary = ENDPOINT_DELETE_ENTITY_SUMMARY, description = ENDPOINT_DELETE_ENTITY_DESCRIPTION)
-  @ApiResponse(responseCode = NO_CONTENT_CODE, description = RESPONSE_ENTITY_DELETED)
-  @ApiResponse(responseCode = BAD_REQUEST_CODE, description = RESPONSE_INVALID_ENTITY_DATA, content = {
-      @Content(schema = @Schema(implementation = ErrorResponse.class))})
-  @ApiResponse(responseCode = UNAUTHORIZED_CODE, description = RESPONSE_UNAUTHORIZED, content = @Content)
-  @ApiResponse(responseCode = FORBIDDEN_CODE, description = RESPONSE_INSUFFICIENT_RIGHTS, content = @Content)
-  @ApiResponse(responseCode = NOT_FOUND_CODE, description = RESPONSE_ENTITY_NOT_FOUND_IDENTIFIER, content = {
-      @Content(schema = @Schema(implementation = ErrorResponse.class))})
-  @ApiResponse(responseCode = CONFLICT_CODE, description = RESPONSE_ENTITY_RELATION_CONFLICT, content = {
-      @Content(schema = @Schema(implementation = ErrorResponse.class))})
-  @ApiResponse(responseCode = INTERNAL_SERVER_ERROR_CODE, description = RESPONSE_UNEXPECTED_SERVER_ERROR, content = {
-      @Content(schema = @Schema(implementation = ErrorResponse.class))})
-  @DeleteMapping("/{templateIdentifier}/{entityIdentifier}")
-  @ResponseStatus(NO_CONTENT)
-  public void deleteEntity(@NotBlank @PathVariable String templateIdentifier,
-      @NotBlank @PathVariable String entityIdentifier) {
-    entityService.deleteEntity(templateIdentifier, entityIdentifier);
-  }
+        Entity entity = entityDtoInMapper.fromPutEntityDtoInToEntity(entityUpdateDtoIn,
+                templateIdentifier, entityIdentifier);
+        Entity updatedEntity = entityService.updateEntity(templateIdentifier, entityIdentifier, entity);
+        return entityDtoOutMapper.fromEntity(updatedEntity);
+    }
 
-  /// Searches for entities across all templates using a nested filter query.
-  ///
-  /// **API contract:** Accepts a JSON body with a nested filter tree, pagination,
-  /// and sorting parameters. Returns a paginated list of entities matching the
-  /// filter. No template scoping is applied by default; include a template
-  /// criterion in the filter to scope results to a specific template.
-  ///
-  /// @param searchRequest the search request body with filter, page, size, and
-  /// sort
-  /// @return paginated entity DTOs matching the filter
-  @Operation(summary = ENDPOINT_POST_SEARCH_SUMMARY, description = ENDPOINT_POST_SEARCH_DESCRIPTION)
-  @ApiResponse(responseCode = OK_CODE, description = RESPONSE_SEARCH_SUCCESS, content = @Content(schema = @Schema(implementation = EntityPageResponse.class)))
-  @ApiResponse(responseCode = BAD_REQUEST_CODE, description = RESPONSE_INVALID_SEARCH_QUERY, content = {
-      @Content(schema = @Schema(implementation = ErrorResponse.class))})
-  @PostMapping("/search")
-  @ResponseStatus(OK)
-  public Page<EntityDtoOut> searchEntities(@RequestBody EntitySearchRequestDtoIn searchRequest) {
-    RawSearchFilterNode rawFilter = searchFilterMapper.toRaw(searchRequest.filter());
-    SearchFilterNode filter = searchFilterParser.parse(rawFilter);
-    PaginationCriteria paginationCriteria = new PaginationCriteria(searchRequest.page(),
-        searchRequest.size(), searchRequest.sort());
+    /// Deletes an existing entity identified by template and entity identifiers.
+    ///
+    /// **API contract:** Validates the template and entity exist, cleans up
+    /// relations in parent entities that reference the deleted entity, then deletes
+    /// the entity. Returns HTTP 204 on successful deletion, HTTP 404 if entity
+    /// doesn't exist, HTTP 400 if deletion is not allowed due to existing
+    /// references.
+    ///
+    /// @param templateIdentifier the template identifier of the entity to delete
+    /// @param entityIdentifier   the identifier of the entity to delete
+    @Operation(summary = ENDPOINT_DELETE_ENTITY_SUMMARY, description = ENDPOINT_DELETE_ENTITY_DESCRIPTION)
+    @ApiResponse(responseCode = NO_CONTENT_CODE, description = RESPONSE_ENTITY_DELETED)
+    @ApiResponse(responseCode = BAD_REQUEST_CODE, description = RESPONSE_INVALID_ENTITY_DATA, content = {
+            @Content(schema = @Schema(implementation = ErrorResponse.class)) })
+    @ApiResponse(responseCode = UNAUTHORIZED_CODE, description = RESPONSE_UNAUTHORIZED, content = @Content)
+    @ApiResponse(responseCode = FORBIDDEN_CODE, description = RESPONSE_INSUFFICIENT_RIGHTS, content = @Content)
+    @ApiResponse(responseCode = NOT_FOUND_CODE, description = RESPONSE_ENTITY_NOT_FOUND_IDENTIFIER, content = {
+            @Content(schema = @Schema(implementation = ErrorResponse.class)) })
+    @ApiResponse(responseCode = CONFLICT_CODE, description = RESPONSE_ENTITY_RELATION_CONFLICT, content = {
+            @Content(schema = @Schema(implementation = ErrorResponse.class)) })
+    @ApiResponse(responseCode = INTERNAL_SERVER_ERROR_CODE, description = RESPONSE_UNEXPECTED_SERVER_ERROR, content = {
+            @Content(schema = @Schema(implementation = ErrorResponse.class)) })
+    @DeleteMapping("/{templateIdentifier}/{entityIdentifier}")
+    @ResponseStatus(NO_CONTENT)
+    public void deleteEntity(@NotBlank @PathVariable String templateIdentifier,
+            @NotBlank @PathVariable String entityIdentifier) {
+        entityService.deleteEntity(templateIdentifier, entityIdentifier);
+    }
 
-    PaginatedResult<Entity> result = entityService.searchEntities(filter, searchRequest.query(),
-        paginationCriteria);
-    Page<Entity> page = toPageResponse(result.content(), paginationCriteria,
-        result.totalElements());
-    return entityDtoOutMapper.fromEntitiesSearchPageToDtoPage(page);
-  }
+    /// Searches for entities across all templates using a nested filter query.
+    ///
+    /// **API contract:** Accepts a JSON body with a nested filter tree, pagination,
+    /// and sorting parameters. Returns a paginated list of entities matching the
+    /// filter. No template scoping is applied by default; include a template
+    /// criterion in the filter to scope results to a specific template.
+    ///
+    /// @param searchRequest the search request body with filter, page, size, and
+    ///                      sort
+    /// @return paginated entity DTOs matching the filter
+    @Operation(summary = ENDPOINT_POST_SEARCH_SUMMARY, description = ENDPOINT_POST_SEARCH_DESCRIPTION)
+    @ApiResponse(responseCode = OK_CODE, description = RESPONSE_SEARCH_SUCCESS, content = @Content(schema = @Schema(implementation = EntityPageResponse.class)))
+    @ApiResponse(responseCode = BAD_REQUEST_CODE, description = RESPONSE_INVALID_SEARCH_QUERY, content = {
+            @Content(schema = @Schema(implementation = ErrorResponse.class)) })
+    @PostMapping("/search")
+    @ResponseStatus(OK)
+    public Page<EntityDtoOut> searchEntities(@RequestBody EntitySearchRequestDtoIn searchRequest) {
+        RawSearchFilterNode rawFilter = searchFilterMapper.toRaw(searchRequest.filter());
+        SearchFilterNode filter = searchFilterParser.parse(rawFilter);
+        PaginationCriteria paginationCriteria = new PaginationCriteria(searchRequest.page(),
+                searchRequest.size(), searchRequest.sort());
 
-  private <T> Page<T> toPageResponse(List<T> content, PaginationCriteria criteria,
-      long totalElements) {
-    Pageable pageable = PageRequest.of(criteria.page(), criteria.size());
-    return new PageImpl<>(content, pageable, totalElements);
-  }
+        PaginatedResult<Entity> result = entityService.searchEntities(filter, searchRequest.query(),
+                paginationCriteria);
+        Page<Entity> page = toPageResponse(result.content(), paginationCriteria,
+                result.totalElements());
+        return entityDtoOutMapper.fromEntitiesSearchPageToDtoPage(page);
+    }
+
+    private <T> Page<T> toPageResponse(List<T> content, PaginationCriteria criteria,
+            long totalElements) {
+        Pageable pageable = PageRequest.of(criteria.page(), criteria.size());
+        return new PageImpl<>(content, pageable, totalElements);
+    }
 }
