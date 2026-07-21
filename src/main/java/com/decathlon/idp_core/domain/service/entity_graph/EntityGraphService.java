@@ -171,7 +171,7 @@ public class EntityGraphService {
 
     // Call the helper to build graph nodes
     Map<UUID, EntityGraphNode> graphsByUuid = entityGraphHelper.buildGraphNodesForEntityIds(
-        entityGraphs, true, Set.of(), Set.of(), EntityGraphTraversalMode.DIRECT_LINEAGE, 1);
+        entityGraphs, true, Set.of(), Set.of(), EntityGraphTraversalMode.DIRECT_LINEAGE, depth);
 
     // Map each Entity to its EntityGraphNode, falling back gracefully if missing
     return entityPage.map(entity -> graphsByUuid.getOrDefault(entity.id(),
