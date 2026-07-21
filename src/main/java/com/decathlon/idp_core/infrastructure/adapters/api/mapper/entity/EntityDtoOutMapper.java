@@ -129,31 +129,7 @@ public class EntityDtoOutMapper {
 
     return entity.properties().stream().filter(prop -> prop.value() != null)
         .collect(Collectors.toMap(Property::name,
-            prop -> convertPropertyValue(prop, propertiesDefinitions.get(prop.name()))));
-  }
-
-  /// Converts a property value to its typed representation based on the property
-  /// definition.
-  ///
-  /// @param property the property to convert
-  /// @param definition the property definition for type information, may be null
-  /// @return the typed value, falling back to the raw string value
-  private Object convertPropertyValue(Property property, PropertyDefinition definition) {
-    String value = property.value();
-    if (definition == null) {
-      return value;
-    }
-    PropertyType type = definition.type();
-    if (PropertyType.NUMBER.equals(type)) {
-      try {
-        return Double.valueOf(value);
-      } catch (NumberFormatException _) {
-        return value;
-      }
-    } else if (PropertyType.BOOLEAN.equals(type)) {
-      return Boolean.valueOf(value);
-    }
-    return value;
+            prop -> PropertyValueConverter.convert(prop, propertiesDefinitions.get(prop.name()))));
   }
 
   /// Builds a unified relations map combining outbound and inbound relations.
