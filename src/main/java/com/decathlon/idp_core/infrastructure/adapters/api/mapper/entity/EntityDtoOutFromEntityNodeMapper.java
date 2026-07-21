@@ -128,8 +128,8 @@ public class EntityDtoOutFromEntityNodeMapper {
     processInboundRelations(node, nodeId, currentDepth, maxDepth, state);
   }
 
-  /// Evaluates outbound dependency linkages originating from the targeted
-  /// node scope.
+  /// Evaluates outbound dependency linkages originating from the targeted node
+  /// scope.
   private static void processOutboundRelations(EntityGraphNode node, String nodeId,
       int currentDepth, int maxDepth, TraversalState state) {
     boolean shouldCollectRelations = currentDepth < maxDepth;
@@ -139,7 +139,10 @@ public class EntityDtoOutFromEntityNodeMapper {
         String targetId = nodeId(target.templateIdentifier(), target.identifier());
         String signature = nodeId + "|" + targetId + "|" + relation.name();
 
-        if (shouldCollectRelations && state.emittedEdgeSignatures().add(signature)) {
+        // Guard: Do not add the root entity as a dependency of itself
+        boolean isNotRoot = !target.identifier().equalsIgnoreCase(state.rootIdentifier());
+
+        if (shouldCollectRelations && isNotRoot && state.emittedEdgeSignatures().add(signature)) {
           state.relationsMap().computeIfAbsent(relation.name(), k -> new LinkedHashSet<>())
               .add(new EntitySummaryDto(target.identifier(), target.name(),
                   target.templateIdentifier()));
@@ -162,7 +165,10 @@ public class EntityDtoOutFromEntityNodeMapper {
         String sourceId = nodeId(source.templateIdentifier(), source.identifier());
         String signature = sourceId + "|" + nodeId + "|" + relation.name();
 
-        if (shouldCollectRelations && state.emittedEdgeSignatures().add(signature)) {
+        // Guard: Do not add the root entity as a dependency of itself
+        boolean isNotRoot = !source.identifier().equalsIgnoreCase(state.rootIdentifier());
+
+        if (shouldCollectRelations && isNotRoot && state.emittedEdgeSignatures().add(signature)) {
           state.relationsMap().computeIfAbsent(relation.name(), k -> new LinkedHashSet<>())
               .add(new EntitySummaryDto(source.identifier(), source.name(),
                   source.templateIdentifier()));

@@ -51,8 +51,8 @@ Here's an entity instantiated from the `web-service` template:
     "depends-on": [
       {
         "identifier": "web-api-1",
-        "name": "Web API 1"
-      }
+        "name": "Web API 1",
+        "template_identifier": "web-service"
     ]
   }
 }
@@ -248,11 +248,13 @@ In API responses, relations are grouped by name and include summary information 
     "depends-on": [
       {
         "identifier": "web-api-1",
-        "name": "Web API 1"
+        "name": "Web API 1",
+        "template_identifier": "web-service"
       },
       {
         "identifier": "web-api-2",
-        "name": "Web API 2"
+        "name": "Web API 2",
+        "template_identifier": "web-service"
       }
     ]
   }

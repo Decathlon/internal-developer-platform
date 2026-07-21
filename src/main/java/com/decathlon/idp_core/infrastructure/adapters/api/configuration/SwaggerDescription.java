@@ -61,7 +61,7 @@ public class SwaggerDescription {
   public static final String ENDPOINT_GET_ENTITIES_PAGINATED_DESCRIPTION = "Retrieve a paginated list of entities with optional sorting";
 
   public static final String ENDPOINT_GET_ENTITY_BY_IDENTIFIER_SUMMARY = "Get entity by entity template and identifier";
-  public static final String ENDPOINT_GET_ENTITY_BY_IDENTIFIER_DESCRIPTION = "Retrieve a specific entity using its string identifier and its template identifier";
+  public static final String ENDPOINT_GET_ENTITY_BY_IDENTIFIER_DESCRIPTION = "Retrieve a specific entity using its string identifier and its template identifier with configurable relationship graph traversal. Supports fetching both inbound and outbound relations up to a specified depth using direct lineage mode.";
 
   public static final String ENDPOINT_POST_ENTITY_SUMMARY = "Create a new entity";
   public static final String ENDPOINT_POST_ENTITY_DESCRIPTION = "Create a new entity in the system with the provided information";
@@ -222,6 +222,8 @@ public class SwaggerDescription {
 
   // --- Entity Graph (flat nodes & edges) descriptions ---
   public static final String PARAM_DEPTH_DESCRIPTION = "Maximum traversal depth for relationship resolution. Clamped between 1 and 6.";
+  public static final String RELATIONS_DEPTH_DESCRIPTION = "Maximum depth to traverse when collecting entity relations. Defaults to 1. Valid range: 1-6.";
+  public static final String RELATIONS_TO_DISPLAY_DESCRIPTION = "Comma-separated list of relation names to include in the response. When omitted, all relations are included.";
   public static final String ENDPOINT_GET_ENTITY_GRAPH_FLAT_SUMMARY = "Get entity relationship graph as flat nodes and edges";
   public static final String ENDPOINT_GET_ENTITY_GRAPH_FLAT_DESCRIPTION = "Retrieves the entity relationship graph as a flat nodes-and-edges structure, suitable for frontend visualization tools such as React Flow, Vis.js, and Cytoscape.";
   public static final String RESPONSE_ENTITY_GRAPH_FLAT_SUCCESS = "Flat entity graph successfully retrieved";

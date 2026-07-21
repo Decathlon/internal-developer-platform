@@ -24,6 +24,8 @@ import static com.decathlon.idp_core.infrastructure.adapters.api.configuration.S
 import static com.decathlon.idp_core.infrastructure.adapters.api.configuration.SwaggerDescription.PARAM_QUERY_DESCRIPTION;
 import static com.decathlon.idp_core.infrastructure.adapters.api.configuration.SwaggerDescription.PARAM_SIZE_DESCRIPTION;
 import static com.decathlon.idp_core.infrastructure.adapters.api.configuration.SwaggerDescription.PARAM_SORT_DESCRIPTION;
+import static com.decathlon.idp_core.infrastructure.adapters.api.configuration.SwaggerDescription.RELATIONS_DEPTH_DESCRIPTION;
+import static com.decathlon.idp_core.infrastructure.adapters.api.configuration.SwaggerDescription.RELATIONS_TO_DISPLAY_DESCRIPTION;
 import static com.decathlon.idp_core.infrastructure.adapters.api.configuration.SwaggerDescription.RESPONSE_ENTITIES_PAGINATED_SUCCESS;
 import static com.decathlon.idp_core.infrastructure.adapters.api.configuration.SwaggerDescription.RESPONSE_ENTITY_CONFLICT;
 import static com.decathlon.idp_core.infrastructure.adapters.api.configuration.SwaggerDescription.RESPONSE_ENTITY_CREATED;
@@ -163,20 +165,36 @@ public class EntityController {
     return entityDtoOutFromEntityNodeMapper.toPageDto(graphNodes, templateIdentifier, 1);
   }
 
-  /// Retrieves a single entity by template and entity identifiers.
+  /// Retrieves a single entity by template and entity identifiers with
+  /// relationship graph.
   ///
   /// **API contract:** Provides specific entity lookup using compound identifier
-  /// pattern. Returns HTTP 404 if either template or entity doesn't exist,
-  /// maintaining REST semantics.
+  /// pattern with support for fetching related entities. Returns HTTP 404 if
+  /// either
+  /// template or entity doesn't exist, maintaining REST semantics.
+  ///
+  /// **Relationship traversal:** Uses direct lineage mode to traverse both
+  /// inbound
+  /// and outbound relations up to the specified depth. Relations are flattened
+  /// into
+  /// a single map at the root level, keyed by relation name. Can optionally
+  /// filter
+  /// which relations to include via `relations_to_display` query parameter.
   ///
   /// @param templateIdentifier business template identifier for entity scope
   /// @param entityIdentifier unique business identifier within template context
+  /// @param relationsDepth maximum depth to traverse when collecting relations
+  /// (1-6, defaults to 1)
+  /// @param relationsToDisplay optional set of relation names to include; omit to
+  /// include all
   /// @return entity DTO with full property and relationship data
   @Operation(summary = ENDPOINT_GET_ENTITY_BY_IDENTIFIER_SUMMARY, description = ENDPOINT_GET_ENTITY_BY_IDENTIFIER_DESCRIPTION)
   @ApiResponse(responseCode = OK_CODE, description = RESPONSE_ENTITY_FOUND, content = {
       @Content(schema = @Schema(implementation = EntityDtoOut.class))})
   @ApiResponse(responseCode = NOT_FOUND_CODE, description = RESPONSE_ENTITY_NOT_FOUND_IDENTIFIER, content = {
       @Content(schema = @Schema(implementation = ApiExceptionHandler.ErrorResponse.class))})
+  @Parameter(name = "relations_depth", description = RELATIONS_DEPTH_DESCRIPTION, in = ParameterIn.QUERY, schema = @Schema(type = "integer", defaultValue = "1"))
+  @Parameter(name = "relations_to_display", description = RELATIONS_TO_DISPLAY_DESCRIPTION, in = ParameterIn.QUERY, schema = @Schema(type = "array", example = "[\"depends-on\", \"relates-to\"]"))
   @GetMapping("/{templateIdentifier}/{entityIdentifier}")
   @ResponseStatus(OK)
   public EntityDtoOut getEntity(@PathVariable String templateIdentifier,
@@ -185,7 +203,8 @@ public class EntityController {
       @RequestParam(name = "relations_to_display", required = false) Set<String> relationsToDisplay) {
 
     EntityGraphNode entityGraphNode = entityGraphService.getEntityGraph(templateIdentifier,
-        entityIdentifier, relationsDepth, true, relationsToDisplay == null ? Set.of() : relationsToDisplay, Set.of(),
+        entityIdentifier, relationsDepth, true,
+        relationsToDisplay == null ? Set.of() : relationsToDisplay, Set.of(),
         EntityGraphTraversalMode.DIRECT_LINEAGE);
     return entityDtoOutFromEntityNodeMapper.toDto(entityGraphNode, templateIdentifier,
         relationsDepth);
