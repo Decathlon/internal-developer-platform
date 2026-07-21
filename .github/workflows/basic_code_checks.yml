@@ -46,7 +46,7 @@ jobs:
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0  # v7.0.0
 
       - name: Setup Java 25
-        uses: actions/setup-java@0f481fcb613427c0f801b606911222b5b6f3083a  # v5.5.0
+        uses: actions/setup-java@03ad4de0992f5dab5e18fcb136590ce7c4a0ac95  # v5.6.0
         with:
           distribution: temurin
           java-version: 25
@@ -78,7 +78,7 @@ jobs:
             ${{ runner.os }}-maven-
 
       - name: Setup Java 25
-        uses: actions/setup-java@0f481fcb613427c0f801b606911222b5b6f3083a  # v5.5.0
+        uses: actions/setup-java@03ad4de0992f5dab5e18fcb136590ce7c4a0ac95  # v5.6.0
         with:
           distribution: temurin
           java-version: 25
@@ -101,7 +101,7 @@ jobs:
             -B
 
       - name: Upload code coverage to GitHub
-        uses: actions/upload-code-coverage@abb5995db9e0199b0e2bb9dbd136fce4cb1ec4d3  # v1
+        uses: actions/upload-code-coverage@a72ab75b4dee0e479386fb9bf33c8dcf64b9c772  # v1
         with:
           file: target/cobertura.xml
           language: Java
@@ -136,7 +136,7 @@ jobs:
           path: target
 
       - name: Setup Java 25
-        uses: actions/setup-java@0f481fcb613427c0f801b606911222b5b6f3083a  # v5.5.0
+        uses: actions/setup-java@03ad4de0992f5dab5e18fcb136590ce7c4a0ac95  # v5.6.0
         with:
           distribution: temurin
           java-version: 25
@@ -198,7 +198,7 @@ jobs:
           path: target
 
       - name: Setup Java 25
-        uses: actions/setup-java@0f481fcb613427c0f801b606911222b5b6f3083a  # v5.5.0
+        uses: actions/setup-java@03ad4de0992f5dab5e18fcb136590ce7c4a0ac95  # v5.6.0
         with:
           distribution: temurin
           java-version: 25
@@ -258,7 +258,7 @@ jobs:
           fetch-depth: 0
 
       - name: Setup Java 25
-        uses: actions/setup-java@0f481fcb613427c0f801b606911222b5b6f3083a  # v5.5.0
+        uses: actions/setup-java@03ad4de0992f5dab5e18fcb136590ce7c4a0ac95  # v5.6.0
         with:
           distribution: temurin
           java-version: 25
