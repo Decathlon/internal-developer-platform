@@ -35,8 +35,8 @@ import lombok.RequiredArgsConstructor;
 /// possibly related entities from the database within a single transaction.
 /// Phase 2 - Reachability Pruning (Breadth-First Propagation): It computes a
 /// precise reachable footprint to ensure we only traverse nodes that actually
-/// connect to our root in the selected direction.
-/// Phase 3 - Recursive Construction (DFS with Safety Nets): The helper runs a depth-first traversal
+/// connect to our root in the selected direction. Phase 3 - Recursive
+/// Construction (DFS with Safety Nets): The helper runs a depth-first traversal
 /// starting at the root entity to build the nested EntityGraphNode tree. It
 /// prevents stack overflows from circular references and avoid re-evaluating the
 /// same nodes via different paths.
