@@ -10,7 +10,7 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
-import org.springframework.stereotype.Component;
+import org.springframework.stereotype.Service;
 
 import com.decathlon.idp_core.domain.model.entity.Entity;
 import com.decathlon.idp_core.domain.model.entity.Property;
@@ -23,7 +23,7 @@ import com.decathlon.idp_core.domain.model.entity_graph.FlowDirection;
 import lombok.RequiredArgsConstructor;
 
 @RequiredArgsConstructor
-@Component
+@Service
 public class EntityGraphHelper {
 
   /// Bulk graph-building logic. Avoid self-proxy transactional calls.

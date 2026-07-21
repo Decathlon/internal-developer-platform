@@ -103,7 +103,7 @@ relation.database.name:prod
 
 #### Reverse Relation Filters
 
-Use `relations_as_target.<name>.<property>` to find entities that have inbound relation of type `<name>`. The `<property>` must be `identifier` or `name` and refers to the **source** entity in that relation.
+Use `relations_as_target.<name>.<property>` to find entities that have an inbound relation of type `<name>`. The `<property>` must be `identifier` or `name` and refers to the **source** entity in that relation.
 
 ```text
 relations_as_target.owned_by.name:platform-team

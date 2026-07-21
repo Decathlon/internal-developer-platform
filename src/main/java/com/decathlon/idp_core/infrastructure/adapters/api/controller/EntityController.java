@@ -182,10 +182,10 @@ public class EntityController {
   public EntityDtoOut getEntity(@PathVariable String templateIdentifier,
       @PathVariable String entityIdentifier,
       @RequestParam(name = "relations_depth", required = false, defaultValue = "1") Integer relationsDepth,
-      @RequestParam(name = "relations_to_display", required = false, defaultValue = "") Set<String> relationsToDisplay) {
+      @RequestParam(name = "relations_to_display", required = false) Set<String> relationsToDisplay) {
 
     EntityGraphNode entityGraphNode = entityGraphService.getEntityGraph(templateIdentifier,
-        entityIdentifier, relationsDepth, true, relationsToDisplay, Set.of(),
+        entityIdentifier, relationsDepth, true, relationsToDisplay == null ? Set.of() : relationsToDisplay, Set.of(),
         EntityGraphTraversalMode.DIRECT_LINEAGE);
     return entityDtoOutFromEntityNodeMapper.toDto(entityGraphNode, templateIdentifier,
         relationsDepth);
