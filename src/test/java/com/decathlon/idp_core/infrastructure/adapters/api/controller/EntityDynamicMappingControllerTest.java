@@ -1,5 +1,6 @@
 package com.decathlon.idp_core.infrastructure.adapters.api.controller;
 
+import static com.decathlon.idp_core.domain.constant.ValidationMessages.ENTITY_DYNAMIC_MAPPING_TEMPLATE_IDENTIFIER_MANDATORY;
 import static org.hamcrest.Matchers.containsString;
 import static org.springframework.http.MediaType.APPLICATION_JSON;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
@@ -395,16 +396,13 @@ class EntityDynamicMappingControllerTest extends AbstractIntegrationTest {
     @WithMockUser
     @DisplayName("Should delete mapping and return 204")
     void deleteMapping_204() throws Exception {
-      // First create a mapping to delete
       mockMvc.perform(MockMvcRequestBuilders.post(MAPPING_PATH).contentType(APPLICATION_JSON)
           .accept(APPLICATION_JSON).with(csrf()).content(buildCreatePayload("mapping-to-delete")))
           .andExpect(status().isCreated());
 
-      // Delete the mapping
       mockMvc.perform(MockMvcRequestBuilders.delete(MAPPING_PATH + "/mapping-to-delete")
           .accept(APPLICATION_JSON).with(csrf())).andExpect(status().isNoContent());
 
-      // Verify the mapping no longer exists
       mockMvc.perform(get(MAPPING_PATH + "/mapping-to-delete").accept(APPLICATION_JSON))
           .andExpect(status().isNotFound()).andExpect(jsonPath("$.error").value("NOT_FOUND"));
     }
@@ -424,12 +422,341 @@ class EntityDynamicMappingControllerTest extends AbstractIntegrationTest {
     @WithMockUser
     @DisplayName("Should return 409 when mapping is in use by a webhook")
     void deleteMapping_409_in_use() throws Exception {
-      // The microservice-mapping is used by github-dora-connector from test data
       mockMvc
           .perform(MockMvcRequestBuilders.delete(MAPPING_PATH + "/microservice-mapping")
               .accept(APPLICATION_JSON).with(csrf()))
           .andExpect(status().isConflict()).andExpect(jsonPath("$.error").value("CONFLICT"))
           .andExpect(jsonPath("$.error_description").value(containsString("in use")));
+    }
+  }
+
+  @Nested
+  @DisplayName("POST /api/v1/entity-dynamic-mappings/dry-run - Dry-run mapping")
+  @Order(6)
+  class PostDryRunMappingTests {
+
+    private String buildDryRunPayload(String mappingIdentifier, String actionFilter) {
+      String escapedFilter = actionFilter.replace("\"", "\\\"");
+      return """
+          {
+            "mapping": {
+              "identifier": "%s",
+              "entity_template_identifier": "microservice",
+              "filter": "%s",
+              "name": "dry-run mapping test",
+              "description": "test description",
+              "entity": {
+                "identifier": ".repository.full_name",
+                "name": ".repository.name",
+                "properties": {
+                  "applicationName": ".repository.name",
+                  "ownerEmail": ".sender.email",
+                  "environment": "\\"DEV\\"",
+                  "version": ".ref",
+                  "port": "8080",
+                  "programmingLanguage": ".repository.language"
+                },
+                "relations": {}
+              }
+            },
+            "payload": {
+              "action": "pushed",
+              "repository": {
+                "full_name": "my-org/my-repo",
+                "name": "my-repo",
+                "language": "Java"
+              },
+              "ref": "1.0.0",
+              "sender": {
+                "email": "user@example.com"
+              }
+            }
+          }
+          """.formatted(mappingIdentifier, escapedFilter);
+    }
+
+    private String buildDryRunPayloadWithSkipped() {
+      return """
+          {
+            "mapping": {
+              "identifier": "skip-test",
+              "entity_template_identifier": "microservice",
+              "filter": ".action == \\"released\\"",
+              "name":"skip test mapping",
+              "description":"test skip",
+              "entity": {
+                "identifier": ".repository.full_name",
+                "name": ".repository.name",
+                "properties": {
+                  "applicationName": ".repository.name",
+                  "ownerEmail": ".sender.email",
+                  "environment": "\\"DEV\\"",
+                  "version": ".ref",
+                  "port": "8080",
+                  "programmingLanguage": ".repository.language"
+                },
+                "relations": {}
+              }
+            },
+            "payload": {
+              "action": "pushed",
+              "repository": {
+                "full_name": "my-org/my-repo",
+                "name": "my-repo",
+                "language": "Java"
+              },
+              "ref": "refs/heads/main",
+              "sender": {
+                "email": "user@example.com"
+              }
+            }
+          }
+          """;
+    }
+
+    @Test
+    @DisplayName("Should return 401 without authentication")
+    void dryRunMapping_401_without_user_token() throws Exception {
+      mockMvc
+          .perform(MockMvcRequestBuilders.post(MAPPING_PATH + "/dry-run")
+              .contentType(APPLICATION_JSON).accept(APPLICATION_JSON).with(csrf())
+              .content(buildDryRunPayload("dry-run-test", ".action == \"pushed\"")))
+          .andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    @WithMockUser
+    @DisplayName("Should return 200 with successful mapping result")
+    void dryRunMapping_200_success() throws Exception {
+      mockMvc
+          .perform(MockMvcRequestBuilders.post(MAPPING_PATH + "/dry-run")
+              .contentType(APPLICATION_JSON).accept(APPLICATION_JSON).with(csrf())
+              .content(buildDryRunPayload("dry-run-test-1", ".action == \"pushed\"")))
+          .andExpect(status().isOk()).andExpect(content().contentType(APPLICATION_JSON))
+          .andExpect(jsonPath("$.results").isArray())
+          .andExpect(jsonPath("$.results[0].success").value(true))
+          .andExpect(jsonPath("$.results[0].mapping_template_identifier").value("microservice"))
+          .andExpect(jsonPath("$.results[0].entity.identifier").value("my-org/my-repo"))
+          .andExpect(jsonPath("$.results[0].entity.name").value("my-repo"))
+          .andExpect(jsonPath("$.results[0].entity.properties.applicationName").value("my-repo"))
+          .andExpect(
+              jsonPath("$.results[0].entity.properties.ownerEmail").value("user@example.com"))
+          .andExpect(jsonPath("$.results[0].entity.properties.programmingLanguage").value("Java"))
+          .andExpect(jsonPath("$.results[0].error").doesNotExist());
+    }
+
+    @Test
+    @WithMockUser
+    @DisplayName("Should return 200 with skipped result when filter is false")
+    void dryRunMapping_200_skipped() throws Exception {
+      mockMvc
+          .perform(
+              MockMvcRequestBuilders.post(MAPPING_PATH + "/dry-run").contentType(APPLICATION_JSON)
+                  .accept(APPLICATION_JSON).with(csrf()).content(buildDryRunPayloadWithSkipped()))
+          .andExpect(status().isOk()).andExpect(content().contentType(APPLICATION_JSON))
+          .andExpect(jsonPath("$.results").isArray())
+          .andExpect(jsonPath("$.results[0].success").value(true))
+          .andExpect(jsonPath("$.results[0].mapping_template_identifier").value("microservice"))
+          .andExpect(jsonPath("$.results[0].entity").doesNotExist())
+          .andExpect(jsonPath("$.results[0].error.type").value("SKIPPED"))
+          .andExpect(jsonPath("$.results[0].error.message").value(containsString("Filter")));
+    }
+
+    @Test
+    @WithMockUser
+    @DisplayName("Should return 404 when entity template does not exist")
+    void dryRunMapping_404_template_not_found() throws Exception {
+      String payload = """
+          {
+            "mapping": {
+              "identifier": "dry-run-404-test",
+              "entity_template_identifier": "non-existent-template",
+              "filter": ".action == \\"pushed\\"",
+              "name":"test mapping",
+              "description":"test",
+              "entity": {
+                "identifier": ".repository.full_name",
+                "name": ".repository.name",
+                "properties": {
+                  "applicationName": ".repository.name"
+                },
+                "relations": {}
+              }
+            },
+            "payload": {
+              "action": "pushed",
+              "repository": {
+                "full_name": "my-org/my-repo",
+                "name": "my-repo"
+              }
+            }
+          }
+          """;
+
+      mockMvc
+          .perform(MockMvcRequestBuilders.post(MAPPING_PATH + "/dry-run")
+              .contentType(APPLICATION_JSON).accept(APPLICATION_JSON).with(csrf()).content(payload))
+          .andExpect(status().isNotFound()).andExpect(jsonPath("$.error").value("NOT_FOUND"))
+          .andExpect(
+              jsonPath("$.error_description").value(containsString("non-existent-template")));
+    }
+
+    @Test
+    @WithMockUser
+    @DisplayName("Should return 400 when mapping is missing")
+    void dryRunMapping_400_mapping_missing() throws Exception {
+      String payload = """
+          {
+            "payload": {
+              "action": "pushed",
+              "repository": {
+                "full_name": "my-org/my-repo"
+              }
+            }
+          }
+          """;
+
+      mockMvc
+          .perform(MockMvcRequestBuilders.post(MAPPING_PATH + "/dry-run")
+              .contentType(APPLICATION_JSON).accept(APPLICATION_JSON).with(csrf()).content(payload))
+          .andExpect(status().isBadRequest()).andExpect(jsonPath("$.error").value("BAD_REQUEST"))
+          .andExpect(jsonPath("$.error_description")
+              .value(containsString("Entity dynamic Mapping definition is mandatory")));
+    }
+
+    @Test
+    @WithMockUser
+    @DisplayName("Should return 400 when payload is missing")
+    void dryRunMapping_400_payload_missing() throws Exception {
+      String payload = """
+          {
+            "mapping": {
+              "identifier": "test",
+              "entity_template_identifier": "microservice",
+              "filter": ".action == \\"pushed\\"",
+              "name": "test mapping name",
+              "entity": {
+                "identifier": ".repository.full_name",
+                "name": ".repository.name",
+                "properties": {},
+                "relations": {}
+              }
+            }
+          }
+          """;
+
+      mockMvc
+          .perform(MockMvcRequestBuilders.post(MAPPING_PATH + "/dry-run")
+              .contentType(APPLICATION_JSON).accept(APPLICATION_JSON).with(csrf()).content(payload))
+          .andExpect(status().isBadRequest()).andExpect(jsonPath("$.error").value("BAD_REQUEST"))
+          .andExpect(jsonPath("$.error_description").value(containsString("Payload is mandatory")));
+    }
+
+    @Test
+    @WithMockUser
+    @DisplayName("Should return 400 when entity_template_identifier is missing")
+    void dryRunMapping_400_template_identifier_missing() throws Exception {
+      String payload = """
+          {
+            "mapping": {
+              "identifier": "test",
+              "filter": ".action == \\"pushed\\"",
+              "name": "Test Mapping",
+              "entity": {
+                "identifier": ".repository.full_name",
+                "name": ".repository.name",
+                "properties": {
+                  "appName": ".repository.name"
+                },
+                "relations": {}
+              }
+            },
+            "payload": {
+              "action": "pushed"
+            }
+          }
+          """;
+
+      mockMvc
+          .perform(MockMvcRequestBuilders.post(MAPPING_PATH + "/dry-run")
+              .contentType(APPLICATION_JSON).accept(APPLICATION_JSON).with(csrf()).content(payload))
+          .andExpect(status().isBadRequest()).andExpect(jsonPath("$.error").value("BAD_REQUEST"))
+          .andExpect(jsonPath("$.error_description")
+              .value(containsString(ENTITY_DYNAMIC_MAPPING_TEMPLATE_IDENTIFIER_MANDATORY)));
+    }
+
+    @Test
+    @WithMockUser
+    @DisplayName("Should return 400 when mapping identifier is missing")
+    void dryRunMapping_400_mapping_identifier_missing() throws Exception {
+      String payload = """
+          {
+            "mapping": {
+              "entity_template_identifier": "microservice",
+              "filter": ".action == \\"pushed\\"",
+              "name": "Test Mapping",
+              "entity": {
+                "identifier": ".repository.full_name",
+                "name": ".repository.name",
+                "properties": {
+                  "applicationName": ".repository.name"
+                },
+                "relations": {}
+              }
+            },
+            "payload": {
+              "action": "opened",
+              "repository": {
+                "full_name": "org/repo"
+              }
+            }
+          }
+          """;
+
+      mockMvc
+          .perform(MockMvcRequestBuilders.post(MAPPING_PATH + "/dry-run")
+              .contentType(APPLICATION_JSON).accept(APPLICATION_JSON).with(csrf()).content(payload))
+          .andExpect(status().isBadRequest()).andExpect(jsonPath("$.error").value("BAD_REQUEST"))
+          .andExpect(jsonPath("$.error_description").value(containsString("mapping identifier")));
+    }
+
+    @Test
+    @WithMockUser
+    @DisplayName("Should return 400 with JSLT error when mapping definition is invalid")
+    void dryRunMapping_400_with_jslt_error() throws Exception {
+      String payload = """
+          {
+            "mapping": {
+              "identifier": "invalid-jslt-test",
+              "entity_template_identifier": "microservice",
+              "filter": ".non_existent_field == \\"value\\"",
+              "name":"test mapping",
+              "description":"test",
+              "entity": {
+                "identifier": ".repository.full_name",
+                "name": ".repository.name",
+                "properties": {
+                  "applicationName": ".undefined_property"
+                },
+                "relations": {}
+              }
+            },
+            "payload": {
+              "action": "pushed",
+              "repository": {
+                "full_name": "my-org/my-repo",
+                "name": "my-repo"
+              }
+            }
+          }
+          """;
+
+      mockMvc
+          .perform(MockMvcRequestBuilders.post(MAPPING_PATH + "/dry-run")
+              .contentType(APPLICATION_JSON).accept(APPLICATION_JSON).with(csrf()).content(payload))
+          .andExpect(status().isBadRequest()).andExpect(jsonPath("$.error").value("BAD_REQUEST"))
+          .andExpect(jsonPath("$.error_description").value(containsString(
+              "The mapping is missing required properties: [environment, ownerEmail, port, programmingLanguage, version]")));
     }
   }
 }

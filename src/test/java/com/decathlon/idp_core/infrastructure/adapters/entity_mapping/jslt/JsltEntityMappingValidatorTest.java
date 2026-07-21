@@ -22,7 +22,7 @@ class JsltEntityMappingValidatorTest {
 
   @BeforeEach
   void setUp() {
-    validator = new JsltEntityMappingValidator();
+    validator = new JsltEntityMappingValidator(new JsltEngine());
   }
 
   // ---------------------------------------------------------------------------
@@ -75,7 +75,7 @@ class JsltEntityMappingValidatorTest {
       assertThatThrownBy(() -> validator.validate(mapping))
           .isInstanceOf(EntityDynamicMappingConfigurationException.class)
           .hasMessageContaining("properties.applicationName")
-          .hasMessageContaining("is required and must contain a JSLT expression");
+          .hasMessageContaining("is required and must contain an expression");
     }
 
     @Test
@@ -105,23 +105,23 @@ class JsltEntityMappingValidatorTest {
   }
 
   // ---------------------------------------------------------------------------
-  // formatJsltErrorMessage (private — exercised through reflection)
+  // formatErrorMessage (private — exercised through reflection)
   // ---------------------------------------------------------------------------
 
   @Nested
-  @DisplayName("formatJsltErrorMessage")
+  @DisplayName("formatErrorMessage")
   class FormatJsltErrorMessageTests {
 
     @Test
     @DisplayName("Should return generic message when raw message is null")
     void shouldReturnGenericMessageWhenNull() {
-      assertThat(formatJsltErrorMessage(null)).isEqualTo("JSLT syntax error.");
+      assertThat(formatJsltErrorMessage(null)).isEqualTo("Expression syntax error.");
     }
 
     @Test
     @DisplayName("Should return generic message when raw message is blank")
     void shouldReturnGenericMessageWhenBlank() {
-      assertThat(formatJsltErrorMessage("   ")).isEqualTo("JSLT syntax error.");
+      assertThat(formatJsltErrorMessage("   ")).isEqualTo("Expression syntax error.");
     }
 
     @Test
@@ -137,7 +137,7 @@ class JsltEntityMappingValidatorTest {
       var raw = "Parse error: at line 3, column 7 Encountered \"}\" but expected something";
 
       assertThat(formatJsltErrorMessage(raw))
-          .isEqualTo("JSLT syntax error at line 3, column 7 (unexpected token: }).");
+          .isEqualTo("Syntax error at line 3, column 7 (unexpected token: }).");
     }
 
     @Test
@@ -145,7 +145,7 @@ class JsltEntityMappingValidatorTest {
     void shouldFormatWithLineColumnOnly() {
       var raw = "Unexpected failure at line 5, column 2 in the expression";
 
-      assertThat(formatJsltErrorMessage(raw)).isEqualTo("JSLT syntax error at line 5, column 2.");
+      assertThat(formatJsltErrorMessage(raw)).isEqualTo("Syntax error at line 5, column 2.");
     }
 
     @Test
@@ -166,16 +166,16 @@ class JsltEntityMappingValidatorTest {
         "My Mapping", "description", entityIdentifier, entityTitle, properties, relations);
   }
 
-  /// Invokes the private `formatJsltErrorMessage` method through reflection so
+  /// Invokes the private `formatErrorMessage` method through reflection so
   /// every formatting branch can be exercised deterministically.
   private String formatJsltErrorMessage(String rawMessage) {
     try {
-      Method method = JsltEntityMappingValidator.class.getDeclaredMethod("formatJsltErrorMessage",
+      Method method = JsltEntityMappingValidator.class.getDeclaredMethod("formatErrorMessage",
           String.class);
       method.setAccessible(true);
       return (String) method.invoke(validator, rawMessage);
     } catch (ReflectiveOperationException e) {
-      throw new IllegalStateException("Unable to invoke formatJsltErrorMessage", e);
+      throw new IllegalStateException("Unable to invoke formatErrorMessage", e);
     }
   }
 }

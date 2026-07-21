@@ -305,6 +305,20 @@ public class ApiExceptionHandler {
     return createErrorResponse(HttpStatus.BAD_REQUEST, ex.getMessage());
   }
 
+  /// Handles JSLT expression evaluation failures (both primary and fallback
+  /// attempts failed).
+  ///
+  /// **HTTP mapping:** Maps to HTTP 400 Bad Request because the expression or
+  /// payload
+  /// is misconfigured. Clients should fix the mapping definition or payload
+  /// structure.
+  @ExceptionHandler(ExpressionEvaluationFailedException.class)
+  public ResponseEntity<ErrorResponse> handleExpressionEvaluationFailedException(
+      ExpressionEvaluationFailedException ex) {
+    log.warn("Expression evaluation failed for '{}': {}", ex.getExpression(), ex.getReason());
+    return createErrorResponse(HttpStatus.BAD_REQUEST, ex.getMessage());
+  }
+
   @ExceptionHandler(PropertyNameNotFoundEntityTemplatePropertiesException.class)
   public ResponseEntity<ErrorResponse> handlePropertyNameNotFoundEntityTemplatePropertiesException(
       PropertyNameNotFoundEntityTemplatePropertiesException ex) {

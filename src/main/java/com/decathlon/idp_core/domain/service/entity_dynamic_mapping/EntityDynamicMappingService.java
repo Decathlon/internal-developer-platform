@@ -29,13 +29,13 @@ public class EntityDynamicMappingService {
 
   private final EntityDynamicMappingPort entityDynamicMappingPort;
   private final WebhookMappingLinkPort webhookTemplateMappingPort;
-  private final EntityDynamicMappingValidationService webhookConnectorMappingValidationService;
+  private final EntityDynamicMappingValidationService entityDynamicMappingValidationService;
 
   @Transactional
   public EntityDynamicMapping createEntityDynamicMapping(
       EntityDynamicMapping entityDynamicMapping) {
     validateIdentifierUniqueness(entityDynamicMapping.identifier());
-    webhookConnectorMappingValidationService.validateMapping(entityDynamicMapping);
+    entityDynamicMappingValidationService.validateMapping(entityDynamicMapping);
     return entityDynamicMappingPort.save(entityDynamicMapping);
   }
 
@@ -96,7 +96,7 @@ public class EntityDynamicMappingService {
   public EntityDynamicMapping updateEntityDynamicMapping(String identifier,
       @Valid EntityDynamicMapping entityDynamicMapping) {
     EntityDynamicMapping existingMapping = getEntityDynamicMapping(identifier);
-    webhookConnectorMappingValidationService.validateMapping(entityDynamicMapping);
+    entityDynamicMappingValidationService.validateMapping(entityDynamicMapping);
 
     EntityDynamicMapping mergedMapping = new EntityDynamicMapping(existingMapping.id(),
         existingMapping.identifier(), entityDynamicMapping.entityTemplateIdentifier(),

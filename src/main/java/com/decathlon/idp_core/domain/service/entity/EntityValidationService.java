@@ -47,7 +47,7 @@ public class EntityValidationService {
   /// violated
   /// @throws EntityAlreadyExistsException if an entity with the same identifier
   /// exists for the template
-  void validateForCreation(Entity entity, EntityTemplate template) {
+  public void validateForCreation(Entity entity, EntityTemplate template) {
     validateUniqueness(entity);
     validateAgainstTemplate(template, entity);
   }

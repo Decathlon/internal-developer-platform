@@ -1,6 +1,5 @@
 package com.decathlon.idp_core.infrastructure.adapters.entity_mapping.jslt;
 
-import java.io.StringReader;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.regex.Matcher;
@@ -12,8 +11,7 @@ import org.springframework.util.StringUtils;
 import com.decathlon.idp_core.domain.exception.entity_dynamic_mapping.EntityDynamicMappingConfigurationException;
 import com.decathlon.idp_core.domain.model.entity_mapping.EntityDynamicMapping;
 import com.decathlon.idp_core.domain.port.EntityDynamicMapperValidator;
-import com.schibsted.spt.data.jslt.JsltException;
-import com.schibsted.spt.data.jslt.Parser;
+import com.decathlon.idp_core.infrastructure.adapters.entity_mapping.engine.ExpressionEngine;
 
 import lombok.RequiredArgsConstructor;
 
@@ -25,12 +23,15 @@ public class JsltEntityMappingValidator implements EntityDynamicMapperValidator 
       .compile("line\\s+(\\d+),\\s+column\\s+(\\d+)");
   private static final Pattern TOKEN_PATTERN = Pattern.compile("Encountered\\s+\"([^\"]+)\"");
 
+  // Depends on ExpressionEngine (port abstraction), not JsltEngine directly,
+  // so a future JqEngine can be injected without touching this validator.
+  private final ExpressionEngine expressionEngine;
+
   @Override
   public void validate(EntityDynamicMapping mapping) {
     List<String> errors = new ArrayList<>();
 
     checkExpression(errors, "filter", mapping.filter());
-
     checkExpression(errors, "entityIdentifier", mapping.entityIdentifier());
     checkExpression(errors, "entityName", mapping.entityName());
 
@@ -48,24 +49,37 @@ public class JsltEntityMappingValidator implements EntityDynamicMapperValidator 
     }
   }
 
+  /**
+   * Validates a single expression field via
+   * {@link ExpressionEngine#validateExpression(String)}. Catches engine-specific
+   * exceptions and formats them into user-friendly messages.
+   *
+   * @param errors
+   *          accumulator for validation errors
+   * @param fieldName
+   *          human-readable field name for error messages
+   * @param expression
+   *          the expression to validate
+   */
   private void checkExpression(List<String> errors, String fieldName, String expression) {
     if (!StringUtils.hasText(expression)) {
-      errors.add(
-          String.format("Field '%s' is required and must contain a JSLT expression.", fieldName));
+      errors
+          .add(String.format("Field '%s' is required and must contain an expression.", fieldName));
       return;
     }
 
     try {
-      new Parser(new StringReader(expression)).compile();
-    } catch (JsltException exception) {
+      // Goes through the ExpressionEngine port — works for JSLT today, JQ tomorrow.
+      expressionEngine.validateExpression(expression);
+    } catch (EntityDynamicMappingConfigurationException exception) {
       errors.add(String.format("Invalid expression for '%s': %s", fieldName,
-          formatJsltErrorMessage(exception.getMessage())));
+          formatErrorMessage(exception.getMessage())));
     }
   }
 
-  private String formatJsltErrorMessage(String rawMessage) {
+  private String formatErrorMessage(String rawMessage) {
     if (!StringUtils.hasText(rawMessage)) {
-      return "JSLT syntax error.";
+      return "Expression syntax error.";
     }
 
     String normalized = rawMessage.replaceAll("\\s+", " ").trim();
@@ -73,26 +87,26 @@ public class JsltEntityMappingValidator implements EntityDynamicMapperValidator 
       normalized = normalized.substring("Parse error:".length()).trim();
     }
 
+    Matcher locationMatcher = LOCATION_PATTERN.matcher(rawMessage);
     String line = null;
     String column = null;
-    Matcher locationMatcher = LOCATION_PATTERN.matcher(rawMessage);
     if (locationMatcher.find()) {
       line = locationMatcher.group(1);
       column = locationMatcher.group(2);
     }
 
-    String token = null;
     Matcher tokenMatcher = TOKEN_PATTERN.matcher(rawMessage);
+    String token = null;
     if (tokenMatcher.find()) {
       token = tokenMatcher.group(1);
     }
 
     if (line != null && column != null && token != null) {
-      return String.format("JSLT syntax error at line %s, column %s (unexpected token: %s).", line,
+      return String.format("Syntax error at line %s, column %s (unexpected token: %s).", line,
           column, token);
     }
     if (line != null && column != null) {
-      return String.format("JSLT syntax error at line %s, column %s.", line, column);
+      return String.format("Syntax error at line %s, column %s.", line, column);
     }
 
     return normalized;
