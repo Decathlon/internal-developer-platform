@@ -1,0 +1,78 @@
+---
+name: 'OWASP ZAP Security Report'
+
+on:
+  workflow_run:
+    workflows: [OWASP ZAP Security Scan]
+    types: [completed]
+
+permissions:
+  contents: read
+  actions: read
+  pull-requests: write
+
+jobs:
+  report_zap_findings:
+    name: Post ZAP Security Findings
+    runs-on: ubuntu-latest
+    if: github.event.workflow_run.conclusion != 'skipped'
+
+    steps:
+      - name: Download ZAP Report Artifact
+        # FIX: Removed the pull_requests[0] != null check here
+        if: github.event.workflow_run.event == 'issue_comment'
+        uses: actions/download-artifact@4cdefc697369ba7f1db6c6b6d3f2b0d14eadfc4e  # v4.1.1
+        with:
+          name: zap-scan-report
+          path: zap-reports
+          github-token: ${{ github.token }}
+          run-id: ${{ github.event.workflow_run.id }}
+
+      - name: Parse ZAP Findings Summary
+        if: github.event.workflow_run.event == 'issue_comment'
+        id: zap-summary
+        shell: bash
+        run: |
+          pr_number=""
+          if [[ -f "zap-reports/pr_number.txt" ]]; then
+            pr_number=$(cat zap-reports/pr_number.txt)
+          fi
+          echo "pr_number=$pr_number" >> "$GITHUB_OUTPUT"
+          if [[ ! -f "zap-reports/zap-report.json" ]]; then
+            # FIX: Grouped redirects for the fallback values
+            {
+              echo "high=0"
+              echo "medium=0"
+              echo "low=0"
+            } >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          high=$(jq '[.site[].alerts[]? | select(.riskcode == "3" or .riskcode == 3)] | length' zap-reports/zap-report.json)
+          medium=$(jq '[.site[].alerts[]? | select(.riskcode == "2" or .riskcode == 2)] | length' zap-reports/zap-report.json)
+          low=$(jq '[.site[].alerts[]? | select(.riskcode == "1" or .riskcode == 1)] | length' zap-reports/zap-report.json)
+
+          pr_number=$(cat zap-reports/pr_number.txt)
+
+          # FIX: Grouped redirects for the actual parsed values
+          {
+            echo "high=$high"
+            echo "medium=$medium"
+            echo "low=$low"
+            echo "pr_number=$pr_number"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Comment PR with ZAP Findings
+        if: github.event.workflow_run.event == 'issue_comment'
+        uses: marocchino/sticky-pull-request-comment@5770ad5eb8f42dd2c4f34da00c94c5381e49af88  # v3.0.5
+        with: # FIX: Indented the following keys properly
+          header: zap-scan-results
+          number: ${{ steps.zap-summary.outputs.pr_number }}
+          message: |
+            ### 🛡️ OWASP ZAP Scan Findings
+
+            - **High Risk:** ${{ steps.zap-summary.outputs.high }}
+            - **Medium Risk:** ${{ steps.zap-summary.outputs.medium }}
+            - **Low Risk:** ${{ steps.zap-summary.outputs.low }}
+
+            📥 Download the complete HTML report from the [Workflow Run Artifacts](${{ github.event.workflow_run.html_url }}).

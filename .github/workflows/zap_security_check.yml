@@ -1,0 +1,87 @@
+---
+name: 'OWASP ZAP Security Scan'
+
+on: # 1. Allows running directly from GitHub Actions UI / CLI
+  workflow_dispatch:
+
+  # 2. Triggers when a comment is added to an Issue or PR
+  issue_comment:
+    types: [created]
+
+# Minimal permissions to reduce attack surface
+# NOTE: pull-requests: write is intentionally NOT granted here to prevent privilege escalation
+# from untrusted code paths. Comment posting is handled by a separate workflow_run workflow.
+permissions:
+  contents: read
+  actions: write  # Required to upload artifacts
+
+jobs:
+  zap_scan:
+    name: Dynamic Application Security Testing (DAST)
+    runs-on: ubuntu-latest
+
+    # Only run if triggered manually OR if a PR comment starts with "/run-owasp-zap"
+    # from a user with write permissions (repository collaborator)
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      (github.event.issue.pull_request &&
+       startsWith(github.event.comment.body, '/run-owasp-zap') &&
+       (github.event.comment.author_association == 'OWNER' ||
+        github.event.comment.author_association == 'MEMBER' ||
+        github.event.comment.author_association == 'COLLABORATOR'))
+
+    steps:
+      # Step A1: Checkout code for workflow_dispatch (default branch)
+      - name: Checkout Default Branch
+        if: github.event_name != 'issue_comment'
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0  # v7.0.0
+
+      # Step A2: Securely fetch the immutable PR commit SHA
+      - name: Get PR SHA
+        if: github.event_name == 'issue_comment'
+        id: get_pr
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          # Use GitHub CLI to get the current head commit SHA of the PR
+          PR_SHA=$(gh pr view "${{ github.event.issue.number }}" --json headRefOid -q .headRefOid)
+          echo "sha=$PR_SHA" >> "$GITHUB_OUTPUT"
+
+      # Step A3: Checkout the immutable PR SHA to prevent TOCTOU
+      - name: Checkout PR Branch
+        if: github.event_name == 'issue_comment'
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0  # v7.0.0
+        with:
+          ref: ${{ steps.get_pr.outputs.sha }}
+          fetch-depth: 0  # Full history for proper branch context
+
+      # Step B: Setup JDK
+      - name: Setup Java 25
+        uses: actions/setup-java@03ad4de0992f5dab5e18fcb136590ce7c4a0ac95  #  v5.6.0
+        with:
+          distribution: 'temurin'
+          java-version: '25'
+          # Cache disabled for security workflows to prevent cache poisoning attacks
+
+      # Step C: Execute OWASP Scan
+      - name: Execute OWASP ZAP Test Only
+        run: |
+          mvn test -Dtest.groups=security -Dtest.excludedGroups= -B
+
+      # Step D: Upload Artifacts
+      # Note: PR comments are intentionally NOT posted here due to missing pull-requests: write permission.
+      # The separate workflow_run workflow (zap_security_report.yml) handles PR commenting with elevated
+      # permissions, ensuring the two-workflow security hardening approach is maintained.
+      - name: Save PR Number
+        if: always() && github.event_name == 'issue_comment'
+        run: |
+          mkdir -p target/zap-reports
+          echo "${{ github.event.issue.number }}" > target/zap-reports/pr_number.txt
+      - name: Upload ZAP Report Artifact
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a  # v7.0.1
+        with:
+          name: zap-scan-report
+          path: target/zap-reports/
+          if-no-files-found: warn
+          retention-days: 1
