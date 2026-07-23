@@ -199,7 +199,7 @@ public class PropertyValidationService {
             case String string -> {
                 try {
                     parsedValue = new BigDecimal(string);
-                } catch (NumberFormatException _) {
+                } catch (NumberFormatException ignored) {
                     return List.of(PROPERTY_TYPE_MISMATCH.formatted(propertyName, PropertyType.NUMBER));
                 }
             }

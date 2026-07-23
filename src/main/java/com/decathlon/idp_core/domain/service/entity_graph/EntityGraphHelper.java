@@ -127,22 +127,29 @@ public class EntityGraphHelper {
       Set<ReachableState> visited) {
     Set<ReachableState> currentLevel = new HashSet<>();
 
-    if (mode == EntityGraphTraversalMode.OUTBOUND_ONLY
-        || mode == EntityGraphTraversalMode.DIRECT_LINEAGE) {
-      ReachableState anchor = new ReachableState(rootId, FlowDirection.OUTBOUND);
-      visited.add(anchor);
-      currentLevel.add(anchor);
-    }
-    if (mode == EntityGraphTraversalMode.DIRECT_LINEAGE) {
-      ReachableState anchor = new ReachableState(rootId, FlowDirection.INBOUND);
-      if (visited.add(anchor)) {
-        currentLevel.add(anchor);
+    switch (mode) {
+      case OUTBOUND_ONLY -> {
+        ReachableState anchor = new ReachableState(rootId, FlowDirection.OUTBOUND);
+        if (visited.add(anchor)) {
+          currentLevel.add(anchor);
+        }
       }
-    }
-    if (mode == EntityGraphTraversalMode.BIDIRECTIONAL) {
-      ReachableState anchor = new ReachableState(rootId, FlowDirection.ANY);
-      visited.add(anchor);
-      currentLevel.add(anchor);
+      case BIDIRECTIONAL -> {
+        ReachableState anchor = new ReachableState(rootId, FlowDirection.ANY);
+        if (visited.add(anchor)) {
+          currentLevel.add(anchor);
+        }
+      }
+      case DIRECT_LINEAGE -> {
+        ReachableState anchorOut = new ReachableState(rootId, FlowDirection.OUTBOUND);
+        if (visited.add(anchorOut)) {
+          currentLevel.add(anchorOut);
+        }
+        ReachableState anchorIn = new ReachableState(rootId, FlowDirection.INBOUND);
+        if (visited.add(anchorIn)) {
+          currentLevel.add(anchorIn);
+        }
+      }
     }
 
     return currentLevel;
@@ -160,14 +167,13 @@ public class EntityGraphHelper {
       Map<UUID, Entity> entityMap, IndexBundle globalIndices, Set<ReachableState> visited) {
     Set<ReachableState> nextLevel = new HashSet<>();
 
-    for (ReachableState state : currentLevel) {
+    currentLevel.forEach(state -> {
       Entity entity = entityMap.get(state.id());
-      if (entity == null)
-        continue;
-
-      propagateOutboundPaths(state, entity, entityMap, globalIndices, visited, nextLevel);
-      propagateInboundPaths(state, entity, entityMap, globalIndices, visited, nextLevel);
-    }
+      if (entity != null) {
+        propagateOutboundPaths(state, entity, entityMap, globalIndices, visited, nextLevel);
+        propagateInboundPaths(state, entity, entityMap, globalIndices, visited, nextLevel);
+      }
+    });
 
     return nextLevel;
   }
@@ -191,18 +197,13 @@ public class EntityGraphHelper {
       return;
     }
 
-    for (Relation rel : entity.relations()) {
-      for (String targetId : rel.targetEntityIdentifiers()) {
-        UUID targetUuid = globalIndices.textToUuidLookup()
-            .get(new EntityCompositeKey(rel.targetTemplateIdentifier(), targetId));
-        if (targetUuid != null && entityMap.containsKey(targetUuid)) {
-          ReachableState nextState = new ReachableState(targetUuid, FlowDirection.OUTBOUND);
-          if (visited.add(nextState)) {
-            nextLevel.add(nextState);
-          }
-        }
-      }
-    }
+    entity.relations().stream()
+        .flatMap(rel -> rel.targetEntityIdentifiers().stream()
+            .map(targetId -> new EntityCompositeKey(rel.targetTemplateIdentifier(), targetId)))
+        .map(key -> globalIndices.textToUuidLookup().get(key))
+        .filter(targetUuid -> targetUuid != null && entityMap.containsKey(targetUuid))
+        .map(targetUuid -> new ReachableState(targetUuid, FlowDirection.OUTBOUND))
+        .filter(visited::add).forEach(nextLevel::add);
   }
 
   /// Discovers and queues adjacent upstream sources connected through inbound
@@ -217,6 +218,7 @@ public class EntityGraphHelper {
   /// @param globalIndices lookup indices to resolve incoming references
   /// @param visited state memory to prevent circular steps
   /// @param nextLevel output set to collect newly discovered states
+  @SuppressWarnings("null")
   private void propagateInboundPaths(ReachableState state, Entity entity,
       Map<UUID, Entity> entityMap, IndexBundle globalIndices, Set<ReachableState> visited,
       Set<ReachableState> nextLevel) {
@@ -230,16 +232,9 @@ public class EntityGraphHelper {
     Map<String, List<UUID>> sourcesByRelation = globalIndices.inboundIndex()
         .getOrDefault(normalizedId, Map.of());
 
-    for (List<UUID> sources : sourcesByRelation.values()) {
-      for (UUID sourceUuid : sources) {
-        if (entityMap.containsKey(sourceUuid)) {
-          ReachableState nextState = new ReachableState(sourceUuid, FlowDirection.INBOUND);
-          if (visited.add(nextState)) {
-            nextLevel.add(nextState);
-          }
-        }
-      }
-    }
+    sourcesByRelation.values().stream().flatMap(List::stream).filter(entityMap::containsKey)
+        .map(sourceUuid -> new ReachableState(sourceUuid, FlowDirection.INBOUND))
+        .filter(visited::add).forEach(nextLevel::add);
   }
 
   /// Recursively constructs an individual [EntityGraphNode] using a Depth-First

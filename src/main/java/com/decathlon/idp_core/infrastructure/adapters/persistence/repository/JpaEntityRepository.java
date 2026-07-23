@@ -53,9 +53,8 @@ public interface JpaEntityRepository
   @Query(value = """
       SELECT e.identifier, e.name, e.template_identifier AS templateIdentifier
       FROM idp_core.entity e
-      WHERE (e.template_identifier, e.identifier) IN (
-        SELECT unnest(:templateIdentifiers), unnest(:identifiers)
-      )
+      JOIN unnest(:templateIdentifiers, :identifiers) AS k(template_identifier, identifier)
+        ON e.template_identifier = k.template_identifier AND e.identifier = k.identifier
       """, nativeQuery = true)
   List<EntitySummary> findByCompositeKeys(
       @Param("templateIdentifiers") String[] templateIdentifiers,
