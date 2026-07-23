@@ -325,6 +325,8 @@ paths:
           required: false
           schema:
             type: array
+            items:
+               type: string
             example:
               - depends-on
               - relates-to

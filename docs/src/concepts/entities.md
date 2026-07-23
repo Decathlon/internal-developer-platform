@@ -53,6 +53,7 @@ Here's an entity instantiated from the `web-service` template:
         "identifier": "web-api-1",
         "name": "Web API 1",
         "template_identifier": "web-service"
+      }
     ]
   }
 }
@@ -240,7 +241,7 @@ When multiple related entities are allowed, list several identifiers:
 
 ### Relations in Responses
 
-In API responses, relations are grouped by name and include summary information about each target entity:
+ In API responses, `relations` groups both outbound (targets) and inbound (sources) relations by name and includes summary information about each related entity (including `template_identifier`).
 
 ```json
 {

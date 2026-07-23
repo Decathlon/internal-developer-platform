@@ -9,6 +9,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 
 import com.decathlon.idp_core.domain.model.entity.Entity;
+import com.decathlon.idp_core.domain.model.entity.EntityCompositeKey;
 import com.decathlon.idp_core.domain.model.entity.EntityFilter;
 import com.decathlon.idp_core.domain.model.entity.EntitySummary;
 import com.decathlon.idp_core.domain.model.search.PaginatedResult;
@@ -48,6 +49,20 @@ public interface EntityRepositoryPort {
       Pageable pageable);
 
   List<EntitySummary> findByIdentifierIn(List<String> identifiers);
+
+  /// Finds entity summaries by composite keys (templateIdentifier, identifier).
+  ///
+  /// **Design:** Queries entities using both templateIdentifier and identifier
+  /// to respect the database's composite uniqueness constraint. This prevents
+  /// fetching wrong entities when identifiers are duplicated across templates.
+  ///
+  /// **Performance:** Implementations should optimize this query using an IN
+  /// clause
+  /// with OR conditions for each composite key pair.
+  ///
+  /// @param compositeKeys list of (templateIdentifier, identifier) pairs
+  /// @return list of matching entity summaries
+  List<EntitySummary> findSummariesByCompositeKeys(List<EntityCompositeKey> compositeKeys);
 
   List<EntitySummary> findByRelationIdIn(List<UUID> relationIds);
 

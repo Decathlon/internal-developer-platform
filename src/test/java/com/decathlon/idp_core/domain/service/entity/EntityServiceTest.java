@@ -39,6 +39,7 @@ import com.decathlon.idp_core.domain.exception.entity.EntityValidationException;
 import com.decathlon.idp_core.domain.exception.entity_template.EntityTemplateNotFoundException;
 import com.decathlon.idp_core.domain.exception.search.InvalidSearchQueryException;
 import com.decathlon.idp_core.domain.model.entity.Entity;
+import com.decathlon.idp_core.domain.model.entity.EntityCompositeKey;
 import com.decathlon.idp_core.domain.model.entity.EntityFilter;
 import com.decathlon.idp_core.domain.model.entity.EntitySummary;
 import com.decathlon.idp_core.domain.model.entity.FilterCriterion;
@@ -106,15 +107,16 @@ class EntityServiceTest {
   }
 
   @Test
-  @DisplayName("Should return entity summaries by identifiers")
-  void shouldReturnEntitySummariesByIdentifiers() {
+  @DisplayName("Should return entity summaries by composite keys")
+  void shouldReturnEntitySummariesByCompositeKeys() {
+    var compositeKeys = List.of(new EntityCompositeKey("web-service", "service-a"));
     var summaries = List.of(new EntitySummary("service-a", "Service A", "web-service"));
-    when(entityRepository.findByIdentifierIn(List.of("service-a"))).thenReturn(summaries);
+    when(entityRepository.findSummariesByCompositeKeys(compositeKeys)).thenReturn(summaries);
 
-    var result = entityService.getEntitiesSummariesByIdentifiers(List.of("service-a"));
+    var result = entityService.getEntitiesSummariesByCompositeKeys(compositeKeys);
 
     assertEquals(summaries, result);
-    verify(entityRepository).findByIdentifierIn(List.of("service-a"));
+    verify(entityRepository).findSummariesByCompositeKeys(compositeKeys);
   }
 
   @Test

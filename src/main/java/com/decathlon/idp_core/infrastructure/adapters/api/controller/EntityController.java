@@ -202,12 +202,14 @@ public class EntityController {
       @RequestParam(name = "relations_depth", required = false, defaultValue = "1") Integer relationsDepth,
       @RequestParam(name = "relations_to_display", required = false) Set<String> relationsToDisplay) {
 
+    int effectiveDepth = Math.clamp(relationsDepth, 1, 6);
+
     EntityGraphNode entityGraphNode = entityGraphService.getEntityGraph(templateIdentifier,
-        entityIdentifier, relationsDepth, true,
+        entityIdentifier, effectiveDepth, true,
         relationsToDisplay == null ? Set.of() : relationsToDisplay, Set.of(),
         EntityGraphTraversalMode.DIRECT_LINEAGE);
     return entityDtoOutFromEntityNodeMapper.toDto(entityGraphNode, templateIdentifier,
-        relationsDepth);
+        effectiveDepth);
   }
 
   /// Creates a new entity for the specified template with validation.

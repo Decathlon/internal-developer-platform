@@ -26,6 +26,41 @@ public interface JpaEntityRepository
   @Query("SELECT e.identifier AS identifier, e.name AS name, e.templateIdentifier AS templateIdentifier FROM EntityJpaEntity e WHERE e.identifier IN :identifiers")
   List<EntitySummary> findByIdentifierIn(List<String> identifiers);
 
+  /// Finds entity summaries by composite keys (templateIdentifier + identifier).
+  ///
+  /// **Purpose:** Batch lookup of entity summaries using composite keys to ensure
+  /// uniqueness across templates. This prevents IllegalStateException when
+  /// building summary maps or resolving relation targets.
+  ///
+  /// **Design:** Uses a native SQL query with tuple IN clause to match composite
+  /// key pairs. Returns only the essential fields (identifier, name,
+  /// templateIdentifier)
+  /// for summary DTOs.
+  ///
+  /// **Why composite keys?** Entity identifiers are unique within a template, not
+  /// globally. Using both templateIdentifier and identifier ensures we fetch the
+  /// correct entity without conflicts.
+  ///
+  /// **Note:** Uses native SQL because JPQL doesn't support tuple IN clauses.
+  /// The unnest function creates a table from the parameter arrays, and we join
+  /// on both columns to match composite keys.
+  ///
+  /// @param templateIdentifiers list of template identifiers (parallel to
+  /// identifiers)
+  /// @param identifiers list of entity identifiers (parallel to
+  /// templateIdentifiers)
+  /// @return list of entity summaries matching the composite keys
+  @Query(value = """
+      SELECT e.identifier, e.name, e.template_identifier AS templateIdentifier
+      FROM idp_core.entity e
+      WHERE (e.template_identifier, e.identifier) IN (
+        SELECT unnest(:templateIdentifiers), unnest(:identifiers)
+      )
+      """, nativeQuery = true)
+  List<EntitySummary> findByCompositeKeys(
+      @Param("templateIdentifiers") String[] templateIdentifiers,
+      @Param("identifiers") String[] identifiers);
+
   @Query("SELECT e.identifier AS identifier, e.name AS name, e.templateIdentifier AS templateIdentifier FROM EntityJpaEntity e JOIN e.relations r WHERE r.id IN :relationIds")
   List<EntitySummary> findByRelationIdIn(List<UUID> relationIds);
 

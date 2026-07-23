@@ -13,6 +13,7 @@ import java.util.stream.Collectors;
 import org.springframework.stereotype.Service;
 
 import com.decathlon.idp_core.domain.model.entity.Entity;
+import com.decathlon.idp_core.domain.model.entity.EntityCompositeKey;
 import com.decathlon.idp_core.domain.model.entity.Property;
 import com.decathlon.idp_core.domain.model.entity.Relation;
 import com.decathlon.idp_core.domain.model.entity_graph.EntityGraphNode;
@@ -441,15 +442,6 @@ public class EntityGraphHelper {
       Set<String> propertyFilter, Set<String> relationFilter, Set<UUID> activeStack,
       Map<UUID, EntityGraphNode> memoCache, // High-speed in-memory reuse cache
       EntityGraphTraversalMode mode) {
-  }
-
-  private static record EntityCompositeKey(String templateIdentifier, String identifier) {
-    public EntityCompositeKey {
-      templateIdentifier = templateIdentifier == null
-          ? ""
-          : templateIdentifier.trim().toLowerCase();
-      identifier = identifier == null ? "" : identifier.trim().toLowerCase();
-    }
   }
 
 }

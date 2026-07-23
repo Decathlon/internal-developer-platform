@@ -14,7 +14,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.stereotype.Component;
 
 import com.decathlon.idp_core.domain.model.entity.Entity;
-import com.decathlon.idp_core.domain.model.entity.EntitySummary;
+import com.decathlon.idp_core.domain.model.entity.EntityCompositeKey;
 import com.decathlon.idp_core.domain.model.entity.Property;
 import com.decathlon.idp_core.domain.model.entity.RelationAsTargetSummary;
 import com.decathlon.idp_core.domain.model.entity_template.EntityTemplate;
@@ -77,9 +77,9 @@ public class EntityDtoOutMapper {
   private EntityDtoOut fromEntityUsingEntityTemplate(Entity entity, EntityTemplate entityTemplate) {
     Map<String, Object> props = mapPropertiesDto(entity, entityTemplate);
 
-    List<String> allTargetIdentifiers = getAllTargetIdentifiersFromEntityRelations(entity);
-    Map<String, EntitySummaryDto> relatedEntitiesSummaryMap = buildEntitiesSummariesMap(
-        allTargetIdentifiers);
+    List<EntityCompositeKey> allCompositeKeys = getAllCompositeKeysFromEntityRelations(entity);
+    Map<String, EntitySummaryDto> relatedEntitiesSummaryMap = buildEntitiesSummariesMapByCompositeKeys(
+        allCompositeKeys);
     Map<String, List<RelationAsTargetSummary>> relatedEntitiesByTargetSummaryMap = buildRelationsAsTargetSummaryMapByEntity(
         entity);
 
@@ -138,9 +138,13 @@ public class EntityDtoOutMapper {
   /// - Inbound relations: keyed by relation name, values are source summaries
   /// - Both directions merged under the same relation key
   ///
+  /// **Composite Key Lookup:** Uses `templateIdentifier:identifier` to resolve
+  /// target entities from the summaries map, preventing lookup failures when the
+  /// same identifier exists across multiple templates.
+  ///
   /// @param entity the entity whose relations to unify
-  /// @param relatedEntitiesSummaries map of target entity summaries (for
-  /// outbound)
+  /// @param relatedEntitiesSummaries map of target entity summaries keyed by
+  /// composite key (template:identifier)
   /// @param relationTargetOwnershipsMap map of inbound relations
   /// @return unified relations map with combined outbound and inbound relations
   private Map<String, List<EntitySummaryDto>> buildUnifiedRelationsMap(Entity entity,
@@ -153,8 +157,11 @@ public class EntityDtoOutMapper {
     if (entity.relations() != null) {
       entity.relations().forEach(relation -> {
         var relationKey = relation.name();
-        var targets = relation.targetEntityIdentifiers().stream().map(relatedEntitiesSummaries::get)
-            .filter(Objects::nonNull).toList();
+        // Build composite key using targetTemplateIdentifier from relation
+        var targets = relation.targetEntityIdentifiers().stream().map(targetId -> {
+          String compositeKey = relation.targetTemplateIdentifier() + ":" + targetId;
+          return relatedEntitiesSummaries.get(compositeKey);
+        }).filter(Objects::nonNull).toList();
         unifiedRelations.merge(relationKey, new ArrayList<>(targets), (existing, incoming) -> {
           var merged = new ArrayList<>(existing);
           merged.addAll(incoming);
@@ -219,53 +226,79 @@ public class EntityDtoOutMapper {
         .collect(Collectors.groupingBy(RelationAsTargetSummary::targetEntityIdentifier));
   }
 
-  /// Gets all unique target entity identifiers from the relations of a single
-  /// entity.
+  /// Gets all unique composite keys (template:identifier) from entity relations.
+  ///
+  /// **Composite Key Collection:** Extracts both templateIdentifier and
+  /// identifier
+  /// from each relation to build EntityCompositeKey objects, ensuring uniqueness
+  /// across templates.
   ///
   /// @param entity the entity to analyze
-  /// @return a list of unique target entity identifiers
-  private List<String> getAllTargetIdentifiersFromEntityRelations(Entity entity) {
+  /// @return a list of unique composite keys for all relation targets
+  private List<EntityCompositeKey> getAllCompositeKeysFromEntityRelations(Entity entity) {
     return entity.relations() == null
         ? Collections.emptyList()
         : new ArrayList<>(entity.relations().stream()
-            .flatMap(rel -> rel.targetEntityIdentifiers().stream()).collect(Collectors.toSet()));
+            .flatMap(rel -> rel.targetEntityIdentifiers().stream()
+                .map(targetId -> new EntityCompositeKey(rel.targetTemplateIdentifier(), targetId)))
+            .collect(Collectors.toSet()));
   }
 
-  /// Gets all unique target entity identifiers from the relations of all entities
-  /// in a page.
+  /// Gets all unique composite keys from the relations of all entities in a page.
+  ///
+  /// **Composite Key Collection:** Extracts composite keys (templateIdentifier +
+  /// identifier)
+  /// from all relations across the page to enable bulk entity summary lookup.
   ///
   /// @param entities the page of entities to analyze
-  /// @return a list of unique target entity identifiers
-  private List<String> getUniqueTargetIdentifiersInPage(Page<Entity> entities) {
+  /// @return a list of unique composite keys for all relation targets
+  private List<EntityCompositeKey> getUniqueCompositeKeysInPage(Page<Entity> entities) {
     return new ArrayList<>(entities.stream()
         .flatMap(entity -> entity.relations() == null
             ? Stream.empty()
-            : entity.relations().stream().flatMap(rel -> rel.targetEntityIdentifiers().stream()))
+            : entity.relations().stream()
+                .flatMap(rel -> rel.targetEntityIdentifiers().stream().map(
+                    targetId -> new EntityCompositeKey(rel.targetTemplateIdentifier(), targetId))))
         .collect(Collectors.toSet()));
   }
 
   /// Builds a map of entity summaries for all unique target identifiers in a page
   /// of entities.
   ///
+  /// **Composite Key:** Uses `templateIdentifier:identifier` as the map key to
+  /// handle
+  /// cases where the same identifier exists across multiple templates (database
+  /// allows
+  /// duplicate identifiers as long as the template differs).
+  ///
   /// @param entities the page of entities
-  /// @return a map from entity identifier to summary DTO
+  /// @return a map from composite key (template:identifier) to summary DTO
   private Map<String, EntitySummaryDto> buildRelatedEntitiesSummaryMapByPage(
       Page<Entity> entities) {
-    return buildEntitiesSummariesMap(getUniqueTargetIdentifiersInPage(entities));
+    return buildEntitiesSummariesMapByCompositeKeys(getUniqueCompositeKeysInPage(entities));
   }
 
-  /// Builds a map of entity summaries for a list of target identifiers.
+  /// Builds a map of entity summaries for a list of composite keys.
   ///
-  /// Includes template identifier for each entity, enabling frontend clients to
-  /// distinguish related entity types without additional queries.
+  /// **Composite Key Strategy:** Uses EntityCompositeKey (templateIdentifier +
+  /// identifier)
+  /// to fetch and map entity summaries, preventing IllegalStateException on
+  /// duplicate
+  /// keys when the same identifier exists across different templates. This
+  /// ensures
+  /// relation targets are resolved correctly in multi-template scenarios.
   ///
-  /// @param targetIdentifiers the list of target entity identifiers
-  /// @return a map from entity identifier to summary DTO with template info
-  private Map<String, EntitySummaryDto> buildEntitiesSummariesMap(List<String> targetIdentifiers) {
-    return targetIdentifiers.isEmpty()
+  /// @param compositeKeys the list of composite keys (templateIdentifier +
+  /// identifier)
+  /// @return a map from composite key string (template:identifier) to summary DTO
+  private Map<String, EntitySummaryDto> buildEntitiesSummariesMapByCompositeKeys(
+      List<EntityCompositeKey> compositeKeys) {
+    return compositeKeys.isEmpty()
         ? Collections.emptyMap()
-        : entityService.getEntitiesSummariesByIdentifiers(targetIdentifiers).stream()
-            .collect(Collectors.toMap(EntitySummary::identifier,
+        : entityService.getEntitiesSummariesByCompositeKeys(compositeKeys).stream()
+            .collect(Collectors.toMap(es -> es.templateIdentifier() + ":" + es.identifier(), // Composite
+                                                                                             // key
+                                                                                             // string
                 es -> new EntitySummaryDto(es.identifier(), es.name(), es.templateIdentifier())));
   }
 
