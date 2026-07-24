@@ -51,11 +51,11 @@ Here's an entity instantiated from the `web-service` template:
     "depends-on": [
       {
         "identifier": "web-api-1",
-        "name": "Web API 1"
+        "name": "Web API 1",
+        "template_identifier": "web-service"
       }
     ]
-  },
-  "relations_as_target": {}
+  }
 }
 ```
 
@@ -220,54 +220,6 @@ When creating an entity, you specify relations as an array of objects, each with
 }
 ```
 
-### Relations in Responses
-
-In API responses, relations are grouped by name and include summary information about each target entity:
-
-```json
-{
-  "relations": {
-    "depends-on": [
-      {
-        "identifier": "web-api-1",
-        "name": "Web API 1"
-      },
-      {
-        "identifier": "web-api-2",
-        "name": "Web API 2"
-      }
-    ]
-  },
-  "relations_as_target": {
-    "depends-on": [
-      {
-        "identifier": "frontend-app",
-        "name": "Frontend App"
-      }
-    ]
-  }
-}
-```
-
-The `relations_as_target` field shows reverse relationships—other entities that reference this entity.
-
-### One-to-One Relations (`to_many: false`)
-
-For consistency, even single relations are represented as arrays:
-
-```json
-{
-  "relations": [
-    {
-      "name": "owned_by",
-      "target_entity_identifiers": [
-        "platform-team"
-      ]
-    }
-  ]
-}
-```
-
 ### One-to-Many Relations (`to_many: true`)
 
 When multiple related entities are allowed, list several identifiers:
@@ -284,6 +236,29 @@ When multiple related entities are allowed, list several identifiers:
       ]
     }
   ]
+}
+```
+
+### Relations in Responses
+
+ In API responses, `relations` groups both outbound (targets) and inbound (sources) relations by name and includes summary information about each related entity (including `template_identifier`).
+
+```json
+{
+  "relations": {
+    "depends-on": [
+      {
+        "identifier": "web-api-1",
+        "name": "Web API 1",
+        "template_identifier": "web-service"
+      },
+      {
+        "identifier": "web-api-2",
+        "name": "Web API 2",
+        "template_identifier": "web-service"
+      }
+    ]
+  }
 }
 ```
 
@@ -386,8 +361,7 @@ curl -X PUT http://localhost:8084/api/v1/entities/web-service/my-web-service \
     "protocol": "HTTP",
     "programmingLanguage": "JAVA"
   },
-  "relations": {},
-  "relations_as_target": {}
+  "relations": {}
 }
 ```
 

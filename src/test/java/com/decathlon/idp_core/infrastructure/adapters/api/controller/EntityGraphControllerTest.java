@@ -45,6 +45,7 @@ public class EntityGraphControllerTest extends AbstractIntegrationTest {
   private static final String ENTITY_A = "graph-svc-a";
   private static final String ENTITY_B = "graph-svc-b";
   private static final String ENTITY_C = "graph-svc-c";
+  private static final String ENTITY_D = "graph-svc-d";
 
   @Autowired
   private MockMvc mockMvc;
@@ -61,10 +62,10 @@ public class EntityGraphControllerTest extends AbstractIntegrationTest {
           .perform(get(GRAPH_PATH, TEMPLATE, ENTITY_A).param("depth", "3").accept(APPLICATION_JSON))
           .andExpect(status().isOk()).andExpect(content().contentType(APPLICATION_JSON))
           // All three nodes must be present
-          .andExpect(
-              jsonPath("$.nodes[*].identifier", containsInAnyOrder(ENTITY_A, ENTITY_B, ENTITY_C)))
-          // Three edges: a-[uses]->b, a-[monitors]->b, b-[uses]->c
-          .andExpect(jsonPath("$.edges", hasSize(3)));
+          .andExpect(jsonPath("$.nodes[*].identifier",
+              containsInAnyOrder(ENTITY_A, ENTITY_B, ENTITY_C, ENTITY_D)))
+          // Three edges: a-[uses]->b, a-[monitors]->b, b-[uses]->c, c-[uses]->d
+          .andExpect(jsonPath("$.edges", hasSize(4)));
     }
   }
 
@@ -81,11 +82,11 @@ public class EntityGraphControllerTest extends AbstractIntegrationTest {
               .param("relations", "uses").accept(APPLICATION_JSON))
           .andExpect(status().isOk()).andExpect(content().contentType(APPLICATION_JSON))
           // All three nodes are reachable via "uses" chain: a→b→c
-          .andExpect(
-              jsonPath("$.nodes[*].identifier", containsInAnyOrder(ENTITY_A, ENTITY_B, ENTITY_C)))
-          // Only the two "uses" edges: a-[uses]->b and b-[uses]->c
-          .andExpect(jsonPath("$.edges", hasSize(2)))
-          .andExpect(jsonPath("$.edges[*].type", containsInAnyOrder("uses", "uses")));
+          .andExpect(jsonPath("$.nodes[*].identifier",
+              containsInAnyOrder(ENTITY_A, ENTITY_B, ENTITY_C, ENTITY_D)))
+          // Only the two "uses" edges: a-[uses]->b, b-[uses]->c and c-[uses]->d
+          .andExpect(jsonPath("$.edges", hasSize(3)))
+          .andExpect(jsonPath("$.edges[*].type", containsInAnyOrder("uses", "uses", "uses")));
     }
 
     @Test
@@ -160,8 +161,8 @@ public class EntityGraphControllerTest extends AbstractIntegrationTest {
               .param("include_data", "true").param("properties", "tier").accept(APPLICATION_JSON))
           .andExpect(status().isOk()).andExpect(content().contentType(APPLICATION_JSON))
           // All three nodes are still returned
-          .andExpect(
-              jsonPath("$.nodes[*].identifier", containsInAnyOrder(ENTITY_A, ENTITY_B, ENTITY_C)))
+          .andExpect(jsonPath("$.nodes[*].identifier",
+              containsInAnyOrder(ENTITY_A, ENTITY_B, ENTITY_C, ENTITY_D)))
           // Each node's data must contain "tier" …
           .andExpect(jsonPath("$.nodes[0].data.tier").exists())
           // … but must NOT contain "version"

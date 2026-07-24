@@ -3,15 +3,17 @@ package com.decathlon.idp_core.infrastructure.adapters.api.dto.out.entity;
 import com.fasterxml.jackson.databind.PropertyNamingStrategies.SnakeCaseStrategy;
 import com.fasterxml.jackson.databind.annotation.JsonNaming;
 
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Data;
-
-@Builder
-@Data
-@AllArgsConstructor
+/**
+ * Represents a summary of an entity for use in collections and relations.
+ *
+ * Immutable record containing essential entity information: identifier, name,
+ * and template identifier for proper entity classification. Used in both entity
+ * listings and unified relation structures.
+ */
 @JsonNaming(SnakeCaseStrategy.class)
-public class EntitySummaryDto {
-  private String identifier;
-  private String name;
+public record EntitySummaryDto(String identifier,
+
+    String name,
+
+    String templateIdentifier) {
 }

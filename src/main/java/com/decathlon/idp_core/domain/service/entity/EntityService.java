@@ -27,6 +27,7 @@ import com.decathlon.idp_core.domain.exception.entity.EntityValidationException;
 import com.decathlon.idp_core.domain.exception.entity_template.EntityTemplateNotFoundException;
 import com.decathlon.idp_core.domain.exception.search.InvalidSearchQueryException;
 import com.decathlon.idp_core.domain.model.entity.Entity;
+import com.decathlon.idp_core.domain.model.entity.EntityCompositeKey;
 import com.decathlon.idp_core.domain.model.entity.EntityFilter;
 import com.decathlon.idp_core.domain.model.entity.EntitySummary;
 import com.decathlon.idp_core.domain.model.entity.Property;
@@ -92,16 +93,29 @@ public class EntityService {
         pageable);
   }
 
-  /// Provides lightweight entity summaries for efficient bulk operations.
+  /// Retrieves entity summaries for a list of composite keys.
+  ///
+  /// **Composite Key Strategy:** Accepts (templateIdentifier, identifier) pairs
+  /// instead of just identifiers to handle cases where the same identifier exists
+  /// across multiple templates. This prevents incorrect entity resolution and
+  /// ensures relation targets are fetched correctly.
   ///
   /// **Contract:** Returns summary projections without full entity data,
   /// optimized
-  /// for UI lists and relationship resolution scenarios.
+  /// for relationship resolution in multi-template scenarios where identifier
+  /// uniqueness is enforced at the (template, identifier) level.
   ///
-  /// @param identifiers business identifiers of entities to summarize
-  /// @return lightweight entity summaries for the specified identifiers
-  public List<EntitySummary> getEntitiesSummariesByIdentifiers(List<String> identifiers) {
-    return entityRepository.findByIdentifierIn(identifiers);
+  /// @param compositeKeys list of composite keys (template + identifier pairs)
+  /// @return lightweight entity summaries matching the composite keys
+  @Transactional(readOnly = true)
+  public List<EntitySummary> getEntitiesSummariesByCompositeKeys(
+      List<EntityCompositeKey> compositeKeys) {
+
+    if (compositeKeys == null || compositeKeys.isEmpty()) {
+      return List.of();
+    }
+
+    return entityRepository.findSummariesByCompositeKeys(compositeKeys);
   }
 
   /// Retrieves a specific entity with template and entity validation.

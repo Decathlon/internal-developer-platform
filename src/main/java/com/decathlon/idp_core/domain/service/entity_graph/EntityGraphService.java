@@ -1,35 +1,45 @@
 package com.decathlon.idp_core.domain.service.entity_graph;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 import java.util.UUID;
 
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.decathlon.idp_core.domain.exception.entity.EntityNotFoundException;
+import com.decathlon.idp_core.domain.exception.entity_template.EntityTemplateNotFoundException;
 import com.decathlon.idp_core.domain.model.entity.Entity;
-import com.decathlon.idp_core.domain.model.entity.Property;
-import com.decathlon.idp_core.domain.model.entity.Relation;
+import com.decathlon.idp_core.domain.model.entity.EntityFilter;
 import com.decathlon.idp_core.domain.model.entity_graph.EntityGraphNode;
-import com.decathlon.idp_core.domain.model.entity_graph.EntityGraphRelation;
 import com.decathlon.idp_core.domain.model.entity_graph.EntityGraphTraversalMode;
 import com.decathlon.idp_core.domain.port.EntityGraphRepositoryPort;
 import com.decathlon.idp_core.domain.port.EntityRepositoryPort;
+import com.decathlon.idp_core.domain.service.entity.EntityService;
 import com.decathlon.idp_core.domain.service.entity_template.EntityTemplateValidationService;
 
 import lombok.RequiredArgsConstructor;
 
 /// Domain service for building entity relationship graphs.
 ///
-/// Resolves an entity's outbound and inbound relations recursively up to a
-/// configurable depth, returning a tree of [EntityGraphNode] records containing
-/// summary information for each connected entity.
+/// Resolves outbound and inbound relations, for a given list of entities,
+/// recursively up to a configurable depth, returning a tree of
+/// [EntityGraphNode] records containing summary information for each connected
+/// entity.
+///
+/// Phase 1 - Gathering the Raw information (DB & Footprint): Gets a list of all
+/// possibly related entities from the database within a single transaction.
+/// Phase 2 - Reachability Pruning (Breadth-First Propagation): It computes a
+/// precise reachable footprint to ensure we only traverse nodes that actually
+/// connect to our root in the selected direction. Phase 3 - Recursive
+/// Construction (DFS with Safety Nets): The helper runs a depth-first traversal
+/// starting at the root entity to build the nested EntityGraphNode tree. It
+/// prevents stack overflows from circular references and avoid re-evaluating the
+/// same nodes via different paths.
 ///
 /// **Business purpose:**
 /// - Visualizing entity dependency graphs in the catalog UI
@@ -48,15 +58,42 @@ import lombok.RequiredArgsConstructor;
 ///   construction, so that callers (e.g. the REST controller) receive a graph
 ///   that already respects the requested scope instead of carrying unnecessary
 ///   data to the Infrastructure layer.
+///
+///
+///
 @Service
 @RequiredArgsConstructor
 public class EntityGraphService {
 
+  private final EntityRepositoryPort entityRepositoryPort;
+  private final EntityTemplateValidationService entityTemplateValidationService;
+  private final EntityService entityService;
+  private final EntityGraphRepositoryPort entityGraphRepositoryPort;
+  private final EntityGraphHelper entityGraphHelper;
+
   private static final int MAX_DEPTH = 6;
 
-  private final EntityRepositoryPort entityRepositoryPort;
-  private final EntityGraphRepositoryPort entityGraphRepositoryPort;
-  private final EntityTemplateValidationService entityTemplateValidationService;
+  /// Resolves a depth-limited, fully populated relationship graph for a single
+  /// root entity.
+  ///
+  /// This method validates template existence, fetches the raw relational map in
+  /// a
+  /// single optimized DB query, and delegates the recursive tree building to the
+  /// [EntityGraphHelper].
+  ///
+  /// @param templateIdentifier the template to find the root entity under (e.g.,
+  /// "service")
+  /// @param entityIdentifier the unique business identifier of the entity
+  /// @param depth the requested depth of relationship traversal
+  /// @param includeProperties whether to fetch property fields for the nodes
+  /// @param relationFilter a set of relation names to restrict the traversal
+  /// to (empty means all)
+  /// @param propertyFilter a set of property names to restrict the properties
+  /// to (empty means all)
+  /// @param mode the traversal mode (e.g., `OUTBOUND_ONLY`,
+  /// `BIDIRECTIONAL`)
+  /// @return the resolved root [EntityGraphNode] with its relationship
+  /// tree populated
 
   @Transactional(readOnly = true)
   public EntityGraphNode getEntityGraph(String templateIdentifier, String entityIdentifier,
@@ -64,6 +101,7 @@ public class EntityGraphService {
       EntityGraphTraversalMode mode) {
 
     int effectiveDepth = Math.clamp(depth, 1, MAX_DEPTH);
+
     entityTemplateValidationService.validateTemplateExists(templateIdentifier);
 
     // 1. Resolve root entity
@@ -72,7 +110,7 @@ public class EntityGraphService {
         .orElseThrow(() -> new EntityNotFoundException(templateIdentifier, entityIdentifier));
 
     // 2. Load the graph footprint via optimized DB calls
-    Map<UUID, Entity> entityMap = entityGraphRepositoryPort.findEntityGraph(rootEntity.id(),
+    Map<UUID, Entity> entityMap = entityGraphRepositoryPort.findEntityGraph(Set.of(rootEntity.id()),
         effectiveDepth, includeProperties, mode);
 
     if (entityMap == null || entityMap.isEmpty()) {
@@ -80,176 +118,65 @@ public class EntityGraphService {
           rootEntity.name(), List.of(), List.of(), List.of());
     }
 
-    // 3. Pre-computation Layer
-    IndexBundle indices = buildIndices(entityMap, mode);
+    // 3. Delegate to helper for graph building
+    Map<UUID, EntityGraphNode> graphNodes = entityGraphHelper.buildGraphNodesForEntityIds(entityMap,
+        includeProperties, relationFilter, propertyFilter, mode, effectiveDepth);
 
-    // Context tracking for this execution tree
-    Set<String> activeStack = new HashSet<>();
-    Map<String, EntityGraphNode> memoCache = new HashMap<>();
-
-    GraphTraversalContext ctx = new GraphTraversalContext(entityMap, indices.textToUuidLookup(),
-        indices.inboundIndex(), includeProperties, propertyFilter, relationFilter, activeStack,
-        memoCache, mode);
-
-    // 4. Trigger recursive tree mapping (O(N) performance, heap-safe)
-    return buildGraphNode(rootEntity.id(), ctx);
+    return graphNodes.getOrDefault(rootEntity.id(),
+        new EntityGraphNode(rootEntity.templateIdentifier(), rootEntity.identifier(),
+            rootEntity.name(), List.of(), List.of(), List.of()));
   }
 
-  private EntityGraphNode buildGraphNode(UUID entityUuid, GraphTraversalContext ctx) {
-    Entity entity = ctx.entityMap().get(entityUuid);
+  /// Retrieves a paginated list of entity graphs for a given template in a single
+  /// transaction.
+  ///
+  /// **Performance contract:** All queries — pagination, outbound and inbound
+  /// relation lookups — execute within the same `@Transactional(readOnly = true)`
+  /// boundary, avoiding split-transaction inconsistencies and N+1 problems.
+  ///
+  /// **Business purpose:** Provides complete bidirectional relationship context
+  /// for paginated entity list responses, so the infrastructure mapper can
+  /// produce
+  /// unified `relations` DTOs without any further DB calls.
+  ///
+  /// @param pageable pagination and sorting configuration
+  /// @param templateIdentifier template to scope the entity list
+  /// @param entityFilter optional filter criteria; `null` means no filtering
+  /// @param depth the requested depth of relationship traversal
+  /// @return paginated graph nodes with outbound and inbound relations resolved
+  /// @throws EntityTemplateNotFoundException when the template does not exist
+  @SuppressWarnings("null")
+  @Transactional(readOnly = true)
+  public Page<EntityGraphNode> getEntityGraphPageByTemplate(Pageable pageable,
+      String templateIdentifier, EntityFilter entityFilter, int depth) {
 
-    var nodeIdDisplay = entityUuid != null ? entityUuid.toString() : "null-entity-";
-    if (entity == null) {
-      return new EntityGraphNode(nodeIdDisplay, nodeIdDisplay, nodeIdDisplay, List.of(), List.of(),
-          List.of());
+    // Fetch paginated entities — template existence is validated inside this call
+    Page<Entity> entityPage = entityService.getEntitiesByTemplateIdentifier(pageable,
+        templateIdentifier, entityFilter);
+
+    if (entityPage.isEmpty()) {
+      // Return empty page preserving pagination metadata
+      return entityPage.map(entity -> new EntityGraphNode(entity.templateIdentifier(),
+          entity.identifier(), entity.name(), entity.properties(), List.of(), List.of()));
     }
 
-    var nodeId = entity.id().toString();
+    // Extract UUIDs for the batch graph call
+    var entityUuids = entityPage.getContent().stream().map(Entity::id).filter(Objects::nonNull)
+        .toList();
 
-    // GUARD 1: If the node is currently in active processing up our current line,
-    // we hit a cyclic loop closure. Break instantly with a stub to prevent infinite
-    // stack overflow.
-    if (ctx.activeStack().contains(nodeId)) {
-      List<Property> stubProperties = resolveProperties(entity, ctx.includeProperties(),
-          ctx.propertyFilter());
-      return new EntityGraphNode(entity.templateIdentifier(), entity.identifier(), entity.name(),
-          stubProperties, List.of(), List.of());
-    }
+    // Load entity graphs in batch (includes roots + neighbors for relation
+    // resolution)
+    Map<UUID, Entity> entityGraphs = entityGraphRepositoryPort.findEntityGraph(entityUuids, depth,
+        true, EntityGraphTraversalMode.DIRECT_LINEAGE);
 
-    // GUARD 2: MEMOIZATION CHECK. If this node has already been built down an
-    // alternate path,
-    // return the pre-existing reference instantly. This prevents the exponential
-    // path explosion.
-    if (ctx.memoCache().containsKey(nodeId)) {
-      return ctx.memoCache().get(nodeId);
-    }
+    // Call the helper to build graph nodes
+    Map<UUID, EntityGraphNode> graphsByUuid = entityGraphHelper.buildGraphNodesForEntityIds(
+        entityGraphs, true, Set.of(), Set.of(), EntityGraphTraversalMode.DIRECT_LINEAGE, depth);
 
-    // Push to active processing stack
-    ctx.activeStack().add(nodeId);
-
-    // Process outbound relationships
-    List<EntityGraphRelation> outboundRelations = entity.relations().stream()
-        .filter(relation -> ctx.relationFilter().isEmpty()
-            || ctx.relationFilter().contains(relation.name()))
-        .map(relation -> new EntityGraphRelation(relation.name(),
-            relation.targetEntityIdentifiers().stream().map(targetId -> {
-              UUID targetUuid = ctx.textToUuidLookup()
-                  .get(new EntityCompositeKey(relation.targetTemplateIdentifier(), targetId));
-              if (targetUuid == null)
-                return null;
-
-              return buildGraphNode(targetUuid, ctx);
-            }).filter(Objects::nonNull).toList()))
-        .filter(rel -> !rel.targets().isEmpty()).toList();
-
-    // Process inbound relationships
-    List<EntityGraphRelation> inboundRelations = buildRelationsAsTargetFromIndex(
-        entity.identifier(), ctx);
-
-    List<Property> properties = resolveProperties(entity, ctx.includeProperties(),
-        ctx.propertyFilter());
-
-    // Assemble the complete node object
-    EntityGraphNode completedNode = new EntityGraphNode(entity.templateIdentifier(),
-        entity.identifier(), entity.name(), properties, outboundRelations, inboundRelations);
-
-    // Save to Cache and pop from active stack before returning
-    ctx.memoCache().put(nodeId, completedNode);
-    ctx.activeStack().remove(nodeId);
-
-    return completedNode;
-  }
-
-  private List<EntityGraphRelation> buildRelationsAsTargetFromIndex(String targetIdentifier,
-      GraphTraversalContext ctx) {
-    // Include inbound relations for BIDIRECTIONAL and DIRECT_LINEAGE modes
-    if (ctx.mode() != EntityGraphTraversalMode.BIDIRECTIONAL
-        && ctx.mode() != EntityGraphTraversalMode.DIRECT_LINEAGE) {
-      return List.of();
-    }
-
-    String normalizedTargetIdentifier = targetIdentifier == null
-        ? ""
-        : targetIdentifier.trim().toLowerCase();
-    Map<String, List<UUID>> sourcesByRelationName = ctx.inboundIndex()
-        .getOrDefault(normalizedTargetIdentifier, Map.of());
-
-    if (sourcesByRelationName.isEmpty()) {
-      return List.of();
-    }
-
-    return sourcesByRelationName.entrySet().stream()
-        .filter(e -> ctx.relationFilter().isEmpty() || ctx.relationFilter().contains(e.getKey()))
-        .map(e -> {
-          List<EntityGraphNode> targets = e.getValue().stream()
-              .map(sourceUuid -> buildGraphNode(sourceUuid, ctx)).toList();
-          return new EntityGraphRelation(e.getKey(), targets);
-        }).toList();
-  }
-
-  private IndexBundle buildIndices(Map<UUID, Entity> entityMap, EntityGraphTraversalMode mode) {
-    Map<EntityCompositeKey, UUID> textToUuidLookup = new HashMap<>();
-    Map<String, Map<String, List<UUID>>> inboundIndex = new HashMap<>();
-
-    for (Map.Entry<UUID, Entity> entry : entityMap.entrySet()) {
-      UUID sourceUuid = entry.getKey();
-      Entity entity = entry.getValue();
-      if (entity == null)
-        continue;
-
-      textToUuidLookup.put(new EntityCompositeKey(entity.templateIdentifier(), entity.identifier()),
-          sourceUuid);
-
-      // Build inbound index for BIDIRECTIONAL and DIRECT_LINEAGE modes
-      if (mode == EntityGraphTraversalMode.BIDIRECTIONAL
-          || mode == EntityGraphTraversalMode.DIRECT_LINEAGE) {
-        buildInboundIndexForEntity(entity, sourceUuid, inboundIndex);
-      }
-    }
-    return new IndexBundle(textToUuidLookup, inboundIndex);
-  }
-
-  private void buildInboundIndexForEntity(Entity entity, UUID sourceUuid,
-      Map<String, Map<String, List<UUID>>> inboundIndex) {
-    for (Relation relation : entity.relations()) {
-      for (String targetId : relation.targetEntityIdentifiers()) {
-        if (targetId == null)
-          continue;
-        String normalizedTargetId = targetId.trim().toLowerCase();
-        inboundIndex.computeIfAbsent(normalizedTargetId, k -> new HashMap<>())
-            .computeIfAbsent(relation.name(), k -> new ArrayList<>()).add(sourceUuid);
-      }
-    }
-  }
-
-  private List<Property> resolveProperties(Entity entity, boolean includeProperties,
-      Set<String> propertyFilter) {
-    if (!includeProperties)
-      return List.of();
-    if (propertyFilter.isEmpty())
-      return entity.properties();
-    return entity.properties().stream().filter(p -> propertyFilter.contains(p.name())).toList();
-  }
-
-  private static record IndexBundle(Map<EntityCompositeKey, UUID> textToUuidLookup,
-      Map<String, Map<String, List<UUID>>> inboundIndex) {
-  }
-
-  private static record GraphTraversalContext(Map<UUID, Entity> entityMap,
-      Map<EntityCompositeKey, UUID> textToUuidLookup,
-      Map<String, Map<String, List<UUID>>> inboundIndex, boolean includeProperties,
-      Set<String> propertyFilter, Set<String> relationFilter, Set<String> activeStack,
-      Map<String, EntityGraphNode> memoCache, // High-speed in-memory reuse cache
-      EntityGraphTraversalMode mode) {
-  }
-
-  private static record EntityCompositeKey(String templateIdentifier, String identifier) {
-    public EntityCompositeKey {
-      templateIdentifier = templateIdentifier == null
-          ? ""
-          : templateIdentifier.trim().toLowerCase();
-      identifier = identifier == null ? "" : identifier.trim().toLowerCase();
-    }
+    // Map each Entity to its EntityGraphNode, falling back gracefully if missing
+    return entityPage.map(entity -> graphsByUuid.getOrDefault(entity.id(),
+        new EntityGraphNode(entity.templateIdentifier(), entity.identifier(), entity.name(),
+            entity.properties(), List.of(), List.of())));
   }
 
 }

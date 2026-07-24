@@ -4,12 +4,12 @@
       "identifier": "microservice-1",
       "name": "Microservice 1",
       "properties": {},
-      "relations": {},
-      "relations_as_target": {
+      "relations": {
         "api-link": [
           {
             "identifier": "web-api-1",
-            "name": "Web API 1"
+            "name": "Web API 1",
+            "template_identifier": "web-service"
           }
         ]
       },
