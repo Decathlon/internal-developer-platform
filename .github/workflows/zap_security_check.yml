@@ -14,7 +14,7 @@ on: # 1. Allows running directly from GitHub Actions UI / CLI
 permissions:
   contents: read
   actions: write  # Required to upload artifacts
-
+  pull-requests: read  # Required for `gh pr view` in "Get PR SHA" step
 jobs:
   zap_scan:
     name: Dynamic Application Security Testing (DAST)
