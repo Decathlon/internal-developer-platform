@@ -141,3 +141,8 @@ management:
       # Shows full health details only to authenticated users.
       # Avoids leaking internal infrastructure info to unauthenticated callers.
       show-details: when_authorized
+
+camel:
+  component:
+    platform-http:
+      engine: "servlet"

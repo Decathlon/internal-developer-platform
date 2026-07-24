@@ -21,16 +21,13 @@ public class WebhookExceptionRouteBuilder extends RouteBuilder {
   @Override
   public void configure() throws Exception {
 
-    onException(WebhookConnectorNotFoundException.class)
-        .handled(true)
+    onException(WebhookConnectorNotFoundException.class).handled(true)
         .log(LoggingLevel.WARN,
             "No webhook connector found for identifier: ${exchangeProperty.webhookId}")
         .setHeader(Exchange.HTTP_RESPONSE_CODE, constant(404))
         .setBody(constant("{\"error\": \"Webhook configuration not found\"}"));
 
-    onException(Exception.class)
-        .handled(true)
-        .setHeader(Exchange.HTTP_RESPONSE_CODE, constant(500))
+    onException(Exception.class).handled(true).setHeader(Exchange.HTTP_RESPONSE_CODE, constant(500))
         .setBody(constant("{\"error\": \"Internal server error processing ingestion payload\"}"));
   }
 }

@@ -72,11 +72,11 @@
         <artifactId>tomcat-embed-el</artifactId>
       </dependency>
       <dependency>
-            <groupId>org.apache.camel.springboot</groupId>
-            <artifactId>camel-spring-boot-bom</artifactId>
-            <version>4.21.0</version>
-            <type>pom</type>
-            <scope>import</scope>
+        <groupId>org.apache.camel.springboot</groupId>
+        <artifactId>camel-spring-boot-bom</artifactId>
+        <version>4.21.0</version>
+        <type>pom</type>
+        <scope>import</scope>
       </dependency>
     </dependencies>
   </dependencyManagement>
@@ -254,7 +254,8 @@
     </dependency>
 
     <!-- JSLT: JVM-native JSON transformation language used as the DSL engine for dynamic mappings -->
-    <!-- ADR 0004: JSLT chosen over JQ for performance, robust syntax checking and JVM-native execution -->
+    <!-- ADR 0004: JSLT chosen over JQ for performance, robust syntax checking and JVM-native
+    execution -->
     <dependency>
       <groupId>com.schibsted.spt.data</groupId>
       <artifactId>jslt</artifactId>
@@ -274,6 +275,22 @@
 
     <dependency>
       <groupId>org.apache.camel.springboot</groupId>
+      <artifactId>camel-platform-http-starter</artifactId>
+    </dependency>
+
+    <!-- Internal In-Memory Routing -->
+    <dependency>
+      <groupId>org.apache.camel.springboot</groupId>
+      <artifactId>camel-direct-starter</artifactId>
+    </dependency>
+
+    <dependency>
+      <groupId>org.apache.camel.springboot</groupId>
+      <artifactId>camel-bean-starter</artifactId>
+    </dependency>
+
+    <dependency>
+      <groupId>org.apache.camel.springboot</groupId>
       <artifactId>camel-jackson-starter</artifactId>
     </dependency>
 
@@ -289,7 +306,7 @@
 
     <dependency>
       <groupId>org.apache.camel.springboot</groupId>
-      <artifactId>camel-platform-http-starter</artifactId>
+      <artifactId>camel-rest-starter</artifactId>
     </dependency>
 
   </dependencies>
@@ -472,7 +489,7 @@
             <rule>name:equal:Apache License Version 2.0</rule>
             <rule>name:equal:Apache License, Version 2.0</rule>
             <rule>name:regex:Apache(\s|-)(Software )?(License |License,
-                            )?(Version|version )?2\.0</rule>
+              )?(Version|version )?2\.0</rule>
             <rule>name:regex:(?i)(EPL|Eclipse Public License)(\s|-|\s+-\s+|\s+v\.?\s*)2\.0</rule>
             <rule>name:equal:EPL 2.0</rule>
             <rule>name:equal:Eclipse Public License - v 2.0</rule>
