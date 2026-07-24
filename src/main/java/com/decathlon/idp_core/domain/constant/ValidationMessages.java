@@ -145,4 +145,11 @@ public class ValidationMessages {
   public static final String ENTITY_DYNAMIC_MAPPING_ENTITY_PROPERTIES_MISSING = "The mapping is missing required properties: %s";
   public static final String ENTITY_DYNAMIC_MAPPING_ENTITY_RELATIONS_MISSING = "The mapping is missing required relations: %s";
 
+  public static final String ENTITY_DYNAMIC_MAPPING_DRY_RUN_MANDATORY = "Entity dynamic Mapping definition is mandatory";
+  public static final String PAYLOAD_DRY_RUN_MANDATORY = "Payload is mandatory";
+
+  // Dry-run result messages
+  public static final String DRY_RUN_FILTER_SKIPPED = "Filter expression returned false";
+  public static final String DRY_RUN_EXPRESSION_EVAL_FAILED = "Expression evaluation failed for '%s': %s";
+
 }

@@ -47,7 +47,7 @@ public class EntityValidationService {
   /// violated
   /// @throws EntityAlreadyExistsException if an entity with the same identifier
   /// exists for the template
-  void validateForCreation(Entity entity, EntityTemplate template) {
+  public void validateForCreation(Entity entity, EntityTemplate template) {
     validateUniqueness(entity);
     validateAgainstTemplate(template, entity);
   }
@@ -64,6 +64,39 @@ public class EntityValidationService {
   /// violated
   void validateForUpdate(Entity entity, EntityTemplate template) {
     validateAgainstTemplate(template, entity);
+  }
+
+  /// Validates entity data for dry-run execution.
+  ///
+  /// **Contract:** dry-run verifies that the mapped entity structurally conforms
+  /// to the template without requiring database persistence preconditions.
+  /// It therefore skips uniqueness checks and relation target-entity existence
+  /// checks, while still validating required properties, relation names, and
+  /// relation cardinality.
+  ///
+  /// @param entity the mapped entity payload to validate
+  /// @param template the already-resolved template the entity must conform to
+  /// @throws EntityValidationException when one or more validation rules are
+  /// violated
+  public void validateForDryRun(Entity entity, EntityTemplate template) {
+    Violations violations = new Violations();
+
+    List<PropertyDefinition> definitions = Optional.ofNullable(template.propertiesDefinitions())
+        .orElse(List.of());
+
+    Map<String, Property> propertiesByName = Optional.ofNullable(entity.properties())
+        .orElse(List.of()).stream().filter(p -> p.name() != null)
+        .collect(Collectors.toMap(Property::name, p -> p, (left, _) -> left));
+
+    propertyValidationService.validatePropertiesAgainstTemplate(template, definitions,
+        propertiesByName, violations);
+
+    relationValidationService.validateRelationsAgainstTemplateForDryRun(template,
+        entity.relations(), violations);
+
+    if (!violations.isEmpty()) {
+      throw new EntityValidationException(violations.asList());
+    }
   }
 
   /// Validates entity properties against the template's property definitions,

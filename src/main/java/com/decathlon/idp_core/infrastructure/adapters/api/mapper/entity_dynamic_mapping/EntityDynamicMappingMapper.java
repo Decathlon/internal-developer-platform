@@ -1,14 +1,18 @@
 package com.decathlon.idp_core.infrastructure.adapters.api.mapper.entity_dynamic_mapping;
 
+import java.util.List;
 import java.util.Map;
 
 import org.springframework.stereotype.Component;
 
 import com.decathlon.idp_core.domain.model.entity_mapping.EntityDynamicMapping;
+import com.decathlon.idp_core.domain.model.entity_mapping.RelationMapping;
 import com.decathlon.idp_core.infrastructure.adapters.api.dto.in.EntityDynamicMappingCreateDtoIn;
 import com.decathlon.idp_core.infrastructure.adapters.api.dto.in.EntityDynamicMappingDtoInCommonFields;
 import com.decathlon.idp_core.infrastructure.adapters.api.dto.in.EntityDynamicMappingUpdateDtoIn;
+import com.decathlon.idp_core.infrastructure.adapters.api.dto.in.RelationMappingDtoIn;
 import com.decathlon.idp_core.infrastructure.adapters.api.dto.out.entity_dynamic_mapping.EntityDynamicMappingDtoOut;
+import com.decathlon.idp_core.infrastructure.adapters.api.dto.out.entity_dynamic_mapping.RelationMappingDtoOut;
 
 @Component
 public class EntityDynamicMappingMapper {
@@ -30,15 +34,20 @@ public class EntityDynamicMappingMapper {
         fields.description(), fields.entity().identifier(), // entityIdentifier
         fields.entity().name(), // entityName
         safeMap(fields.entity().properties()), // properties
-        safeMap(fields.entity().relations())); // relations
+        toRelationMappings(fields.entity().relations())); // relations
   }
 
   public EntityDynamicMappingDtoOut fromEntityMappingToDto(EntityDynamicMapping mapping) {
     return new EntityDynamicMappingDtoOut(mapping.identifier(), mapping.entityTemplateIdentifier(),
         mapping.filter(), mapping.name(), mapping.description(),
         new EntityDynamicMappingDtoOut.InboundWebhookEntityMappingDtoOut(mapping.entityIdentifier(),
-            mapping.entityName(), Map.copyOf(mapping.properties()),
-            Map.copyOf(mapping.relations())));
+            mapping.entityName(), copyNullableProperties(mapping.properties()),
+            mapping.relations() == null ? null : toRelationMappingDtoOut(mapping.relations())));
+  }
+  /// Defensive copy for outbound DTO while preserving null when persistence data
+  /// is malformed (JSON null).
+  private Map<String, String> copyNullableProperties(Map<String, String> properties) {
+    return properties == null ? null : Map.copyOf(properties);
   }
 
   /// Converts an update DTO to domain model, using the identifier from the path.
@@ -57,10 +66,31 @@ public class EntityDynamicMappingMapper {
         fields.description(), fields.entity().identifier(), // entityIdentifier
         fields.entity().name(), // entityName
         safeMap(fields.entity().properties()), // properties
-        safeMap(fields.entity().relations())); // relations
+        toRelationMappings(fields.entity().relations())); // relations
   }
 
   private Map<String, String> safeMap(Map<String, String> input) {
     return input == null ? Map.of() : Map.copyOf(input);
+  }
+
+  /// Converts inbound relation DTOs to domain RelationMapping records.
+  /// Preserves declaration order; duplicates are handled by downstream
+  /// validation.
+  private List<RelationMapping> toRelationMappings(List<RelationMappingDtoIn> input) {
+    if (input == null || input.isEmpty()) {
+      return List.of();
+    }
+    return input.stream()
+        .map(dto -> new RelationMapping(dto.name(), List.copyOf(dto.targetEntityIdentifiers())))
+        .toList();
+  }
+
+  /// Converts domain RelationMapping records to output DTOs.
+  private List<RelationMappingDtoOut> toRelationMappingDtoOut(List<RelationMapping> relations) {
+    if (relations.isEmpty()) {
+      return List.of();
+    }
+    return relations.stream()
+        .map(rm -> new RelationMappingDtoOut(rm.name(), List.copyOf(rm.expressions()))).toList();
   }
 }

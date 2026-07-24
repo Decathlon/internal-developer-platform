@@ -103,7 +103,7 @@ public class RelationValidationService {
   }
 
   private Set<String> getDefinedRelationNames(EntityTemplate template) {
-    if (template.relationsDefinitions() == null) {
+    if (template.relationsDefinitions().isEmpty()) {
       return Set.of();
     }
     return template.relationsDefinitions().stream().map(RelationDefinition::name)
@@ -138,6 +138,55 @@ public class RelationValidationService {
         violations.add(RELATION_NOT_DEFINED_IN_TEMPLATE, relation.name(), template.identifier());
       } else {
         validateRelationTargetEntityExistence(relation, violations);
+      }
+    }
+
+    for (RelationDefinition definition : definitions) {
+      Relation relation = relationsByName.get(definition.name());
+      List<String> validTargets = extractValidTargetIdentifiers(relation);
+
+      if (definition.required() && validTargets.isEmpty()) {
+        violations.add(RELATION_REQUIRED_MISSING, definition.name(), template.identifier());
+      }
+
+      if (relation != null && !definition.toMany() && validTargets.size() > 1) {
+        violations.add(RELATION_TOO_MANY_TARGETS, definition.name(), template.identifier());
+      }
+    }
+  }
+
+  /// Validates entity relations for dry-run executions.
+  ///
+  /// Keeps structural validation (relation names, required relations,
+  /// cardinality)
+  /// and skips database existence checks for target entity identifiers.
+  ///
+  /// This method is intentionally additive and does not change the behavior of
+  /// [#validateRelationsAgainstTemplate].
+  ///
+  /// @param template the entity template whose relation definitions are used for
+  /// validation
+  /// @param providedRelations the actual relations provided by mapping extraction
+  /// @param violations the accumulator for any validation violations found during
+  /// the process
+  public void validateRelationsAgainstTemplateForDryRun(EntityTemplate template,
+      List<Relation> providedRelations, Violations violations) {
+
+    List<RelationDefinition> definitions = template.relationsDefinitions() != null
+        ? template.relationsDefinitions()
+        : List.of();
+    List<Relation> relations = providedRelations != null ? providedRelations : List.of();
+
+    Map<String, RelationDefinition> definitionsByName = definitions.stream()
+        .filter(def -> def.name() != null).collect(Collectors.toMap(RelationDefinition::name,
+            def -> def, (existing, replacement) -> existing));
+
+    Map<String, Relation> relationsByName = relations.stream().filter(rel -> rel.name() != null)
+        .collect(Collectors.toMap(Relation::name, rel -> rel, (existing, replacement) -> existing));
+
+    for (Relation relation : relations) {
+      if (relation.name() != null && !definitionsByName.containsKey(relation.name())) {
+        violations.add(RELATION_NOT_DEFINED_IN_TEMPLATE, relation.name(), template.identifier());
       }
     }
 

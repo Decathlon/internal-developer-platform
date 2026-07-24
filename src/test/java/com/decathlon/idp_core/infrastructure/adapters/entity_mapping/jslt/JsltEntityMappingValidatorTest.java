@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.*;
 
 import java.lang.reflect.Method;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
@@ -12,8 +13,9 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 
-import com.decathlon.idp_core.domain.exception.entity_dynamic_mapping.EntityDynamicMappingConfigurationException;
+import com.decathlon.idp_core.domain.exception.entity_dynamic_mapping.EntityDynamicMappingJsltErrorException;
 import com.decathlon.idp_core.domain.model.entity_mapping.EntityDynamicMapping;
+import com.decathlon.idp_core.domain.model.entity_mapping.RelationMapping;
 
 @DisplayName("JsltEntityMappingValidator")
 class JsltEntityMappingValidatorTest {
@@ -22,7 +24,7 @@ class JsltEntityMappingValidatorTest {
 
   @BeforeEach
   void setUp() {
-    validator = new JsltEntityMappingValidator();
+    validator = new JsltEntityMappingValidator(new JsltEngine());
   }
 
   // ---------------------------------------------------------------------------
@@ -38,7 +40,7 @@ class JsltEntityMappingValidatorTest {
     void shouldPassWhenAllExpressionsValid() {
       var mapping = buildMapping(".action == \"pushed\"", ".repository.full_name",
           ".repository.name", Map.of("applicationName", ".repository.name"),
-          Map.of("owner", ".sender.login"));
+          List.of(new RelationMapping("owner", List.of(".sender.login"))));
 
       assertThatCode(() -> validator.validate(mapping)).doesNotThrowAnyException();
     }
@@ -47,7 +49,7 @@ class JsltEntityMappingValidatorTest {
     @DisplayName("Should pass when properties and relations are empty (false branch)")
     void shouldPassWhenPropertiesAndRelationsEmpty() {
       var mapping = buildMapping(".action", ".repository.full_name", ".repository.name", Map.of(),
-          Map.of());
+          List.of());
 
       assertThatCode(() -> validator.validate(mapping)).doesNotThrowAnyException();
     }
@@ -56,10 +58,10 @@ class JsltEntityMappingValidatorTest {
     @DisplayName("Should throw when the filter expression is an invalid JSLT")
     void shouldThrowWhenFilterExpressionInvalid() {
       var mapping = buildMapping("[", ".repository.full_name", ".repository.name", Map.of(),
-          Map.of());
+          List.of());
 
       assertThatThrownBy(() -> validator.validate(mapping))
-          .isInstanceOf(EntityDynamicMappingConfigurationException.class)
+          .isInstanceOf(EntityDynamicMappingJsltErrorException.class)
           .hasMessageContaining("Validation failed with").hasMessageContaining("filter");
     }
 
@@ -70,22 +72,22 @@ class JsltEntityMappingValidatorTest {
       properties.put("applicationName", "   ");
 
       var mapping = buildMapping(".action", ".repository.full_name", ".repository.name", properties,
-          Map.of());
+          List.of());
 
       assertThatThrownBy(() -> validator.validate(mapping))
-          .isInstanceOf(EntityDynamicMappingConfigurationException.class)
+          .isInstanceOf(EntityDynamicMappingJsltErrorException.class)
           .hasMessageContaining("properties.applicationName")
-          .hasMessageContaining("is required and must contain a JSLT expression");
+          .hasMessageContaining("is required and must contain an expression");
     }
 
     @Test
     @DisplayName("Should report an error when a relation expression is invalid JSLT")
     void shouldReportErrorWhenRelationExpressionInvalid() {
       var mapping = buildMapping(".action", ".repository.full_name", ".repository.name", Map.of(),
-          Map.of("owner", "["));
+          List.of(new RelationMapping("owner", List.of("["))));
 
       assertThatThrownBy(() -> validator.validate(mapping))
-          .isInstanceOf(EntityDynamicMappingConfigurationException.class)
+          .isInstanceOf(EntityDynamicMappingJsltErrorException.class)
           .hasMessageContaining("relations.owner");
     }
 
@@ -96,32 +98,32 @@ class JsltEntityMappingValidatorTest {
       properties.put("applicationName", "   ");
 
       var mapping = buildMapping("[", ".repository.full_name", ".repository.name", properties,
-          Map.of("owner", "["));
+          List.of(new RelationMapping("owner", List.of("["))));
 
       assertThatThrownBy(() -> validator.validate(mapping))
-          .isInstanceOf(EntityDynamicMappingConfigurationException.class)
+          .isInstanceOf(EntityDynamicMappingJsltErrorException.class)
           .hasMessageContaining("Validation failed with 3 errors");
     }
   }
 
   // ---------------------------------------------------------------------------
-  // formatJsltErrorMessage (private — exercised through reflection)
+  // formatErrorMessage (private — exercised through reflection)
   // ---------------------------------------------------------------------------
 
   @Nested
-  @DisplayName("formatJsltErrorMessage")
+  @DisplayName("formatErrorMessage")
   class FormatJsltErrorMessageTests {
 
     @Test
     @DisplayName("Should return generic message when raw message is null")
     void shouldReturnGenericMessageWhenNull() {
-      assertThat(formatJsltErrorMessage(null)).isEqualTo("JSLT syntax error.");
+      assertThat(formatJsltErrorMessage(null)).isEqualTo("Expression syntax error.");
     }
 
     @Test
     @DisplayName("Should return generic message when raw message is blank")
     void shouldReturnGenericMessageWhenBlank() {
-      assertThat(formatJsltErrorMessage("   ")).isEqualTo("JSLT syntax error.");
+      assertThat(formatJsltErrorMessage("   ")).isEqualTo("Expression syntax error.");
     }
 
     @Test
@@ -137,7 +139,7 @@ class JsltEntityMappingValidatorTest {
       var raw = "Parse error: at line 3, column 7 Encountered \"}\" but expected something";
 
       assertThat(formatJsltErrorMessage(raw))
-          .isEqualTo("JSLT syntax error at line 3, column 7 (unexpected token: }).");
+          .isEqualTo("Syntax error at line 3, column 7 (unexpected token: }).");
     }
 
     @Test
@@ -145,7 +147,7 @@ class JsltEntityMappingValidatorTest {
     void shouldFormatWithLineColumnOnly() {
       var raw = "Unexpected failure at line 5, column 2 in the expression";
 
-      assertThat(formatJsltErrorMessage(raw)).isEqualTo("JSLT syntax error at line 5, column 2.");
+      assertThat(formatJsltErrorMessage(raw)).isEqualTo("Syntax error at line 5, column 2.");
     }
 
     @Test
@@ -161,21 +163,21 @@ class JsltEntityMappingValidatorTest {
   // ---------------------------------------------------------------------------
 
   private EntityDynamicMapping buildMapping(String filter, String entityIdentifier,
-      String entityTitle, Map<String, String> properties, Map<String, String> relations) {
+      String entityTitle, Map<String, String> properties, List<RelationMapping> relations) {
     return new EntityDynamicMapping(UUID.randomUUID(), "my-mapping", "microservice", filter,
         "My Mapping", "description", entityIdentifier, entityTitle, properties, relations);
   }
 
-  /// Invokes the private `formatJsltErrorMessage` method through reflection so
+  /// Invokes the private `formatErrorMessage` method through reflection so
   /// every formatting branch can be exercised deterministically.
   private String formatJsltErrorMessage(String rawMessage) {
     try {
-      Method method = JsltEntityMappingValidator.class.getDeclaredMethod("formatJsltErrorMessage",
+      Method method = JsltEntityMappingValidator.class.getDeclaredMethod("formatErrorMessage",
           String.class);
       method.setAccessible(true);
       return (String) method.invoke(validator, rawMessage);
     } catch (ReflectiveOperationException e) {
-      throw new IllegalStateException("Unable to invoke formatJsltErrorMessage", e);
+      throw new IllegalStateException("Unable to invoke formatErrorMessage", e);
     }
   }
 }

@@ -249,4 +249,10 @@ public class SwaggerDescription {
   public static final String RESPONSE_SEARCH_SUCCESS = "Entities retrieved successfully";
   public static final String RESPONSE_INVALID_SEARCH_QUERY = "Invalid search filter";
 
+  //
+  public static final String ENDPOINT_POST_ENTITY_DYNAMIC_MAPPING_DRY_RUN_SUMMARY = "Validate a single entity dynamic mapping with a dry-run";
+  public static final String ENDPOINT_POST_ENTITY_DYNAMIC_MAPPING_DRY_RUN_DESCRIPTION = "Validate one JSLT mapping definition against a sample payload and target template identifier without persisting any data";
+  public static final String RESPONSE_ENTITY_DYNAMIC_MAPPING_DRY_RUN_SUCCESS = "Dry-run completed successfully";
+  public static final String WEBHOOK_DRY_RUN_PAYLOAD_DESCRIPTION = "Sample JSON payload to test against the webhook mapping configuration";
+
 }
