@@ -1,5 +1,7 @@
 package com.decathlon.idp_core.infrastructure.adapters.api.controller;
 
+import static com.decathlon.idp_core.domain.constant.ValidationMessages.ENTITY_DYNAMIC_MAPPING_ENTITY_PROPERTIES_MANDATORY;
+import static com.decathlon.idp_core.domain.constant.ValidationMessages.ENTITY_DYNAMIC_MAPPING_ENTITY_RELATIONS_MANDATORY;
 import static com.decathlon.idp_core.domain.constant.ValidationMessages.ENTITY_DYNAMIC_MAPPING_TEMPLATE_IDENTIFIER_MANDATORY;
 import static org.hamcrest.Matchers.containsString;
 import static org.springframework.http.MediaType.APPLICATION_JSON;
@@ -277,6 +279,69 @@ class EntityDynamicMappingControllerTest extends AbstractIntegrationTest {
           .andExpect(jsonPath("$.error").value("UNPROCESSABLE_CONTENT"))
           .andExpect(jsonPath("$.error_description").value(containsString("missing required")));
     }
+
+    @Test
+    @WithMockUser
+    @DisplayName("Should return 400 when entity properties is null")
+    void postMapping_400_entity_properties_null() throws Exception {
+      var payload = """
+          {
+            "identifier": "test-mapping-properties-null",
+            "entity_template_identifier": "microservice",
+            "filter": ".action == \\"pushed\\"",
+            "name":"test mapping name",
+            "description":"description",
+            "entity": {
+              "identifier": ".repository.full_name",
+              "name": ".repository.name",
+              "properties": null,
+              "relations": []
+            }
+          }
+          """;
+
+      mockMvc
+          .perform(MockMvcRequestBuilders.post(MAPPING_PATH).contentType(APPLICATION_JSON)
+              .accept(APPLICATION_JSON).with(csrf()).content(payload))
+          .andExpect(status().isBadRequest()).andExpect(jsonPath("$.error").value("BAD_REQUEST"))
+          .andExpect(jsonPath("$.error_description")
+              .value(containsString(ENTITY_DYNAMIC_MAPPING_ENTITY_PROPERTIES_MANDATORY)));
+    }
+
+    @Test
+    @WithMockUser
+    @DisplayName("Should return 400 when entity relations is null")
+    void postMapping_400_entity_relations_null() throws Exception {
+      var payload = """
+          {
+            "identifier": "test-mapping-relations-null",
+            "entity_template_identifier": "microservice",
+            "filter": ".action == \\"pushed\\"",
+            "name":"test mapping name",
+            "description":"description",
+            "entity": {
+              "identifier": ".repository.full_name",
+              "name": ".repository.name",
+              "properties": {
+                "applicationName": ".repository.name",
+                "ownerEmail": ".sender.email",
+                "environment": "\\"DEV\\"",
+                "version": ".ref",
+                "port": "8080",
+                "programmingLanguage": ".repository.language"
+              },
+              "relations": null
+            }
+          }
+          """;
+
+      mockMvc
+          .perform(MockMvcRequestBuilders.post(MAPPING_PATH).contentType(APPLICATION_JSON)
+              .accept(APPLICATION_JSON).with(csrf()).content(payload))
+          .andExpect(status().isBadRequest()).andExpect(jsonPath("$.error").value("BAD_REQUEST"))
+          .andExpect(jsonPath("$.error_description")
+              .value(containsString(ENTITY_DYNAMIC_MAPPING_ENTITY_RELATIONS_MANDATORY)));
+    }
   }
 
   @Nested
@@ -461,7 +526,7 @@ class EntityDynamicMappingControllerTest extends AbstractIntegrationTest {
       var componentEntities = new String[][]{
           {"e5d9813e-b16f-4f24-bdf9-376f18f3a9ac", "sportyswap-be"},
           {"f2e2ab44-5d19-44de-a77a-42ef6aa51676", "user-profile-sync"},
-          {"398cb790-9117-4bfe-830e-bbb0e423c26e", "dkt-return-lookup"}};
+          {"398cb790-9117-4bfe-830e-bbb0e423c26e", "return-lookup"}};
       for (var entity : componentEntities) {
         String entityPayload = """
             {"identifier": "%s", "name": "%s", "properties": {}, "relations": []}
@@ -605,7 +670,7 @@ class EntityDynamicMappingControllerTest extends AbstractIntegrationTest {
                 "apim-api-provided_by-component": [
                   {
                     "identifier": "398cb790-9117-4bfe-830e-bbb0e423c26e",
-                    "name": "dkt-return-lookup"
+                    "name": "return-lookup"
                   }
                 ]
               },

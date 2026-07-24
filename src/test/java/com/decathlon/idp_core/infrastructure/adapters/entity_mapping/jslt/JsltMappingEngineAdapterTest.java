@@ -103,7 +103,7 @@ class JsltMappingEngineAdapterTest {
             "providedBy": [
               {
                 "identifier": "398cb790-9117-4bfe-830e-bbb0e423c26e",
-                "name": "dkt-return-lookup"
+                "name": "return-lookup"
               }
             ]
           }
