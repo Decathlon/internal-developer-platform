@@ -63,7 +63,7 @@ VALUES ('880e8400-e29b-41d4-a716-446655440001',
         '.repository.full_name',
         '.repository.name',
         '{"applicationName": ".repository.name", "programmingLanguage": ".repository.language"}',
-        '[]');
+        '[{"name":"dependencies","expressions":[".dependencies[*].identifier"]}]');
 
 -- Webhook Template Mapping for GitHub Connector
 INSERT INTO webhook_mapping_link (webhook_id,  entity_mapping_id, jslt_filter) VALUES (

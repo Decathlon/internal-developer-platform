@@ -1,8 +1,6 @@
 package com.decathlon.idp_core.infrastructure.adapters.api.controller;
 
-import static com.decathlon.idp_core.domain.constant.ValidationMessages.ENTITY_DYNAMIC_MAPPING_ENTITY_PROPERTIES_MANDATORY;
-import static com.decathlon.idp_core.domain.constant.ValidationMessages.ENTITY_DYNAMIC_MAPPING_ENTITY_RELATIONS_MANDATORY;
-import static com.decathlon.idp_core.domain.constant.ValidationMessages.ENTITY_DYNAMIC_MAPPING_TEMPLATE_IDENTIFIER_MANDATORY;
+import static com.decathlon.idp_core.domain.constant.ValidationMessages.*;
 import static org.hamcrest.Matchers.containsString;
 import static org.springframework.http.MediaType.APPLICATION_JSON;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
@@ -56,7 +54,11 @@ class EntityDynamicMappingControllerTest extends AbstractIntegrationTest {
               "port": "8080",
               "programmingLanguage": ".repository.language"
             },
-            "relations": []
+            "relations": [
+            {
+                                  "name": "api-link",
+                                  "target_entity_identifiers": [".repository.full_name"]
+            }]
           }
         }
         """.formatted(mappingIdentifier);
@@ -81,7 +83,12 @@ class EntityDynamicMappingControllerTest extends AbstractIntegrationTest {
               "port": "8080",
               "programmingLanguage": ".repository.language"
             },
-            "relations": []
+            "relations": [
+              {
+                        "name": "api-link",
+                        "target_entity_identifiers": [".release.tag_name"]
+              }
+            ]
           }
         }
         """;
@@ -107,7 +114,10 @@ class EntityDynamicMappingControllerTest extends AbstractIntegrationTest {
           .andExpect(content().contentType(APPLICATION_JSON))
           .andExpect(jsonPath("$.content").isArray())
           .andExpect(jsonPath("$.page.total_elements").value(1))
-          .andExpect(jsonPath("$.content[0].identifier").value("microservice-mapping"));
+          .andExpect(jsonPath("$.content[0].identifier").value("microservice-mapping"))
+          .andExpect(jsonPath("$.content[0].entity.relations[0].name").value("dependencies"))
+          .andExpect(jsonPath("$.content[0].entity.relations[0].target_entity_identifiers[0]")
+              .value(".dependencies[*].identifier"));
     }
 
     @Test
@@ -149,7 +159,10 @@ class EntityDynamicMappingControllerTest extends AbstractIntegrationTest {
           .andExpect(jsonPath("$.identifier").value("new-test-mapping"))
           .andExpect(jsonPath("$.entity_template_identifier").value("microservice"))
           .andExpect(jsonPath("$.filter").value(".action == \"pushed\""))
-          .andExpect(jsonPath("$.entity.identifier").value(".repository.full_name"));
+          .andExpect(jsonPath("$.entity.identifier").value(".repository.full_name"))
+          .andExpect(jsonPath("$.entity.relations[0].name").value("api-link"))
+          .andExpect(jsonPath("$.entity.relations[0].target_entity_identifiers[0]")
+              .value(".repository.full_name"));
     }
 
     @Test
@@ -342,6 +355,89 @@ class EntityDynamicMappingControllerTest extends AbstractIntegrationTest {
           .andExpect(jsonPath("$.error_description")
               .value(containsString(ENTITY_DYNAMIC_MAPPING_ENTITY_RELATIONS_MANDATORY)));
     }
+
+    @Test
+    @WithMockUser
+    @DisplayName("Should return 422 when required template relations are missing")
+    void postMapping_422_required_relations_missing() throws Exception {
+      var payload = """
+          {
+            "identifier": "support-mapping-missing-relations",
+            "entity_template_identifier": "support",
+            "filter": ".action == \\"pushed\\"",
+            "name":"support mapping",
+            "description":"missing required relation test",
+            "entity": {
+              "identifier": ".repository.full_name",
+              "name": ".repository.name",
+              "properties": {
+                "applicationName": ".repository.name",
+                "ownerEmail": ".sender.email",
+                "environment": "\\"DEV\\"",
+                "version": ".ref",
+                "teamName": "\\"platform\\""
+              },
+              "relations": []
+            }
+          }
+          """;
+
+      mockMvc
+          .perform(MockMvcRequestBuilders.post(MAPPING_PATH).contentType(APPLICATION_JSON)
+              .accept(APPLICATION_JSON).with(csrf()).content(payload))
+          .andExpect(status().isUnprocessableContent())
+          .andExpect(jsonPath("$.error").value("UNPROCESSABLE_CONTENT")).andExpect(
+              jsonPath("$.error_description").value(containsString("missing required relations")));
+    }
+
+    @Test
+    @WithMockUser
+    @DisplayName("Should return 422 when mapping relation is not defined in a template without relations")
+    void postMapping_422_relation_not_defined_for_template_without_relations() throws Exception {
+      String templatePayload = """
+          {
+            "identifier": "component-no-relations",
+            "name": "Component no relations",
+            "description": "Template without relation definitions",
+            "properties_definitions": [],
+            "relations_definitions": []
+          }
+          """;
+
+      mockMvc
+          .perform(
+              MockMvcRequestBuilders.post("/api/v1/entity-templates").contentType(APPLICATION_JSON)
+                  .accept(APPLICATION_JSON).with(csrf()).content(templatePayload))
+          .andExpect(status().isCreated());
+
+      var payload = """
+          {
+            "identifier": "component-no-relations-mapping",
+            "entity_template_identifier": "component-no-relations",
+            "filter": ".action == \\"pushed\\"",
+            "name":"component mapping",
+            "description":"unknown relation name test",
+            "entity": {
+              "identifier": ".repository.full_name",
+              "name": ".repository.name",
+              "properties": {},
+              "relations": [
+                {
+                  "name": "api-link",
+                  "target_entity_identifiers": [".repository.full_name"]
+                }
+              ]
+            }
+          }
+          """;
+
+      mockMvc
+          .perform(MockMvcRequestBuilders.post(MAPPING_PATH).contentType(APPLICATION_JSON)
+              .accept(APPLICATION_JSON).with(csrf()).content(payload))
+          .andExpect(status().isUnprocessableContent())
+          .andExpect(jsonPath("$.error").value("UNPROCESSABLE_CONTENT")).andExpect(
+              jsonPath("$.error_description").value(containsString("is not defined in template")));
+    }
   }
 
   @Nested
@@ -364,7 +460,10 @@ class EntityDynamicMappingControllerTest extends AbstractIntegrationTest {
           .andExpect(status().isOk())
           .andExpect(jsonPath("$.identifier").value("microservice-mapping"))
           .andExpect(jsonPath("$.entity_template_identifier").value("microservice"))
-          .andExpect(jsonPath("$.filter").value(".action == \"pushed\""));
+          .andExpect(jsonPath("$.filter").value(".action == \"pushed\""))
+          .andExpect(jsonPath("$.entity.relations[0].name").value("dependencies"))
+          .andExpect(jsonPath("$.entity.relations[0].target_entity_identifiers[0]")
+              .value(".dependencies[*].identifier"));
     }
 
     @Test
@@ -374,6 +473,20 @@ class EntityDynamicMappingControllerTest extends AbstractIntegrationTest {
       mockMvc.perform(get(MAPPING_PATH + "/non-existent-mapping").accept(APPLICATION_JSON))
           .andExpect(status().isNotFound()).andExpect(jsonPath("$.error").value("NOT_FOUND"))
           .andExpect(jsonPath("$.error_description").exists());
+    }
+
+    @Test
+    @WithMockUser
+    @Sql(statements = {
+        "INSERT INTO entity_dynamic_mapping (id, identifier, template_id, filter, name, description, entity_identifier, entity_name, properties, relations) "
+            + "VALUES ('990e8400-e29b-41d4-a716-446655440001', 'null-json-mapping', '550e8400-e29b-41d4-a716-446655440071', '.action == \"pushed\"', "
+            + "'Null JSON mapping', 'For DTO null-branch coverage', '.repository.full_name', '.repository.name', 'null'::jsonb, 'null'::jsonb)"})
+    @DisplayName("Should normalize null relations from persistence to empty array in API response")
+    void getMapping_200_normalizes_null_json_relations() throws Exception {
+      mockMvc.perform(get(MAPPING_PATH + "/null-json-mapping").accept(APPLICATION_JSON))
+          .andExpect(status().isOk()).andExpect(jsonPath("$.identifier").value("null-json-mapping"))
+          .andExpect(jsonPath("$.entity.relations").isArray())
+          .andExpect(jsonPath("$.entity.relations").isEmpty());
     }
   }
 
@@ -416,11 +529,17 @@ class EntityDynamicMappingControllerTest extends AbstractIntegrationTest {
               .content(buildUpdatePayload()))
           .andExpect(status().isOk()).andExpect(jsonPath("$.identifier").value("mapping-to-update"))
           .andExpect(jsonPath("$.filter").value(".action == \"released\""))
-          .andExpect(jsonPath("$.entity.identifier").value(".release.tag_name"));
+          .andExpect(jsonPath("$.entity.identifier").value(".release.tag_name"))
+          .andExpect(jsonPath("$.entity.relations[0].name").value("api-link"))
+          .andExpect(jsonPath("$.entity.relations[0].target_entity_identifiers[0]")
+              .value(".release.tag_name"));
 
       mockMvc.perform(get(MAPPING_PATH + "/mapping-to-update").accept(APPLICATION_JSON))
           .andExpect(status().isOk())
-          .andExpect(jsonPath("$.filter").value(".action == \"released\""));
+          .andExpect(jsonPath("$.filter").value(".action == \"released\""))
+          .andExpect(jsonPath("$.entity.relations[0].name").value("api-link"))
+          .andExpect(jsonPath("$.entity.relations[0].target_entity_identifiers[0]")
+              .value(".release.tag_name"));
     }
 
     @Test
@@ -931,6 +1050,89 @@ class EntityDynamicMappingControllerTest extends AbstractIntegrationTest {
               .contentType(APPLICATION_JSON).accept(APPLICATION_JSON).with(csrf()).content(payload))
           .andExpect(status().isBadRequest()).andExpect(jsonPath("$.error").value("BAD_REQUEST"))
           .andExpect(jsonPath("$.error_description").value(containsString("Payload is mandatory")));
+    }
+
+    @Test
+    @WithMockUser
+    @DisplayName("Should return 400 when payload is a blank string")
+    void dryRunMapping_400_payload_blank_string() throws Exception {
+      String payload = """
+          {
+            "mapping": {
+              "identifier": "dry-run-blank-payload",
+              "entity_template_identifier": "microservice",
+              "filter": ".action == \\"pushed\\"",
+              "name": "blank payload test",
+              "entity": {
+                "identifier": ".repository.full_name",
+                "name": ".repository.name",
+                "properties": {
+                  "applicationName": ".repository.name",
+                  "ownerEmail": ".sender.email",
+                  "environment": "\\"DEV\\"",
+                  "version": ".ref",
+                  "port": "8080",
+                  "programmingLanguage": ".repository.language"
+                },
+                "relations": []
+              }
+            },
+            "payload": "   "
+          }
+          """;
+
+      mockMvc
+          .perform(MockMvcRequestBuilders.post(MAPPING_PATH + "/dry-run")
+              .contentType(APPLICATION_JSON).accept(APPLICATION_JSON).with(csrf()).content(payload))
+          .andExpect(status().isBadRequest()).andExpect(jsonPath("$.error").value("BAD_REQUEST"))
+          .andExpect(jsonPath("$.error_description").value(containsString("Payload is mandatory")));
+    }
+
+    @Test
+    @WithMockUser
+    @DisplayName("Should return 422 on dry-run when required relations are missing")
+    void dryRunMapping_422_required_relations_missing() throws Exception {
+      String payload = """
+          {
+            "mapping": {
+              "identifier": "support-dry-run-missing-relations",
+              "entity_template_identifier": "support",
+              "filter": ".action == \\"pushed\\"",
+              "name": "support dry-run",
+              "description": "missing relation",
+              "entity": {
+                "identifier": ".repository.full_name",
+                "name": ".repository.name",
+                "properties": {
+                  "applicationName": ".repository.name",
+                  "ownerEmail": ".sender.email",
+                  "environment": "\\"DEV\\"",
+                  "version": ".ref",
+                  "teamName": "\\"platform\\""
+                },
+                "relations": []
+              }
+            },
+            "payload": {
+              "action": "pushed",
+              "repository": {
+                "full_name": "my-org/my-repo",
+                "name": "my-repo"
+              },
+              "ref": "1.0.0",
+              "sender": {
+                "email": "user@example.com"
+              }
+            }
+          }
+          """;
+
+      mockMvc
+          .perform(MockMvcRequestBuilders.post(MAPPING_PATH + "/dry-run")
+              .contentType(APPLICATION_JSON).accept(APPLICATION_JSON).with(csrf()).content(payload))
+          .andExpect(status().isUnprocessableContent())
+          .andExpect(jsonPath("$.error").value("UNPROCESSABLE_CONTENT")).andExpect(
+              jsonPath("$.error_description").value(containsString("missing required relations")));
     }
 
     @Test

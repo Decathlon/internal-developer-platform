@@ -103,7 +103,7 @@ public class RelationValidationService {
   }
 
   private Set<String> getDefinedRelationNames(EntityTemplate template) {
-    if (template.relationsDefinitions() == null) {
+    if (template.relationsDefinitions().isEmpty()) {
       return Set.of();
     }
     return template.relationsDefinitions().stream().map(RelationDefinition::name)

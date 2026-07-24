@@ -41,8 +41,13 @@ public class EntityDynamicMappingMapper {
     return new EntityDynamicMappingDtoOut(mapping.identifier(), mapping.entityTemplateIdentifier(),
         mapping.filter(), mapping.name(), mapping.description(),
         new EntityDynamicMappingDtoOut.InboundWebhookEntityMappingDtoOut(mapping.entityIdentifier(),
-            mapping.entityName(), Map.copyOf(mapping.properties()),
-            toRelationMappingDtoOut(mapping.relations())));
+            mapping.entityName(), copyNullableProperties(mapping.properties()),
+            mapping.relations() == null ? null : toRelationMappingDtoOut(mapping.relations())));
+  }
+  /// Defensive copy for outbound DTO while preserving null when persistence data
+  /// is malformed (JSON null).
+  private Map<String, String> copyNullableProperties(Map<String, String> properties) {
+    return properties == null ? null : Map.copyOf(properties);
   }
 
   /// Converts an update DTO to domain model, using the identifier from the path.
@@ -82,7 +87,7 @@ public class EntityDynamicMappingMapper {
 
   /// Converts domain RelationMapping records to output DTOs.
   private List<RelationMappingDtoOut> toRelationMappingDtoOut(List<RelationMapping> relations) {
-    if (relations == null || relations.isEmpty()) {
+    if (relations.isEmpty()) {
       return List.of();
     }
     return relations.stream()
