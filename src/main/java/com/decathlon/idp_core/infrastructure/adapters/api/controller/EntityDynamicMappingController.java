@@ -1,9 +1,6 @@
 package com.decathlon.idp_core.infrastructure.adapters.api.controller;
 
 import static com.decathlon.idp_core.infrastructure.adapters.api.configuration.SwaggerDescription.*;
-import static com.decathlon.idp_core.infrastructure.adapters.api.configuration.SwaggerDescription.ENDPOINT_POST_ENTITY_DYNAMIC_MAPPING_DRY_RUN_DESCRIPTION;
-import static com.decathlon.idp_core.infrastructure.adapters.api.configuration.SwaggerDescription.ENDPOINT_POST_ENTITY_DYNAMIC_MAPPING_DRY_RUN_SUMMARY;
-import static com.decathlon.idp_core.infrastructure.adapters.api.configuration.SwaggerDescription.RESPONSE_ENTITY_DYNAMIC_MAPPING_DRY_RUN_SUCCESS;
 import static org.springframework.http.HttpStatus.*;
 
 import jakarta.validation.Valid;
@@ -118,6 +115,7 @@ public class EntityDynamicMappingController {
         .fromEntityMappingToDto(dynamicMappingService.updateEntityDynamicMapping(identifier,
             dynamicMappingMapper.toDomainForUpdate(identifier, entityDynamicMappingDtoIn)));
   }
+
   @Operation(summary = ENDPOINT_POST_ENTITY_DYNAMIC_MAPPING_DRY_RUN_SUMMARY, description = ENDPOINT_POST_ENTITY_DYNAMIC_MAPPING_DRY_RUN_DESCRIPTION)
   @ApiResponse(responseCode = OK_CODE, description = RESPONSE_ENTITY_DYNAMIC_MAPPING_DRY_RUN_SUCCESS, content = {
       @Content(schema = @Schema(implementation = EntityDynamicMappingDryRunDtoOut.class))})

@@ -180,7 +180,8 @@ INSERT INTO entity_template_properties_definitions (entity_template_id, properti
 INSERT INTO entity_template_relations_definitions (entity_template_id, relations_definitions_id) VALUES
 ('550e8400-e29b-41d4-a716-446655440071', '550e8400-e29b-41d4-a716-446655440050'), -- dependencies
 ('550e8400-e29b-41d4-a716-446655440071', '550e8400-e29b-41d4-a716-446655440055'), -- message_queue
-('550e8400-e29b-41d4-a716-446655440071', '550e8400-e29b-41d4-a716-446655440059'); -- monitoring
+('550e8400-e29b-41d4-a716-446655440071', '550e8400-e29b-41d4-a716-446655440059'), -- monitoring
+('550e8400-e29b-41d4-a716-446655440071', '550e8400-e29b-41d4-a716-446655440067'); -- api-link
 
 -- Link batch-job template (data processing)
 INSERT INTO entity_template_properties_definitions (entity_template_id, properties_definitions_id) VALUES

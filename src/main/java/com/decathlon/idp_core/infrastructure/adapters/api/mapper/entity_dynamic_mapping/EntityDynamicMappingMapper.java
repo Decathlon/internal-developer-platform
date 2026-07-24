@@ -41,8 +41,14 @@ public class EntityDynamicMappingMapper {
     return new EntityDynamicMappingDtoOut(mapping.identifier(), mapping.entityTemplateIdentifier(),
         mapping.filter(), mapping.name(), mapping.description(),
         new EntityDynamicMappingDtoOut.InboundWebhookEntityMappingDtoOut(mapping.entityIdentifier(),
-            mapping.entityName(), Map.copyOf(mapping.properties()),
+            mapping.entityName(), copyNullableProperties(mapping.properties()),
             toRelationMappingDtoOut(mapping.relations())));
+  }
+  /// Defensive copy for outbound DTO with null safety.
+  /// Returns an empty map for null input, maintaining consistency with relations
+  /// handling.
+  private Map<String, String> copyNullableProperties(Map<String, String> properties) {
+    return properties == null ? Map.of() : Map.copyOf(properties);
   }
 
   /// Converts an update DTO to domain model, using the identifier from the path.
@@ -81,11 +87,14 @@ public class EntityDynamicMappingMapper {
   }
 
   /// Converts domain RelationMapping records to output DTOs.
+  /// Handles null safety for relations, relation names, and expressions.
   private List<RelationMappingDtoOut> toRelationMappingDtoOut(List<RelationMapping> relations) {
     if (relations == null || relations.isEmpty()) {
       return List.of();
     }
-    return relations.stream()
-        .map(rm -> new RelationMappingDtoOut(rm.name(), List.copyOf(rm.expressions()))).toList();
+    return relations.stream().filter(rm -> rm != null && rm.name() != null)
+        .map(rm -> new RelationMappingDtoOut(rm.name(),
+            rm.expressions() == null ? List.of() : List.copyOf(rm.expressions())))
+        .toList();
   }
 }
