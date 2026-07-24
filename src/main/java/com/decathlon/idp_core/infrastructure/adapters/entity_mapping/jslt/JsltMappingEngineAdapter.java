@@ -1,9 +1,11 @@
 package com.decathlon.idp_core.infrastructure.adapters.entity_mapping.jslt;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
+import java.util.stream.StreamSupport;
 
 import org.springframework.stereotype.Component;
 
@@ -12,6 +14,7 @@ import com.decathlon.idp_core.domain.model.entity.Entity;
 import com.decathlon.idp_core.domain.model.entity.Property;
 import com.decathlon.idp_core.domain.model.entity.Relation;
 import com.decathlon.idp_core.domain.model.entity_mapping.EntityDynamicMapping;
+import com.decathlon.idp_core.domain.model.entity_mapping.RelationMapping;
 import com.decathlon.idp_core.domain.port.MappingEnginePort;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
@@ -36,31 +39,24 @@ public class JsltMappingEngineAdapter implements MappingEnginePort {
   private final ObjectMapper objectMapper;
   private final JsltExpressionEvaluator jsltEvaluator;
 
-  /// Maps a raw payload to zero, one, or many domain entities.
-  ///
-  /// Flow:
-  /// - Parse payload JSON.
-  /// - Stream candidate items from the payload shape.
-  /// - Apply mapping filter and extract entity fields.
+  /// Maps a raw payload to one domain entity, or returns `null` when the filter
+  /// excludes the payload.
   @Override
-  public List<Entity> mapToEntities(String rawPayload, EntityDynamicMapping mapping) {
+  public Entity mapToEntity(String rawPayload, EntityDynamicMapping mapping) {
     JsonNode rootPayload = parsePayload(rawPayload);
-    return jsltEvaluator.streamPayloadItems(rootPayload)
-        .map(itemNode -> mapItemToEntity(itemNode, rootPayload, mapping))
-        .flatMap(Stream::ofNullable).toList();
+    return mapRootPayloadToEntity(rootPayload, mapping);
   }
 
   /// Applies the filter and maps one payload item to an Entity.
   /// Returns null when the filter evaluates to false/null (skipped item).
-  private Entity mapItemToEntity(JsonNode itemNode, JsonNode rootPayload,
-      EntityDynamicMapping mapping) {
-    JsonNode filterResult = jsltEngine.evaluate(mapping.filter(), itemNode);
+  private Entity mapRootPayloadToEntity(JsonNode rootPayload, EntityDynamicMapping mapping) {
+    JsonNode filterResult = jsltEngine.evaluate(mapping.filter(), rootPayload);
     if (filterResult.isNull() || (filterResult.isBoolean() && !filterResult.asBoolean())) {
       log.debug("Filter expression returned false/null, skipping item for template: {}",
           mapping.entityTemplateIdentifier());
       return null;
     }
-    return extractEntity(itemNode, rootPayload, mapping);
+    return extractEntity(rootPayload, rootPayload, mapping);
   }
 
   /// Extracts one domain Entity from a payload node using mapping expressions.
@@ -76,10 +72,22 @@ public class JsltMappingEngineAdapter implements MappingEnginePort {
 
     List<Property> properties = extractEntityProperties(currentNode, rootPayload,
         mapping.properties());
-    List<Relation> relations = List.of();
+    List<Relation> relations = extractEntityRelations(currentNode, rootPayload,
+        mapping.relations());
 
     return new Entity(null, mapping.entityTemplateIdentifier(), title, identifier, properties,
         relations);
+  }
+
+  /// Extracts all mapped relations for one entity node.
+  /// Null or missing values are excluded from the output list.
+  private List<Relation> extractEntityRelations(JsonNode currentNode, JsonNode rootPayload,
+      List<RelationMapping> relationMappings) {
+    if (relationMappings == null || relationMappings.isEmpty()) {
+      return List.of();
+    }
+    return relationMappings.stream().map(rm -> extractRelation(rm, currentNode, rootPayload))
+        .flatMap(Stream::ofNullable).toList();
   }
 
   /// Extracts all mapped properties for one entity node.
@@ -105,6 +113,62 @@ public class JsltMappingEngineAdapter implements MappingEnginePort {
       return new Property(null, entry.getKey(), value);
     }
     return null;
+  }
+
+  /// Extracts one Relation from a relation mapping entry.
+  /// Evaluates each expression in the list and combines all target identifiers.
+  private Relation extractRelation(RelationMapping relationMapping, JsonNode currentNode,
+      JsonNode rootPayload) {
+    List<String> allTargetIdentifiers = new ArrayList<>();
+
+    if (relationMapping.expressions() != null && !relationMapping.expressions().isEmpty()) {
+      for (String expression : relationMapping.expressions()) {
+        JsonNode valueNode = jsltEvaluator.resolveExpression(expression, currentNode, rootPayload);
+        List<String> targetIdentifiers = extractTargetEntityIdentifiers(valueNode);
+        allTargetIdentifiers.addAll(targetIdentifiers);
+      }
+    }
+
+    if (allTargetIdentifiers.isEmpty()) {
+      return null;
+    }
+
+    return new Relation(null, relationMapping.name(), null, allTargetIdentifiers);
+  }
+
+  /// Extracts relation target identifiers from a scalar or array result node.
+  private List<String> extractTargetEntityIdentifiers(JsonNode valueNode) {
+    if (valueNode == null || valueNode.isNull() || valueNode.isMissingNode()) {
+      return List.of();
+    }
+
+    if (valueNode.isArray()) {
+      return StreamSupport.stream(valueNode.spliterator(), false)
+          .filter(node -> !node.isNull() && !node.isMissingNode())
+          .map(this::toRelationTargetIdentifier).filter(identifier -> !identifier.isBlank())
+          .toList();
+    }
+
+    String targetIdentifier = toRelationTargetIdentifier(valueNode);
+    return targetIdentifier.isBlank() ? List.of() : List.of(targetIdentifier);
+  }
+
+  private String toRelationTargetIdentifier(JsonNode valueNode) {
+    if (valueNode.isTextual()) {
+      return valueNode.asText();
+    }
+
+    // Support relation payload entries provided as objects containing an identifier
+    // field.
+    if (valueNode.isObject()) {
+      JsonNode identifierNode = valueNode.get("identifier");
+      if (identifierNode != null && identifierNode.isTextual()) {
+        return identifierNode.asText();
+      }
+      return "";
+    }
+
+    return valueNode.toString();
   }
 
   /// Returns node text value and fails when node is null or missing.

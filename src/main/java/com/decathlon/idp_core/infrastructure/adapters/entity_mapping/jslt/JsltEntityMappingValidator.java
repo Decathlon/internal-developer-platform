@@ -9,6 +9,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 
 import com.decathlon.idp_core.domain.exception.entity_dynamic_mapping.EntityDynamicMappingConfigurationException;
+import com.decathlon.idp_core.domain.exception.entity_dynamic_mapping.EntityDynamicMappingJsltErrorException;
 import com.decathlon.idp_core.domain.model.entity_mapping.EntityDynamicMapping;
 import com.decathlon.idp_core.domain.port.EntityDynamicMapperValidator;
 import com.decathlon.idp_core.infrastructure.adapters.entity_mapping.engine.ExpressionEngine;
@@ -23,8 +24,6 @@ public class JsltEntityMappingValidator implements EntityDynamicMapperValidator 
       .compile("line\\s+(\\d+),\\s+column\\s+(\\d+)");
   private static final Pattern TOKEN_PATTERN = Pattern.compile("Encountered\\s+\"([^\"]+)\"");
 
-  // Depends on ExpressionEngine (port abstraction), not JsltEngine directly,
-  // so a future JqEngine can be injected without touching this validator.
   private final ExpressionEngine expressionEngine;
 
   @Override
@@ -40,11 +39,16 @@ public class JsltEntityMappingValidator implements EntityDynamicMapperValidator 
           .forEach((key, expr) -> checkExpression(errors, "properties." + key, expr));
     }
     if (mapping.relations() != null && !mapping.relations().isEmpty()) {
-      mapping.relations().forEach((key, expr) -> checkExpression(errors, "relations." + key, expr));
+      mapping.relations().forEach(relation -> {
+        if (relation.expressions() != null && !relation.expressions().isEmpty()) {
+          relation.expressions().forEach(
+              expr -> checkExpression(errors, "relations." + relation.name() + "[]", expr));
+        }
+      });
     }
 
     if (!errors.isEmpty()) {
-      throw new EntityDynamicMappingConfigurationException(String.format(
+      throw new EntityDynamicMappingJsltErrorException(String.format(
           "Validation failed with %d errors: %s", errors.size(), String.join(" | ", errors)));
     }
   }

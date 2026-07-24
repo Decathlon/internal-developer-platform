@@ -54,7 +54,7 @@ class EntityDynamicMappingControllerTest extends AbstractIntegrationTest {
               "port": "8080",
               "programmingLanguage": ".repository.language"
             },
-            "relations": {}
+            "relations": []
           }
         }
         """.formatted(mappingIdentifier);
@@ -79,7 +79,7 @@ class EntityDynamicMappingControllerTest extends AbstractIntegrationTest {
               "port": "8080",
               "programmingLanguage": ".repository.language"
             },
-            "relations": {}
+            "relations": []
           }
         }
         """;
@@ -181,7 +181,7 @@ class EntityDynamicMappingControllerTest extends AbstractIntegrationTest {
                 "port": "8080",
                 "programmingLanguage": ".repository.language"
               },
-              "relations": {}
+              "relations": []
             }
           }
           """;
@@ -207,7 +207,7 @@ class EntityDynamicMappingControllerTest extends AbstractIntegrationTest {
               "identifier": ".repository.full_name",
               "name": ".repository.name",
               "properties": {},
-              "relations": {}
+              "relations": []
             }
           }
           """;
@@ -235,7 +235,7 @@ class EntityDynamicMappingControllerTest extends AbstractIntegrationTest {
               "identifier": ".repository.full_name",
               "name": ".repository.name",
               "properties": {},
-              "relations": {}
+              "relations": []
             }
           }
           """;
@@ -265,7 +265,7 @@ class EntityDynamicMappingControllerTest extends AbstractIntegrationTest {
               "properties": {
                 "applicationName": ".repository.name"
               },
-              "relations": {}
+              "relations": []
             }
           }
           """;
@@ -273,7 +273,8 @@ class EntityDynamicMappingControllerTest extends AbstractIntegrationTest {
       mockMvc
           .perform(MockMvcRequestBuilders.post(MAPPING_PATH).contentType(APPLICATION_JSON)
               .accept(APPLICATION_JSON).with(csrf()).content(payload))
-          .andExpect(status().isBadRequest()).andExpect(jsonPath("$.error").value("BAD_REQUEST"))
+          .andExpect(status().isUnprocessableContent())
+          .andExpect(jsonPath("$.error").value("UNPROCESSABLE_CONTENT"))
           .andExpect(jsonPath("$.error_description").value(containsString("missing required")));
     }
   }
@@ -368,7 +369,7 @@ class EntityDynamicMappingControllerTest extends AbstractIntegrationTest {
               "identifier": ".release.tag_name",
               "name": ".release.name",
               "properties": {},
-              "relations": {}
+              "relations": []
             }
           }
           """;
@@ -435,6 +436,189 @@ class EntityDynamicMappingControllerTest extends AbstractIntegrationTest {
   @Order(6)
   class PostDryRunMappingTests {
 
+    private void createApimApiTemplate() throws Exception {
+      // Step 1: Create the component template (target of apim-api relations).
+      // Must be created first so the apim-api template can reference it.
+      String componentTemplate = """
+          {
+            "identifier": "component",
+            "name": "Component",
+            "description": "Software component template"
+          }
+          """;
+      int componentTemplateStatus = mockMvc
+          .perform(
+              MockMvcRequestBuilders.post("/api/v1/entity-templates").contentType(APPLICATION_JSON)
+                  .accept(APPLICATION_JSON).with(csrf()).content(componentTemplate))
+          .andReturn().getResponse().getStatus();
+      Assertions.assertTrue(componentTemplateStatus == 201 || componentTemplateStatus == 409,
+          "Component template creation should return 201 or 409");
+
+      // Step 2: Create component entities whose identifiers will be extracted by JSLT
+      // from the dry-run payload. These must exist so validateForCreation passes
+      // the target-entity existence check (same rules as a real POST entity
+      // creation).
+      var componentEntities = new String[][]{
+          {"e5d9813e-b16f-4f24-bdf9-376f18f3a9ac", "sportyswap-be"},
+          {"f2e2ab44-5d19-44de-a77a-42ef6aa51676", "user-profile-sync"},
+          {"398cb790-9117-4bfe-830e-bbb0e423c26e", "dkt-return-lookup"}};
+      for (var entity : componentEntities) {
+        String entityPayload = """
+            {"identifier": "%s", "name": "%s", "properties": {}, "relations": []}
+            """.formatted(entity[0], entity[1]);
+        int entityStatus = mockMvc.perform(
+            MockMvcRequestBuilders.post("/api/v1/entities/component").contentType(APPLICATION_JSON)
+                .accept(APPLICATION_JSON).with(csrf()).content(entityPayload))
+            .andReturn().getResponse().getStatus();
+        Assertions.assertTrue(entityStatus == 201 || entityStatus == 409,
+            "Component entity creation should return 201 or 409 for: " + entity[0]);
+      }
+
+      // Step 3: Create the apim-api template with optional relations pointing to
+      // component.
+      String templatePayload = """
+          {
+            "identifier": "apim-api",
+            "name": "APIM API",
+            "description": "APIM API template",
+            "properties_definitions": [
+              {
+                "name": "description",
+                "description": "API description",
+                "type": "STRING",
+                "required": false,
+                "rules": null
+              },
+              {
+                "name": "lifecycle",
+                "description": "API lifecycle state",
+                "type": "STRING",
+                "required": true,
+                "rules": null
+              },
+              {
+                "name": "owner_uuid",
+                "description": "UUID of the API owner",
+                "type": "STRING",
+                "required": false,
+                "rules": null
+              }
+            ],
+            "relations_definitions": [
+              {
+                "name": "apim-api-consumed_by-component",
+                "target_template_identifier": "component",
+                "required": false,
+                "to_many": true
+              },
+              {
+                "name": "apim-api-provided_by-component",
+                "target_template_identifier": "component",
+                "required": false,
+                "to_many": true
+              }
+            ]
+          }
+          """;
+      int statusCode = mockMvc
+          .perform(
+              MockMvcRequestBuilders.post("/api/v1/entity-templates").contentType(APPLICATION_JSON)
+                  .accept(APPLICATION_JSON).with(csrf()).content(templatePayload))
+          .andReturn().getResponse().getStatus();
+      Assertions.assertTrue(statusCode == 201 || statusCode == 409,
+          "APIM API template creation should return 201 or 409");
+    }
+
+    private String buildApimApiDryRunPayload() {
+      return """
+          {
+            "mapping": {
+              "identifier": "apim-api-dry-run",
+              "entity_template_identifier": "apim-api",
+              "filter": ".event.type == \\"API_PUBLISHED\\" and .event.status == \\"SUCCESS\\"",
+              "name": "APIM API dry-run",
+              "description": "Validation APIM API mapping",
+              "entity": {
+                "identifier": ".api.id",
+                "name": ".api.display_name",
+                "properties": {
+                  "lifecycle": ".api.lifecycle.current_state",
+                  "description": ".api.metadata.summary",
+                  "owner_uuid": "if (.api.owner.uuid) .api.owner.uuid else .owner.uuid"
+                },
+                "relations": [
+                  {
+                    "name": "apim-api-consumed_by-component",
+                    "target_entity_identifiers": [".relations.\\\"apim-api-consumed_by-component\\\""]
+                  },
+                  {
+                    "name": "apim-api-provided_by-component",
+                    "target_entity_identifiers": [".relations.\\\"apim-api-provided_by-component\\\""]
+                  }
+                ]
+              }
+            },
+            "payload": {
+              "event": {
+                "id": "evt-2026-07-23-00091",
+                "type": "API_PUBLISHED",
+                "status": "SUCCESS",
+                "occurred_at": "2026-07-23T08:41:12Z",
+                "source": "apim-gateway-prod"
+              },
+              "context": {
+                "tenant": "decathlon",
+                "environment": "prod",
+                "trace_id": "3bff9d6c734a4c6f98d3f3f1e6930f6f"
+              },
+              "api": {
+                "id": "09a90502-bbf0-445d-a905-02bbf0545d95",
+                "display_name": "Sports User full access",
+                "lifecycle": {
+                  "current_state": "PUBLISHED",
+                  "history": [
+                    { "state": "DRAFT", "at": "2026-07-01T10:00:00Z" },
+                    { "state": "PUBLISHED", "at": "2026-07-23T08:40:00Z" }
+                  ]
+                },
+                "metadata": {
+                  "summary": "Legacy APIs to access sport user data",
+                  "tags": ["legacy", "user", "public"]
+                },
+                "owner": {
+                  "uuid": "8a6287ea-7de2-d3db-017d-e2f92d5c0e54",
+                  "name": "domain-sport-user-team",
+                  "email": "team-sport-user@decathlon.com"
+                }
+              },
+              "relations": {
+                "apim-api-consumed_by-component": [
+                  {
+                    "identifier": "e5d9813e-b16f-4f24-bdf9-376f18f3a9ac",
+                    "name": "sportyswap-be"
+                  },
+                  {
+                    "identifier": "f2e2ab44-5d19-44de-a77a-42ef6aa51676",
+                    "name": "user-profile-sync"
+                  }
+                ],
+                "apim-api-provided_by-component": [
+                  {
+                    "identifier": "398cb790-9117-4bfe-830e-bbb0e423c26e",
+                    "name": "dkt-return-lookup"
+                  }
+                ]
+              },
+              "audit": {
+                "publisher": "apim-admin",
+                "change_ticket": "CHG-184920",
+                "raw_payload_version": 3
+              }
+            }
+          }
+          """;
+    }
+
     private String buildDryRunPayload(String mappingIdentifier, String actionFilter) {
       String escapedFilter = actionFilter.replace("\"", "\\\"");
       return """
@@ -456,7 +640,7 @@ class EntityDynamicMappingControllerTest extends AbstractIntegrationTest {
                   "port": "8080",
                   "programmingLanguage": ".repository.language"
                 },
-                "relations": {}
+                "relations": []
               }
             },
             "payload": {
@@ -495,7 +679,7 @@ class EntityDynamicMappingControllerTest extends AbstractIntegrationTest {
                   "port": "8080",
                   "programmingLanguage": ".repository.language"
                 },
-                "relations": {}
+                "relations": []
               }
             },
             "payload": {
@@ -547,6 +731,38 @@ class EntityDynamicMappingControllerTest extends AbstractIntegrationTest {
 
     @Test
     @WithMockUser
+    @DisplayName("Should return 200 and map APIM API payload with relation expressions")
+    void dryRunMapping_200_apim_api_with_relations() throws Exception {
+      createApimApiTemplate();
+
+      mockMvc
+          .perform(
+              MockMvcRequestBuilders.post(MAPPING_PATH + "/dry-run").contentType(APPLICATION_JSON)
+                  .accept(APPLICATION_JSON).with(csrf()).content(buildApimApiDryRunPayload()))
+          .andExpect(status().isOk()).andExpect(content().contentType(APPLICATION_JSON))
+          .andExpect(jsonPath("$.results").isArray())
+          .andExpect(jsonPath("$.results[0].success").value(true))
+          .andExpect(jsonPath("$.results[0].mapping_template_identifier").value("apim-api"))
+          .andExpect(jsonPath("$.results[0].entity.identifier")
+              .value("09a90502-bbf0-445d-a905-02bbf0545d95"))
+          .andExpect(jsonPath("$.results[0].entity.name").value("Sports User full access"))
+          .andExpect(jsonPath("$.results[0].entity.properties.lifecycle").value("PUBLISHED"))
+          .andExpect(jsonPath("$.results[0].entity.properties.description")
+              .value("Legacy APIs to access sport user data"))
+          .andExpect(jsonPath("$.results[0].entity.properties.owner_uuid")
+              .value("8a6287ea-7de2-d3db-017d-e2f92d5c0e54"))
+          .andExpect(jsonPath("$.results[0].entity.relations").isArray())
+          .andExpect(jsonPath("$.results[0].entity.relations[0].name")
+              .value("apim-api-consumed_by-component"))
+          .andExpect(
+              jsonPath("$.results[0].entity.relations[0].target_entity_identifiers").isArray())
+          .andExpect(jsonPath("$.results[0].entity.relations[1].name")
+              .value("apim-api-provided_by-component"))
+          .andExpect(jsonPath("$.results[0].error").doesNotExist());
+    }
+
+    @Test
+    @WithMockUser
     @DisplayName("Should return 200 with skipped result when filter is false")
     void dryRunMapping_200_skipped() throws Exception {
       mockMvc
@@ -580,7 +796,7 @@ class EntityDynamicMappingControllerTest extends AbstractIntegrationTest {
                 "properties": {
                   "applicationName": ".repository.name"
                 },
-                "relations": {}
+                "relations": []
               }
             },
             "payload": {
@@ -639,7 +855,7 @@ class EntityDynamicMappingControllerTest extends AbstractIntegrationTest {
                 "identifier": ".repository.full_name",
                 "name": ".repository.name",
                 "properties": {},
-                "relations": {}
+                "relations": []
               }
             }
           }
@@ -668,7 +884,7 @@ class EntityDynamicMappingControllerTest extends AbstractIntegrationTest {
                 "properties": {
                   "appName": ".repository.name"
                 },
-                "relations": {}
+                "relations": []
               }
             },
             "payload": {
@@ -701,7 +917,7 @@ class EntityDynamicMappingControllerTest extends AbstractIntegrationTest {
                 "properties": {
                   "applicationName": ".repository.name"
                 },
-                "relations": {}
+                "relations": []
               }
             },
             "payload": {
@@ -722,7 +938,58 @@ class EntityDynamicMappingControllerTest extends AbstractIntegrationTest {
 
     @Test
     @WithMockUser
-    @DisplayName("Should return 400 with JSLT error when mapping definition is invalid")
+    @DisplayName("Should return 422 when expression evaluation fails at runtime")
+    void dryRunMapping_422_with_expression_evaluation_failed_exception() throws Exception {
+      String payload = """
+          {
+            "mapping": {
+              "identifier": "runtime-expression-error-test",
+              "entity_template_identifier": "microservice",
+              "filter": ".action == \\\"pushed\\\"",
+              "name": "runtime expression error test",
+              "description": "test",
+              "entity": {
+                "identifier": "error(\\\"forced dry-run failure\\\")",
+                "name": ".repository.name",
+                "properties": {
+                  "applicationName": ".repository.name",
+                  "ownerEmail": ".sender.email",
+                  "environment": "\\\"DEV\\\"",
+                  "version": ".ref",
+                  "port": "8080",
+                  "programmingLanguage": ".repository.language"
+                },
+                "relations": []
+              }
+            },
+            "payload": {
+              "action": "pushed",
+              "repository": {
+                "full_name": "my-org/my-repo",
+                "name": "my-repo",
+                "language": "Java"
+              },
+              "ref": "1.0.0",
+              "sender": {
+                "email": "user@example.com"
+              }
+            }
+          }
+          """;
+
+      mockMvc
+          .perform(MockMvcRequestBuilders.post(MAPPING_PATH + "/dry-run")
+              .contentType(APPLICATION_JSON).accept(APPLICATION_JSON).with(csrf()).content(payload))
+          .andExpect(status().isUnprocessableContent())
+          .andExpect(content().contentType(APPLICATION_JSON))
+          .andExpect(jsonPath("$.error").value("UNPROCESSABLE_CONTENT"))
+          .andExpect(jsonPath("$.error_description")
+              .value(containsString("Expression evaluation failed")));
+    }
+
+    @Test
+    @WithMockUser
+    @DisplayName("Should return 422 when mapping definition is invalid")
     void dryRunMapping_400_with_jslt_error() throws Exception {
       String payload = """
           {
@@ -738,7 +1005,7 @@ class EntityDynamicMappingControllerTest extends AbstractIntegrationTest {
                 "properties": {
                   "applicationName": ".undefined_property"
                 },
-                "relations": {}
+                "relations": []
               }
             },
             "payload": {
@@ -754,9 +1021,59 @@ class EntityDynamicMappingControllerTest extends AbstractIntegrationTest {
       mockMvc
           .perform(MockMvcRequestBuilders.post(MAPPING_PATH + "/dry-run")
               .contentType(APPLICATION_JSON).accept(APPLICATION_JSON).with(csrf()).content(payload))
-          .andExpect(status().isBadRequest()).andExpect(jsonPath("$.error").value("BAD_REQUEST"))
+          .andExpect(status().isUnprocessableContent())
+          .andExpect(jsonPath("$.error").value("UNPROCESSABLE_CONTENT"))
           .andExpect(jsonPath("$.error_description").value(containsString(
               "The mapping is missing required properties: [environment, ownerEmail, port, programmingLanguage, version]")));
+    }
+
+    @Test
+    @WithMockUser
+    @DisplayName("Should return 422 when required ownerEmail cannot be extracted from payload")
+    void dryRunMapping_422_when_owner_email_is_not_extracted() throws Exception {
+      String payload = """
+          {
+            "mapping": {
+              "identifier": "github-commits-dry-run",
+              "entity_template_identifier": "microservice",
+              "filter": ".action == \\\"pushed\\\"",
+              "name": "GitHub multi-commit dry-run",
+              "description": "Generation d'une liste d'entites a partir des commits",
+              "entity": {
+                "identifier": ".repository.full_name",
+                "name": ".repository.name",
+                "properties": {
+                  "applicationName": ".repository.name",
+                  "ownerEmail": ".email",
+                  "port": "\\\"8080\\\"",
+                  "programmingLanguage": ".repository.language",
+                  "version": "\\\"1.0.0\\\"",
+                  "environment": "\\\"DEV\\\""
+                },
+                "relations": []
+              }
+            },
+            "payload": {
+              "action": "pushed",
+              "repository": {
+                "full_name": "my-org/my-repo",
+                "name": "my-repo",
+                "language": "Java"
+              },
+              "ref": "refs/heads/main",
+              "sender": {
+                "email": "user@example.com"
+              }
+            }
+          }
+          """;
+
+      mockMvc
+          .perform(MockMvcRequestBuilders.post(MAPPING_PATH + "/dry-run")
+              .contentType(APPLICATION_JSON).accept(APPLICATION_JSON).with(csrf()).content(payload))
+          .andExpect(status().isUnprocessableContent())
+          .andExpect(jsonPath("$.error").value("UNPROCESSABLE_CONTENT"))
+          .andExpect(jsonPath("$.error_description").value(containsString("ownerEmail")));
     }
   }
 }

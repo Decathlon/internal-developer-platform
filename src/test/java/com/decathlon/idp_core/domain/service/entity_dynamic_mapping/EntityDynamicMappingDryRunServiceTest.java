@@ -12,7 +12,9 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import com.decathlon.idp_core.domain.exception.entity.EntityValidationException;
 import com.decathlon.idp_core.domain.exception.entity_dynamic_mapping.EntityDynamicMappingConfigurationException;
+import com.decathlon.idp_core.domain.exception.entity_dynamic_mapping.EntityDynamicMappingJsltErrorException;
 import com.decathlon.idp_core.domain.model.entity.Entity;
 import com.decathlon.idp_core.domain.model.entity.Property;
 import com.decathlon.idp_core.domain.model.entity_mapping.DryRunResult;
@@ -55,7 +57,7 @@ class EntityDynamicMappingDryRunServiceTest {
     return new EntityDynamicMapping(null, "test-mapping", "microservice", ".action == \"pushed\"",
         "Test Mapping", "Test Description", ".repository.full_name", ".repository.name",
         Map.of("applicationName", ".repository.name", "language", ".repository.language"),
-        Map.of());
+        List.of());
   }
 
   @Nested
@@ -75,10 +77,10 @@ class EntityDynamicMappingDryRunServiceTest {
           "Desc", List.of(), List.of());
 
       doNothing().when(entityDynamicMappingValidationService).validateMapping(mapping);
-      doReturn(List.of(mappedEntity)).when(mappingEnginePort).mapToEntities(payload, mapping);
+      doReturn(mappedEntity).when(mappingEnginePort).mapToEntity(payload, mapping);
       doReturn(dummyTemplate).when(entityTemplateService)
           .getEntityTemplateByIdentifier("microservice");
-      doNothing().when(entityValidationService).validateForCreation(mappedEntity, dummyTemplate);
+      doNothing().when(entityValidationService).validateForDryRun(mappedEntity, dummyTemplate);
 
       DryRunResult result = dryRunService.executeSingleMappingDryRun(mapping, payload);
 
@@ -93,9 +95,9 @@ class EntityDynamicMappingDryRunServiceTest {
       assertNull(entityResult.error());
 
       verify(entityDynamicMappingValidationService).validateMapping(mapping);
-      verify(mappingEnginePort).mapToEntities(payload, mapping);
+      verify(mappingEnginePort).mapToEntity(payload, mapping);
       verify(entityTemplateService).getEntityTemplateByIdentifier("microservice");
-      verify(entityValidationService).validateForCreation(mappedEntity, dummyTemplate);
+      verify(entityValidationService).validateForDryRun(mappedEntity, dummyTemplate);
     }
 
     @Test
@@ -105,13 +107,13 @@ class EntityDynamicMappingDryRunServiceTest {
       String payload = "{\"repository\": {\"full_name\": \"my-org/my-repo\"}, \"action\": \"released\"}";
 
       doNothing().when(entityDynamicMappingValidationService).validateMapping(mapping);
-      doReturn(List.of()).when(mappingEnginePort).mapToEntities(payload, mapping);
+      doReturn(null).when(mappingEnginePort).mapToEntity(payload, mapping);
 
       DryRunResult result = dryRunService.executeSingleMappingDryRun(mapping, payload);
 
       assertNotNull(result);
       assertFalse(result.entityResults().isEmpty());
-      DryRunEntityResult entityResult = result.entityResults().get(0);
+      DryRunEntityResult entityResult = result.entityResults().getFirst();
       assertTrue(entityResult.success());
       assertEquals("microservice", entityResult.mappingTemplateIdentifier());
       assertNull(entityResult.entity());
@@ -120,11 +122,11 @@ class EntityDynamicMappingDryRunServiceTest {
       assertTrue(entityResult.error().message().contains("Filter"));
 
       verify(entityDynamicMappingValidationService).validateMapping(mapping);
-      verify(mappingEnginePort).mapToEntities(payload, mapping);
+      verify(mappingEnginePort).mapToEntity(payload, mapping);
     }
 
     @Test
-    @DisplayName("Should catch JSLT error and return failure result")
+    @DisplayName("Should throw configuration exception when payload parsing or mapping fails")
     void executeSingleMappingDryRun_jslt_error() {
       EntityDynamicMapping mapping = createValidMapping();
       String payload = "{\"invalid\": \"payload\"}";
@@ -132,22 +134,13 @@ class EntityDynamicMappingDryRunServiceTest {
           "Invalid JSLT expression");
 
       doNothing().when(entityDynamicMappingValidationService).validateMapping(mapping);
-      doThrow(jsltException).when(mappingEnginePort).mapToEntities(payload, mapping);
+      doThrow(jsltException).when(mappingEnginePort).mapToEntity(payload, mapping);
 
-      DryRunResult result = dryRunService.executeSingleMappingDryRun(mapping, payload);
-
-      assertNotNull(result);
-      assertFalse(result.entityResults().isEmpty());
-      DryRunEntityResult entityResult = result.entityResults().get(0);
-      assertFalse(entityResult.success());
-      assertEquals("microservice", entityResult.mappingTemplateIdentifier());
-      assertNull(entityResult.entity());
-      assertNotNull(entityResult.error());
-      assertEquals(ErrorType.JSLT_ERROR, entityResult.error().type());
-      assertTrue(entityResult.error().message().contains("Invalid JSLT expression"));
+      assertThrows(EntityDynamicMappingConfigurationException.class,
+          () -> dryRunService.executeSingleMappingDryRun(mapping, payload));
 
       verify(entityDynamicMappingValidationService).validateMapping(mapping);
-      verify(mappingEnginePort).mapToEntities(payload, mapping);
+      verify(mappingEnginePort).mapToEntity(payload, mapping);
     }
 
     @Test
@@ -158,13 +151,13 @@ class EntityDynamicMappingDryRunServiceTest {
       RuntimeException unexpectedException = new RuntimeException("Unexpected error occurred");
 
       doNothing().when(entityDynamicMappingValidationService).validateMapping(mapping);
-      doThrow(unexpectedException).when(mappingEnginePort).mapToEntities(payload, mapping);
+      doThrow(unexpectedException).when(mappingEnginePort).mapToEntity(payload, mapping);
 
       DryRunResult result = dryRunService.executeSingleMappingDryRun(mapping, payload);
 
       assertNotNull(result);
       assertFalse(result.entityResults().isEmpty());
-      DryRunEntityResult entityResult = result.entityResults().get(0);
+      DryRunEntityResult entityResult = result.entityResults().getFirst();
       assertFalse(entityResult.success());
       assertEquals("microservice", entityResult.mappingTemplateIdentifier());
       assertNull(entityResult.entity());
@@ -173,7 +166,7 @@ class EntityDynamicMappingDryRunServiceTest {
       assertTrue(entityResult.error().message().contains("Unexpected transformation error"));
 
       verify(entityDynamicMappingValidationService).validateMapping(mapping);
-      verify(mappingEnginePort).mapToEntities(payload, mapping);
+      verify(mappingEnginePort).mapToEntity(payload, mapping);
     }
   }
 
@@ -191,25 +184,25 @@ class EntityDynamicMappingDryRunServiceTest {
       EntityTemplate dummyTemplate = new EntityTemplate(null, "microservice", "Microservice",
           "Desc", List.of(), List.of());
 
-      doReturn(List.of(mappedEntity)).when(mappingEnginePort).mapToEntities(payload, mapping);
+      doReturn(mappedEntity).when(mappingEnginePort).mapToEntity(payload, mapping);
       doReturn(dummyTemplate).when(entityTemplateService)
           .getEntityTemplateByIdentifier("microservice");
-      doNothing().when(entityValidationService).validateForCreation(mappedEntity, dummyTemplate);
+      doNothing().when(entityValidationService).validateForDryRun(mappedEntity, dummyTemplate);
 
       List<DryRunEntityResult> results = dryRunService.processMapping(mapping, payload);
 
       assertNotNull(results);
       assertEquals(1, results.size());
-      DryRunEntityResult result = results.get(0);
+      DryRunEntityResult result = results.getFirst();
       assertTrue(result.success());
       assertEquals("microservice", result.mappingTemplateIdentifier());
       assertNotNull(result.entity());
       assertEquals("test/repo", result.entity().identifier());
       assertNull(result.error());
 
-      verify(mappingEnginePort).mapToEntities(payload, mapping);
+      verify(mappingEnginePort).mapToEntity(payload, mapping);
       verify(entityTemplateService).getEntityTemplateByIdentifier("microservice");
-      verify(entityValidationService).validateForCreation(mappedEntity, dummyTemplate);
+      verify(entityValidationService).validateForDryRun(mappedEntity, dummyTemplate);
     }
 
     @Test
@@ -218,45 +211,60 @@ class EntityDynamicMappingDryRunServiceTest {
       EntityDynamicMapping mapping = createValidMapping();
       String payload = "{\"action\": \"released\"}";
 
-      doReturn(List.of()).when(mappingEnginePort).mapToEntities(payload, mapping);
+      doReturn(null).when(mappingEnginePort).mapToEntity(payload, mapping);
 
       List<DryRunEntityResult> results = dryRunService.processMapping(mapping, payload);
 
       assertNotNull(results);
       assertEquals(1, results.size());
-      DryRunEntityResult result = results.get(0);
+      DryRunEntityResult result = results.getFirst();
       assertTrue(result.success());
       assertEquals("microservice", result.mappingTemplateIdentifier());
       assertNull(result.entity());
       assertNotNull(result.error());
       assertEquals(ErrorType.SKIPPED, result.error().type());
 
-      verify(mappingEnginePort).mapToEntities(payload, mapping);
+      verify(mappingEnginePort).mapToEntity(payload, mapping);
     }
 
     @Test
-    @DisplayName("Should handle JSLT exception")
+    @DisplayName("Should throw configuration exception when mapping engine fails")
     void processMapping_jslt_error() {
       EntityDynamicMapping mapping = createValidMapping();
       String payload = "{}";
       EntityDynamicMappingConfigurationException exception = new EntityDynamicMappingConfigurationException(
           "JSLT syntax error");
 
-      doThrow(exception).when(mappingEnginePort).mapToEntities(payload, mapping);
+      doThrow(exception).when(mappingEnginePort).mapToEntity(payload, mapping);
 
-      List<DryRunEntityResult> results = dryRunService.processMapping(mapping, payload);
+      assertThrows(EntityDynamicMappingConfigurationException.class,
+          () -> dryRunService.processMapping(mapping, payload));
 
-      assertNotNull(results);
-      assertEquals(1, results.size());
-      DryRunEntityResult result = results.get(0);
-      assertFalse(result.success());
-      assertEquals("microservice", result.mappingTemplateIdentifier());
-      assertNull(result.entity());
-      assertNotNull(result.error());
-      assertEquals(ErrorType.JSLT_ERROR, result.error().type());
-      assertTrue(result.error().message().contains("JSLT syntax error"));
+      verify(mappingEnginePort).mapToEntity(payload, mapping);
+    }
 
-      verify(mappingEnginePort).mapToEntities(payload, mapping);
+    @Test
+    @DisplayName("Should throw dedicated mapping exception when entity validation fails")
+    void processMapping_entity_validation_error() {
+      EntityDynamicMapping mapping = createValidMapping();
+      String payload = "{\"repository\": {\"full_name\": \"test/repo\", \"name\": \"repo\"}, \"action\": \"pushed\"}";
+      Entity mappedEntity = new Entity(null, "microservice", "repo", "test/repo",
+          List.of(new Property(null, "applicationName", "repo")), List.of());
+      EntityTemplate dummyTemplate = new EntityTemplate(null, "microservice", "Microservice",
+          "Desc", List.of(), List.of());
+
+      doReturn(mappedEntity).when(mappingEnginePort).mapToEntity(payload, mapping);
+      doReturn(dummyTemplate).when(entityTemplateService)
+          .getEntityTemplateByIdentifier("microservice");
+      doThrow(new EntityValidationException(List.of("invalid relation")))
+          .when(entityValidationService).validateForDryRun(any(Entity.class), eq(dummyTemplate));
+
+      assertThrows(EntityDynamicMappingJsltErrorException.class,
+          () -> dryRunService.processMapping(mapping, payload));
+
+      verify(mappingEnginePort).mapToEntity(payload, mapping);
+      verify(entityTemplateService).getEntityTemplateByIdentifier("microservice");
+      verify(entityValidationService).validateForDryRun(any(Entity.class), eq(dummyTemplate));
     }
 
     @Test
@@ -266,13 +274,13 @@ class EntityDynamicMappingDryRunServiceTest {
       String payload = "{}";
       IllegalStateException exception = new IllegalStateException("Unexpected state");
 
-      doThrow(exception).when(mappingEnginePort).mapToEntities(payload, mapping);
+      doThrow(exception).when(mappingEnginePort).mapToEntity(payload, mapping);
 
       List<DryRunEntityResult> results = dryRunService.processMapping(mapping, payload);
 
       assertNotNull(results);
       assertEquals(1, results.size());
-      DryRunEntityResult result = results.get(0);
+      DryRunEntityResult result = results.getFirst();
       assertFalse(result.success());
       assertEquals("microservice", result.mappingTemplateIdentifier());
       assertNull(result.entity());
@@ -280,7 +288,7 @@ class EntityDynamicMappingDryRunServiceTest {
       assertEquals(ErrorType.JSLT_ERROR, result.error().type());
       assertTrue(result.error().message().contains("Unexpected transformation error"));
 
-      verify(mappingEnginePort).mapToEntities(payload, mapping);
+      verify(mappingEnginePort).mapToEntity(payload, mapping);
     }
   }
 }

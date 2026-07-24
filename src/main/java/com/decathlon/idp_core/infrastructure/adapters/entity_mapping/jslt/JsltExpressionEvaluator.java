@@ -64,26 +64,6 @@ public class JsltExpressionEvaluator {
     }
   }
 
-  /// Streams payload items according to payload shape.
-  ///
-  /// Cases:
-  /// - Array payload: stream all elements.
-  /// - Object with nested array: stream first non-empty array field.
-  /// - Single object: stream the object itself.
-  public Stream<JsonNode> streamPayloadItems(JsonNode rootPayload) {
-    if (rootPayload.isArray()) {
-      return StreamSupport.stream(rootPayload.spliterator(), false);
-    }
-
-    if (rootPayload.isObject()) {
-      return findFirstArray(rootPayload)
-          .map(arrayNode -> StreamSupport.stream(arrayNode.spliterator(), false))
-          .orElseGet(() -> Stream.of(rootPayload));
-    }
-
-    return Stream.empty();
-  }
-
   /// Finds the first non-empty array field in an object payload.
   public Optional<JsonNode> findFirstArray(JsonNode rootObject) {
     return StreamSupport

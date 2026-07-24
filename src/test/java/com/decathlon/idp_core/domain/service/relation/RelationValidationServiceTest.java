@@ -134,6 +134,20 @@ class RelationValidationServiceTest {
 
       verify(violations).add(RELATION_TARGET_ENTITY_NOT_FOUND, "owned-by", "missing-team");
     }
+
+    @Test
+    @DisplayName("Should skip target entity existence validation during dry-run")
+    void shouldSkipTargetEntityExistenceValidationDuringDryRun() {
+      var definition = definition("owned-by", true, false);
+      var template = template("system-template", List.of(definition));
+      var relation = relation("owned-by", List.of("missing-team"));
+      var violations = mock(Violations.class);
+
+      service.validateRelationsAgainstTemplateForDryRun(template, List.of(relation), violations);
+
+      verifyNoInteractions(entityRepository);
+      verifyNoInteractions(violations);
+    }
   }
 
   @Nested

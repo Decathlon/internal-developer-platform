@@ -1,6 +1,5 @@
 package com.decathlon.idp_core.domain.port;
 
-import java.util.List;
 import java.util.Map;
 
 import com.decathlon.idp_core.domain.model.entity.Entity;
@@ -12,13 +11,7 @@ import com.decathlon.idp_core.domain.model.entity_mapping.EntityDynamicMapping;
 /// allowing the domain layer to remain engine-agnostic.
 public interface MappingEnginePort {
 
-  /**
-   * Evaluates mapping against raw payload. Supports both single entity mapping
-   * and multi-entity list generation.
-   *
-   * @return List of mapped entities, or empty list if filtered out / skipped.
-   */
-  List<Entity> mapToEntities(String rawPayload, EntityDynamicMapping mapping);
+  Entity mapToEntity(String rawPayload, EntityDynamicMapping mapping);
 
   /// Extracts values from a payload using the mapping's property expressions.
   ///

@@ -152,7 +152,7 @@ class WebhookConnectorValidationServiceTest {
     WebhookSecurity security = new WebhookSecurity(WebhookSecurityType.HMAC_SHA256,
         Map.of("header_name", "X-Hub-Signature-256", "secret_alias", "MY_SECRET"));
     EntityDynamicMapping mapping = new EntityDynamicMapping(UUID.randomUUID(), "my-mapping",
-        "web-service", ".filter", "name", "desc", ".id", ".name", Map.of(), Map.of());
+        "web-service", ".filter", "name", "desc", ".id", ".name", Map.of(), List.of());
     return new WebhookConnector(UUID.randomUUID(), identifier, title, "desc", true,
         List.of(mapping), security);
   }

@@ -8,6 +8,7 @@ import org.springframework.stereotype.Component;
 
 import com.decathlon.idp_core.domain.model.entity.Entity;
 import com.decathlon.idp_core.domain.model.entity.Property;
+import com.decathlon.idp_core.domain.model.entity.Relation;
 import com.decathlon.idp_core.domain.model.entity_mapping.DryRunResult;
 import com.decathlon.idp_core.domain.model.entity_mapping.DryRunResult.DryRunEntityResult;
 import com.decathlon.idp_core.domain.model.entity_mapping.DryRunResult.DryRunError;
@@ -15,6 +16,7 @@ import com.decathlon.idp_core.infrastructure.adapters.api.dto.out.entity_dynamic
 import com.decathlon.idp_core.infrastructure.adapters.api.dto.out.entity_dynamic_mapping.EntityDynamicMappingDryRunDtoOut.DryRunEntityDto;
 import com.decathlon.idp_core.infrastructure.adapters.api.dto.out.entity_dynamic_mapping.EntityDynamicMappingDryRunDtoOut.DryRunEntityResultDto;
 import com.decathlon.idp_core.infrastructure.adapters.api.dto.out.entity_dynamic_mapping.EntityDynamicMappingDryRunDtoOut.DryRunErrorDto;
+import com.decathlon.idp_core.infrastructure.adapters.api.dto.out.entity_dynamic_mapping.EntityDynamicMappingDryRunDtoOut.DryRunRelationDto;
 
 /// Mapper converting a domain [DryRunResult] to the entity dynamic mapping
 /// dry-run response DTO.
@@ -40,8 +42,17 @@ public class EntityDynamicMappingDryRunDtoOutMapper {
         properties.put(prop.name(), prop.value());
       }
     }
+
+    List<DryRunRelationDto> relations = entity.relations() != null
+        ? entity.relations().stream().map(this::toRelationDto).toList()
+        : List.of();
+
     return new DryRunEntityDto(entity.templateIdentifier(), entity.name(), entity.identifier(),
-        properties);
+        properties, relations);
+  }
+
+  private DryRunRelationDto toRelationDto(Relation relation) {
+    return new DryRunRelationDto(relation.name(), relation.targetEntityIdentifiers());
   }
 
   private DryRunErrorDto toErrorDto(DryRunError error) {

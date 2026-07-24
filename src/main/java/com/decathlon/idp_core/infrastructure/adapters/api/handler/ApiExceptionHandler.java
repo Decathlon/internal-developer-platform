@@ -308,29 +308,48 @@ public class ApiExceptionHandler {
   /// Handles JSLT expression evaluation failures (both primary and fallback
   /// attempts failed).
   ///
-  /// **HTTP mapping:** Maps to HTTP 400 Bad Request because the expression or
-  /// payload
-  /// is misconfigured. Clients should fix the mapping definition or payload
-  /// structure.
+  /// **HTTP mapping:** Maps to HTTP 422 Unprocessable Entity because the request
+  /// body is syntactically valid, but the mapping expression cannot be evaluated.
   @ExceptionHandler(ExpressionEvaluationFailedException.class)
   public ResponseEntity<ErrorResponse> handleExpressionEvaluationFailedException(
       ExpressionEvaluationFailedException ex) {
     log.warn("Expression evaluation failed for '{}': {}", ex.getExpression(), ex.getReason());
-    return createErrorResponse(HttpStatus.BAD_REQUEST, ex.getMessage());
+    return createErrorResponse(HttpStatus.UNPROCESSABLE_CONTENT, ex.getMessage());
+  }
+
+  @ExceptionHandler(EntityDynamicMappingJsltErrorException.class)
+  public ResponseEntity<ErrorResponse> handleEntityDynamicMappingJsltErrorException(
+      EntityDynamicMappingJsltErrorException ex) {
+    log.warn("JSLT error in entity dynamic mapping: {}", ex.getMessage());
+    return createErrorResponse(HttpStatus.UNPROCESSABLE_CONTENT, ex.getMessage());
   }
 
   @ExceptionHandler(PropertyNameNotFoundEntityTemplatePropertiesException.class)
   public ResponseEntity<ErrorResponse> handlePropertyNameNotFoundEntityTemplatePropertiesException(
       PropertyNameNotFoundEntityTemplatePropertiesException ex) {
     log.warn("Webhook mapping references unknown property: {}", ex.getMessage());
-    return createErrorResponse(HttpStatus.BAD_REQUEST, ex.getMessage());
+    return createErrorResponse(HttpStatus.UNPROCESSABLE_CONTENT, ex.getMessage());
   }
 
   @ExceptionHandler(RelationNameNotFoundEntityTemplateRelationsException.class)
   public ResponseEntity<ErrorResponse> handleRelationNameNotFoundEntityTemplateRelationsException(
       RelationNameNotFoundEntityTemplateRelationsException ex) {
     log.warn("Webhook mapping references unknown relation: {}", ex.getMessage());
-    return createErrorResponse(HttpStatus.BAD_REQUEST, ex.getMessage());
+    return createErrorResponse(HttpStatus.UNPROCESSABLE_CONTENT, ex.getMessage());
+  }
+
+  @ExceptionHandler(EntityDynamicMappingHasNoPropertiesException.class)
+  public ResponseEntity<ErrorResponse> handleEntityDynamicMappingHasNoPropertiesException(
+      EntityDynamicMappingHasNoPropertiesException ex) {
+    log.warn("Dynamic mapping is missing required properties: {}", ex.getMessage());
+    return createErrorResponse(HttpStatus.UNPROCESSABLE_CONTENT, ex.getMessage());
+  }
+
+  @ExceptionHandler(EntityDynamicMappingHasNoRelationsException.class)
+  public ResponseEntity<ErrorResponse> handleEntityDynamicMappingHasNoRelationsException(
+      EntityDynamicMappingHasNoRelationsException ex) {
+    log.warn("Dynamic mapping is missing required relations: {}", ex.getMessage());
+    return createErrorResponse(HttpStatus.UNPROCESSABLE_CONTENT, ex.getMessage());
   }
 
   @ExceptionHandler(WebhookSecurityConfigurationException.class)
@@ -589,19 +608,6 @@ public class ApiExceptionHandler {
     log.warn("Webhook connector name conflict: {}", ex.getMessage());
     ErrorResponse errorResponse = new ErrorResponse(HttpStatus.CONFLICT.name(), ex.getMessage());
     return ResponseEntity.status(HttpStatus.CONFLICT).body(errorResponse);
-  }
-  @ExceptionHandler(EntityDynamicMappingHasNoPropertiesException.class)
-  public ResponseEntity<ErrorResponse> handleEntityDynamicMappingHasNoPropertiesException(
-      EntityDynamicMappingHasNoPropertiesException ex) {
-    log.warn("Entity dynamic mapping has no properties: {}", ex.getMessage());
-    return createErrorResponse(HttpStatus.BAD_REQUEST, ex.getMessage());
-  }
-
-  @ExceptionHandler(EntityDynamicMappingHasNoRelationsException.class)
-  public ResponseEntity<ErrorResponse> handleEntityDynamicMappingHasNoRelationsException(
-      EntityDynamicMappingHasNoRelationsException ex) {
-    log.warn("Entity dynamic mapping has no relations: {}", ex.getMessage());
-    return createErrorResponse(HttpStatus.BAD_REQUEST, ex.getMessage());
   }
 
   private static ResponseEntity<ErrorResponse> createErrorResponse(HttpStatus httpStatus,

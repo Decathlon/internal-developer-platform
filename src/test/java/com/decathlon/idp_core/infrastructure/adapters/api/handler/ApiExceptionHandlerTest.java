@@ -194,10 +194,10 @@ class ApiExceptionHandlerTest {
             .handlePropertyNameNotFoundEntityTemplatePropertiesException(exception);
 
         assertNotNull(response);
-        assertEquals(HttpStatus.BAD_REQUEST, response.getStatusCode());
+        assertEquals(HttpStatus.UNPROCESSABLE_CONTENT, response.getStatusCode());
         ErrorResponse body = response.getBody();
         assertNotNull(body);
-        assertEquals(HttpStatus.BAD_REQUEST.name(), body.getError());
+        assertEquals(HttpStatus.UNPROCESSABLE_CONTENT.name(), body.getError());
         assertEquals(details, body.getErrorDescription());
       }
 
@@ -215,10 +215,10 @@ class ApiExceptionHandlerTest {
 
         // Then
         assertNotNull(response);
-        assertEquals(HttpStatus.BAD_REQUEST, response.getStatusCode());
+        assertEquals(HttpStatus.UNPROCESSABLE_CONTENT, response.getStatusCode());
         ErrorResponse body = response.getBody();
         assertNotNull(body);
-        assertEquals(HttpStatus.BAD_REQUEST.name(), body.getError());
+        assertEquals(HttpStatus.UNPROCESSABLE_CONTENT.name(), body.getError());
         assertEquals(details, body.getErrorDescription());
       }
 
@@ -233,10 +233,10 @@ class ApiExceptionHandlerTest {
             .handleEntityDynamicMappingHasNoPropertiesException(exception);
 
         assertNotNull(response);
-        assertEquals(HttpStatus.BAD_REQUEST, response.getStatusCode());
+        assertEquals(HttpStatus.UNPROCESSABLE_CONTENT, response.getStatusCode());
         ErrorResponse body = response.getBody();
         assertNotNull(body);
-        assertEquals(HttpStatus.BAD_REQUEST.name(), body.getError());
+        assertEquals(HttpStatus.UNPROCESSABLE_CONTENT.name(), body.getError());
         assertEquals(details, body.getErrorDescription());
       }
 

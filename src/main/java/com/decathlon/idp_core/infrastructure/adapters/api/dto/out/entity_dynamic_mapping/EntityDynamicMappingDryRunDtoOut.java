@@ -3,6 +3,7 @@ package com.decathlon.idp_core.infrastructure.adapters.api.dto.out.entity_dynami
 import java.util.List;
 import java.util.Map;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.PropertyNamingStrategies.SnakeCaseStrategy;
 import com.fasterxml.jackson.databind.annotation.JsonNaming;
 
@@ -27,7 +28,13 @@ public record EntityDynamicMappingDryRunDtoOut(
       @Schema(description = "Target template identifier") String templateIdentifier,
       @Schema(description = "Entity name") String name,
       @Schema(description = "Entity identifier") String identifier,
-      @Schema(description = "Extracted properties") Map<String, String> properties) {
+      @Schema(description = "Extracted properties") Map<String, String> properties,
+      @Schema(description = "Extracted relations") List<DryRunRelationDto> relations) {
+  }
+
+  @JsonNaming(SnakeCaseStrategy.class)
+  public record DryRunRelationDto(@Schema(description = "Relation name") String name,
+      @Schema(description = "Target entity identifiers extracted from payload") @JsonProperty("target_entity_identifiers") List<String> targetEntityIdentifiers) {
   }
 
   @JsonNaming(SnakeCaseStrategy.class)
