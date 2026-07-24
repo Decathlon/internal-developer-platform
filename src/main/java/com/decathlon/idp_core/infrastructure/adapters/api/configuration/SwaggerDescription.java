@@ -223,7 +223,7 @@ public class SwaggerDescription {
   // --- Entity Graph (flat nodes & edges) descriptions ---
   public static final String PARAM_DEPTH_DESCRIPTION = "Maximum traversal depth for relationship resolution. Clamped between 1 and 6.";
   public static final String RELATIONS_DEPTH_DESCRIPTION = "Maximum depth to traverse when collecting entity relations. Defaults to 1. Valid range: 1-6.";
-  public static final String RELATIONS_TO_DISPLAY_DESCRIPTION = "Comma-separated list of relation names to include in the response. When omitted, all relations are included.";
+  public static final String RELATIONS_TO_DISPLAY_DESCRIPTION = "Comma-separated list of relation names to filter the response. Only relations that form a connected chain from the root entity are included. Isolated relations (not reachable from the root) are excluded even if listed. When omitted, all reachable relations are included.";
   public static final String ENDPOINT_GET_ENTITY_GRAPH_FLAT_SUMMARY = "Get entity relationship graph as flat nodes and edges";
   public static final String ENDPOINT_GET_ENTITY_GRAPH_FLAT_DESCRIPTION = "Retrieves the entity relationship graph as a flat nodes-and-edges structure, suitable for frontend visualization tools such as React Flow, Vis.js, and Cytoscape.";
   public static final String RESPONSE_ENTITY_GRAPH_FLAT_SUCCESS = "Flat entity graph successfully retrieved";
