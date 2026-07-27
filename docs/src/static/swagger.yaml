@@ -166,7 +166,8 @@ paths:
               schema:
                 $ref: "#/components/schemas/EntityDynamicMappingDtoOut"
         "400":
-          description: Bad Request
+          description: Entity template identifier is mandatory or target entity template
+            not found
           content:
             "*/*":
               schema:
@@ -178,7 +179,7 @@ paths:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
         "409":
-          description: Conflict
+          description: Target entity template not found or identifier already exists
           content:
             "*/*":
               schema:
@@ -606,7 +607,14 @@ paths:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
         "404":
-          description: Entity dynamic mapping not found with the provided identifier
+          description: Entity template not found with the provided identifier
+          content:
+            "*/*":
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "422":
+          description: Mapping validation, template validation or expression evaluation
+            error
           content:
             "*/*":
               schema:
@@ -1720,19 +1728,19 @@ components:
           $ref: "#/components/schemas/PageableObject"
         last:
           type: boolean
-        totalElements:
-          type: integer
-          format: int64
         totalPages:
           type: integer
           format: int32
-        numberOfElements:
+        totalElements:
           type: integer
-          format: int32
+          format: int64
         first:
           type: boolean
         sort:
           $ref: "#/components/schemas/SortObject"
+        numberOfElements:
+          type: integer
+          format: int32
         size:
           type: integer
           format: int32
@@ -1744,8 +1752,6 @@ components:
     PageableObject:
       type: object
       properties:
-        sort:
-          $ref: "#/components/schemas/SortObject"
         paged:
           type: boolean
         pageNumber:
@@ -1756,6 +1762,8 @@ components:
           format: int32
         unpaged:
           type: boolean
+        sort:
+          $ref: "#/components/schemas/SortObject"
         offset:
           type: integer
           format: int64
@@ -1780,19 +1788,19 @@ components:
           $ref: "#/components/schemas/PageableObject"
         last:
           type: boolean
-        totalElements:
-          type: integer
-          format: int64
         totalPages:
           type: integer
           format: int32
-        numberOfElements:
+        totalElements:
           type: integer
-          format: int32
+          format: int64
         first:
           type: boolean
         sort:
           $ref: "#/components/schemas/SortObject"
+        numberOfElements:
+          type: integer
+          format: int32
         size:
           type: integer
           format: int32
@@ -1813,19 +1821,19 @@ components:
           $ref: "#/components/schemas/PageableObject"
         last:
           type: boolean
-        totalElements:
-          type: integer
-          format: int64
         totalPages:
           type: integer
           format: int32
-        numberOfElements:
+        totalElements:
           type: integer
-          format: int32
+          format: int64
         first:
           type: boolean
         sort:
           $ref: "#/components/schemas/SortObject"
+        numberOfElements:
+          type: integer
+          format: int32
         size:
           type: integer
           format: int32
@@ -1846,19 +1854,19 @@ components:
           $ref: "#/components/schemas/PageableObject"
         last:
           type: boolean
-        totalElements:
-          type: integer
-          format: int64
         totalPages:
           type: integer
           format: int32
-        numberOfElements:
+        totalElements:
           type: integer
-          format: int32
+          format: int64
         first:
           type: boolean
         sort:
           $ref: "#/components/schemas/SortObject"
+        numberOfElements:
+          type: integer
+          format: int32
         size:
           type: integer
           format: int32

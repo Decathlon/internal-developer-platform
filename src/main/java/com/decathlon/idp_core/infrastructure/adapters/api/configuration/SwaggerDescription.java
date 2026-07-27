@@ -34,6 +34,7 @@ public class SwaggerDescription {
   public static final String CONFLICT_CODE = "409";
   public static final String SERVICE_UNAVAILABLE_CODE = "503";
   public static final String INTERNAL_SERVER_ERROR_CODE = "500";
+  public static final String UNPROCESSABLE_CONTENT_CODE = "422";
 
   /// Entity Template API endpoint constants
   public static final String ENDPOINT_GET_TEMPLATES_SUMMARY = "Get all templates";
@@ -145,6 +146,10 @@ public class SwaggerDescription {
   public static final String RESPONSE_ENTITY_DYNAMIC_MAPPING_NOT_FOUND_IDENTIFIER = "Entity dynamic mapping not found with the provided identifier";
   public static final String RESPONSE_ENTITY_DYNAMIC_MAPPING_FOUND = "Entity dynamic mapping found";
   public static final String RESPONSE_ENTITY_DYNAMIC_MAPPING_UPDATED = "Entity dynamic mapping updated successfully";
+  public static final String RESPONSE_ENTITY_DYNAMIC_MAPPING_UPDATE_INVALID_TEMPLATE = "Entity template identifier is mandatory or target entity template not found";
+  public static final String RESPONSE_ENTITY_DYNAMIC_MAPPING_UPDATE_CONFLICT = "Target entity template not found or identifier already exists";
+  public static final String RESPONSE_ENTITY_DYNAMIC_MAPPING_DRY_RUN_VALIDATION_ERROR = "Mapping validation, template validation or expression evaluation error";
+  public static final String RESPONSE_ENTITY_DYNAMIC_MAPPING_DRY_RUN_TEMPLATE_NOT_FOUND = "Entity template not found with the provided identifier";
 
   // --- Schema (class) descriptions ---
   public static final String SCHEMA_ENTITY_TEMPLATE_CREATE_IN = "Input DTO for creating an entity template";

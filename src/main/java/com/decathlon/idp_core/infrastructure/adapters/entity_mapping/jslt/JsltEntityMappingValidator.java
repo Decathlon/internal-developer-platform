@@ -53,18 +53,15 @@ public class JsltEntityMappingValidator implements EntityDynamicMapperValidator 
     }
   }
 
-  /**
-   * Validates a single expression field via
-   * {@link ExpressionEngine#validateExpression(String)}. Catches engine-specific
-   * exceptions and formats them into user-friendly messages.
-   *
-   * @param errors
-   *          accumulator for validation errors
-   * @param fieldName
-   *          human-readable field name for error messages
-   * @param expression
-   *          the expression to validate
-   */
+  /// Validates a single expression field via
+  /// `ExpressionEngine#validateExpression`.
+  ///
+  /// Catches engine-specific exceptions and formats them into user-friendly
+  /// messages.
+  ///
+  /// @param errors accumulator for validation errors
+  /// @param fieldName human-readable field name for error messages
+  /// @param expression the expression to validate
   private void checkExpression(List<String> errors, String fieldName, String expression) {
     if (!StringUtils.hasText(expression)) {
       errors

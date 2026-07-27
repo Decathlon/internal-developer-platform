@@ -61,12 +61,12 @@ class EntityDynamicMappingDryRunServiceTest {
   }
 
   @Nested
-  @DisplayName("executeSingleMappingDryRun Tests")
+  @DisplayName("executeDryRun Tests")
   class ExecuteSingleMappingDryRunTests {
 
     @Test
     @DisplayName("Should execute successful dry-run and return mapped entity")
-    void executeSingleMappingDryRun_success() {
+    void executeDryRun_success() {
       EntityDynamicMapping mapping = createValidMapping();
       String payload = "{\"repository\": {\"full_name\": \"my-org/my-repo\", \"name\": \"my-repo\", \"language\": \"Java\"}, \"action\": \"pushed\"}";
       Entity mappedEntity = new Entity(null, "microservice", "my-repo", "my-org/my-repo",
@@ -82,11 +82,11 @@ class EntityDynamicMappingDryRunServiceTest {
           .getEntityTemplateByIdentifier("microservice");
       doNothing().when(entityValidationService).validateForDryRun(mappedEntity, dummyTemplate);
 
-      DryRunResult result = dryRunService.executeSingleMappingDryRun(mapping, payload);
+      DryRunResult result = dryRunService.executeDryRun(mapping, payload);
 
       assertNotNull(result);
       assertFalse(result.entityResults().isEmpty());
-      DryRunEntityResult entityResult = result.entityResults().get(0);
+      DryRunEntityResult entityResult = result.entityResults().getFirst();
       assertTrue(entityResult.success());
       assertEquals("microservice", entityResult.mappingTemplateIdentifier());
       assertNotNull(entityResult.entity());
@@ -102,14 +102,14 @@ class EntityDynamicMappingDryRunServiceTest {
 
     @Test
     @DisplayName("Should return skipped result when mapping filter returns empty list or null")
-    void executeSingleMappingDryRun_skipped() {
+    void executeDryRun_skipped() {
       EntityDynamicMapping mapping = createValidMapping();
       String payload = "{\"repository\": {\"full_name\": \"my-org/my-repo\"}, \"action\": \"released\"}";
 
       doNothing().when(entityDynamicMappingValidationService).validateMapping(mapping);
       doReturn(null).when(mappingEnginePort).mapToEntity(payload, mapping);
 
-      DryRunResult result = dryRunService.executeSingleMappingDryRun(mapping, payload);
+      DryRunResult result = dryRunService.executeDryRun(mapping, payload);
 
       assertNotNull(result);
       assertFalse(result.entityResults().isEmpty());
@@ -127,7 +127,7 @@ class EntityDynamicMappingDryRunServiceTest {
 
     @Test
     @DisplayName("Should throw configuration exception when payload parsing or mapping fails")
-    void executeSingleMappingDryRun_jslt_error() {
+    void executeDryRun_jslt_error() {
       EntityDynamicMapping mapping = createValidMapping();
       String payload = "{\"invalid\": \"payload\"}";
       EntityDynamicMappingConfigurationException jsltException = new EntityDynamicMappingConfigurationException(
@@ -137,7 +137,7 @@ class EntityDynamicMappingDryRunServiceTest {
       doThrow(jsltException).when(mappingEnginePort).mapToEntity(payload, mapping);
 
       assertThrows(EntityDynamicMappingConfigurationException.class,
-          () -> dryRunService.executeSingleMappingDryRun(mapping, payload));
+          () -> dryRunService.executeDryRun(mapping, payload));
 
       verify(entityDynamicMappingValidationService).validateMapping(mapping);
       verify(mappingEnginePort).mapToEntity(payload, mapping);
@@ -145,7 +145,7 @@ class EntityDynamicMappingDryRunServiceTest {
 
     @Test
     @DisplayName("Should catch unexpected exception and return failure result")
-    void executeSingleMappingDryRun_unexpected_error() {
+    void executeDryRun_unexpected_error() {
       EntityDynamicMapping mapping = createValidMapping();
       String payload = "{\"test\": \"data\"}";
       RuntimeException unexpectedException = new RuntimeException("Unexpected error occurred");
@@ -153,7 +153,7 @@ class EntityDynamicMappingDryRunServiceTest {
       doNothing().when(entityDynamicMappingValidationService).validateMapping(mapping);
       doThrow(unexpectedException).when(mappingEnginePort).mapToEntity(payload, mapping);
 
-      DryRunResult result = dryRunService.executeSingleMappingDryRun(mapping, payload);
+      DryRunResult result = dryRunService.executeDryRun(mapping, payload);
 
       assertNotNull(result);
       assertFalse(result.entityResults().isEmpty());

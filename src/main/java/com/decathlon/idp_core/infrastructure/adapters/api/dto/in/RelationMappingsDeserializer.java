@@ -102,10 +102,10 @@ public class RelationMappingsDeserializer extends JsonDeserializer<List<Relation
     return parseExpressions(expressionsNode, parser, relationName);
   }
 
-  /**
-   * Dispatches expression parsing to the appropriate handler based on the JSON
-   * node type. Accepts either a single string or an array of strings.
-   */
+  /// Dispatches expression parsing to the appropriate handler based on the JSON
+  /// node type.
+  ///
+  /// Accepts either a single string or an array of strings.
   private List<String> parseExpressions(JsonNode expressionsNode, JsonParser parser,
       String relationName) throws IOException {
     if (expressionsNode.isTextual()) {
@@ -118,9 +118,7 @@ public class RelationMappingsDeserializer extends JsonDeserializer<List<Relation
         MESSAGE_RELATION_TARGETS_INVALID_TYPE.formatted(relationName));
   }
 
-  /**
-   * Parses a single string expression, rejecting blank values.
-   */
+  /// Parses a single string expression, rejecting blank values.
   private List<String> parseSingleExpression(JsonNode expressionsNode, JsonParser parser,
       String relationName) throws IOException {
     String expr = expressionsNode.asText();
@@ -131,10 +129,8 @@ public class RelationMappingsDeserializer extends JsonDeserializer<List<Relation
     return List.of(expr);
   }
 
-  /**
-   * Parses an array of string expressions, rejecting blank items and empty
-   * arrays.
-   */
+  /// Parses an array of string expressions, rejecting blank items and empty
+  /// arrays.
   private List<String> parseArrayExpressions(JsonNode expressionsNode, JsonParser parser,
       String relationName) throws IOException {
     List<String> expressions = new ArrayList<>();

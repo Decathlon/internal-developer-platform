@@ -32,22 +32,19 @@ public class EntityDynamicMappingDryRunService {
   private final EntityDynamicMappingValidationService entityDynamicMappingValidationService;
   private final EntityValidationService entityValidationService;
 
-  /**
-   * Executes dry-run validation for one mapping definition and payload sample.
-   * Returns success, skipped, and failure entries as a {@link DryRunResult}.
-   */
+  /// Executes dry-run validation for one mapping definition and payload sample.
+  ///
+  /// Returns success, skipped, and failure entries as a `DryRunResult`.
   @Transactional(readOnly = true)
-  public DryRunResult executeSingleMappingDryRun(EntityDynamicMapping mapping, String rawPayload) {
+  public DryRunResult executeDryRun(EntityDynamicMapping mapping, String rawPayload) {
     entityDynamicMappingValidationService.validateMapping(mapping);
 
     List<DryRunEntityResult> results = processMapping(mapping, rawPayload);
     return new DryRunResult(results);
   }
 
-  /**
-   * Processes one mapping against a payload and returns per-entity dry-run
-   * results.
-   */
+  /// Processes one mapping against a payload and returns per-entity dry-run
+  /// results.
   public List<DryRunEntityResult> processMapping(EntityDynamicMapping mapping, String rawPayload) {
     String templateIdentifier = mapping.entityTemplateIdentifier();
 
@@ -64,10 +61,8 @@ public class EntityDynamicMappingDryRunService {
     }
   }
 
-  /**
-   * Maps payload to one entity, then validates that mapped entity against the
-   * target template.
-   */
+  /// Maps payload to one entity, then validates that mapped entity against the
+  /// target template.
   private List<DryRunEntityResult> mapAndValidateEntity(EntityDynamicMapping mapping,
       String rawPayload, String templateIdentifier) {
     Entity mappedEntity = mappingEnginePort.mapToEntity(rawPayload, mapping);
@@ -83,10 +78,8 @@ public class EntityDynamicMappingDryRunService {
     return List.of(validateAndBuildResult(enrichedEntity, template, templateIdentifier));
   }
 
-  /**
-   * Validates one mapped entity and builds the corresponding dry-run result
-   * entry.
-   */
+  /// Validates one mapped entity and builds the corresponding dry-run result
+  /// entry.
   private DryRunEntityResult validateAndBuildResult(Entity entity, EntityTemplate template,
       String templateIdentifier) {
     try {
@@ -98,11 +91,11 @@ public class EntityDynamicMappingDryRunService {
     }
   }
 
-  /**
-   * Enriches extracted relations with target template identifiers coming from the
-   * template definition. Leaves unknown relation names unchanged so downstream
-   * validation can report them explicitly.
-   */
+  /// Enriches extracted relations with target template identifiers coming from
+  /// the template definition.
+  ///
+  /// Leaves unknown relation names unchanged so downstream validation can report
+  /// them explicitly.
   private Entity enrichRelationsWithTargetTemplates(Entity entity, EntityTemplate template) {
     List<RelationDefinition> relationDefinitions = template.relationsDefinitions() != null
         ? template.relationsDefinitions()
