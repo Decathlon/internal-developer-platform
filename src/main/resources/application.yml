@@ -164,5 +164,9 @@ management:
       enabled: false
     ssl:
       # SSL certificate/chain info is internal infrastructure detail and
-      # must not be exposed via actuator.
-      enabled: false
+     # must not be exposed via actuator.
+     enabled: false
+camel:
+ component:
+   platform-http:
+     engine: "servlet"
