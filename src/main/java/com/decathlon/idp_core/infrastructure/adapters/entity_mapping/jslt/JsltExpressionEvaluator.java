@@ -1,7 +1,6 @@
 package com.decathlon.idp_core.infrastructure.adapters.entity_mapping.jslt;
 
 import java.util.Optional;
-import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
 
 import org.springframework.stereotype.Component;
@@ -64,12 +63,4 @@ public class JsltExpressionEvaluator {
     }
   }
 
-  /// Finds the first non-empty array field in an object payload.
-  public Optional<JsonNode> findFirstArray(JsonNode rootObject) {
-    return StreamSupport
-        .stream(java.util.Spliterators.spliteratorUnknownSize(rootObject.properties().iterator(),
-            java.util.Spliterator.ORDERED), false)
-        .map(java.util.Map.Entry::getValue).filter(JsonNode::isArray)
-        .filter(node -> !node.isEmpty()).findFirst();
-  }
 }

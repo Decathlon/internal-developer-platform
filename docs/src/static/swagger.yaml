@@ -1517,8 +1517,6 @@ components:
           $ref: "#/components/schemas/EntityDynamicMappingCreateDtoIn"
         payload:
           description: Sample JSON payload to test against the webhook mapping configuration
-        payload_not_blank_when_string:
-          type: boolean
       required:
         - mapping
         - payload

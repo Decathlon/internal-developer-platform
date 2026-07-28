@@ -40,7 +40,11 @@ public class JsltEntityMappingValidator implements EntityDynamicMapperValidator 
     }
     if (mapping.relations() != null && !mapping.relations().isEmpty()) {
       mapping.relations().forEach(relation -> {
-        if (relation.expressions() != null && !relation.expressions().isEmpty()) {
+        if (relation.expressions() == null || relation.expressions().isEmpty()) {
+          errors.add(String.format(
+              "Field 'relations.%s[]' is required and must contain at least one expression.",
+              relation.name()));
+        } else {
           relation.expressions().forEach(
               expr -> checkExpression(errors, "relations." + relation.name() + "[]", expr));
         }

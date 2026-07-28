@@ -8,6 +8,7 @@ import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
 
 import org.springframework.stereotype.Component;
+import org.springframework.util.StringUtils;
 
 import com.decathlon.idp_core.domain.exception.entity_dynamic_mapping.EntityDynamicMappingConfigurationException;
 import com.decathlon.idp_core.domain.model.entity.Entity;
@@ -49,7 +50,12 @@ public class JsltMappingEngineAdapter implements MappingEnginePort {
 
   /// Applies the filter and maps one payload item to an Entity.
   /// Returns null when the filter evaluates to false/null (skipped item).
+  /// A missing/blank filter is treated as always-true (process all items).
   private Entity mapRootPayloadToEntity(JsonNode rootPayload, EntityDynamicMapping mapping) {
+    if (!StringUtils.hasText(mapping.filter())) {
+      return extractEntity(rootPayload, rootPayload, mapping);
+    }
+
     JsonNode filterResult = jsltEngine.evaluate(mapping.filter(), rootPayload);
     if (filterResult.isNull() || (filterResult.isBoolean() && !filterResult.asBoolean())) {
       log.debug("Filter expression returned false/null, skipping item for template: {}",
@@ -171,13 +177,27 @@ public class JsltMappingEngineAdapter implements MappingEnginePort {
     return valueNode.toString();
   }
 
-  /// Returns node text value and fails when node is null or missing.
+  /// Returns node text value and fails when node is null, missing, non-textual,
+  /// or blank.
+  ///
+  /// `JsonNode.asText()` returns `""` for object/array/number nodes, which would
+  /// silently produce invalid identifiers or names. We fail fast here so that
+  /// consumers always receive a meaningful error rather than an empty string.
   private String requireStringValue(JsonNode node, String fieldName) {
     if (node == null || node.isNull() || node.isMissingNode()) {
       throw new EntityDynamicMappingConfigurationException(
           "Expression for '" + fieldName + "' returned null");
     }
-    return node.asText();
+    if (!node.isTextual()) {
+      throw new EntityDynamicMappingConfigurationException(
+          "Expression for '" + fieldName + "' returned a non-string value: " + node.getNodeType());
+    }
+    String value = node.asText();
+    if (value.isBlank()) {
+      throw new EntityDynamicMappingConfigurationException(
+          "Expression for '" + fieldName + "' returned a blank string");
+    }
+    return value;
   }
 
   /// Extracts mapped properties from a payload using property expressions.

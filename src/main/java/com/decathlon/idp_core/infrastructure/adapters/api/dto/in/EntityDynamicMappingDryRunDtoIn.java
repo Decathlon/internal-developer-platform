@@ -8,6 +8,7 @@ import jakarta.validation.Valid;
 import jakarta.validation.constraints.AssertTrue;
 import jakarta.validation.constraints.NotNull;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.databind.PropertyNamingStrategies.SnakeCaseStrategy;
 import com.fasterxml.jackson.databind.annotation.JsonNaming;
 
@@ -29,6 +30,11 @@ public record EntityDynamicMappingDryRunDtoIn(
   /// Keeps syntactic validation equivalent to previous String-based contract.
   ///
   /// Null is handled by `@NotNull`; this guard prevents blank String payloads.
+  /// `@JsonIgnore` prevents this bean-style getter from leaking into the
+  /// generated
+  /// OpenAPI schema as a `payload_not_blank_when_string` boolean property.
+  @Schema(hidden = true)
+  @JsonIgnore
   @SuppressWarnings("unused")
   @AssertTrue(message = PAYLOAD_DRY_RUN_MANDATORY)
   public boolean isPayloadNotBlankWhenString() {

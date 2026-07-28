@@ -29,7 +29,7 @@ public class EntityDynamicMappingMapper {
     return new EntityDynamicMapping(null, // id (assigned by persistence layer)
         mapping.identifier(), // identifier
         fields.entityTemplateIdentifier(), // entityTemplateIdentifier
-        fields.filter(), // filter
+        defaultFilter(fields.filter()), // filter
         fields.name(), // name
         fields.description(), fields.entity().identifier(), // entityIdentifier
         fields.entity().name(), // entityName
@@ -68,6 +68,11 @@ public class EntityDynamicMappingMapper {
         fields.entity().name(), // entityName
         safeMap(fields.entity().properties()), // properties
         toRelationMappings(fields.entity().relations())); // relations
+  }
+
+  /// For create/dry-run payloads, a missing filter means "process everything".
+  private String defaultFilter(String filter) {
+    return (filter == null || filter.isBlank()) ? "true" : filter;
   }
 
   private Map<String, String> safeMap(Map<String, String> input) {

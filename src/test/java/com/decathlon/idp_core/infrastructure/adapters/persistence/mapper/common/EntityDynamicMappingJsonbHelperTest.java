@@ -22,7 +22,7 @@ class EntityDynamicMappingJsonbHelperTest {
         [
           {
             "name": "owner",
-            "expressions": [".sender.login"]
+            "expression": ".sender.login"
           }
         ]
         """;

@@ -45,16 +45,19 @@ public class EntityDynamicMappingDryRunService {
 
   /// Processes one mapping against a payload and returns per-entity dry-run
   /// results.
+  ///
+  /// `ExpressionEvaluationFailedException` is re-thrown as-is so that the
+  /// `ApiExceptionHandler` dedicated handler can log expression/reason context
+  /// with full diagnostic detail (HTTP 422). Wrapping it into
+  /// `EntityDynamicMappingJsltErrorException` would lose that information.
   public List<DryRunEntityResult> processMapping(EntityDynamicMapping mapping, String rawPayload) {
     String templateIdentifier = mapping.entityTemplateIdentifier();
 
     try {
       return mapAndValidateEntity(mapping, rawPayload, templateIdentifier);
-    } catch (EntityDynamicMappingJsltErrorException
-        | EntityDynamicMappingConfigurationException e) {
+    } catch (EntityDynamicMappingJsltErrorException | EntityDynamicMappingConfigurationException
+        | ExpressionEvaluationFailedException e) {
       throw e;
-    } catch (ExpressionEvaluationFailedException e) {
-      throw new EntityDynamicMappingJsltErrorException(e.getMessage());
     } catch (Exception e) {
       return List.of(DryRunEntityResult.failure(templateIdentifier, ErrorType.JSLT_ERROR,
           "Unexpected transformation error: " + e.getMessage()));
