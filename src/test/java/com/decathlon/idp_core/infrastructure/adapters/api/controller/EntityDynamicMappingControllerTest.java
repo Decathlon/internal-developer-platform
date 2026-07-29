@@ -1461,5 +1461,79 @@ class EntityDynamicMappingControllerTest extends AbstractIntegrationTest {
           .andExpect(jsonPath("$.results[0].entity.properties.programmingLanguage").value("Java"))
           .andExpect(jsonPath("$.results[0].error").doesNotExist());
     }
+
+    @Test
+    @WithMockUser
+    @DisplayName("Should return 422 when dry-run relation is not defined in template without relations")
+    void dryRunMapping_422_relation_not_defined() throws Exception {
+      // Create a template without any relation definitions
+      String templatePayload = """
+          {
+            "identifier": "component-template-no-relations",
+            "name": "Component Template No Relations",
+            "description": "Template without relation definitions",
+            "properties_definitions": [
+              {
+                "name": "applicationName",
+                "description": "Application name",
+                "type": "STRING",
+                "required": true,
+                "rules": null
+              }
+            ],
+            "relations_definitions": []
+          }
+          """;
+
+      mockMvc
+          .perform(
+              MockMvcRequestBuilders.post("/api/v1/entity-templates").contentType(APPLICATION_JSON)
+                  .accept(APPLICATION_JSON).with(csrf()).content(templatePayload))
+          .andExpect(status().isCreated());
+
+      // Execute dry-run with a relation that is NOT defined in the template
+      String dryRunPayload = """
+          {
+            "mapping": {
+              "identifier": "component-dry-run-undefined-relation",
+              "entity_template_identifier": "component-template-no-relations",
+              "filter": ".action == \\"deployed\\"",
+              "name": "component mapping with undefined relation",
+              "description": "test undefined relation in dry-run",
+              "entity": {
+                "identifier": ".component.identifier",
+                "name": ".component.name",
+                "properties": {
+                  "applicationName": ".component.name"
+                },
+                "relations": [
+                  {
+                    "name": "undefined-api-link",
+                    "target_entity_identifiers": [".component.api_id"]
+                  }
+                ]
+              }
+            },
+            "payload": {
+              "action": "deployed",
+              "component": {
+                "identifier": "comp-123",
+                "name": "my-component",
+                "api_id": "api-456"
+              }
+            }
+          }
+          """;
+
+      mockMvc
+          .perform(
+              MockMvcRequestBuilders.post(MAPPING_PATH + "/dry-run").contentType(APPLICATION_JSON)
+                  .accept(APPLICATION_JSON).with(csrf()).content(dryRunPayload))
+          .andExpect(status().isUnprocessableContent())
+          .andExpect(jsonPath("$.error").value("UNPROCESSABLE_CONTENT"))
+          .andExpect(
+              jsonPath("$.error_description").value(containsString("is not defined in template")))
+          .andExpect(jsonPath("$.error_description").value(containsString("undefined-api-link")));
+    }
   }
 }

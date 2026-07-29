@@ -64,6 +64,8 @@ public class EntityDynamicMappingJsonbHelper {
   /// Backward compatibility:
   /// - Legacy entries using singular `expression` are normalized to
   /// `expressions: [<expression>]` before deserialization.
+  /// - Legacy pre-migration object format `{"relation":"<expression>"}` is
+  /// also supported.
   ///
   /// Handles edge cases:
   /// - Java `null` or empty/blank string → returns empty list.
@@ -81,6 +83,15 @@ public class EntityDynamicMappingJsonbHelper {
       if (relationsNode == null || relationsNode.isNull()) {
         return List.of();
       }
+
+      if (relationsNode.isObject()) {
+        Map<String, String> legacyMap = OBJECT_MAPPER.convertValue(relationsNode,
+            new TypeReference<>() {
+            });
+        return legacyMap.entrySet().stream()
+            .map(entry -> new RelationMapping(entry.getKey(), List.of(entry.getValue()))).toList();
+      }
+
       if (!relationsNode.isArray()) {
         throw new IllegalArgumentException("Invalid JSON relation list configuration");
       }

@@ -23,13 +23,4 @@ public class ExpressionEvaluationFailedException extends RuntimeException {
     this.reason = reason;
   }
 
-  /// Creates a new exception with expression and failure reason (no cause chain).
-  ///
-  /// @param expression the JSLT expression that failed to evaluate
-  /// @param reason human-readable description of why evaluation failed
-  public ExpressionEvaluationFailedException(String expression, String reason) {
-    super(String.format("Expression evaluation failed for '%s': %s", expression, reason));
-    this.expression = expression;
-    this.reason = reason;
-  }
 }

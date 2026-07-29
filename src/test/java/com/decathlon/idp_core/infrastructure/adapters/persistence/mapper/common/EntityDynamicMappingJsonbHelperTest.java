@@ -52,4 +52,28 @@ class EntityDynamicMappingJsonbHelperTest {
     assertThat(relations.getFirst().name()).isEqualTo("owner");
     assertThat(relations.getFirst().expressions()).containsExactly(".sender.login", ".sender.name");
   }
+
+  @Test
+  @DisplayName("Should return empty list for JSON null literal")
+  void shouldReturnEmptyListForJsonNullLiteral() {
+    var relations = helper.toRelationList("null");
+
+    assertThat(relations).isEmpty();
+  }
+
+  @Test
+  @DisplayName("Should deserialize legacy object map format")
+  void shouldDeserializeLegacyObjectMapFormat() {
+    String json = """
+        {
+          "owner": ".sender.login"
+        }
+        """;
+
+    var relations = helper.toRelationList(json);
+
+    assertThat(relations).hasSize(1);
+    assertThat(relations.getFirst().name()).isEqualTo("owner");
+    assertThat(relations.getFirst().expressions()).containsExactly(".sender.login");
+  }
 }
