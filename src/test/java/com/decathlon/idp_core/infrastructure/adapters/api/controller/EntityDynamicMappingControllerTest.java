@@ -295,8 +295,8 @@ class EntityDynamicMappingControllerTest extends AbstractIntegrationTest {
 
     @Test
     @WithMockUser
-    @DisplayName("Should return 400 when entity properties is null")
-    void postMapping_400_entity_properties_null() throws Exception {
+    @DisplayName("Should return 422 when entity properties is null and required properties are missing")
+    void postMapping_422_entity_properties_null() throws Exception {
       var payload = """
           {
             "identifier": "test-mapping-properties-null",
@@ -316,15 +316,15 @@ class EntityDynamicMappingControllerTest extends AbstractIntegrationTest {
       mockMvc
           .perform(MockMvcRequestBuilders.post(MAPPING_PATH).contentType(APPLICATION_JSON)
               .accept(APPLICATION_JSON).with(csrf()).content(payload))
-          .andExpect(status().isBadRequest()).andExpect(jsonPath("$.error").value("BAD_REQUEST"))
-          .andExpect(jsonPath("$.error_description")
-              .value(containsString(ENTITY_DYNAMIC_MAPPING_ENTITY_PROPERTIES_MANDATORY)));
+          .andExpect(status().isUnprocessableContent())
+          .andExpect(jsonPath("$.error").value("UNPROCESSABLE_CONTENT"))
+          .andExpect(jsonPath("$.error_description").value(containsString("missing required")));
     }
 
     @Test
     @WithMockUser
-    @DisplayName("Should return 400 when entity relations is null")
-    void postMapping_400_entity_relations_null() throws Exception {
+    @DisplayName("Should create mapping when entity relations is null")
+    void postMapping_201_entity_relations_null() throws Exception {
       var payload = """
           {
             "identifier": "test-mapping-relations-null",
@@ -351,9 +351,10 @@ class EntityDynamicMappingControllerTest extends AbstractIntegrationTest {
       mockMvc
           .perform(MockMvcRequestBuilders.post(MAPPING_PATH).contentType(APPLICATION_JSON)
               .accept(APPLICATION_JSON).with(csrf()).content(payload))
-          .andExpect(status().isBadRequest()).andExpect(jsonPath("$.error").value("BAD_REQUEST"))
-          .andExpect(jsonPath("$.error_description")
-              .value(containsString(ENTITY_DYNAMIC_MAPPING_ENTITY_RELATIONS_MANDATORY)));
+          .andExpect(status().isCreated())
+          .andExpect(jsonPath("$.identifier").value("test-mapping-relations-null"))
+          .andExpect(jsonPath("$.entity.relations").isArray())
+          .andExpect(jsonPath("$.entity.relations").isEmpty());
     }
 
     @Test
@@ -915,7 +916,7 @@ class EntityDynamicMappingControllerTest extends AbstractIntegrationTest {
 
     @Test
     @WithMockUser
-    @DisplayName("Should return 200 and map APIM API payload with relation expressions")
+    @DisplayName("Should return 200 and map APIM API payload with relation targetIdentifiersExpressions")
     void dryRunMapping_200_apim_api_with_relations() throws Exception {
       createApimApiTemplate();
 

@@ -16,7 +16,7 @@ class EntityDynamicMappingJsonbHelperTest {
   private final EntityDynamicMappingJsonbHelper helper = new EntityDynamicMappingJsonbHelper();
 
   @Test
-  @DisplayName("Should deserialize legacy V6.4 'expression' field as expressions list")
+  @DisplayName("Should deserialize legacy V6.4 'expression' field as targetIdentifiersExpressions list")
   void shouldDeserializeLegacyExpressionField() {
     String json = """
         [
@@ -31,17 +31,18 @@ class EntityDynamicMappingJsonbHelperTest {
 
     assertThat(relations).hasSize(1);
     assertThat(relations.getFirst().name()).isEqualTo("owner");
-    assertThat(relations.getFirst().expressions()).containsExactly(".sender.login");
+    assertThat(relations.getFirst().targetIdentifiersExpressions())
+        .containsExactly(".sender.login");
   }
 
   @Test
-  @DisplayName("Should deserialize current 'expressions' array field")
+  @DisplayName("Should deserialize current 'targetIdentifiersExpressions' array field")
   void shouldDeserializeExpressionsArrayField() {
     String json = """
         [
           {
             "name": "owner",
-            "expressions": [".sender.login", ".sender.name"]
+            "targetIdentifiersExpressions": [".sender.login", ".sender.name"]
           }
         ]
         """;
@@ -50,7 +51,8 @@ class EntityDynamicMappingJsonbHelperTest {
 
     assertThat(relations).hasSize(1);
     assertThat(relations.getFirst().name()).isEqualTo("owner");
-    assertThat(relations.getFirst().expressions()).containsExactly(".sender.login", ".sender.name");
+    assertThat(relations.getFirst().targetIdentifiersExpressions()).containsExactly(".sender.login",
+        ".sender.name");
   }
 
   @Test
@@ -74,6 +76,7 @@ class EntityDynamicMappingJsonbHelperTest {
 
     assertThat(relations).hasSize(1);
     assertThat(relations.getFirst().name()).isEqualTo("owner");
-    assertThat(relations.getFirst().expressions()).containsExactly(".sender.login");
+    assertThat(relations.getFirst().targetIdentifiersExpressions())
+        .containsExactly(".sender.login");
   }
 }

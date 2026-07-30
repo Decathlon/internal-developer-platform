@@ -28,7 +28,7 @@ import lombok.extern.slf4j.Slf4j;
 ///
 /// Responsibilities:
 /// - Parse raw JSON payloads.
-/// - Apply mapping filter and projection expressions.
+/// - Apply mapping filter and projection targetIdentifiersExpressions.
 /// - Build domain Entity instances from evaluated values.
 /// - Delegate expression resolution and payload traversal to JsltExpressionEvaluator.
 @Slf4j
@@ -65,7 +65,8 @@ public class JsltMappingEngineAdapter implements MappingEnginePort {
     return extractEntity(rootPayload, rootPayload, mapping);
   }
 
-  /// Extracts one domain Entity from a payload node using mapping expressions.
+  /// Extracts one domain Entity from a payload node using mapping
+  /// targetIdentifiersExpressions.
   private Entity extractEntity(JsonNode currentNode, JsonNode rootPayload,
       EntityDynamicMapping mapping) {
     String identifier = requireStringValue(
@@ -127,8 +128,9 @@ public class JsltMappingEngineAdapter implements MappingEnginePort {
       JsonNode rootPayload) {
     List<String> allTargetIdentifiers = new ArrayList<>();
 
-    if (relationMapping.expressions() != null && !relationMapping.expressions().isEmpty()) {
-      for (String expression : relationMapping.expressions()) {
+    if (relationMapping.targetIdentifiersExpressions() != null
+        && !relationMapping.targetIdentifiersExpressions().isEmpty()) {
+      for (String expression : relationMapping.targetIdentifiersExpressions()) {
         JsonNode valueNode = jsltEvaluator.resolveExpression(expression, currentNode, rootPayload);
         List<String> targetIdentifiers = extractTargetEntityIdentifiers(valueNode);
         allTargetIdentifiers.addAll(targetIdentifiers);
@@ -200,7 +202,8 @@ public class JsltMappingEngineAdapter implements MappingEnginePort {
     return value;
   }
 
-  /// Extracts mapped properties from a payload using property expressions.
+  /// Extracts mapped properties from a payload using property
+  /// targetIdentifiersExpressions.
   /// Reuses extractEntityProperties and excludes null/missing values.
   @Override
   public Map<String, Object> extractProperties(String rawPayload,

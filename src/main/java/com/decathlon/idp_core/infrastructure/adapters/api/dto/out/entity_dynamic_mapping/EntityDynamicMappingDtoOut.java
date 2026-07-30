@@ -12,7 +12,6 @@ public record EntityDynamicMappingDtoOut(String identifier, String entityTemplat
 
     public InboundWebhookEntityMappingDtoOut {
       properties = properties != null ? Map.copyOf(properties) : null;
-      // Relations are stored as an ordered list; null is normalized to empty list.
       relations = relations != null ? List.copyOf(relations) : List.of();
     }
   }

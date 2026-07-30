@@ -12,7 +12,6 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
-import com.decathlon.idp_core.domain.exception.entity.EntityValidationException;
 import com.decathlon.idp_core.domain.exception.entity_dynamic_mapping.EntityDynamicMappingConfigurationException;
 import com.decathlon.idp_core.domain.exception.entity_dynamic_mapping.EntityDynamicMappingJsltErrorException;
 import com.decathlon.idp_core.domain.model.entity.Entity;
@@ -23,8 +22,10 @@ import com.decathlon.idp_core.domain.model.entity_mapping.EntityDynamicMapping;
 import com.decathlon.idp_core.domain.model.entity_template.EntityTemplate;
 import com.decathlon.idp_core.domain.model.enums.ErrorType;
 import com.decathlon.idp_core.domain.port.MappingEnginePort;
-import com.decathlon.idp_core.domain.service.entity.EntityValidationService;
+import com.decathlon.idp_core.domain.service.entity.Violations;
 import com.decathlon.idp_core.domain.service.entity_template.EntityTemplateService;
+import com.decathlon.idp_core.domain.service.property.PropertyValidationService;
+import com.decathlon.idp_core.domain.service.relation.RelationValidationService;
 
 /// Unit tests for EntityDynamicMappingDryRunService.
 ///
@@ -45,7 +46,10 @@ class EntityDynamicMappingDryRunServiceTest {
   private EntityTemplateService entityTemplateService;
 
   @Mock
-  private EntityValidationService entityValidationService;
+  private PropertyValidationService propertyValidationService;
+
+  @Mock
+  private RelationValidationService relationValidationService;
 
   @Mock
   private EntityDynamicMappingValidationService entityDynamicMappingValidationService;
@@ -80,7 +84,6 @@ class EntityDynamicMappingDryRunServiceTest {
       doReturn(mappedEntity).when(mappingEnginePort).mapToEntity(payload, mapping);
       doReturn(dummyTemplate).when(entityTemplateService)
           .getEntityTemplateByIdentifier("microservice");
-      doNothing().when(entityValidationService).validateForDryRun(mappedEntity, dummyTemplate);
 
       DryRunResult result = dryRunService.executeDryRun(mapping, payload);
 
@@ -97,7 +100,10 @@ class EntityDynamicMappingDryRunServiceTest {
       verify(entityDynamicMappingValidationService).validateMapping(mapping);
       verify(mappingEnginePort).mapToEntity(payload, mapping);
       verify(entityTemplateService).getEntityTemplateByIdentifier("microservice");
-      verify(entityValidationService).validateForDryRun(mappedEntity, dummyTemplate);
+      verify(propertyValidationService).validatePropertiesAgainstTemplate(eq(dummyTemplate),
+          anyList(), anyMap(), any(Violations.class));
+      verify(relationValidationService).validateRelationsAgainstTemplateForDryRun(eq(dummyTemplate),
+          anyList(), any(Violations.class));
     }
 
     @Test
@@ -187,7 +193,6 @@ class EntityDynamicMappingDryRunServiceTest {
       doReturn(mappedEntity).when(mappingEnginePort).mapToEntity(payload, mapping);
       doReturn(dummyTemplate).when(entityTemplateService)
           .getEntityTemplateByIdentifier("microservice");
-      doNothing().when(entityValidationService).validateForDryRun(mappedEntity, dummyTemplate);
 
       List<DryRunEntityResult> results = dryRunService.processMapping(mapping, payload);
 
@@ -202,7 +207,10 @@ class EntityDynamicMappingDryRunServiceTest {
 
       verify(mappingEnginePort).mapToEntity(payload, mapping);
       verify(entityTemplateService).getEntityTemplateByIdentifier("microservice");
-      verify(entityValidationService).validateForDryRun(mappedEntity, dummyTemplate);
+      verify(propertyValidationService).validatePropertiesAgainstTemplate(eq(dummyTemplate),
+          anyList(), anyMap(), any(Violations.class));
+      verify(relationValidationService).validateRelationsAgainstTemplateForDryRun(eq(dummyTemplate),
+          anyList(), any(Violations.class));
     }
 
     @Test
@@ -256,15 +264,21 @@ class EntityDynamicMappingDryRunServiceTest {
       doReturn(mappedEntity).when(mappingEnginePort).mapToEntity(payload, mapping);
       doReturn(dummyTemplate).when(entityTemplateService)
           .getEntityTemplateByIdentifier("microservice");
-      doThrow(new EntityValidationException(List.of("invalid relation")))
-          .when(entityValidationService).validateForDryRun(any(Entity.class), eq(dummyTemplate));
+      doAnswer(invocation -> {
+        invocation.getArgument(2, Violations.class).add("%s", "invalid relation");
+        return null;
+      }).when(relationValidationService).validateRelationsAgainstTemplateForDryRun(
+          eq(dummyTemplate), anyList(), any(Violations.class));
 
       assertThrows(EntityDynamicMappingJsltErrorException.class,
           () -> dryRunService.processMapping(mapping, payload));
 
       verify(mappingEnginePort).mapToEntity(payload, mapping);
       verify(entityTemplateService).getEntityTemplateByIdentifier("microservice");
-      verify(entityValidationService).validateForDryRun(any(Entity.class), eq(dummyTemplate));
+      verify(propertyValidationService).validatePropertiesAgainstTemplate(eq(dummyTemplate),
+          anyList(), anyMap(), any(Violations.class));
+      verify(relationValidationService).validateRelationsAgainstTemplateForDryRun(eq(dummyTemplate),
+          anyList(), any(Violations.class));
     }
 
     @Test

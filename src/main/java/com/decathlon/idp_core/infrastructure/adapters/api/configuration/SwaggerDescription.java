@@ -260,4 +260,20 @@ public class SwaggerDescription {
   public static final String RESPONSE_ENTITY_DYNAMIC_MAPPING_DRY_RUN_SUCCESS = "Dry-run completed successfully";
   public static final String WEBHOOK_DRY_RUN_PAYLOAD_DESCRIPTION = "Sample JSON payload to test against the webhook mapping configuration";
 
+  public static final String SCHEMA_DRY_RUN_RESULT = "Result of an entity dynamic mapping dry-run validation";
+  public static final String SCHEMA_DRY_RUN_RESULTS = "List of entity mapping results";
+  public static final String SCHEMA_DRY_RUN_MAPPING_TEMPLATE_IDENTIFIER = "Template identifier for this mapping";
+  public static final String SCHEMA_DRY_RUN_SUCCESS = "Whether the mapping was successful";
+  public static final String SCHEMA_DRY_RUN_ENTITY = "Mapped entity data";
+  public static final String SCHEMA_DRY_RUN_ERROR = "Error details";
+  public static final String SCHEMA_DRY_RUN_TEMPLATE_IDENTIFIER = "Target template identifier";
+  public static final String SCHEMA_DRY_RUN_ENTITY_NAME = "Entity name";
+  public static final String SCHEMA_DRY_RUN_ENTITY_IDENTIFIER = "Entity identifier";
+  public static final String SCHEMA_DRY_RUN_PROPERTIES = "Extracted properties";
+  public static final String SCHEMA_DRY_RUN_RELATIONS = "Extracted relations";
+  public static final String SCHEMA_DRY_RUN_RELATION_NAME = "Relation name";
+  public static final String SCHEMA_DRY_RUN_RELATION_TARGET_IDENTIFIERS = "Target entity identifiers extracted from payload";
+  public static final String SCHEMA_DRY_RUN_ERROR_TYPE = "Error type";
+  public static final String SCHEMA_DRY_RUN_ERROR_MESSAGE = "Error message";
+
 }

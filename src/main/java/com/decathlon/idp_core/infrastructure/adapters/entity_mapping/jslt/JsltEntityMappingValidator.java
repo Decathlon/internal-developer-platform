@@ -40,12 +40,13 @@ public class JsltEntityMappingValidator implements EntityDynamicMapperValidator 
     }
     if (mapping.relations() != null && !mapping.relations().isEmpty()) {
       mapping.relations().forEach(relation -> {
-        if (relation.expressions() == null || relation.expressions().isEmpty()) {
+        if (relation.targetIdentifiersExpressions() == null
+            || relation.targetIdentifiersExpressions().isEmpty()) {
           errors.add(String.format(
               "Field 'relations.%s[]' is required and must contain at least one expression.",
               relation.name()));
         } else {
-          relation.expressions().forEach(
+          relation.targetIdentifiersExpressions().forEach(
               expr -> checkExpression(errors, "relations." + relation.name() + "[]", expr));
         }
       });
@@ -76,7 +77,8 @@ public class JsltEntityMappingValidator implements EntityDynamicMapperValidator 
     try {
       // Goes through the ExpressionEngine port — works for JSLT today, JQ tomorrow.
       expressionEngine.validateExpression(expression);
-    } catch (EntityDynamicMappingConfigurationException exception) {
+    } catch (EntityDynamicMappingConfigurationException
+        | EntityDynamicMappingJsltErrorException exception) {
       errors.add(String.format("Invalid expression for '%s': %s", fieldName,
           formatErrorMessage(exception.getMessage())));
     }

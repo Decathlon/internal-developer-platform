@@ -1,6 +1,7 @@
 package com.decathlon.idp_core.infrastructure.adapters.api.mapper.entity_dynamic_mapping;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import java.util.List;
 import java.util.Map;
@@ -8,6 +9,7 @@ import java.util.Map;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
+import com.decathlon.idp_core.domain.exception.entity_dynamic_mapping.EntityDynamicMappingConfigurationException;
 import com.decathlon.idp_core.domain.model.entity_mapping.EntityDynamicMapping;
 import com.decathlon.idp_core.domain.model.entity_mapping.RelationMapping;
 import com.decathlon.idp_core.infrastructure.adapters.api.dto.out.entity_dynamic_mapping.EntityDynamicMappingDtoOut;
@@ -76,46 +78,23 @@ class EntityDynamicMappingMapperTest {
   }
 
   @Test
-  @DisplayName("Should handle null expressions in RelationMapping")
-  void fromEntityMappingToDto_with_null_expressions_in_relation() {
-    List<RelationMapping> relations = List.of(new RelationMapping("api-link", null)); // null
-                                                                                      // expressions
+  @DisplayName("Should reject RelationMapping with null expressions")
+  void relationMapping_with_null_expressions_should_throw() {
+    List<String> expressions = null;
 
-    EntityDynamicMapping mapping = new EntityDynamicMapping(null, // id
-        "test-mapping", "microservice", ".action == \"pushed\"", "Test Mapping", "Test Description",
-        ".repository.full_name", ".repository.name", Map.of("applicationName", ".repository.name"),
-        relations);
-
-    EntityDynamicMappingDtoOut dto = mapper.fromEntityMappingToDto(mapping);
-
-    assertThat(dto).isNotNull();
-    assertThat(dto.entity()).isNotNull();
-    assertThat(dto.entity().relations()).isNotNull().hasSize(1);
-    assertThat(dto.entity().relations().getFirst().name()).isEqualTo("api-link");
-    assertThat(dto.entity().relations().getFirst().targetEntityIdentifiers()).isNotNull().isEmpty();
+    assertThatThrownBy(() -> new RelationMapping("api-link", expressions))
+        .isInstanceOf(EntityDynamicMappingConfigurationException.class)
+        .hasMessageContaining("array of strings");
   }
 
   @Test
-  @DisplayName("Should handle relation with null name in relations list")
-  void fromEntityMappingToDto_with_null_relation_name() {
-    // Simulating a malformed domain object with null name (edge case from
-    // persistence layer)
-    List<RelationMapping> relationsList = List.of(
-        new RelationMapping("api-link", List.of(".repository.full_name")),
-        new RelationMapping(null, List.of(".dependencies[*].identifier")));
+  @DisplayName("Should reject RelationMapping with null name")
+  void relationMapping_with_null_name_should_throw() {
+    List<String> expressions = List.of(".dependencies[*].identifier");
 
-    EntityDynamicMapping mapping = new EntityDynamicMapping(null, // id
-        "test-mapping", "microservice", ".action == \"pushed\"", "Test Mapping", "Test Description",
-        ".repository.full_name", ".repository.name", Map.of("applicationName", ".repository.name"),
-        relationsList);
-
-    EntityDynamicMappingDtoOut dto = mapper.fromEntityMappingToDto(mapping);
-
-    assertThat(dto).isNotNull();
-    assertThat(dto.entity()).isNotNull();
-    // Relations with null name should be filtered out, leaving only valid ones
-    assertThat(dto.entity().relations()).isNotNull().hasSize(1);
-    assertThat(dto.entity().relations().getFirst().name()).isEqualTo("api-link");
+    assertThatThrownBy(() -> new RelationMapping(null, expressions))
+        .isInstanceOf(EntityDynamicMappingConfigurationException.class)
+        .hasMessageContaining("mandatory");
   }
 
   @Test

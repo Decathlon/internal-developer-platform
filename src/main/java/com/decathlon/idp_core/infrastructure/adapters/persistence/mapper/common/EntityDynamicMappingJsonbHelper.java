@@ -59,11 +59,12 @@ public class EntityDynamicMappingJsonbHelper {
 
   /// Converts JSONB array string to `List<RelationMapping>`.
   ///
-  /// Expected format: `[{"name": "owner", "expressions": [".sender.login"]}]`
+  /// Expected format: `[{"name": "owner", "targetIdentifiersExpressions":
+  /// [".sender.login"]}]`
   ///
   /// Backward compatibility:
   /// - Legacy entries using singular `expression` are normalized to
-  /// `expressions: [<expression>]` before deserialization.
+  /// `targetIdentifiersExpressions: [<expression>]` before deserialization.
   /// - Legacy pre-migration object format `{"relation":"<expression>"}` is
   /// also supported.
   ///
@@ -113,7 +114,7 @@ public class EntityDynamicMappingJsonbHelper {
       return relationNode;
     }
 
-    if (objectNode.has("expressions") || !objectNode.has("expression")) {
+    if (objectNode.has("targetIdentifiersExpressions") || !objectNode.has("expression")) {
       return objectNode;
     }
 
@@ -129,13 +130,14 @@ public class EntityDynamicMappingJsonbHelper {
       }
     }
 
-    normalizedNode.set("expressions", expressionsNode);
+    normalizedNode.set("targetIdentifiersExpressions", expressionsNode);
     return normalizedNode;
   }
 
   /// Converts `List<RelationMapping>` to JSONB array string.
   ///
-  /// Output format: `[{"name": "owner", "expressions": [".sender.login"]}]`
+  /// Output format: `[{"name": "owner", "targetIdentifiersExpressions":
+  /// [".sender.login"]}]`
   ///
   /// Used when persisting relations to database.
   @Named("relationListToJsonString")

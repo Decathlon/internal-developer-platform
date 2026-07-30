@@ -133,8 +133,8 @@ public class ValidationMessages {
   public static final String ENTITY_DYNAMIC_MAPPING_ENTITY_MANDATORY = "Dynamic mapping entity section is mandatory";
   public static final String ENTITY_DYNAMIC_MAPPING_ENTITY_NAME_MANDATORY = "Entity name is mandatory";
   public static final String ENTITY_DYNAMIC_MAPPING_ENTITY_IDENTIFIER_MANDATORY = "Entity identifier is mandatory";
-  public static final String ENTITY_DYNAMIC_MAPPING_ENTITY_RELATIONS_MANDATORY = "Entity relations section is mandatory";
-  public static final String ENTITY_DYNAMIC_MAPPING_ENTITY_PROPERTIES_MANDATORY = "Entity properties section is mandatory";
+  public static final String ENTITY_DYNAMIC_MAPPING_ENTITY_RELATION_NAME_MANDATORY = "Entity relations name is mandatory in Dynamic mapping entity relation section";
+  public static final String ENTITY_DYNAMIC_MAPPING_ENTITY_RELATION_EXPRESSIONS_LIST_MESSAGE = "Target entity identifiers is mandatory in Dynamic mapping entity relation section when section is setUse a JSON array of strings for relation targetIdentifiersExpressions";
 
   public static final String WEBHOOK_CONNECTOR_SECURITY_TYPE_MANDATORY = "Webhook security type is mandatory";
   public static final String WEBHOOK_CONNECTOR_SECURITY_CONFIG_MANDATORY = "Webhook security config is mandatory";

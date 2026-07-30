@@ -293,11 +293,12 @@ public class ApiExceptionHandler {
     return createErrorResponse(HttpStatus.BAD_REQUEST, errorMessage);
   }
 
-  /// Handles invalid dynamic mapping expressions (JSLT) provided in webhook
+  /// Handles invalid dynamic mapping targetIdentifiersExpressions (JSLT) provided
+  /// in webhook
   /// configuration.
   ///
   /// **HTTP mapping:** Maps domain mapping configuration failures to HTTP 400,
-  /// because clients can fix these expressions and retry.
+  /// because clients can fix these targetIdentifiersExpressions and retry.
   @ExceptionHandler(EntityDynamicMappingConfigurationException.class)
   public ResponseEntity<ErrorResponse> handleEntityDynamicMappingConfigurationException(
       EntityDynamicMappingConfigurationException ex) {
@@ -328,7 +329,7 @@ public class ApiExceptionHandler {
   public ResponseEntity<ErrorResponse> handlePropertyNameNotFoundEntityTemplatePropertiesException(
       PropertyNameNotFoundEntityTemplatePropertiesException ex) {
     log.warn("Webhook mapping references unknown property: {}", ex.getMessage());
-    return createErrorResponse(HttpStatus.UNPROCESSABLE_CONTENT, ex.getMessage());
+    return createErrorResponse(HttpStatus.BAD_REQUEST, ex.getMessage());
   }
 
   @ExceptionHandler(RelationNameNotFoundEntityTemplateRelationsException.class)

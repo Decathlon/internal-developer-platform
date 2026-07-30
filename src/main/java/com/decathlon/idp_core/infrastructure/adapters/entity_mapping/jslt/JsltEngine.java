@@ -4,7 +4,7 @@ import java.io.StringReader;
 
 import org.springframework.stereotype.Component;
 
-import com.decathlon.idp_core.domain.exception.entity_dynamic_mapping.EntityDynamicMappingConfigurationException;
+import com.decathlon.idp_core.domain.exception.entity_dynamic_mapping.EntityDynamicMappingJsltErrorException;
 import com.decathlon.idp_core.infrastructure.adapters.entity_mapping.engine.ExpressionEngine;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.schibsted.spt.data.jslt.Expression;
@@ -23,7 +23,7 @@ public class JsltEngine implements ExpressionEngine {
     try {
       compile(expression);
     } catch (JsltException exception) {
-      throw new EntityDynamicMappingConfigurationException(exception.getMessage(), exception);
+      throw new EntityDynamicMappingJsltErrorException(exception.getMessage());
     }
   }
 
@@ -32,7 +32,7 @@ public class JsltEngine implements ExpressionEngine {
     try {
       return compile(expression).apply(payload);
     } catch (JsltException exception) {
-      throw new EntityDynamicMappingConfigurationException(exception.getMessage(), exception);
+      throw new EntityDynamicMappingJsltErrorException(exception.getMessage());
     }
   }
 

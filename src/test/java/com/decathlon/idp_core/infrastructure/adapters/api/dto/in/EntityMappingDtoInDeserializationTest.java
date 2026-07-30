@@ -8,15 +8,31 @@ import org.junit.jupiter.api.Test;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 
-/// Tests JSON deserialization for relation mappings accepted as map or array.
+/// Tests JSON deserialization for entity dynamic mapping input.
 @DisplayName("EntityMappingDtoIn Deserialization")
 class EntityMappingDtoInDeserializationTest {
 
   private final ObjectMapper objectMapper = new ObjectMapper();
 
   @Test
-  @DisplayName("Should deserialize relations from object map format")
-  void shouldDeserializeRelationsFromObjectMap() throws Exception {
+  @DisplayName("Should deserialize when properties and relations are omitted")
+  void shouldDeserializeWhenPropertiesAndRelationsAreOmitted() throws Exception {
+    String json = """
+        {
+          "identifier": ".identifier",
+          "name": ".name"
+        }
+        """;
+
+    EntityMappingDtoIn dto = objectMapper.readValue(json, EntityMappingDtoIn.class);
+
+    assertThat(dto.properties()).isNotNull().isEmpty();
+    assertThat(dto.relations()).isNotNull().isEmpty();
+  }
+
+  @Test
+  @DisplayName("Should fail when relations are provided as object map")
+  void shouldFailWhenRelationsAreObjectMap() {
     String json = """
         {
           "identifier": ".repository.full_name",
@@ -25,17 +41,13 @@ class EntityMappingDtoInDeserializationTest {
             "applicationName": ".repository.name"
           },
           "relations": {
-            "owner": ".sender.login"
+            "owner": [".sender.login"]
           }
         }
         """;
 
-    EntityMappingDtoIn dto = objectMapper.readValue(json, EntityMappingDtoIn.class);
-
-    assertThat(dto.relations()).hasSize(1);
-    assertThat(dto.relations().getFirst().name()).isEqualTo("owner");
-    assertThat(dto.relations().getFirst().targetEntityIdentifiers())
-        .containsExactly(".sender.login");
+    assertThatThrownBy(() -> objectMapper.readValue(json, EntityMappingDtoIn.class))
+        .hasMessageContaining("relations").hasMessageContaining("ArrayList");
   }
 
   @Test
@@ -74,8 +86,8 @@ class EntityMappingDtoInDeserializationTest {
   }
 
   @Test
-  @DisplayName("Should fail when relation value is not a string or array of strings")
-  void shouldFailWhenRelationValueIsNotAString() {
+  @DisplayName("Should fail when relation entry target_entity_identifiers is an object")
+  void shouldFailWhenRelationValueIsNotArrayOfStrings() {
     String json = """
         {
           "identifier": ".repository.full_name",
@@ -83,17 +95,41 @@ class EntityMappingDtoInDeserializationTest {
           "properties": {
             "applicationName": ".repository.name"
           },
-          "relations": {
-            "apim-api-consumed_by-component": {
-              "identifier": "f2e2ab44-5d19-44de-a77a-42ef6aa51676",
-              "name": "user-profile-sync",
-              "criticality": "MEDIUM"
+          "relations": [
+            {
+              "name": "apim-api-consumed_by-component",
+              "target_entity_identifiers": {
+                "identifier": "f2e2ab44-5d19-44de-a77a-42ef6aa51676"
+              }
             }
-          }
+          ]
         }
         """;
 
     assertThatThrownBy(() -> objectMapper.readValue(json, EntityMappingDtoIn.class))
-        .hasMessageContaining("must be either a string or an array of strings");
+        .hasMessageContaining("target_entity_identifiers").hasMessageContaining("ArrayList");
+  }
+
+  @Test
+  @DisplayName("Should fail when relation entry target_entity_identifiers is a single string")
+  void shouldFailWhenRelationEntryTargetsIsSingleString() {
+    String json = """
+        {
+          "identifier": ".repository.full_name",
+          "name": ".repository.name",
+          "properties": {
+            "applicationName": ".repository.name"
+          },
+          "relations": [
+            {
+              "name": "owner",
+              "target_entity_identifiers": ".sender.login"
+            }
+          ]
+        }
+        """;
+
+    assertThatThrownBy(() -> objectMapper.readValue(json, EntityMappingDtoIn.class))
+        .hasMessageContaining("target_entity_identifiers").hasMessageContaining("ArrayList");
   }
 }
