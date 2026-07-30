@@ -9,10 +9,10 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
+import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
@@ -29,12 +29,8 @@ class PrincipalProvisioningServiceTest {
   @Mock
   private EntityRepositoryPort entityRepository;
 
+  @InjectMocks
   private PrincipalProvisioningService provisioningService;
-
-  @BeforeEach
-  void setUp() {
-    provisioningService = new PrincipalProvisioningService(entityRepository);
-  }
 
   @Test
   void shouldCreateNewPrincipalOnFirstAuthentication() {

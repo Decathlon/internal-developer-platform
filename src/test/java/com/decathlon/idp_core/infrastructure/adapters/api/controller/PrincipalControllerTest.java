@@ -14,7 +14,6 @@ import org.springframework.test.context.jdbc.Sql;
 import org.springframework.test.web.servlet.MockMvc;
 
 import com.decathlon.idp_core.AbstractIntegrationTest;
-import com.decathlon.idp_core.domain.port.EntityTemplateRepositoryPort;
 
 import lombok.extern.slf4j.Slf4j;
 

@@ -25,7 +25,6 @@ import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 
-import com.decathlon.idp_core.infrastructure.adapters.api.auth.JitProvisioningFilter;
 import com.decathlon.idp_core.infrastructure.adapters.api.configuration.CorsProperties;
 import com.decathlon.idp_core.infrastructure.adapters.api.configuration.SecurityConfiguration;
 import com.decathlon.idp_core.infrastructure.adapters.api.configuration.SecurityRoleProperties;
@@ -35,9 +34,6 @@ class SecurityConfigurationTest {
 
   @Mock
   private CorsProperties corsProperties;
-
-  @Mock
-  private JitProvisioningFilter jitProvisioningFilter;
 
   @Mock
   private SecurityRoleProperties securityRoleProperties;
@@ -110,14 +106,14 @@ class SecurityConfigurationTest {
   }
 
   @Test
-  void securityFilterChain_shouldConfigureAndBuildHttpSecurity() throws Exception {
+  void securityFilterChain_shouldConfigureAndBuildHttpSecurity(){
     // Arrange
     // We use deep stubs to safely mock the highly fluent HttpSecurity builder API
     // without throwing NPEs
     HttpSecurity httpSecurityMock = mock(HttpSecurity.class, Answers.RETURNS_DEEP_STUBS);
 
     // Act
-    SecurityFilterChain filterChain = securityConfiguration.securityFilterChain(httpSecurityMock);
+    securityConfiguration.securityFilterChain(httpSecurityMock);
 
     // Assert
     verify(httpSecurityMock).build();

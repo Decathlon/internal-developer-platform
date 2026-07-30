@@ -92,10 +92,7 @@ public class PrincipalProvisioningService {
         principalInfo.identifier(), buildProperties(principalInfo), buildRelations(principalInfo));
     try {
       return entityRepository.save(newPrincipal);
-    } catch (EntityAlreadyExistsException e) {
-      // Handle race condition: another thread created the principal between our check
-      // and save
-      // Retry the read to return the existing principal
+    } catch (EntityAlreadyExistsException entityAlreadyExistsException) {
       return entityRepository
           .findByTemplateIdentifierAndIdentifier(PRINCIPAL_TEMPLATE_IDENTIFIER,
               principalInfo.identifier())

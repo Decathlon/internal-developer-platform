@@ -1,21 +1,18 @@
 package com.decathlon.idp_core.infrastructure.adapters.persistence;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import java.util.Collections;
 import java.util.List;
-import java.util.Optional;
-import java.util.UUID;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
+import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 
@@ -35,12 +32,12 @@ class PostgresEntityAdapterTest {
   @Mock
   private EntityPersistenceMapper mapper;
 
+  @InjectMocks
   private PostgresEntityAdapter adapter;
 
   @BeforeEach
   void setUp() {
     MockitoAnnotations.openMocks(this);
-    adapter = new PostgresEntityAdapter(jpaEntityRepository, mapper);
   }
 
   @Nested
@@ -74,7 +71,6 @@ class PostgresEntityAdapterTest {
           identifiers);
 
       // Then
-      assertThat(result).hasSize(3);
       assertThat(result).containsExactly(entity1, entity2, entity3);
       verify(jpaEntityRepository).findAllByTemplateIdentifierAndIdentifierIn(templateIdentifier,
           identifiers);
@@ -122,7 +118,6 @@ class PostgresEntityAdapterTest {
           identifiers);
 
       // Then
-      assertThat(result).hasSize(1);
       assertThat(result).containsExactly(entity);
       verify(jpaEntityRepository).findAllByTemplateIdentifierAndIdentifierIn(templateIdentifier,
           identifiers);

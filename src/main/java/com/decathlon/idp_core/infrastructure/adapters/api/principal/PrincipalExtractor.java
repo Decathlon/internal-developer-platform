@@ -33,6 +33,7 @@ public class PrincipalExtractor {
   private static final String CLAIM_EMAIL = "email";
   private static final String CLAIM_GROUPS = "groups";
   private static final String CLAIM_CLIENT_ID = "client_id";
+  private static final String CLAIM_ORIGIN = "origin";
   private static final String CLAIM_AZP = "azp";
   private static final String CLAIM_SERVICE_NAME = "service_name";
 
@@ -84,7 +85,7 @@ public class PrincipalExtractor {
 
     Map<String, String> attributes = new HashMap<>();
     Optional.ofNullable(claims.get(CLAIM_EMAIL)).map(Object::toString)
-        .ifPresent(email -> attributes.put("email", email));
+        .ifPresent(email -> attributes.put(CLAIM_EMAIL, email));
 
     List<String> groups = extractGroups(claims);
 
@@ -100,9 +101,9 @@ public class PrincipalExtractor {
         .orElse(clientId);
 
     Map<String, String> attributes = new HashMap<>();
-    attributes.put("client_id", clientId);
-    Optional.ofNullable(claims.get("origin")).map(Object::toString)
-        .ifPresent(origin -> attributes.put("origin", origin));
+    attributes.put(CLAIM_CLIENT_ID, clientId);
+    Optional.ofNullable(claims.get(CLAIM_ORIGIN)).map(Object::toString)
+        .ifPresent(origin -> attributes.put(CLAIM_ORIGIN, origin));
 
     List<String> groups = extractGroups(claims);
 

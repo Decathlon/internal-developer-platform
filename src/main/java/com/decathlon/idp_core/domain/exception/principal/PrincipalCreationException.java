@@ -9,14 +9,11 @@ import static com.decathlon.idp_core.domain.constant.ValidationMessages.PRINCIPA
 /// when the principal is accessed (Just-In-Time provisioning retry strategy).
 public class PrincipalCreationException extends RuntimeException {
 
-  private final String principalIdentifier;
-
   /// Constructs a new exception with the principal identifier.
   ///
   /// @param principalIdentifier the identifier of the principal that failed to be
   /// created
   public PrincipalCreationException(String principalIdentifier) {
     super(String.format(PRINCIPAL_CREATION_FAILED, principalIdentifier));
-    this.principalIdentifier = principalIdentifier;
   }
 }
