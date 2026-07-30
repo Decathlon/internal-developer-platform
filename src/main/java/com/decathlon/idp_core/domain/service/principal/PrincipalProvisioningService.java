@@ -4,10 +4,11 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
-import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.decathlon.idp_core.domain.exception.entity.EntityAlreadyExistsException;
+import com.decathlon.idp_core.domain.exception.principal.PrincipalCreationException;
 import com.decathlon.idp_core.domain.model.entity.Entity;
 import com.decathlon.idp_core.domain.model.entity.Property;
 import com.decathlon.idp_core.domain.model.entity.Relation;
@@ -81,7 +82,8 @@ public class PrincipalProvisioningService {
   /// Creates a new Principal entity in the catalog.
   ///
   /// **Business logic:** Maps PrincipalInfo to entity properties and relations.
-  /// If a concurrent creation occurs, the existing entity is returned.
+  /// If a concurrent creation occurs (race condition during JIT provisioning),
+  /// the existing entity is returned instead.
   ///
   /// @param principalInfo extracted authentication information
   /// @return the newly created or existing Principal entity
@@ -90,9 +92,16 @@ public class PrincipalProvisioningService {
         principalInfo.identifier(), buildProperties(principalInfo), buildRelations(principalInfo));
     try {
       return entityRepository.save(newPrincipal);
-    } catch (DataIntegrityViolationException e) {
-      return entityRepository.findByTemplateIdentifierAndIdentifier(PRINCIPAL_TEMPLATE_IDENTIFIER,
-          principalInfo.identifier()).orElse(newPrincipal);
+    } catch (EntityAlreadyExistsException e) {
+      // Handle race condition: another thread created the principal between our check
+      // and save
+      // Retry the read to return the existing principal
+      return entityRepository
+          .findByTemplateIdentifierAndIdentifier(PRINCIPAL_TEMPLATE_IDENTIFIER,
+              principalInfo.identifier())
+          .orElseThrow(() -> new PrincipalCreationException(
+              "Principal concurrent creation detected but subsequent read failed for identifier: "
+                  + principalInfo.identifier()));
     }
   }
 

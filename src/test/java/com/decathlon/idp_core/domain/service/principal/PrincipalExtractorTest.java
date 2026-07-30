@@ -2,6 +2,7 @@ package com.decathlon.idp_core.domain.service.principal;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 import java.util.List;
 import java.util.Map;
@@ -156,6 +157,95 @@ class PrincipalExtractorTest {
     // Then: Optional fields are empty/null
     assertThat(principalInfo.identifier()).isEqualTo("david-sub");
     assertThat(principalInfo.attributes()).doesNotContainKey("email");
+    assertThat(principalInfo.groups()).isEmpty();
+  }
+
+  @Test
+  void shouldExtractFromStandardOAuth2User() {
+    // Given: A standard OAuth2 user authentication
+    org.springframework.security.oauth2.core.user.OAuth2User oauth2User = mock(
+        org.springframework.security.oauth2.core.user.OAuth2User.class);
+    when(oauth2User.getName()).thenReturn("fallback-name");
+    when(oauth2User.getAttribute("sub")).thenReturn("oauth2-sub-123");
+    when(oauth2User.getAttribute("name")).thenReturn("OAuth2 User");
+    when(oauth2User.getAttribute("email")).thenReturn("oauth2@example.com");
+    when(oauth2User.getAttributes()).thenReturn(Map.of("sub", "oauth2-sub-123", "name",
+        "OAuth2 User", "email", "oauth2@example.com", "groups", List.of("oauth-group-1")));
+
+    Authentication authentication = mock(Authentication.class);
+    when(authentication.getPrincipal()).thenReturn(oauth2User);
+
+    // When
+    PrincipalInfo principalInfo = principalExtractor.extractPrincipalInfo(authentication);
+
+    // Then
+    assertThat(principalInfo.identifier()).isEqualTo("oauth2-sub-123");
+    assertThat(principalInfo.kind()).isEqualTo(PrincipalKind.HUMAN);
+    assertThat(principalInfo.name()).isEqualTo("OAuth2 User");
+    assertThat(principalInfo.attributes()).containsEntry("email", "oauth2@example.com");
+    assertThat(principalInfo.groups()).containsExactly("oauth-group-1");
+  }
+
+  @Test
+  void shouldExtractFromOidcUser() {
+    // Given: An OIDC user authentication
+    org.springframework.security.oauth2.core.oidc.user.OidcUser oidcUser = mock(
+        org.springframework.security.oauth2.core.oidc.user.OidcUser.class);
+    when(oidcUser.getSubject()).thenReturn("oidc-sub-456");
+    when(oidcUser.getPreferredUsername()).thenReturn("oidc-username");
+    when(oidcUser.getFullName()).thenReturn("OIDC Full Name");
+    when(oidcUser.getEmail()).thenReturn("oidc@example.com");
+    when(oidcUser.getAttributes())
+        .thenReturn(Map.of("groups", List.of("oidc-group-1", "oidc-group-2")));
+
+    Authentication authentication = mock(Authentication.class);
+    when(authentication.getPrincipal()).thenReturn(oidcUser);
+
+    // When
+    PrincipalInfo principalInfo = principalExtractor.extractPrincipalInfo(authentication);
+
+    // Then
+    assertThat(principalInfo.identifier()).isEqualTo("oidc-username");
+    assertThat(principalInfo.kind()).isEqualTo(PrincipalKind.HUMAN);
+    assertThat(principalInfo.name()).isEqualTo("OIDC Full Name");
+    assertThat(principalInfo.attributes()).containsEntry("email", "oidc@example.com");
+    assertThat(principalInfo.groups()).containsExactlyInAnyOrder("oidc-group-1", "oidc-group-2");
+  }
+
+  @Test
+  void shouldExtractFromOidcUserWithMinimalClaims() {
+    // Given: An OIDC user with only a subject
+    org.springframework.security.oauth2.core.oidc.user.OidcUser oidcUser = mock(
+        org.springframework.security.oauth2.core.oidc.user.OidcUser.class);
+    when(oidcUser.getSubject()).thenReturn("oidc-minimal-sub");
+    when(oidcUser.getAttributes()).thenReturn(Map.of());
+
+    Authentication authentication = mock(Authentication.class);
+    when(authentication.getPrincipal()).thenReturn(oidcUser);
+
+    // When
+    PrincipalInfo principalInfo = principalExtractor.extractPrincipalInfo(authentication);
+
+    // Then: Fallbacks to subject for identifier and name
+    assertThat(principalInfo.identifier()).isEqualTo("oidc-minimal-sub");
+    assertThat(principalInfo.name()).isEqualTo("oidc-minimal-sub");
+    assertThat(principalInfo.attributes()).isEmpty();
+    assertThat(principalInfo.groups()).isEmpty();
+  }
+
+  @Test
+  void shouldHandleMalformedGroupsClaimGracefully() {
+    // Given: JWT token where 'groups' is a String instead of a List
+    Map<String, Object> claims = Map.of("sub", "malformed-groups-sub", "email", "user@example.com",
+        "preferred_username", "user", "groups", "this-should-be-a-list-but-is-a-string");
+
+    Jwt jwt = createJwt(claims);
+    Authentication authentication = new JwtAuthenticationToken(jwt);
+
+    // When
+    PrincipalInfo principalInfo = principalExtractor.extractPrincipalInfo(authentication);
+
+    // Then: Safe casting returns empty list instead of throwing ClassCastException
     assertThat(principalInfo.groups()).isEmpty();
   }
 

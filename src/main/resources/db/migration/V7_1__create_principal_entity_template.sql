@@ -23,10 +23,9 @@ SELECT gen_random_uuid(),
        true WHERE NOT EXISTS (SELECT 1 FROM idp_core.property_definition WHERE name = 'kind');
 
 INSERT INTO idp_core.property_definition (id, name, type, description, required, rules_id)
-SELECT gen_random_uuid(), 'email', 'STRING', 'Email address (for HUMAN principals)', false, pr.id
-FROM idp_core.property_rules pr
-WHERE pr.format = 'EMAIL'
-  AND NOT EXISTS (SELECT 1 FROM idp_core.property_definition WHERE name = 'email');
+SELECT gen_random_uuid(), 'email', 'STRING', 'Email address (for HUMAN principals)', false,
+       (SELECT pr.id FROM idp_core.property_rules pr WHERE pr.format = 'EMAIL' ORDER BY pr.id LIMIT 1)
+WHERE NOT EXISTS (SELECT 1 FROM idp_core.property_definition WHERE name = 'email');
 
 INSERT INTO idp_core.property_definition (id, name, type, description, required)
 SELECT gen_random_uuid(),

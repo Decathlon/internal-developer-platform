@@ -30,14 +30,6 @@ public class PrincipalControllerTest extends AbstractIntegrationTest {
   @Autowired
   private MockMvc mockMvc;
 
-  @Autowired
-  private EntityTemplateRepositoryPort entityTemplateRepository; // or your JPA template repository
-
-  @Test
-  void debugTemplateExistence() {
-    boolean exists = entityTemplateRepository.findByIdentifier("principal").isPresent();
-    System.out.println("Does principal template exist in DB? " + exists);
-  }
   @Nested
   @DisplayName("GET /api/v1/entities/principals/me - Get Current Principal")
   class GetCurrentPrincipalTests {

@@ -101,7 +101,7 @@ class PrincipalProvisioningServiceTest {
         invocation.getArgument(0, Entity.class).relations()));
 
     // When: Provision service account
-    Entity result = provisioningService.provisionPrincipal(principalInfo);
+    provisioningService.provisionPrincipal(principalInfo);
 
     // Then: Service account entity created
     ArgumentCaptor<Entity> entityCaptor = ArgumentCaptor.forClass(Entity.class);
@@ -137,7 +137,7 @@ class PrincipalProvisioningServiceTest {
         invocation.getArgument(0, Entity.class).relations()));
 
     // When: Provision principal
-    Entity result = provisioningService.provisionPrincipal(principalInfo);
+    provisioningService.provisionPrincipal(principalInfo);
 
     // Then: Principal created without relations
     ArgumentCaptor<Entity> entityCaptor = ArgumentCaptor.forClass(Entity.class);
