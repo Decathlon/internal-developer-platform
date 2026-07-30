@@ -113,6 +113,12 @@ springdoc:
 app:
   # Base URL of this service, used to build self-referencing links.
   idp-core-prefix-url: ${IDP_CORE_PREFIX_URL}
+  security:
+    roles:
+      # Baseline role assigned to all authenticated principals during V1 phase.
+      # Default: * (Super Admin) - grants unrestricted access to all catalog operations.
+      # Override via APP_SECURITY_ROLES_BASELINE_ROLE env var for granular RBAC in future phases.
+      baseline-role: ${APP_SECURITY_ROLES_BASELINE_ROLE:*}
 
 logging:
   level:

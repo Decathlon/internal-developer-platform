@@ -28,8 +28,10 @@ import com.decathlon.idp_core.domain.exception.entity.EntityValidationException;
 import com.decathlon.idp_core.domain.exception.entity_dynamic_mapping.*;
 import com.decathlon.idp_core.domain.exception.entity_template.*;
 import com.decathlon.idp_core.domain.exception.filter.InvalidFilterDslException;
+import com.decathlon.idp_core.domain.exception.principal.PrincipalNotFoundException;
 import com.decathlon.idp_core.domain.exception.search.InvalidSearchQueryException;
 import com.decathlon.idp_core.domain.exception.webhook.*;
+import com.decathlon.idp_core.infrastructure.adapters.api.controller.PrincipalController;
 
 import lombok.AllArgsConstructor;
 import lombok.Getter;
@@ -333,6 +335,18 @@ public class ApiExceptionHandler {
   /// specific entity context for API consumers.
   @ExceptionHandler(EntityNotFoundException.class)
   public ResponseEntity<ErrorResponse> handleEntityNotFoundException(EntityNotFoundException ex) {
+    ErrorResponse errorResponse = new ErrorResponse(NOT_FOUND.name(), ex.getMessage());
+    return ResponseEntity.status(NOT_FOUND).body(errorResponse);
+  }
+
+  /// Handles principal not found exception when JIT provisioning fails.
+  ///
+  /// **HTTP mapping:** Maps PrincipalNotFoundException to HTTP 404 status
+  /// indicating the authenticated principal does not have a catalog entry.
+  @ExceptionHandler(PrincipalNotFoundException.class)
+  public ResponseEntity<ErrorResponse> handlePrincipalNotFoundException(
+      PrincipalNotFoundException ex) {
+    log.warn("Principal not found: {}", ex.getMessage());
     ErrorResponse errorResponse = new ErrorResponse(NOT_FOUND.name(), ex.getMessage());
     return ResponseEntity.status(NOT_FOUND).body(errorResponse);
   }

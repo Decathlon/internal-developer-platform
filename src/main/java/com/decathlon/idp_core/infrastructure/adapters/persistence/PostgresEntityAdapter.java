@@ -157,4 +157,13 @@ public class PostgresEntityAdapter implements EntityRepositoryPort {
     jpaEntityRepository.deleteByTemplateIdentifierAndIdentifier(templateIdentifier,
         entityIdentifier);
   }
+
+  @Override
+  public List<Entity> findAllByTemplateIdentifierAndIdentifierIn(final String templateIdentifier,
+      final List<String> identifiers) {
+    return jpaEntityRepository
+        .findAllByTemplateIdentifierAndIdentifierIn(templateIdentifier, identifiers).stream()
+        .map(mapper::toDomain).toList();
+  }
+
 }
