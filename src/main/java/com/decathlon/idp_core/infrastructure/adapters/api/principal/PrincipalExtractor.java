@@ -125,7 +125,7 @@ public class PrincipalExtractor {
 
     Map<String, String> attributes = new HashMap<>();
     Optional.ofNullable(oauth2User.getAttribute(CLAIM_EMAIL)).map(Object::toString)
-        .ifPresent(email -> attributes.put("email", email));
+        .ifPresent(email -> attributes.put(CLAIM_EMAIL, email));
 
     List<String> groups = extractGroupsFromAttributes(oauth2User.getAttributes());
 
@@ -139,7 +139,7 @@ public class PrincipalExtractor {
         .or(() -> Optional.ofNullable(oidcUser.getGivenName())).orElse(identifier);
 
     Map<String, String> attributes = new HashMap<>();
-    Optional.ofNullable(oidcUser.getEmail()).ifPresent(email -> attributes.put("email", email));
+    Optional.ofNullable(oidcUser.getEmail()).ifPresent(email -> attributes.put(CLAIM_EMAIL, email));
 
     List<String> groups = extractGroupsFromAttributes(oidcUser.getAttributes());
 

@@ -92,7 +92,7 @@ public class PrincipalProvisioningService {
         principalInfo.identifier(), buildProperties(principalInfo), buildRelations(principalInfo));
     try {
       return entityRepository.save(newPrincipal);
-    } catch (EntityAlreadyExistsException entityAlreadyExistsException) {
+    } catch (EntityAlreadyExistsException _) {
       return entityRepository
           .findByTemplateIdentifierAndIdentifier(PRINCIPAL_TEMPLATE_IDENTIFIER,
               principalInfo.identifier())
