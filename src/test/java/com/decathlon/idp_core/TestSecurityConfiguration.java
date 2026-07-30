@@ -106,7 +106,7 @@ class SecurityConfigurationTest {
   }
 
   @Test
-  void securityFilterChain_shouldConfigureAndBuildHttpSecurity(){
+  void securityFilterChain_shouldConfigureAndBuildHttpSecurity() {
     // Arrange
     // We use deep stubs to safely mock the highly fluent HttpSecurity builder API
     // without throwing NPEs
