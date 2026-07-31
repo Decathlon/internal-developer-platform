@@ -1,11 +1,14 @@
 package com.decathlon.idp_core.domain.service.entity;
 
-import static java.util.stream.Collectors.*;
+import static java.util.stream.Collectors.joining;
+import static java.util.stream.Collectors.toMap;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 import jakarta.validation.Valid;
 
@@ -26,6 +29,7 @@ import com.decathlon.idp_core.domain.exception.search.InvalidSearchQueryExceptio
 import com.decathlon.idp_core.domain.model.entity.Entity;
 import com.decathlon.idp_core.domain.model.entity.EntityFilter;
 import com.decathlon.idp_core.domain.model.entity.EntitySummary;
+import com.decathlon.idp_core.domain.model.entity.Property;
 import com.decathlon.idp_core.domain.model.entity.Relation;
 import com.decathlon.idp_core.domain.model.entity_template.EntityTemplate;
 import com.decathlon.idp_core.domain.model.entity_template.RelationDefinition;
@@ -176,9 +180,115 @@ public class EntityService {
     Entity enrichedEntity = enrichRelationsWithTargetTemplates(entityToSave, template);
 
     entityValidationService.validateForUpdate(enrichedEntity, template);
-    return entityRepository.save(enrichedEntity);
+
+    // Only save if there are actual changes to avoid unnecessary audit records
+    if (hasEntityChanged(existingEntity, enrichedEntity)) {
+      return entityRepository.save(enrichedEntity);
+    }
+
+    return existingEntity;
   }
 
+  /// Detects if an entity has actually changed by comparing its core fields,
+  /// properties, and relations with the incoming entity.
+  ///
+  /// @param existingEntity the current entity in the repository
+  /// @param incomingEntity the new entity data to be applied
+  /// @return true if any field, property, or relation has changed; false
+  /// otherwise
+  private boolean hasEntityChanged(Entity existingEntity, Entity incomingEntity) {
+    // Check name change
+    if (!Objects.equals(existingEntity.name(), incomingEntity.name())) {
+      return true;
+    }
+
+    // Check properties change
+    if (havePropertiesChanged(existingEntity.properties(), incomingEntity.properties())) {
+      return true;
+    }
+
+    // last Check relations change
+    return haveRelationsChanged(existingEntity.relations(), incomingEntity.relations());
+  }
+
+  /// Compares two property lists for equality, ignoring UUID ids which are
+  /// only present in persisted properties.
+  ///
+  /// @param existing the current list of properties in the repository
+  /// @param request the new list of properties to be applied
+  /// @return true if any property has changed; false otherwise
+  private boolean havePropertiesChanged(List<Property> existing, List<Property> request) {
+    if (existing == request)
+      return false;
+    if (existing == null || request == null)
+      return true;
+    if (existing.size() != request.size())
+      return true;
+
+    Map<String, String> existingMap = existing.stream()
+        .collect(Collectors.toMap(Property::name, Property::value, (_, v2) -> v2));
+    Map<String, String> incomingMap = request.stream()
+        .collect(Collectors.toMap(Property::name, Property::value, (_, v2) -> v2));
+
+    return !existingMap.equals(incomingMap);
+  }
+
+  /// Compares two relation lists for equality by name and target identifiers,
+  /// ignoring the UUID id field which is only present in persisted relations.
+  ///
+  /// @param existing the current list of relations in the repository
+  /// @param request the new list of relations to be applied
+  /// @return true if any relation has changed; false otherwise
+  private boolean haveRelationsChanged(List<Relation> existing, List<Relation> request) {
+    if (existing == request)
+      return false;
+    if (existing == null || request == null)
+      return true;
+    if (existing.size() != request.size())
+      return true;
+
+    Map<String, Relation> existingMap = existing.stream()
+        .collect(Collectors.toMap(Relation::name, r -> r, (_, r) -> r));
+    Map<String, Relation> incomingMap = request.stream()
+        .collect(Collectors.toMap(Relation::name, r -> r, (_, r) -> r));
+
+    if (!existingMap.keySet().equals(incomingMap.keySet())) {
+      return true;
+    }
+
+    for (Map.Entry<String, Relation> entry : existingMap.entrySet()) {
+      Relation existingRel = entry.getValue();
+      Relation incomingRel = incomingMap.get(entry.getKey());
+
+      if (haveRelationChanged(existingRel, incomingRel)) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  /// Compares two relations for equality by target template identifier and target
+  /// entity identifiers, ignoring the UUID id field which is only present in
+  /// persisted relations.
+  /// @param existingRelation the current relation in the repository
+  /// @param requestRelation the new relation data to be applied
+  /// @return true if the relation has changed; false otherwise
+  private boolean haveRelationChanged(Relation existingRelation, Relation requestRelation) {
+    if (!Objects.equals(existingRelation.targetTemplateIdentifier(),
+        requestRelation.targetTemplateIdentifier())) {
+      return true;
+    }
+
+    Set<String> existingEntityIdentifier = existingRelation.targetEntityIdentifiers() == null
+        ? Set.of()
+        : Set.copyOf(existingRelation.targetEntityIdentifiers());
+
+    Set<String> requestEntityIdentifier = requestRelation.targetEntityIdentifiers() == null
+        ? Set.of()
+        : Set.copyOf(requestRelation.targetEntityIdentifiers());
+
+    return !existingEntityIdentifier.equals(requestEntityIdentifier);
+  }
   /// Enriches entity relations with target template identifiers from template
   /// definition.
   ///

@@ -1,0 +1,21 @@
+{
+  "name": "Web API 2 Updated",
+  "properties": {
+    "applicationName": "catalog-api",
+    "ownerEmail": "owner@example.com",
+    "port": "8080",
+    "environment": "DEV",
+    "version": "1.2.3",
+    "teamName": "platform-team",
+    "baseUrl": "https://catalog.example.com",
+    "protocol": "HTTP",
+    "programmingLanguage": "JAVA",
+    "status": "deprecated"
+  },
+  "relations": [
+    {
+      "name": "database",
+      "target_entity_identifiers": ["missing-database"]
+    }
+  ]
+}

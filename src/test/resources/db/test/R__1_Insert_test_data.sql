@@ -96,8 +96,8 @@ INSERT INTO relation_definition (id, name, target_template_identifier, required,
 ('550e8400-e29b-41d4-a716-446655440052', 'downstream_services', 'service', false, true),
 
 -- Data relationships
-('550e8400-e29b-41d4-a716-446655440053', 'database', 'database', false, false),
-('550e8400-e29b-41d4-a716-446655440054', 'cache', 'cache', false, false),
+('550e8400-e29b-41d4-a716-446655440053', 'database', 'database-service', false, false),
+('550e8400-e29b-41d4-a716-446655440054', 'cache', 'cache-service', false, false),
 ('550e8400-e29b-41d4-a716-446655440055', 'message_queue', 'queue', false, true),
 ('550e8400-e29b-41d4-a716-446655440056', 'search_engine', 'search', false, false),
 
@@ -117,7 +117,12 @@ INSERT INTO relation_definition (id, name, target_template_identifier, required,
 ('550e8400-e29b-41d4-a716-446655440065', 'file_storage', 'storage', false, false),
 
 -- Test relationship with required constraint
-('550e8400-e29b-41d4-a716-446655440066', 'required_team', 'team', true, false);
+('550e8400-e29b-41d4-a716-446655440066', 'required_team', 'team', true, false),
+
+-- Web-service to microservice links
+('550e8400-e29b-41d4-a716-446655440067', 'api-link', 'microservice', false, true),
+('550e8400-e29b-41d4-a716-446655440068', 'uses', 'web-service', false, true),
+('550e8400-e29b-41d4-a716-446655440069', 'monitors', 'web-service', false, true);
 
 -- Insert diverse entity templates
 INSERT INTO entity_template (id, identifier, name, description) VALUES
@@ -155,7 +160,10 @@ INSERT INTO entity_template_relations_definitions (entity_template_id, relations
 ('550e8400-e29b-41d4-a716-446655440070', '550e8400-e29b-41d4-a716-446655440054'), -- cache
 ('550e8400-e29b-41d4-a716-446655440070', '550e8400-e29b-41d4-a716-446655440057'), -- networks
 ('550e8400-e29b-41d4-a716-446655440070', '550e8400-e29b-41d4-a716-446655440059'), -- monitoring
-('550e8400-e29b-41d4-a716-446655440070', '550e8400-e29b-41d4-a716-446655440061'); -- secrets
+('550e8400-e29b-41d4-a716-446655440070', '550e8400-e29b-41d4-a716-446655440061'), -- secrets
+('550e8400-e29b-41d4-a716-446655440070', '550e8400-e29b-41d4-a716-446655440067'), -- api-link
+('550e8400-e29b-41d4-a716-446655440070', '550e8400-e29b-41d4-a716-446655440068'), -- uses
+('550e8400-e29b-41d4-a716-446655440070', '550e8400-e29b-41d4-a716-446655440069'); -- monitors
 
 -- Link microservice template (lightweight service)
 INSERT INTO entity_template_properties_definitions (entity_template_id, properties_definitions_id) VALUES

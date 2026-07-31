@@ -4,6 +4,7 @@ import static com.decathlon.idp_core.domain.constant.ValidationMessages.ENTITY_D
 import static com.decathlon.idp_core.domain.constant.ValidationMessages.RELATION_NOT_DEFINED_IN_TEMPLATE;
 import static com.decathlon.idp_core.domain.constant.ValidationMessages.RELATION_REQUIRED_MISSING;
 import static com.decathlon.idp_core.domain.constant.ValidationMessages.RELATION_TARGET_ENTITY_NOT_FOUND;
+import static com.decathlon.idp_core.domain.constant.ValidationMessages.RELATION_TARGET_TEMPLATE_MISMATCH;
 import static com.decathlon.idp_core.domain.constant.ValidationMessages.RELATION_TOO_MANY_TARGETS;
 
 import java.util.List;
@@ -155,7 +156,7 @@ public class RelationValidationService {
   }
 
   /// Validates that all target entity identifiers in the relation actually exist
-  /// in the database.
+  /// in the database and match the expected target template.
   ///
   /// @param relation the relation whose target entity identifiers are to be
   /// validated
@@ -175,6 +176,31 @@ public class RelationValidationService {
     for (String identifier : targetIdentifiers) {
       if (!existingIdentifiers.contains(identifier)) {
         violations.add(RELATION_TARGET_ENTITY_NOT_FOUND, relation.name(), identifier);
+      }
+    }
+
+    // Validate that target entities match the expected target template
+    validateRelationTargetTemplates(relation, existingEntities, violations);
+  }
+
+  /// Validates that all target entities have the expected target template
+  /// identifier
+  /// as defined in the relation.
+  ///
+  /// @param relation the relation with target template identifier
+  /// @param existingEntities the existing entities to validate
+  /// @param violations the accumulator for validation violations
+  private void validateRelationTargetTemplates(Relation relation,
+      List<EntitySummary> existingEntities, Violations violations) {
+    if (relation.targetTemplateIdentifier() == null || existingEntities.isEmpty()) {
+      return;
+    }
+
+    for (EntitySummary entity : existingEntities) {
+      if (extractValidTargetIdentifiers(relation).contains(entity.identifier())
+          && !relation.targetTemplateIdentifier().equals(entity.templateIdentifier())) {
+        violations.add(RELATION_TARGET_TEMPLATE_MISMATCH, relation.name(),
+            relation.targetTemplateIdentifier(), entity.identifier(), entity.templateIdentifier());
       }
     }
   }

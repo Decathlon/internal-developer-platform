@@ -1,0 +1,15 @@
+{
+  "name": "web-service-invalid-rules",
+  "identifier": "web-service-invalid-rules",
+  "properties": {
+    "applicationName": "catalog-api",
+    "ownerEmail": "invalid-email",
+    "port": "80",
+    "environment": "DEV",
+    "version": "1.2.3",
+    "teamName": "platform-team",
+    "baseUrl": "invalid-url",
+    "protocol": "HTTP",
+    "programmingLanguage": "JAVA"
+  }
+}

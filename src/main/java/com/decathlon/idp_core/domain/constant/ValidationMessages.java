@@ -56,6 +56,7 @@ public class ValidationMessages {
   public static final String RELATION_REQUIRED_MISSING = "Relation '%s' is required by template '%s'";
   public static final String RELATION_TOO_MANY_TARGETS = "Relation '%s' allows only one target in template '%s'";
   public static final String RELATION_TARGET_ENTITY_NOT_FOUND = "Relation '%s': target entity '%s' does not exist";
+  public static final String RELATION_TARGET_TEMPLATE_MISMATCH = "Relation '%s' targets entities with template '%s', but entity '%s' has template '%s'";
   public static final String RELATION_TARGET_TEMPLATE_CANNOT_CHANGE = "Cannot change target template of relation '%s' from '%s' to '%s'. Target template cannot be modified after creation. Please delete and recreate the relation instead.";
   public static final String RELATION_CANNOT_TARGET_ITSELF = "Relation '%s' cannot reference its own template '%s' as the target.";
 
