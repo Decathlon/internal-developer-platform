@@ -3,6 +3,7 @@ package com.decathlon.idp_core.infrastructure.adapters.api.principal;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 
 import org.springframework.security.core.Authentication;
@@ -36,6 +37,9 @@ public class PrincipalExtractor {
   private static final String CLAIM_ORIGIN = "origin";
   private static final String CLAIM_AZP = "azp";
   private static final String CLAIM_SERVICE_NAME = "service_name";
+  private static final String CLAIM_GRANT_TYPE = "grant_type";
+  private static final String CLAIM_GTY = "gty";
+  private static final String GRANT_TYPE_CLIENT_CREDENTIALS = "client_credentials";
 
   /// Extracts principal information from the current authentication context.
   ///
@@ -66,8 +70,19 @@ public class PrincipalExtractor {
     String sub = jwtToken.getToken().getSubject();
 
     // Detect if this is a service account token
-    boolean isServiceAccount = claims.containsKey(CLAIM_CLIENT_ID) || claims.containsKey(CLAIM_AZP)
-        || claims.containsKey(CLAIM_SERVICE_NAME) || !claims.containsKey(CLAIM_EMAIL);
+    // 1. grant_type = client_credentials (definitive proof of M2M flow)
+    // 2. Explicit service_name claim
+    // 3. sub equals client_id (M2M flow where subject is the OAuth2 client itself)
+    // Humans: sub is a user identifier, even if client_id is present (identifying
+    // the OAuth2 client app)
+    String grantType = Optional.ofNullable(claims.get(CLAIM_GRANT_TYPE))
+        .or(() -> Optional.ofNullable(claims.get(CLAIM_GTY))).map(Object::toString).orElse(null);
+
+    String clientId = Optional.ofNullable(claims.get(CLAIM_CLIENT_ID))
+        .or(() -> Optional.ofNullable(claims.get(CLAIM_AZP))).map(Object::toString).orElse(null);
+
+    boolean isServiceAccount = GRANT_TYPE_CLIENT_CREDENTIALS.equals(grantType)
+        || claims.containsKey(CLAIM_SERVICE_NAME) || (clientId != null && sub.equals(clientId));
 
     if (isServiceAccount) {
       return extractServiceAccountFromJwt(sub, claims);

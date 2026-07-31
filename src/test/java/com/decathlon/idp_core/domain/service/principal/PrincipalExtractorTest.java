@@ -52,8 +52,8 @@ class PrincipalExtractorTest {
   }
 
   @Test
-  void shouldExtractServiceAccountFromJwtToken() {
-    // Given: JWT token for service account (M2M OAuth2)
+  void shouldExtractServiceAccountFromJwtTokenWithServiceName() {
+    // Given: JWT token for service account with service_name claim
     Map<String, Object> claims = Map.of("sub", "service-sub-456", "client_id", "github-connector",
         "service_name", "GitHub Actions Webhook", "origin", "github", "groups",
         List.of("devops-tools"));
@@ -71,6 +71,62 @@ class PrincipalExtractorTest {
     assertThat(principalInfo.attributes()).containsEntry("client_id", "github-connector")
         .containsEntry("origin", "github");
     assertThat(principalInfo.groups()).containsExactly("devops-tools");
+  }
+
+  @Test
+  void shouldExtractServiceAccountFromJwtWithClientCredentialsGrant() {
+    // Given: JWT token with grant_type = client_credentials (definitive M2M proof)
+    Map<String, Object> claims = Map.of("sub", "api-client-123", "client_id", "api-service",
+        "grant_type", "client_credentials", "origin", "corporate");
+
+    Jwt jwt = createJwt(claims);
+    Authentication authentication = new JwtAuthenticationToken(jwt);
+
+    // When: Extract principal info
+    PrincipalInfo principalInfo = principalExtractor.extractPrincipalInfo(authentication);
+
+    // Then: Service account correctly identified by grant_type
+    assertThat(principalInfo.identifier()).isEqualTo("api-service");
+    assertThat(principalInfo.kind()).isEqualTo(PrincipalKind.SERVICE_ACCOUNT);
+    assertThat(principalInfo.attributes()).containsEntry("client_id", "api-service")
+        .containsEntry("origin", "corporate");
+  }
+
+  @Test
+  void shouldExtractServiceAccountFromJwtWithGtyClaim() {
+    // Given: JWT token with gty (grant type) claim instead of grant_type
+    Map<String, Object> claims = Map.of("sub", "api-client-456", "client_id", "automation-service",
+        "gty", "client_credentials", "origin", "automation");
+
+    Jwt jwt = createJwt(claims);
+    Authentication authentication = new JwtAuthenticationToken(jwt);
+
+    // When: Extract principal info
+    PrincipalInfo principalInfo = principalExtractor.extractPrincipalInfo(authentication);
+
+    // Then: Service account correctly identified by gty claim
+    assertThat(principalInfo.identifier()).isEqualTo("automation-service");
+    assertThat(principalInfo.kind()).isEqualTo(PrincipalKind.SERVICE_ACCOUNT);
+    assertThat(principalInfo.attributes()).containsEntry("client_id", "automation-service");
+  }
+
+  @Test
+  void shouldExtractServiceAccountWhenSubEqualsClientId() {
+    // Given: JWT token where sub equals client_id (typical M2M flow)
+    Map<String, Object> claims = Map.of("sub", "C66c415a8b5cec7cb00ccd071892b4ff38042972e",
+        "client_id", "C66c415a8b5cec7cb00ccd071892b4ff38042972e", "origin", "corporate");
+
+    Jwt jwt = createJwt(claims);
+    Authentication authentication = new JwtAuthenticationToken(jwt);
+
+    // When: Extract principal info
+    PrincipalInfo principalInfo = principalExtractor.extractPrincipalInfo(authentication);
+
+    // Then: Service account correctly identified when sub == client_id
+    assertThat(principalInfo.identifier()).isEqualTo("C66c415a8b5cec7cb00ccd071892b4ff38042972e");
+    assertThat(principalInfo.kind()).isEqualTo(PrincipalKind.SERVICE_ACCOUNT);
+    assertThat(principalInfo.attributes()).containsEntry("client_id",
+        "C66c415a8b5cec7cb00ccd071892b4ff38042972e");
   }
 
   @Test
@@ -94,8 +150,8 @@ class PrincipalExtractorTest {
 
   @Test
   void shouldExtractServiceAccountWithAzpClaim() {
-    // Given: JWT token with azp (authorized party) claim instead of client_id
-    Map<String, Object> claims = Map.of("sub", "service-sub-999", "azp", "kafka-connector", "name",
+    // Given: JWT token with azp (authorized party) claim where sub == azp
+    Map<String, Object> claims = Map.of("sub", "kafka-connector", "azp", "kafka-connector", "name",
         "Kafka Event Producer");
 
     Jwt jwt = createJwt(claims);
@@ -109,6 +165,45 @@ class PrincipalExtractorTest {
     assertThat(principalInfo.kind()).isEqualTo(PrincipalKind.SERVICE_ACCOUNT);
     assertThat(principalInfo.name()).isEqualTo("Kafka Event Producer");
     assertThat(principalInfo.attributes()).containsEntry("client_id", "kafka-connector");
+  }
+
+  @Test
+  void shouldExtractHumanFromJwtWithClientIdPresent() {
+    // Given: JWT token for human user but client_id is present (identifies OAuth2
+    // client app)
+    // This is the real-world case: sub != client_id means it's a human using an
+    // OAuth2 client
+    Map<String, Object> claims = Map.of("sub", "RVANDO12", "client_id",
+        "C66c415a8b5cec7cb00ccd071892b4ff38042972e", "uid", "RVANDO12", "origin", "corporate");
+
+    Jwt jwt = createJwt(claims);
+    Authentication authentication = new JwtAuthenticationToken(jwt);
+
+    // When: Extract principal info
+    PrincipalInfo principalInfo = principalExtractor.extractPrincipalInfo(authentication);
+
+    // Then: Human principal correctly identified despite client_id presence
+    assertThat(principalInfo.identifier()).isEqualTo("RVANDO12");
+    assertThat(principalInfo.kind()).isEqualTo(PrincipalKind.HUMAN);
+    assertThat(principalInfo.name()).isEqualTo("RVANDO12");
+  }
+
+  @Test
+  void shouldNotConfuseHumanWithServiceAccountWhenGrantTypeDiffers() {
+    // Given: JWT token with grant_type other than client_credentials
+    Map<String, Object> claims = Map.of("sub", "user123", "client_id", "mobile-app", "grant_type",
+        "authorization_code", "email", "user@example.com");
+
+    Jwt jwt = createJwt(claims);
+    Authentication authentication = new JwtAuthenticationToken(jwt);
+
+    // When: Extract principal info
+    PrincipalInfo principalInfo = principalExtractor.extractPrincipalInfo(authentication);
+
+    // Then: Human principal correctly identified
+    assertThat(principalInfo.identifier()).isEqualTo("user123");
+    assertThat(principalInfo.kind()).isEqualTo(PrincipalKind.HUMAN);
+    assertThat(principalInfo.attributes()).containsEntry("email", "user@example.com");
   }
 
   @Test
@@ -154,8 +249,8 @@ class PrincipalExtractorTest {
     // When: Extract principal info
     PrincipalInfo principalInfo = principalExtractor.extractPrincipalInfo(authentication);
 
-    // Then: Optional fields are empty/null
-    assertThat(principalInfo.identifier()).isEqualTo("david-sub");
+    // Then: preferred_username is used as identifier, optional fields are empty
+    assertThat(principalInfo.identifier()).isEqualTo("david");
     assertThat(principalInfo.attributes()).doesNotContainKey("email");
     assertThat(principalInfo.groups()).isEmpty();
   }
@@ -247,6 +342,30 @@ class PrincipalExtractorTest {
 
     // Then: Safe casting returns empty list instead of throwing ClassCastException
     assertThat(principalInfo.groups()).isEmpty();
+  }
+
+  @Test
+  void shouldExtractGcpServiceAccountWithEmailClaim() {
+    // Given: GCP service account token with email claim (service account email, not
+    // user email)
+    // This is a real GCP workload identity token where sub == azp
+    Map<String, Object> claims = Map.of("aud",
+        "https://idp-back-245355900377.europe-west1.run.app/api/v1/events/products", "azp",
+        "107405014128022353937", "email",
+        "ps-fb25-product-events-produ@cpe-idp-stg-337o.iam.gserviceaccount.com", "email_verified",
+        true, "iss", "https://accounts.google.com", "sub", "107405014128022353937");
+
+    Jwt jwt = createJwt(claims);
+    Authentication authentication = new JwtAuthenticationToken(jwt);
+
+    // When: Extract principal info
+    PrincipalInfo principalInfo = principalExtractor.extractPrincipalInfo(authentication);
+
+    // Then: Service account correctly identified (sub == azp takes priority over
+    // email presence)
+    assertThat(principalInfo.identifier()).isEqualTo("107405014128022353937");
+    assertThat(principalInfo.kind()).isEqualTo(PrincipalKind.SERVICE_ACCOUNT);
+    assertThat(principalInfo.attributes()).containsEntry("client_id", "107405014128022353937");
   }
 
   private Jwt createJwt(Map<String, Object> claims) {
