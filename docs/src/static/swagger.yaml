@@ -717,7 +717,6 @@ paths:
             type: string
         - name: q
           in: query
-          description:
           description: >-
             Optional filter query using a simple expression language. See more details in the API documentation. Example: `name:idp` for entities with names containing 'idp'.
           required: false

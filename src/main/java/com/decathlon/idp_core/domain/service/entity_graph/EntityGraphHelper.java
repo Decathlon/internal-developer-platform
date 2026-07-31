@@ -33,7 +33,8 @@ public class EntityGraphHelper {
   /// callers that already own a transaction can reuse the logic directly without
   /// triggering a new transaction via the Spring proxy.
   ///
-  /// @param entityIds UUIDs of the root entities to build graphs for
+  /// @param entityGraphs map of entity UUIDs to their corresponding Entity
+  /// objects
   /// @param includeProperties whether to include property data in the nodes
   /// @param relationFilter relation names to include; empty means all
   /// @param propertyFilter property names to include; empty means all

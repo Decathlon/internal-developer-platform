@@ -190,39 +190,72 @@ public class EntityDtoOutMapper {
     return unifiedRelations;
   }
 
-  /// Builds a map of relation target ownerships for a page of entities, grouping
-  /// by target entity identifier.
-  ///
-  /// @param entitiesPage the page of entities to analyze
-  /// @return a map from target entity identifier to list of
-  /// relation-as-target summaries
+  /**
+   * Builds a map of relation target ownerships for a page of entities, grouping
+   * by target entity identifier.
+   *
+   * **UUID-Based Lookup:** Uses entity UUIDs (database primary keys) to fetch
+   * inbound relations, preventing incorrect associations when the same identifier
+   * exists across multiple templates.
+   *
+   * **Design:** Extracts UUIDs from all entities in the page and performs a bulk
+   * relationship query for efficiency.
+   *
+   * @param entitiesPage
+   *          the page of entities to analyze
+   * @return a map from target entity identifier to list of relation-as-target
+   *         summaries showing all inbound connections
+   */
   private Map<String, List<RelationAsTargetSummary>> buildRelationsAsTargetSummaryMapByPage(
       Page<Entity> entitiesPage) {
     if (entitiesPage == null || entitiesPage.getContent().isEmpty()) {
       return Collections.emptyMap();
     }
-    List<String> entitiesIdentifiers = entitiesPage.getContent().stream().map(Entity::identifier)
-        .filter(Objects::nonNull).toList();
+
+    List<Entity> entities = entitiesPage.getContent().stream()
+        .filter(e -> e != null && e.id() != null).toList();
+
+    if (entities.isEmpty()) {
+      return Collections.emptyMap();
+    }
+
+    // Extract UUIDs from entities
+    List<java.util.UUID> entityUuids = entities.stream().map(Entity::id).filter(Objects::nonNull)
+        .toList();
+
     List<RelationAsTargetSummary> relationTargetOwnerships = relationService
-        .findRelationsSummariesByTargetEntityIdentifiers(entitiesIdentifiers);
+        .findRelationsSummariesByTargetEntityUuids(entityUuids);
     return relationTargetOwnerships.stream()
+        .filter(rel -> rel != null && rel.targetEntityIdentifier() != null)
         .collect(Collectors.groupingBy(RelationAsTargetSummary::targetEntityIdentifier));
   }
 
-  /// Builds a map of relation target ownerships for a single entity, grouping by
-  /// target entity identifier.
-  ///
-  /// @param entity the entity to analyze
-  /// @return a map from target entity identifier to list of
-  /// relation-as-target summaries
+  /**
+   * Builds a map of relation target ownerships for a single entity, grouping by
+   * target entity identifier.
+   *
+   * **UUID-Based Lookup:** Uses entity UUID (database primary key) to fetch
+   * inbound relations, preventing incorrect associations when the same identifier
+   * exists across multiple templates.
+   *
+   * **Design:** Extracts the entity UUID and performs a single relationship
+   * query.
+   *
+   * @param entity
+   *          the entity to analyze
+   * @return a map from target entity identifier to list of relation-as-target
+   *         summaries showing all inbound connections
+   */
   private Map<String, List<RelationAsTargetSummary>> buildRelationsAsTargetSummaryMapByEntity(
       Entity entity) {
-    if (entity == null || entity.identifier() == null) {
+    if (entity == null || entity.id() == null) {
       return Collections.emptyMap();
     }
+
     List<RelationAsTargetSummary> relationTargetOwnerships = relationService
-        .findRelationsSummariesByTargetEntityIdentifiers(List.of(entity.identifier()));
+        .findRelationsSummariesByTargetEntityUuids(List.of(entity.id()));
     return relationTargetOwnerships.stream()
+        .filter(rel -> rel != null && rel.targetEntityIdentifier() != null)
         .collect(Collectors.groupingBy(RelationAsTargetSummary::targetEntityIdentifier));
   }
 
@@ -296,9 +329,7 @@ public class EntityDtoOutMapper {
     return compositeKeys.isEmpty()
         ? Collections.emptyMap()
         : entityService.getEntitiesSummariesByCompositeKeys(compositeKeys).stream()
-            .collect(Collectors.toMap(es -> es.templateIdentifier() + ":" + es.identifier(), // Composite
-                                                                                             // key
-                                                                                             // string
+            .collect(Collectors.toMap(es -> es.templateIdentifier() + ":" + es.identifier(),
                 es -> new EntitySummaryDto(es.identifier(), es.name(), es.templateIdentifier())));
   }
 
