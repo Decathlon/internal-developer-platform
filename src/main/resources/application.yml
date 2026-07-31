@@ -99,6 +99,8 @@ spring:
           batch_versioned_data: true
 
 springdoc:
+    # Will expose the health endpoint in the OpenAPI spec.
+  show-actuator: true
   swagger-ui:
     # Sorts API tags alphabetically in the Swagger UI.
     # Improves readability of the API documentation.
