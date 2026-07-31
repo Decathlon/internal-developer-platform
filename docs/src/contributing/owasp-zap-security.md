@@ -1,6 +1,6 @@
 ---
 title: OWASP ZAP Security Scanning
-description: Dynamic Application Security Testing (DAST) using OWASP ZAP Test Containers
+description: Dynamic Application Security Testing (DAST) using OWASP ZAP Testcontainers
 ---
 
 Use this guide to run OWASP ZAP scans against IDP-Core locally or in GitHub Actions and to interpret the results.
