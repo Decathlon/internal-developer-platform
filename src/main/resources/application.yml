@@ -51,7 +51,6 @@ spring:
     validate-on-migrate: true
     # Allows migrations to run even if they're detected out of order (common in ephemeral DBs).
     out-of-order: true
-    
   security:
     oauth2:
       client:
