@@ -1,27 +1,20 @@
 package com.decathlon.idp_core.domain.service.property;
 
-import static com.decathlon.idp_core.domain.constant.ValidationMessages.PROPERTY_ENUM_VIOLATION;
-import static com.decathlon.idp_core.domain.constant.ValidationMessages.PROPERTY_FORMAT_VIOLATION;
-import static com.decathlon.idp_core.domain.constant.ValidationMessages.PROPERTY_MAX_LENGTH_VIOLATION;
-import static com.decathlon.idp_core.domain.constant.ValidationMessages.PROPERTY_MAX_VALUE_VIOLATION;
-import static com.decathlon.idp_core.domain.constant.ValidationMessages.PROPERTY_MIN_LENGTH_VIOLATION;
-import static com.decathlon.idp_core.domain.constant.ValidationMessages.PROPERTY_MIN_VALUE_VIOLATION;
-import static com.decathlon.idp_core.domain.constant.ValidationMessages.PROPERTY_NOT_DEFINED_IN_TEMPLATE;
-import static com.decathlon.idp_core.domain.constant.ValidationMessages.PROPERTY_REGEX_VIOLATION;
-import static com.decathlon.idp_core.domain.constant.ValidationMessages.PROPERTY_REQUIRED_MISSING;
-import static com.decathlon.idp_core.domain.constant.ValidationMessages.PROPERTY_TYPE_MISMATCH;
+import static com.decathlon.idp_core.domain.constant.ValidationMessages.*;
 
 import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 import org.springframework.stereotype.Service;
 
-import com.decathlon.idp_core.domain.exception.entity.EntityValidationException;
+import com.decathlon.idp_core.domain.exception.entity_dynamic_mapping.EntityDynamicMappingHasNoPropertiesException;
+import com.decathlon.idp_core.domain.exception.entity_template.PropertyNameNotFoundEntityTemplatePropertiesException;
 import com.decathlon.idp_core.domain.model.entity.Property;
 import com.decathlon.idp_core.domain.model.entity_template.EntityTemplate;
 import com.decathlon.idp_core.domain.model.entity_template.PropertyDefinition;
@@ -76,6 +69,7 @@ public class PropertyValidationService {
   /// provided and non-blank. If a required property is missing, adds a violation.
   /// If the property is present, validates its value against the definition's
   /// rules and accumulates any violations found.
+  ///
   /// @param template the entity template whose property definitions are used for
   /// validation
   /// @param definitions the list of property definitions from the template
@@ -116,6 +110,53 @@ public class PropertyValidationService {
 
       validatePropertyValue(definition, property.value()).forEach(violations::add);
     }
+  }
+
+  public void validateMappingPropertiesAgainstTemplate(EntityTemplate template,
+      List<String> mappedPropertyNames) {
+    validateNamesExistInTemplate(template, mappedPropertyNames);
+    validateRequiredPropertiesAreMapped(template, mappedPropertyNames);
+  }
+
+  private void validateNamesExistInTemplate(EntityTemplate template, List<String> propertyNames) {
+    if (propertyNames == null || propertyNames.isEmpty()) {
+      return;
+    }
+
+    Set<String> definedPropertyNames = getDefinedPropertyNames(template);
+
+    propertyNames.stream().filter(name -> !definedPropertyNames.contains(name)).findFirst()
+        .ifPresent(name -> {
+          throw new PropertyNameNotFoundEntityTemplatePropertiesException(
+              PROPERTY_NOT_EXPECTED_FORMAT.formatted(name));
+        });
+  }
+
+  /// Validates that all required property definitions in the template are mapped.
+  private void validateRequiredPropertiesAreMapped(EntityTemplate template,
+      List<String> mappedPropertyNames) {
+    List<PropertyDefinition> definitions = template.propertiesDefinitions() != null
+        ? template.propertiesDefinitions()
+        : List.of();
+
+    List<String> mappedNames = mappedPropertyNames != null ? mappedPropertyNames : List.of();
+
+    List<String> missingProperties = definitions.stream().filter(PropertyDefinition::required)
+        .map(PropertyDefinition::name).filter(requiredName -> !mappedNames.contains(requiredName))
+        .toList();
+
+    if (!missingProperties.isEmpty()) {
+      throw new EntityDynamicMappingHasNoPropertiesException(
+          String.format(ENTITY_DYNAMIC_MAPPING_ENTITY_PROPERTIES_MISSING, missingProperties));
+    }
+  }
+
+  private Set<String> getDefinedPropertyNames(EntityTemplate template) {
+    if (template.propertiesDefinitions() == null) {
+      return Set.of();
+    }
+    return template.propertiesDefinitions().stream().map(PropertyDefinition::name)
+        .collect(Collectors.toSet());
   }
 
   private List<String> validateStringPropertyValue(String propertyName, Object rawValue,

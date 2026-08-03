@@ -1,0 +1,10 @@
+{
+  "name": "GitHub DORA Connector",
+  "description": "Duplicate title",
+  "enabled": true,
+  "mapping_identifiers": ["microservice-mapping"],
+  "security": {
+    "type": "NONE",
+    "config": {}
+  }
+}

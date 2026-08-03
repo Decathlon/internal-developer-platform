@@ -131,7 +131,7 @@ Define your own **Entity Templates** that mirror your organization's specific ne
 
 ### Multi-Source Data Ingestion
 
-Connect to any data source through **Webhooks**, **Kafka/Pub-Sub**, or direct API calls. Map incoming data to your entities using JQ expressions.
+Connect to any data source through **Webhooks**, **Kafka/Pub-Sub**, or direct API calls. Map incoming data to your entities using JSLT expressions.
 
 ### Scorecards & Metrics
 

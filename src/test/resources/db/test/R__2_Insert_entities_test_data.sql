@@ -4,9 +4,6 @@
 
 INSERT INTO entity (id, identifier, name, template_identifier)
 VALUES
-  ('550e8400-e29b-41d4-a716-446655440115', 'default-team', 'Default Team', 'team'),
-  ('550e8400-e29b-41d4-a716-446655440116', 'test-team-required', 'Test Team Required', 'team'),
-  ('550e8400-e29b-41d4-a716-446655440117', 'test-support-with-required-team', 'Test Support With Required Team', 'support'),
   ('550e8400-e29b-41d4-a716-446655440100', 'web-api-1', 'Web API 1', 'web-service'),
   ('550e8400-e29b-41d4-a716-446655440101', 'web-api-2', 'Web API 2', 'web-service'),
   ('550e8400-e29b-41d4-a716-446655440102', 'microservice-1', 'Microservice 1', 'microservice'),
@@ -21,7 +18,10 @@ VALUES
   ('550e8400-e29b-41d4-a716-446655440111', 'monitoring-service-3', 'Monitoring Service 3', 'monitoring-service'),
   ('550e8400-e29b-41d4-a716-446655440112', 'monitoring-service-4', 'Monitoring Service 4', 'monitoring-service'),
   ('550e8400-e29b-41d4-a716-446655440113', 'monitoring-service-5', 'Monitoring Service 5', 'monitoring-service'),
-  ('550e8400-e29b-41d4-a716-446655440114', 'monitoring-service-6', 'Monitoring Service 6', 'monitoring-service');
+  ('550e8400-e29b-41d4-a716-446655440114', 'monitoring-service-6', 'Monitoring Service 6', 'monitoring-service'),
+  ('550e8400-e29b-41d4-a716-446655440115', 'default-team', 'Default Team', 'team'),
+  ('550e8400-e29b-41d4-a716-446655440116', 'test-team-required', 'Test Team Required', 'team'),
+  ('550e8400-e29b-41d4-a716-446655440117', 'test-support-with-required-team', 'Test Support With Required Team', 'support');
 
 -- Properties for default-team entity
 INSERT INTO idp_core.property (id, name, value)

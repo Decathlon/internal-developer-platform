@@ -5,6 +5,8 @@ import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
+import jakarta.persistence.EntityNotFoundException;
+
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -37,7 +39,17 @@ public class PostgresEntityAdapter implements EntityRepositoryPort {
 
   @Override
   public Entity save(Entity entity) {
-    return mapper.toDomain(jpaEntityRepository.save(mapper.toJpa(entity)));
+    if (entity.id() != null) {
+      // Update: merge existing entity
+      EntityJpaEntity existing = jpaEntityRepository.findById(entity.id())
+          .orElseThrow(() -> new EntityNotFoundException(
+              "Entity with id " + entity.id() + " not found for update"));
+      EntityJpaEntity merged = mapper.toJpaWithMerge(entity, existing);
+      return mapper.toDomain(jpaEntityRepository.save(merged));
+    } else {
+      // Create: new entity
+      return mapper.toDomain(jpaEntityRepository.save(mapper.toJpa(entity)));
+    }
   }
 
   @Override

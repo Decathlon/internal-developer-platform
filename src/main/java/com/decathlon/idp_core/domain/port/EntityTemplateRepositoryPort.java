@@ -45,4 +45,6 @@ public interface EntityTemplateRepositoryPort {
   /// @param identifier the business identifier of the template to check
   /// @return `true` when at least one other template targets this template in a relation
   boolean existsRelationTargetingTemplate(String identifier);
+
+  boolean existsById(UUID id);
 }

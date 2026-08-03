@@ -55,3 +55,10 @@ repos:
         pass_filenames: false
         files: \.java$
         stages: [pre-commit]
+      - id: check-rejected-terms
+        name: Check staged files for rejected vocabulary terms
+        entry: scripts/check-rejected-terms.sh
+        language: script
+        types: [text]
+        exclude: ^\.vale/styles/config/vocabularies/IDP/reject\.txt$
+        stages: [pre-commit]

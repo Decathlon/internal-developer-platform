@@ -1,0 +1,11 @@
+{
+  "identifier": "invalid-jslt-connector",
+  "name": "Invalid JSLT Connector",
+  "description": "Should fail due to invalid JSLT filter",
+  "enabled": true,
+  "mapping_identifiers": ["microservice-mapping"],
+  "security": {
+    "type": "NONE",
+    "config": {}
+  }
+}

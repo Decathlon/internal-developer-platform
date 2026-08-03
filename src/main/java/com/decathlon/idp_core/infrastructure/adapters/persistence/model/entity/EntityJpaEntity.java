@@ -1,10 +1,11 @@
 package com.decathlon.idp_core.infrastructure.adapters.persistence.model.entity;
 
-import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 
 import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
@@ -16,16 +17,22 @@ import jakarta.persistence.Table;
 import jakarta.persistence.UniqueConstraint;
 
 import org.hibernate.annotations.BatchSize;
+import org.hibernate.envers.Audited;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;
-import lombok.Data;
+import lombok.EqualsAndHashCode;
+import lombok.Getter;
 import lombok.NoArgsConstructor;
+import lombok.Setter;
 
-@jakarta.persistence.Entity
-@Data
+@Entity
+@Getter
+@Setter
+@EqualsAndHashCode(onlyExplicitlyIncluded = true)
 @Table(name = "entity", uniqueConstraints = {
     @UniqueConstraint(columnNames = {"identifier", "template_identifier"})})
+@Audited(withModifiedFlag = true)
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
@@ -40,17 +47,21 @@ public class EntityJpaEntity {
 
   private String name;
 
+  @EqualsAndHashCode.Include
   private String identifier;
 
   @BatchSize(size = 50)
   @OneToMany(cascade = CascadeType.ALL, orphanRemoval = true)
   @JoinTable(name = "entity_properties", joinColumns = @JoinColumn(name = "entity_id"), inverseJoinColumns = @JoinColumn(name = "property_id"), uniqueConstraints = @UniqueConstraint(columnNames = {
       "entity_id", "property_id"}), indexes = @Index(columnList = "entity_id"))
-  private List<PropertyJpaEntity> properties;
+  private Set<PropertyJpaEntity> properties;
 
   @BatchSize(size = 50)
   @OneToMany(cascade = CascadeType.ALL, orphanRemoval = true)
   @JoinTable(name = "entity_relations", joinColumns = @JoinColumn(name = "entity_id"), inverseJoinColumns = @JoinColumn(name = "relation_id"), uniqueConstraints = @UniqueConstraint(columnNames = {
       "entity_id", "relation_id"}), indexes = @Index(columnList = "entity_id"))
-  private List<RelationJpaEntity> relations;
+  private Set<RelationJpaEntity> relations;
+
+  @Column(name = "updated_at")
+  private Long updatedAt;
 }

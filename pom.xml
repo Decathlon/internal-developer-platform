@@ -32,6 +32,8 @@
     <spring-framework.version>7.0.8</spring-framework.version>
     <postgresql.version>42.7.11</postgresql.version>
     <nimbus-jose-jwt.version>10.9.1</nimbus-jose-jwt.version>
+    <test.groups/>
+    <test.excludedGroups>security</test.excludedGroups>
   </properties>
 
   <!--  Swagger version management to avoid conflicts -->
@@ -246,11 +248,28 @@
       <version>3.20.0</version>
     </dependency>
 
+    <!-- JSLT: JVM-native JSON transformation language used as the DSL engine for dynamic mappings -->
+    <!-- ADR 0004: JSLT chosen over JQ for performance, robust syntax checking and JVM-native execution -->
+    <dependency>
+      <groupId>com.schibsted.spt.data</groupId>
+      <artifactId>jslt</artifactId>
+      <version>0.1.14</version>
+    </dependency>
+
     <dependency>
       <groupId>org.springframework.boot</groupId>
       <artifactId>spring-boot-starter-actuator</artifactId>
     </dependency>
 
+    <!-- Hibernate Envers for auditing -->
+    <dependency>
+      <groupId>org.hibernate.orm</groupId>
+      <artifactId>hibernate-envers</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.springframework.data</groupId>
+      <artifactId>spring-data-envers</artifactId>
+    </dependency>
   </dependencies>
 
   <build>
@@ -308,6 +327,15 @@
               <version>0.2.0</version>
             </path>
           </annotationProcessorPaths>
+        </configuration>
+      </plugin>
+
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-surefire-plugin</artifactId>
+        <configuration>
+          <groups>${test.groups}</groups>
+          <excludedGroups>${test.excludedGroups}</excludedGroups>
         </configuration>
       </plugin>
 

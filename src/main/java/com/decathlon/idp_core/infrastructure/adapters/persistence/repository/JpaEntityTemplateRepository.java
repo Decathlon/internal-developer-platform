@@ -8,6 +8,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.history.RevisionRepository;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 import org.springframework.transaction.annotation.Transactional;
@@ -15,7 +16,10 @@ import org.springframework.transaction.annotation.Transactional;
 import com.decathlon.idp_core.infrastructure.adapters.persistence.model.entity_template.EntityTemplateJpaEntity;
 
 @Repository
-public interface JpaEntityTemplateRepository extends JpaRepository<EntityTemplateJpaEntity, UUID> {
+public interface JpaEntityTemplateRepository
+    extends
+      JpaRepository<EntityTemplateJpaEntity, UUID>,
+      RevisionRepository<EntityTemplateJpaEntity, UUID, Long> {
 
   @EntityGraph(attributePaths = {"propertiesDefinitions", "propertiesDefinitions.rules",
       "relationsDefinitions"})

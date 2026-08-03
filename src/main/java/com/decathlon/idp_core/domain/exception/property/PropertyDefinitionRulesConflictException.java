@@ -1,7 +1,5 @@
 package com.decathlon.idp_core.domain.exception.property;
 
-import com.decathlon.idp_core.domain.model.enums.PropertyType;
-
 /// Domain exception for property rule validation violations.
 ///
 /// **Business purpose:** Represents the business rule violation when property rules
@@ -18,7 +16,7 @@ public class PropertyDefinitionRulesConflictException extends RuntimeException {
   /// @param propertyName the name of the property with invalid rules
   /// @param propertyType the data type of the property
   /// @param violationMessage detailed explanation of what rule is invalid
-  public PropertyDefinitionRulesConflictException(String propertyName, PropertyType propertyType,
+  public PropertyDefinitionRulesConflictException(String propertyName, String propertyType,
       String violationMessage) {
     super("Property '" + propertyName + "' of type " + propertyType + ": " + violationMessage);
   }

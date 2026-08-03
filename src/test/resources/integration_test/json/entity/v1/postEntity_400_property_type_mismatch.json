@@ -1,0 +1,15 @@
+{
+  "name": "web-service-invalid-type",
+  "identifier": "web-service-invalid-type",
+  "properties": {
+    "applicationName": "catalog-api",
+    "ownerEmail": "owner@example.com",
+    "port": "not-a-number",
+    "environment": "DEV",
+    "version": "1.2.3",
+    "teamName": "platform-team",
+    "baseUrl": "https://catalog.example.com",
+    "protocol": "HTTP",
+    "programmingLanguage": "JAVA"
+  }
+}

@@ -1,0 +1,10 @@
+{
+  "name": "Audit Test Entity",
+  "identifier": "%s",
+  "properties": {
+    "applicationName": "catalog-api",
+    "ownerEmail": "owner@example.com",
+    "environment": "DEV",
+    "version": "1.2.3"
+  }
+}

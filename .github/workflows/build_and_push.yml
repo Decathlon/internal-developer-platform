@@ -19,12 +19,12 @@ jobs:
       id-token: write
     steps:
       - name: Checkout repository
-        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0  #  v7.0.0
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  #  v7.0.1
         with:
           fetch-depth: 0
           ref: ${{ github.event.release.tag_name || github.event.inputs.tag_name }}
       - name: Set up JDK 25
-        uses: actions/setup-java@1bcf9fb12cf4aa7d266a90ae39939e61372fe520  #  v5.4.0
+        uses: actions/setup-java@b6effb05e454b25005698d916606bdc6ffcbf961  #  v5.7.0
         with:
           distribution: 'temurin'
           java-version: 25
@@ -34,7 +34,7 @@ jobs:
         id: compile
         run: mvn clean verify
       - name: Login to Docker Hub
-        uses: docker/login-action@af1e73f918a031802d376d3c8bbc3fe56130a9b0  #  v4.4.0
+        uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f  #  v4.6.0
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}

@@ -1,9 +1,9 @@
 ---
 title: Core Concepts
-description: Understand the fundamental concepts of IDP-Core - Entity Templates, Entities, Properties, Relations
+description: Understand the fundamental concepts of IDP-Core - Entity Templates, Entities, Properties, Relations, and Audit tracking
 ---
 
-IDP-Core sits at the center of a flexible, runtime-configurable data model. This section explains the fundamental concepts you need to understand.
+IDP-Core sits at the center of a flexible, runtime-configurable data model. This section explains the fundamental concepts you need to understand, including entity management and comprehensive audit tracking.
 
 ## Overview
 
@@ -29,31 +29,43 @@ graph TB
 
     ---
 
-    Blueprints that define the structure of your entities—like database schemas defined at runtime.
+  Blueprints that define the structure of your entities—like database schemas defined at runtime.
 
 - 🗄️ **[Entities](entities.md)**
 
     ---
 
-    Instances of templates with actual data—your software catalog items.
+  Instances of templates with actual data—your software catalog items.
 
 - 📋 **[Properties](properties.md)**
 
     ---
 
-    Data fields with types, validation rules, and constraints.
+  Data fields with types, validation rules, and constraints.
 
 - 🔗 **[Relations](relations.md)**
 
     ---
 
-    Connections between entities forming a knowledge graph.
+  Connections between entities forming a knowledge graph.
+
+- 🌐 **[Webhooks](webhooks.md)**
+
+    ---
+
+ Runtime-configurable connectors to push your data from external systems within your IDP. You can map any source in your data model in minutes.
 
 - 🔍 **[Filtering Entities](entity-filtering.md)**
 
     ---
 
     Query entities by attributes, property values, and relations using the filter DSL.
+
+- 📜 **[Audit](audit.md)**
+
+    ---
+
+    Track all changes over time with comprehensive revision history and user attribution.
 
 </div>
 
@@ -105,7 +117,7 @@ erDiagram
 ## Quick Reference
 
 | Concept             | What It Is                                          | Example                                                   |
-| ------------------- | --------------------------------------------------- | --------------------------------------------------------- |
+|---------------------|-----------------------------------------------------|-----------------------------------------------------------|
 | **Entity Template** | Blueprint/schema                                    | `service`, `team`, `repository`                           |
 | **Entity**          | Instance based on a template that contains the data | `payment-service`, `platform-team`, `idp-core-repository` |
 | **Property**        | Data field                                          | `name`, `status`, `url`                                   |
@@ -130,3 +142,4 @@ Dive deeper into each concept:
 - **[Entity Templates](entity-templates.md)** - Learn how to design your data model
 - **[Properties](properties.md)** - Understand property types and validation
 - **[Relations](relations.md)** - Connect your entities into a graph
+- **[Webhooks](webhooks.md)** - Configure inbound integrations and security strategies

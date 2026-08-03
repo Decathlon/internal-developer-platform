@@ -348,7 +348,7 @@ Use template expressions to inject dynamic values:
 
 ```bash
 {{ .entity.identifier }}        // Entity ID
-{{ .entity.title }}             // Entity title
+{{ .entity.name }}             // Entity name
 {{ .entity.properties.owner }}  // Entity property
 {{ .entity.relations.team }}    // Entity relation
 ```

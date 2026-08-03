@@ -13,7 +13,7 @@ The Internal Developer Platform provides a comprehensive set of features to buil
 
     ---
 
-    Connect to any data source through Webhooks, Kafka, or Pub/Sub. Map incoming data to entities using JQ expressions.
+    Connect to any data source through Webhooks, Kafka, or Pub/Sub. Map incoming data to entities using JSLT expressions.
 
     **Status:** 🕐 Planned
 

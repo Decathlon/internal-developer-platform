@@ -1,0 +1,7 @@
+{
+  "name": "web-service-missing-required",
+  "identifier": "web-service-missing-required",
+  "properties": {
+    "port": "8080"
+  }
+}

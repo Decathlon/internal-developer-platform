@@ -1,5 +1,10 @@
 -- Sample data for IDP Core domain models - Enhanced with 10 templates
 
+-- Clear existing data (for repeatable migrations)
+-- Order matters: respect foreign key constraints
+DELETE FROM webhook_mapping_link;
+DELETE FROM entity_dynamic_mapping;
+DELETE FROM webhook_connector;
 -- Clear existing data (for repeatable migrations).
 -- Deletion order respects FK constraints: child tables first, then parents.
 DELETE FROM entity_properties;
@@ -91,8 +96,8 @@ INSERT INTO relation_definition (id, name, target_template_identifier, required,
 ('550e8400-e29b-41d4-a716-446655440052', 'downstream_services', 'service', false, true),
 
 -- Data relationships
-('550e8400-e29b-41d4-a716-446655440053', 'database', 'database', false, false),
-('550e8400-e29b-41d4-a716-446655440054', 'cache', 'cache', false, false),
+('550e8400-e29b-41d4-a716-446655440053', 'database', 'database-service', false, false),
+('550e8400-e29b-41d4-a716-446655440054', 'cache', 'cache-service', false, false),
 ('550e8400-e29b-41d4-a716-446655440055', 'message_queue', 'queue', false, true),
 ('550e8400-e29b-41d4-a716-446655440056', 'search_engine', 'search', false, false),
 
@@ -112,7 +117,12 @@ INSERT INTO relation_definition (id, name, target_template_identifier, required,
 ('550e8400-e29b-41d4-a716-446655440065', 'file_storage', 'storage', false, false),
 
 -- Test relationship with required constraint
-('550e8400-e29b-41d4-a716-446655440066', 'required_team', 'team', true, false);
+('550e8400-e29b-41d4-a716-446655440066', 'required_team', 'team', true, false),
+
+-- Web-service to microservice links
+('550e8400-e29b-41d4-a716-446655440067', 'api-link', 'microservice', false, true),
+('550e8400-e29b-41d4-a716-446655440068', 'uses', 'web-service', false, true),
+('550e8400-e29b-41d4-a716-446655440069', 'monitors', 'web-service', false, true);
 
 -- Insert diverse entity templates
 INSERT INTO entity_template (id, identifier, name, description) VALUES
@@ -127,7 +137,8 @@ INSERT INTO entity_template (id, identifier, name, description) VALUES
 ('550e8400-e29b-41d4-a716-446655440078', 'cache-service', 'Cache Service', 'Template for caching services'),
 ('550e8400-e29b-41d4-a716-446655440079', 'monitoring-service', 'Monitoring Service', 'Template for monitoring and observability services'),
 ('550e8400-e29b-41d4-a716-446655440080', 'team', 'Team', 'Template for team entities'),
-('550e8400-e29b-41d4-a716-446655440081', 'support', 'Support', 'Template for support entities with required team relation');
+('550e8400-e29b-41d4-a716-446655440081', 'support', 'Support', 'Template for support entities with required team relation'),
+('550e8400-e29b-41d4-a716-446655440082', 'web-audited', 'Web audited', 'Template for validation of audit modifications');
 
 -- Link web-service template (comprehensive web API)
 INSERT INTO entity_template_properties_definitions (entity_template_id, properties_definitions_id) VALUES
@@ -149,7 +160,10 @@ INSERT INTO entity_template_relations_definitions (entity_template_id, relations
 ('550e8400-e29b-41d4-a716-446655440070', '550e8400-e29b-41d4-a716-446655440054'), -- cache
 ('550e8400-e29b-41d4-a716-446655440070', '550e8400-e29b-41d4-a716-446655440057'), -- networks
 ('550e8400-e29b-41d4-a716-446655440070', '550e8400-e29b-41d4-a716-446655440059'), -- monitoring
-('550e8400-e29b-41d4-a716-446655440070', '550e8400-e29b-41d4-a716-446655440061'); -- secrets
+('550e8400-e29b-41d4-a716-446655440070', '550e8400-e29b-41d4-a716-446655440061'), -- secrets
+('550e8400-e29b-41d4-a716-446655440070', '550e8400-e29b-41d4-a716-446655440067'), -- api-link
+('550e8400-e29b-41d4-a716-446655440070', '550e8400-e29b-41d4-a716-446655440068'), -- uses
+('550e8400-e29b-41d4-a716-446655440070', '550e8400-e29b-41d4-a716-446655440069'); -- monitors
 
 -- Link microservice template (lightweight service)
 INSERT INTO entity_template_properties_definitions (entity_template_id, properties_definitions_id) VALUES
@@ -304,6 +318,13 @@ INSERT INTO entity_template_properties_definitions (entity_template_id, properti
 ('550e8400-e29b-41d4-a716-446655440081', '550e8400-e29b-41d4-a716-446655440022'), -- environment
 ('550e8400-e29b-41d4-a716-446655440081', '550e8400-e29b-41d4-a716-446655440023'), -- version
 ('550e8400-e29b-41d4-a716-446655440081', '550e8400-e29b-41d4-a716-446655440024'); -- teamName
+
+-- Link web-audited template (for testing audit modifications)
+INSERT INTO entity_template_properties_definitions (entity_template_id, properties_definitions_id) VALUES
+('550e8400-e29b-41d4-a716-446655440082', '550e8400-e29b-41d4-a716-446655440020'), -- applicationName
+('550e8400-e29b-41d4-a716-446655440082', '550e8400-e29b-41d4-a716-446655440021'), -- ownerEmail
+('550e8400-e29b-41d4-a716-446655440082', '550e8400-e29b-41d4-a716-446655440022'), -- environment
+('550e8400-e29b-41d4-a716-446655440082', '550e8400-e29b-41d4-a716-446655440023'); -- version
 
 INSERT INTO entity_template_relations_definitions (entity_template_id, relations_definitions_id) VALUES
 ('550e8400-e29b-41d4-a716-446655440081', '550e8400-e29b-41d4-a716-446655440066'); -- required_team

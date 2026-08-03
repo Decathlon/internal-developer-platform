@@ -85,6 +85,11 @@ spring:
         # works together with batch_size to reduce round-trips.
         order_inserts: true
         order_updates: true
+        envers:
+          # Enables Hibernate Envers for auditing entity changes, also deletion.
+          # Stores audit data in a separate table for each entity.
+          store_data_at_delete: true
+          track_entities_changed_in_revision: true
         jdbc:
           # Number of statements grouped into one JDBC batch.
           # significantly reduces DB round-trips on bulk writes.
