@@ -43,8 +43,7 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          # Use GitHub CLI to get the current head commit SHA of the PR
-          PR_SHA=$(gh pr view "${{ github.event.issue.number }}" --json headRefOid -q .headRefOid)
+          PR_SHA=$(gh pr view "${{ github.event.issue.number }}" --repo "${{ github.repository }}" --json headRefOid -q .headRefOid)
           echo "sha=$PR_SHA" >> "$GITHUB_OUTPUT"
 
       # Step A3: Checkout the immutable PR SHA to prevent TOCTOU
