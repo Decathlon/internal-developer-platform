@@ -32,6 +32,8 @@
     <spring-framework.version>7.0.8</spring-framework.version>
     <postgresql.version>42.7.11</postgresql.version>
     <nimbus-jose-jwt.version>10.9.1</nimbus-jose-jwt.version>
+    <test.groups/>
+    <test.excludedGroups>security</test.excludedGroups>
   </properties>
 
   <!--  Swagger version management to avoid conflicts -->
@@ -325,6 +327,15 @@
               <version>0.2.0</version>
             </path>
           </annotationProcessorPaths>
+        </configuration>
+      </plugin>
+
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-surefire-plugin</artifactId>
+        <configuration>
+          <groups>${test.groups}</groups>
+          <excludedGroups>${test.excludedGroups}</excludedGroups>
         </configuration>
       </plugin>
 
