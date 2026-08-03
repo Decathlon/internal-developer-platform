@@ -298,6 +298,7 @@
       <plugin>
         <groupId>org.flywaydb</groupId>
         <artifactId>flyway-maven-plugin</artifactId>
+        <version>13.0.0</version>
       </plugin>
 
       <plugin>
@@ -482,7 +483,7 @@
         <groupId>com.diffplug.spotless</groupId>
         <artifactId>spotless-maven-plugin</artifactId>
         <version>3.8.0</version>
-        <!-- Last known stable with Java 21 -->
+        <!-- Version validated with Java ${java.version} -->
         <configuration>
           <java>
             <!-- Use Eclipse formatter instead of Google Java Format for Java 25 compatibility -->
