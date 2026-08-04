@@ -91,6 +91,11 @@ public class PostgresEntityTemplateAdapter implements EntityTemplateRepositoryPo
   }
 
   @Override
+  public boolean existsRelationTargetingTemplate(String identifier) {
+    return jpaEntityTemplateRepository.countRelationTargetingTemplate(identifier) > 0;
+  }
+
+  @Override
   public boolean existsById(UUID id) {
     return jpaEntityTemplateRepository.existsById(id);
   }

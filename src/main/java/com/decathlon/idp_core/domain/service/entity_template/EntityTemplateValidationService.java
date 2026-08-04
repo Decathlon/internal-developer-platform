@@ -7,7 +7,18 @@ import java.util.Objects;
 
 import org.springframework.stereotype.Service;
 
-import com.decathlon.idp_core.domain.exception.entity_template.*;
+import com.decathlon.idp_core.domain.exception.entity_template.EntityTemplateAlreadyExistsException;
+import com.decathlon.idp_core.domain.exception.entity_template.EntityTemplateIdentifierCannotChangeException;
+import com.decathlon.idp_core.domain.exception.entity_template.EntityTemplateIsRelationTargetException;
+import com.decathlon.idp_core.domain.exception.entity_template.EntityTemplateNameAlreadyExistsException;
+import com.decathlon.idp_core.domain.exception.entity_template.EntityTemplateNotFoundException;
+import com.decathlon.idp_core.domain.exception.entity_template.EntityTemplateUsedByDynamicMappingException;
+import com.decathlon.idp_core.domain.exception.entity_template.PropertyDefinitionRulesConflictException;
+import com.decathlon.idp_core.domain.exception.entity_template.PropertyNameAlreadyExistsException;
+import com.decathlon.idp_core.domain.exception.entity_template.RelationCannotTargetItselfException;
+import com.decathlon.idp_core.domain.exception.entity_template.RelationNameAlreadyExistsException;
+import com.decathlon.idp_core.domain.exception.entity_template.RelationTargetTemplateChangeException;
+import com.decathlon.idp_core.domain.exception.entity_template.TargetTemplateNotFoundException;
 import com.decathlon.idp_core.domain.model.entity_mapping.EntityDynamicMapping;
 import com.decathlon.idp_core.domain.model.entity_template.EntityTemplate;
 import com.decathlon.idp_core.domain.model.entity_template.PropertyDefinition;
@@ -124,18 +135,23 @@ public class EntityTemplateValidationService {
     }
   }
 
-  /// Validates that a template identifier is non-null and refers to an existing
-  /// template.
+  /// Validates that a template identifier is non-null, refers to an existing
+  /// template, and is not referenced as a target in another template's relation
+  /// definition.
   ///
   /// @param identifier the identifier of the template to delete
   /// @throws EntityTemplateNotFoundException when `identifier` is null
-  /// @throws EntityTemplateNotFoundException when no template matches
-  /// `identifier`
+  /// @throws EntityTemplateNotFoundException when no template matches `identifier`
+  /// @throws EntityTemplateIsRelationTargetException when another template
+  /// declares a relation whose `targetTemplateIdentifier` equals `identifier`
   public void validateForDeletion(String identifier) {
     if (identifier == null) {
       throw new EntityTemplateNotFoundException("identifier", "null");
     }
     validateTemplateExists(identifier);
+    if (entityTemplateRepositoryPort.existsRelationTargetingTemplate(identifier)) {
+      throw new EntityTemplateIsRelationTargetException(identifier);
+    }
     validateTemplateIsNotUsedInEntityDynamicMapper(identifier);
   }
 
