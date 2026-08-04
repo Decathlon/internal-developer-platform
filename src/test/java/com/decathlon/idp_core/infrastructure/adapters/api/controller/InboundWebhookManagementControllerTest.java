@@ -55,6 +55,7 @@ class InboundWebhookManagementControllerTest extends AbstractIntegrationTest {
           "identifier": "%s",
           "entity_template_identifier": "microservice",
           "filter": ".action == \\"pushed\\"",
+          "action": "UPSERT",
           "name":"test mapping name",
           "description":"descrption",
           "entity": {

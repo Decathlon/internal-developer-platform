@@ -1,16 +1,16 @@
-package com.decathlon.idp_core.infrastructure.adapters.ingestion.service;
+package com.decathlon.idp_core.infrastructure.adapters.ingestion.processors;
 
 import java.util.Map;
 
-import org.springframework.stereotype.Service;
+import org.springframework.stereotype.Component;
 
 import com.decathlon.idp_core.domain.model.inbound_connectors.webhook.WebhookConnector;
 
 import lombok.extern.slf4j.Slf4j;
 
-@Service
+@Component
 @Slf4j
-public class SecurityService {
+public class SecurityProcessor {
   public boolean validate(String rawPayload, Map<String, Object> headers,
       WebhookConnector webhookConnector) {
     // Implement security validation logic here

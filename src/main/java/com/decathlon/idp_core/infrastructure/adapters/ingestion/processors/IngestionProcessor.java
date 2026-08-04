@@ -1,8 +1,9 @@
-package com.decathlon.idp_core.infrastructure.adapters.ingestion.service;
+package com.decathlon.idp_core.infrastructure.adapters.ingestion.processors;
 
-import org.springframework.stereotype.Service;
+import org.springframework.stereotype.Component;
 
 import com.decathlon.idp_core.domain.model.entity.Entity;
+import com.decathlon.idp_core.domain.model.entity_mapping.MappingAction;
 import com.decathlon.idp_core.domain.model.inbound_connectors.webhook.WebhookConnector;
 import com.decathlon.idp_core.domain.port.MappingEnginePort;
 import com.decathlon.idp_core.domain.service.entity.EntityService;
@@ -10,10 +11,10 @@ import com.decathlon.idp_core.domain.service.entity.EntityService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
-@Service
+@Component
 @Slf4j
 @RequiredArgsConstructor
-public class IngestionService {
+public class IngestionProcessor {
 
   private final MappingEnginePort mappingEngine;
   private final EntityService entityService;
@@ -40,6 +41,7 @@ public class IngestionService {
           mapping.entityTemplateIdentifier());
 
       try {
+
         // Map the raw payload to a domain entity using JSLT expressions
         Entity entity = mappingEngine.mapToEntity(payload, mapping);
 
@@ -50,9 +52,33 @@ public class IngestionService {
           return;
         }
 
-        // Persist the mapped entity via the domain service
-        // (handles validation, deduplication, and audit trails)
-        entityService.createEntity(entity);
+        switch (mapping.action()) {
+          case MappingAction.UPSERT :
+            log.debug("Call entity service upsert");
+            // check if entity exists
+            // If not create entity
+            // If exists patch entity
+            break;
+          case MappingAction.UPSERT_PROPERTIES :
+            // check if entity exists
+            // If not create entity only with the properties information from mapped entity
+            // If exists update only the properties information from mmaped entity
+            log.debug("Call entity service upsert entity properties");
+            break;
+          case MappingAction.UPSERT_RELATIONS :
+            // check if entity exists
+            // If not create entity only with the relations information from mmaped entity
+            // If exists update only the relations information from mmaped entity
+            log.debug("Call entity service upsert entity relations");
+            break;
+          case MappingAction.DELETE :
+            entityService.deleteEntity(entity.templateIdentifier(), entity.identifier());
+            log.debug("Call entity service to delete ");
+            break;
+          default :
+            log.debug("Not supported action");
+            break;
+        }
 
         log.info("Successfully ingested entity: {} for template: {}", entity.identifier(),
             entity.templateIdentifier());

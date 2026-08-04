@@ -20,6 +20,7 @@ import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 
 import com.decathlon.idp_core.domain.model.entity_mapping.EntityDynamicMapping;
+import com.decathlon.idp_core.domain.model.entity_mapping.MappingAction;
 import com.decathlon.idp_core.domain.model.entity_template.EntityTemplate;
 import com.decathlon.idp_core.domain.port.EntityTemplateRepositoryPort;
 import com.decathlon.idp_core.infrastructure.adapters.persistence.mapper.EntityDynamicMappingPersistenceMapper;
@@ -272,7 +273,7 @@ class EntityDynamicMappingAdaptorTest {
   }
 
   private EntityDynamicMapping buildDomainMapping(String identifier) {
-    return new EntityDynamicMapping(UUID.randomUUID(), identifier, "web-service", ".filter", "name",
-        "desc", ".id", ".title", Map.of(), List.of());
+    return new EntityDynamicMapping(UUID.randomUUID(), identifier, "web-service", ".filter",
+        MappingAction.UPSERT, "name", "desc", ".id", ".title", Map.of(), List.of());
   }
 }

@@ -129,6 +129,7 @@ public class ValidationMessages {
   public static final String ENTITY_DYNAMIC_MAPPING_FILTER_MANDATORY = "Webhook mapping filter is mandatory";
   public static final String ENTITY_DYNAMIC_MAPPING_IDENTIFIER_MANDATORY = "Entity dynamic mapping identifier is mandatory";
   public static final String ENTITY_DYNAMIC_MAPPING_NAME_MANDATORY = "Entity dynamic mapping name is mandatory";
+  public static final String ENTITY_DYNAMIC_MAPPING_ACTION_MANDATORY = "Entity dynamic mapping action is mandatory";
   public static final String ENTITY_DYNAMIC_MAPPING_TEMPLATE_IDENTIFIER_MANDATORY = "Entity Template Identifier is mandatory";
   public static final String ENTITY_DYNAMIC_MAPPING_ENTITY_MANDATORY = "Dynamic mapping entity section is mandatory";
   public static final String ENTITY_DYNAMIC_MAPPING_ENTITY_NAME_MANDATORY = "Entity name is mandatory";

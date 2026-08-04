@@ -16,8 +16,8 @@ import com.decathlon.idp_core.domain.exception.entity_dynamic_mapping.EntityDyna
 /// Note: The technical ID is managed purely at the infrastructure layer
 /// (persisted in entity_dynamic_mapping table) and is NOT part of the domain model.
 public record EntityDynamicMapping(UUID id, String identifier, String entityTemplateIdentifier,
-    String filter, String name, String description, String entityIdentifier, String entityName,
-    Map<String, String> properties, List<RelationMapping> relations) {
+    String filter, MappingAction action, String name, String description, String entityIdentifier,
+    String entityName, Map<String, String> properties, List<RelationMapping> relations) {
 
   public EntityDynamicMapping {
     if (isBlank(identifier)) {

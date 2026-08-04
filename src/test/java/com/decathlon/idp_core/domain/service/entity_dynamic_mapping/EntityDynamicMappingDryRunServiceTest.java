@@ -19,6 +19,7 @@ import com.decathlon.idp_core.domain.model.entity.Property;
 import com.decathlon.idp_core.domain.model.entity_mapping.DryRunResult;
 import com.decathlon.idp_core.domain.model.entity_mapping.DryRunResult.DryRunEntityResult;
 import com.decathlon.idp_core.domain.model.entity_mapping.EntityDynamicMapping;
+import com.decathlon.idp_core.domain.model.entity_mapping.MappingAction;
 import com.decathlon.idp_core.domain.model.entity_template.EntityTemplate;
 import com.decathlon.idp_core.domain.model.enums.ErrorType;
 import com.decathlon.idp_core.domain.port.MappingEnginePort;
@@ -59,7 +60,8 @@ class EntityDynamicMappingDryRunServiceTest {
 
   private EntityDynamicMapping createValidMapping() {
     return new EntityDynamicMapping(null, "test-mapping", "microservice", ".action == \"pushed\"",
-        "Test Mapping", "Test Description", ".repository.full_name", ".repository.name",
+        MappingAction.UPSERT, "Test Mapping", "Test Description", ".repository.full_name",
+        ".repository.name",
         Map.of("applicationName", ".repository.name", "language", ".repository.language"),
         List.of());
   }

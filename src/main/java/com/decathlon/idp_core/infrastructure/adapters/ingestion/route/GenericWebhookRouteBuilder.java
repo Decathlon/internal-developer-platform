@@ -6,8 +6,8 @@ import org.apache.camel.builder.RouteBuilder;
 import org.springframework.stereotype.Component;
 
 import com.decathlon.idp_core.domain.service.webhook.WebhookConnectorService;
-import com.decathlon.idp_core.infrastructure.adapters.ingestion.service.IngestionService;
-import com.decathlon.idp_core.infrastructure.adapters.ingestion.service.SecurityService;
+import com.decathlon.idp_core.infrastructure.adapters.ingestion.processors.IngestionProcessor;
+import com.decathlon.idp_core.infrastructure.adapters.ingestion.processors.SecurityProcessor;
 
 import lombok.RequiredArgsConstructor;
 
@@ -18,8 +18,8 @@ public class GenericWebhookRouteBuilder extends RouteBuilder {
   /// Domain service resolving the persisted webhook connector configuration
   /// by identifier.
   private final WebhookConnectorService webhookConnectorService;
-  private final SecurityService securityService;
-  private final IngestionService ingestionService;
+  private final SecurityProcessor securityService;
+  private final IngestionProcessor ingestionService;
 
   @Override
   public void configure() throws Exception {

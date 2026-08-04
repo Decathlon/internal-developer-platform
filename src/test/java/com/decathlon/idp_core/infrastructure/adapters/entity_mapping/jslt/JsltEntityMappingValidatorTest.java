@@ -15,6 +15,7 @@ import org.junit.jupiter.api.Test;
 
 import com.decathlon.idp_core.domain.exception.entity_dynamic_mapping.EntityDynamicMappingJsltErrorException;
 import com.decathlon.idp_core.domain.model.entity_mapping.EntityDynamicMapping;
+import com.decathlon.idp_core.domain.model.entity_mapping.MappingAction;
 import com.decathlon.idp_core.domain.model.entity_mapping.RelationMapping;
 
 @DisplayName("JsltEntityMappingValidator")
@@ -165,7 +166,8 @@ class JsltEntityMappingValidatorTest {
   private EntityDynamicMapping buildMapping(String filter, String entityIdentifier,
       String entityTitle, Map<String, String> properties, List<RelationMapping> relations) {
     return new EntityDynamicMapping(UUID.randomUUID(), "my-mapping", "microservice", filter,
-        "My Mapping", "description", entityIdentifier, entityTitle, properties, relations);
+        MappingAction.UPSERT, "My Mapping", "description", entityIdentifier, entityTitle,
+        properties, relations);
   }
 
   /// Invokes the private `formatErrorMessage` method through reflection so

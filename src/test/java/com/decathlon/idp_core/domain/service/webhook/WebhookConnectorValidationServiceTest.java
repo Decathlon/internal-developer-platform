@@ -19,6 +19,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import com.decathlon.idp_core.domain.exception.webhook.WebhookConnectorAlreadyExistException;
 import com.decathlon.idp_core.domain.exception.webhook.WebhookConnectorNotFoundException;
 import com.decathlon.idp_core.domain.model.entity_mapping.EntityDynamicMapping;
+import com.decathlon.idp_core.domain.model.entity_mapping.MappingAction;
 import com.decathlon.idp_core.domain.model.enums.WebhookSecurityType;
 import com.decathlon.idp_core.domain.model.inbound_connectors.webhook.WebhookConnector;
 import com.decathlon.idp_core.domain.model.inbound_connectors.webhook.WebhookSecurity;
@@ -152,7 +153,8 @@ class WebhookConnectorValidationServiceTest {
     WebhookSecurity security = new WebhookSecurity(WebhookSecurityType.HMAC_SHA256,
         Map.of("header_name", "X-Hub-Signature-256", "secret_alias", "MY_SECRET"));
     EntityDynamicMapping mapping = new EntityDynamicMapping(UUID.randomUUID(), "my-mapping",
-        "web-service", ".filter", "name", "desc", ".id", ".name", Map.of(), List.of());
+        "web-service", ".filter", MappingAction.UPSERT, "name", "desc", ".id", ".name", Map.of(),
+        List.of());
     return new WebhookConnector(UUID.randomUUID(), identifier, title, "desc", true,
         List.of(mapping), security);
   }
