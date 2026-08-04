@@ -1919,14 +1919,6 @@ components:
       name: clientId
       flows:
         clientCredentials:
-          tokenUrl: 
-  securitySchemes:
-    clientId:
-      type: oauth2
-      description: clientId authentication
-      name: clientId
-      flows:
-        clientCredentials:
           tokenUrl: "https://example.com/as/token.oauth2"
     bearer:
       type: http
