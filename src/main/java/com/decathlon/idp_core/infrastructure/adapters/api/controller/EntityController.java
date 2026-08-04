@@ -52,6 +52,8 @@ import java.util.List;
 import java.util.Set;
 
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.Max;
+import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
 
 import org.springframework.data.domain.Page;
@@ -127,6 +129,14 @@ public class EntityController {
   private final SearchFilterParser searchFilterParser;
   private final EntityGraphService entityGraphService;
 
+  // Validation message constants for relations_depth parameter
+  private static final int RELATIONS_DEPTH_MIN = 1;
+  private static final int RELATIONS_DEPTH_MAX = 6;
+  private static final String RELATIONS_DEPTH_MIN_MESSAGE = "relations_depth must be at least "
+      + RELATIONS_DEPTH_MIN;
+  private static final String RELATIONS_DEPTH_MAX_MESSAGE = "relations_depth cannot exceed "
+      + RELATIONS_DEPTH_MAX;
+
   /// Returns paginated entities filtered by template with HTTP pagination
   /// support.
   ///
@@ -165,44 +175,44 @@ public class EntityController {
     return entityDtoOutFromEntityNodeMapper.toPageDto(graphNodes, templateIdentifier, 1);
   }
 
-  /// Retrieves a single entity by template and entity identifiers with
-  /// relationship graph.
-  ///
-  /// **API contract:** Provides specific entity lookup using compound identifier
-  /// pattern with support for fetching related entities. Returns HTTP 404 if
-  /// either
-  /// template or entity doesn't exist, maintaining REST semantics.
-  ///
-  /// **Relationship traversal:** Uses direct lineage mode to traverse both
-  /// inbound
-  /// and outbound relations up to the specified depth. Relations are flattened
-  /// into
-  /// a single map at the root level, keyed by relation name. Can optionally
-  /// filter
-  /// which relations to include via `relations_to_display` query parameter.
-  ///
-  /// @param templateIdentifier business template identifier for entity scope
-  /// @param entityIdentifier unique business identifier within template context
-  /// @param relationsDepth maximum depth to traverse when collecting relations
-  /// (1-6, defaults to 1)
-  /// @param relationsToDisplay optional set of relation names to include; omit to
-  /// include all
-  /// @return entity DTO with full property and relationship data
+  /**
+   * Retrieves a single entity by template and entity identifiers with relationship graph.
+   *
+   * **API Contract**
+   *
+   * Provides specific entity lookup using compound identifier pattern with support for
+   * fetching related entities. Returns HTTP 404 if either template or entity doesn't exist,
+   * maintaining REST semantics.
+   *
+   * **Relationship Traversal**
+   *
+   * Uses direct lineage mode to traverse both inbound and outbound relations up to the
+   * specified depth. Relations are flattened into a single map at the root level, keyed by
+   * relation name. Can optionally filter which relations to include via `relations_to_display`
+   * query parameter.
+   *
+   * @param templateIdentifier business template identifier for entity scope
+   * @param entityIdentifier unique business identifier within template context
+   * @param relationsDepth maximum depth to traverse when collecting relations (1-6, defaults to 1)
+   * @param relationsToDisplay optional set of relation names to include; omit to include all
+   * @return entity DTO with full property and relationship data
+   */
   @Operation(summary = ENDPOINT_GET_ENTITY_BY_IDENTIFIER_SUMMARY, description = ENDPOINT_GET_ENTITY_BY_IDENTIFIER_DESCRIPTION)
   @ApiResponse(responseCode = OK_CODE, description = RESPONSE_ENTITY_FOUND, content = {
       @Content(schema = @Schema(implementation = EntityDtoOut.class))})
   @ApiResponse(responseCode = NOT_FOUND_CODE, description = RESPONSE_ENTITY_NOT_FOUND_IDENTIFIER, content = {
       @Content(schema = @Schema(implementation = ApiExceptionHandler.ErrorResponse.class))})
-  @Parameter(name = "relations_depth", description = RELATIONS_DEPTH_DESCRIPTION, in = ParameterIn.QUERY, schema = @Schema(type = "integer", defaultValue = "1"))
-  @Parameter(name = "relations_to_display", description = RELATIONS_TO_DISPLAY_DESCRIPTION, in = ParameterIn.QUERY, schema = @Schema(type = "array", example = "[\"depends-on\", \"relates-to\"]"))
+  @Parameter(name = "relations_depth", description = RELATIONS_DEPTH_DESCRIPTION, in = ParameterIn.QUERY, schema = @Schema(type = "integer", defaultValue = "1", minimum = "1", maximum = "6"))
+  @Parameter(name = "relations_to_display", description = RELATIONS_TO_DISPLAY_DESCRIPTION, in = ParameterIn.QUERY, schema = @Schema(type = "array"))
   @GetMapping("/{templateIdentifier}/{entityIdentifier}")
   @ResponseStatus(OK)
   public EntityDtoOut getEntity(@PathVariable String templateIdentifier,
       @PathVariable String entityIdentifier,
-      @RequestParam(name = "relations_depth", required = false, defaultValue = "1") Integer relationsDepth,
+      @Min(value = RELATIONS_DEPTH_MIN, message = RELATIONS_DEPTH_MIN_MESSAGE) @Max(value = RELATIONS_DEPTH_MAX, message = RELATIONS_DEPTH_MAX_MESSAGE) @RequestParam(name = "relations_depth", required = false, defaultValue = "1") Integer relationsDepth,
       @RequestParam(name = "relations_to_display", required = false) Set<String> relationsToDisplay) {
 
-    int effectiveDepth = Math.clamp(relationsDepth, 1, 6);
+    int effectiveDepth = Math.clamp(relationsDepth != null ? relationsDepth : RELATIONS_DEPTH_MIN,
+        RELATIONS_DEPTH_MIN, RELATIONS_DEPTH_MAX);
 
     EntityGraphNode entityGraphNode = entityGraphService.getEntityGraph(templateIdentifier,
         entityIdentifier, effectiveDepth, true,
