@@ -1,5 +1,6 @@
 package com.decathlon.idp_core.infrastructure.adapters.ingestion.configuration;
 
+import org.apache.camel.LoggingLevel;
 import org.apache.camel.builder.RouteBuilder;
 import org.springframework.stereotype.Component;
 
@@ -21,5 +22,11 @@ public class CamelRestConfiguration extends RouteBuilder {
 
     rest("/webhooks").post("/{webhookIdentifier}").description("Generic webhook ingestion endpoint")
         .to("direct:generic-route");
+
+    from("direct:generic-route")
+        .log(LoggingLevel.INFO,
+            "Received generic request for identifier: ${header.webhookIdentifier}")
+        .setProperty("connectorIdentifier", header("webhookIdentifier")).to("direct:process-event");
+
   }
 }
