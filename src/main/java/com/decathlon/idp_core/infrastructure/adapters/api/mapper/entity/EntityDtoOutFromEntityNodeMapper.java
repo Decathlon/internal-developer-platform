@@ -27,23 +27,27 @@ import com.decathlon.idp_core.infrastructure.adapters.api.dto.out.entity.EntityS
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
-/// Adapter mapper for converting a recursive [EntityGraphNode] domain tree into the flat,
-/// unified [EntityDtoOut] representation expected by API clients.
+/// Adapter mapper for converting a recursive [EntityGraphNode] domain tree into
+/// the flat, unified [EntityDtoOut] representation expected by API clients.
 ///
 /// **Design:**
-/// - Traverses both `relations` (outbound) and `relationsAsTarget` (inbound) depth-first,
-///   flattening the tree into a single relations map at the root level.
-/// - Outbound edges are collected as `source → target` during outbound traversal.
+/// - Traverses both `relations` (outbound) and `relationsAsTarget` (inbound)
+///   depth-first, flattening the tree into a single relations map at the root
+///   level.
+/// - Outbound edges are collected as `source → target` during outbound
+///   traversal.
 /// - Inbound edges are collected as `source → root` during inbound traversal.
 /// - Both traversals originate independently from the root entity at depth 0.
-/// - A `Set` of emitted edge signatures (`source|target|label`) deduplicates edges that
-///   would otherwise be emitted twice when both sides of a relation are traversed.
-/// - Depth tracking matrices (`visitedOutboundDepths`, `visitedInboundDepths`) prevent
-///   infinite loops and redundant re-traversal in cyclic graphs by recording the minimum
-///   depth at which each node was first reached during each directional pass.
-/// - Directional isolation is maintained: outbound traversal strictly ignores `relationsAsTarget`,
-///   and inbound traversal strictly ignores `relations`, preventing cross-branch entity leakage
-///   at shared convergence nodes.
+/// - A `Set` of emitted edge signatures (`source|target|label`) deduplicates
+///   edges that would otherwise be emitted twice when both sides of a relation
+///   are traversed.
+/// - Depth tracking matrices (`visitedOutboundDepths`, `visitedInboundDepths`)
+///   prevent infinite loops and redundant re-traversal in cyclic graphs by
+///   recording the minimum depth at which each node was first reached during
+///   each directional pass.
+/// - Directional isolation is maintained: outbound traversal strictly ignores
+///   `relationsAsTarget`, and inbound traversal strictly ignores `relations`,
+///   preventing cross-branch entity leakage at shared convergence nodes.
 @Slf4j
 @Component
 @RequiredArgsConstructor
@@ -57,8 +61,8 @@ public class EntityDtoOutFromEntityNodeMapper {
   /// @param root the starting root node of the entity graph
   /// @param entityTemplateIdentifier the template key used for property type
   /// definitions
-  /// @param maxDepth the strict maximum depth layer allowed for relationship
-  /// collection
+  /// @param maxDepth the strict maximum depth layer allowed for
+  /// relationship collection
   /// @return a fully mapped, flat [EntityDtoOut] object
   public EntityDtoOut toDto(EntityGraphNode root, String entityTemplateIdentifier, int maxDepth) {
     if (root == null) {
@@ -94,8 +98,8 @@ public class EntityDtoOutFromEntityNodeMapper {
         finalizedRelations);
   }
 
-  /// Overloaded fallback extracting the primary root node from a paginated
-  /// container.
+  /// Overloaded fallback extracting the primary root node from a
+  /// paginated container.
   public EntityDtoOut toDto(Page<EntityGraphNode> page, EntityTemplate entityTemplate,
       int maxDepth) {
     if (page == null || page.getContent().isEmpty()) {
@@ -106,13 +110,14 @@ public class EntityDtoOutFromEntityNodeMapper {
   }
 
   /// Converts a paginated series of domain [EntityGraphNode] trees into a page of
-  /// flattened
-  /// [EntityDtoOut] objects.
+  /// flattened [EntityDtoOut] objects.
   ///
-  /// @param graphNodesPage paginated graph nodes returned by the domain service
+  /// @param graphNodesPage paginated graph nodes returned by the domain
+  /// service
   /// @param entityTemplateIdentifier the template identifier for property type
   /// definitions
-  /// @param maxDepth the maximum depth threshold allowed for flattening relations
+  /// @param maxDepth the maximum depth threshold allowed for
+  /// flattening relations
   /// @return paginated DTOs with flattened unified relations maps
   public Page<EntityDtoOut> toPageDto(Page<EntityGraphNode> graphNodesPage,
       String entityTemplateIdentifier, int maxDepth) {
@@ -129,14 +134,13 @@ public class EntityDtoOutFromEntityNodeMapper {
   /// Recursively walks downstream outbound relations (`source → target`).
   ///
   /// **Directional Isolation:** Strictly ignores `relationsAsTarget()` to prevent
-  /// upstream or sibling
-  /// entity leakage when visiting shared convergence nodes.
+  /// upstream or sibling entity leakage when visiting shared convergence nodes.
   ///
   /// @param node current graph node being evaluated
   /// @param currentDepth active depth level in the execution stack
   /// @param maxDepth maximum allowable depth boundary
-  /// @param state shared accumulator state tracking visited depths and emitted
-  /// edge signatures
+  /// @param state shared accumulator state tracking visited depths and
+  /// emitted edge signatures
   private static void traverseOutbound(EntityGraphNode node, int currentDepth, int maxDepth,
       TraversalState state) {
     String nodeId = nodeId(node.templateIdentifier(), node.identifier());
@@ -172,14 +176,13 @@ public class EntityDtoOutFromEntityNodeMapper {
   /// Recursively walks upstream inbound relations (`target ← source`).
   ///
   /// **Directional Isolation:** Strictly ignores direct `relations()` to prevent
-  /// downstream entity
-  /// leakage when visiting shared convergence nodes.
+  /// downstream entity leakage when visiting shared convergence nodes.
   ///
   /// @param node current graph node being evaluated
   /// @param currentDepth active depth level in the execution stack
   /// @param maxDepth maximum allowable depth boundary
-  /// @param state shared accumulator state tracking visited depths and emitted
-  /// edge signatures
+  /// @param state shared accumulator state tracking visited depths and
+  /// emitted edge signatures
   private static void traverseInbound(EntityGraphNode node, int currentDepth, int maxDepth,
       TraversalState state) {
     String nodeId = nodeId(node.templateIdentifier(), node.identifier());
@@ -215,8 +218,8 @@ public class EntityDtoOutFromEntityNodeMapper {
   /// Builds the unique node identifier string format
   /// (`templateIdentifier:identifier`).
   ///
-  /// This composite ID is used for deduplication and lookups within traversal
-  /// accumulators.
+  /// This composite ID is used for deduplication and lookups within
+  /// traversal accumulators.
   private static String nodeId(String templateIdentifier, String identifier) {
     return templateIdentifier + ":" + identifier;
   }
@@ -225,8 +228,7 @@ public class EntityDtoOutFromEntityNodeMapper {
   /// type conversion.
   ///
   /// Uses explicit filtering and null-safety checks to handle missing property
-  /// definitions
-  /// and maintain consistent property representation across the API.
+  /// definitions and maintain consistent property representation across the API.
   ///
   /// @param graphNode the node containing properties
   /// @param template entity template with property definitions
@@ -240,14 +242,22 @@ public class EntityDtoOutFromEntityNodeMapper {
     Map<String, PropertyDefinition> definitions = template.propertiesDefinitions().stream()
         .filter(Objects::nonNull).collect(Collectors.toMap(def -> def.name(), Function.identity()));
 
-    return graphNode.properties().stream().filter(prop -> prop.value() != null)
-        .collect(Collectors.toMap(Property::name,
-            prop -> PropertyValueConverter.convert(prop, definitions.get(prop.name()))));
+    Map<String, Object> result = new HashMap<>();
+
+    for (Property prop : graphNode.properties()) {
+      if (prop.value() != null) {
+        Object convertedValue = PropertyValueConverter.convert(prop, definitions.get(prop.name()));
+        if (convertedValue != null) {
+          result.put(prop.name(), convertedValue);
+        }
+      }
+    }
+
+    return result;
   }
 
   /// Groups mutable traversal accumulators to keep the traversal method
-  /// signatures readable
-  /// and manage state efficiently across directional passes.
+  /// signatures readable and manage state efficiently across directional passes.
   private record TraversalState(String rootIdentifier,
       Map<String, Set<EntitySummaryDto>> relationsMap, Map<String, Integer> visitedOutboundDepths,
       Map<String, Integer> visitedInboundDepths, Set<String> emittedEdgeSignatures) {

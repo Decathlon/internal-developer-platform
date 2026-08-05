@@ -176,25 +176,31 @@ public class EntityController {
   }
 
   /**
-   * Retrieves a single entity by template and entity identifiers with relationship graph.
+   * Retrieves a single entity by template and entity identifiers with
+   * relationship graph.
    *
    * **API Contract**
    *
-   * Provides specific entity lookup using compound identifier pattern with support for
-   * fetching related entities. Returns HTTP 404 if either template or entity doesn't exist,
-   * maintaining REST semantics.
+   * Provides specific entity lookup using compound identifier pattern with
+   * support for fetching related entities. Returns HTTP 404 if either template or
+   * entity doesn't exist, maintaining REST semantics.
    *
    * **Relationship Traversal**
    *
-   * Uses direct lineage mode to traverse both inbound and outbound relations up to the
-   * specified depth. Relations are flattened into a single map at the root level, keyed by
-   * relation name. Can optionally filter which relations to include via `relations_to_display`
-   * query parameter.
+   * Uses direct lineage mode to traverse both inbound and outbound relations up
+   * to the specified depth. Relations are flattened into a single map at the root
+   * level, keyed by relation name. Can optionally filter which relations to
+   * include via `relations_to_display` query parameter.
    *
-   * @param templateIdentifier business template identifier for entity scope
-   * @param entityIdentifier unique business identifier within template context
-   * @param relationsDepth maximum depth to traverse when collecting relations (1-6, defaults to 1)
-   * @param relationsToDisplay optional set of relation names to include; omit to include all
+   * @param templateIdentifier
+   *          business template identifier for entity scope
+   * @param entityIdentifier
+   *          unique business identifier within template context
+   * @param relationsDepth
+   *          maximum depth to traverse when collecting relations (1-6, defaults
+   *          to 1)
+   * @param relationsToDisplay
+   *          optional set of relation names to include; omit to include all
    * @return entity DTO with full property and relationship data
    */
   @Operation(summary = ENDPOINT_GET_ENTITY_BY_IDENTIFIER_SUMMARY, description = ENDPOINT_GET_ENTITY_BY_IDENTIFIER_DESCRIPTION)
@@ -211,15 +217,12 @@ public class EntityController {
       @Min(value = RELATIONS_DEPTH_MIN, message = RELATIONS_DEPTH_MIN_MESSAGE) @Max(value = RELATIONS_DEPTH_MAX, message = RELATIONS_DEPTH_MAX_MESSAGE) @RequestParam(name = "relations_depth", required = false, defaultValue = "1") Integer relationsDepth,
       @RequestParam(name = "relations_to_display", required = false) Set<String> relationsToDisplay) {
 
-    int effectiveDepth = Math.clamp(relationsDepth != null ? relationsDepth : RELATIONS_DEPTH_MIN,
-        RELATIONS_DEPTH_MIN, RELATIONS_DEPTH_MAX);
-
     EntityGraphNode entityGraphNode = entityGraphService.getEntityGraph(templateIdentifier,
-        entityIdentifier, effectiveDepth, true,
+        entityIdentifier, relationsDepth, true,
         relationsToDisplay == null ? Set.of() : relationsToDisplay, Set.of(),
         EntityGraphTraversalMode.DIRECT_LINEAGE);
     return entityDtoOutFromEntityNodeMapper.toDto(entityGraphNode, templateIdentifier,
-        effectiveDepth);
+        relationsDepth);
   }
 
   /// Creates a new entity for the specified template with validation.
