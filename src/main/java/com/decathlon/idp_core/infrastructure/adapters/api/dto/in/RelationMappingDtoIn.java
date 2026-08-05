@@ -9,7 +9,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 
 /// Relation mapping entry for inbound webhook entity projections.
 ///
-/// Represents one relation name bound to one or more JSLT expressions that will
+/// Represents one relation name bound to one or more JSLT targetIdentifiersExpressions that will
 /// be evaluated at runtime to extract the target entity identifiers from the event payload.
 ///
 /// The field name `target_entity_identifiers` mirrors the structure of

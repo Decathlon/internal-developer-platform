@@ -40,8 +40,13 @@ public class JsltEntityMappingValidator implements EntityDynamicMapperValidator 
     }
     if (mapping.relations() != null && !mapping.relations().isEmpty()) {
       mapping.relations().forEach(relation -> {
-        if (relation.expressions() != null && !relation.expressions().isEmpty()) {
-          relation.expressions().forEach(
+        if (relation.targetIdentifiersExpressions() == null
+            || relation.targetIdentifiersExpressions().isEmpty()) {
+          errors.add(String.format(
+              "Field 'relations.%s[]' is required and must contain at least one expression.",
+              relation.name()));
+        } else {
+          relation.targetIdentifiersExpressions().forEach(
               expr -> checkExpression(errors, "relations." + relation.name() + "[]", expr));
         }
       });
@@ -53,18 +58,15 @@ public class JsltEntityMappingValidator implements EntityDynamicMapperValidator 
     }
   }
 
-  /**
-   * Validates a single expression field via
-   * {@link ExpressionEngine#validateExpression(String)}. Catches engine-specific
-   * exceptions and formats them into user-friendly messages.
-   *
-   * @param errors
-   *          accumulator for validation errors
-   * @param fieldName
-   *          human-readable field name for error messages
-   * @param expression
-   *          the expression to validate
-   */
+  /// Validates a single expression field via
+  /// `ExpressionEngine#validateExpression`.
+  ///
+  /// Catches engine-specific exceptions and formats them into user-friendly
+  /// messages.
+  ///
+  /// @param errors accumulator for validation errors
+  /// @param fieldName human-readable field name for error messages
+  /// @param expression the expression to validate
   private void checkExpression(List<String> errors, String fieldName, String expression) {
     if (!StringUtils.hasText(expression)) {
       errors
@@ -75,7 +77,8 @@ public class JsltEntityMappingValidator implements EntityDynamicMapperValidator 
     try {
       // Goes through the ExpressionEngine port — works for JSLT today, JQ tomorrow.
       expressionEngine.validateExpression(expression);
-    } catch (EntityDynamicMappingConfigurationException exception) {
+    } catch (EntityDynamicMappingConfigurationException
+        | EntityDynamicMappingJsltErrorException exception) {
       errors.add(String.format("Invalid expression for '%s': %s", fieldName,
           formatErrorMessage(exception.getMessage())));
     }

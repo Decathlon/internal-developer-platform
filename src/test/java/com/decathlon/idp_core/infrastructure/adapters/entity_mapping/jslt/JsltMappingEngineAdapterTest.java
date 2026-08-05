@@ -15,7 +15,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 
 /// Unit tests for JsltMappingEngineAdapter.
 ///
-/// Covers relation extraction for scalar, array and object-based mapping expressions.
+/// Covers relation extraction for scalar, array and object-based mapping targetIdentifiersExpressions.
 @DisplayName("JsltMappingEngineAdapter")
 class JsltMappingEngineAdapterTest {
 

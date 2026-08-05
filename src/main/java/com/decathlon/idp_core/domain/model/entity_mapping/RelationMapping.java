@@ -1,13 +1,27 @@
 package com.decathlon.idp_core.domain.model.entity_mapping;
 
+import static com.decathlon.idp_core.domain.constant.ValidationMessages.*;
+
 import java.util.List;
 
-import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.NotEmpty;
+import com.decathlon.idp_core.domain.exception.entity_dynamic_mapping.EntityDynamicMappingConfigurationException;
 
-public record RelationMapping(
-    /// The relation name as defined on the entity template.
-    @NotBlank String name,
-    /// The JSLT expressions used to extract the target entity identifier(s).
-    @NotEmpty List<@NotBlank String> expressions) {
+public record RelationMapping(String name, List<String> targetIdentifiersExpressions) {
+
+  public RelationMapping {
+    if (name == null || name.isBlank()) {
+      throw new EntityDynamicMappingConfigurationException(
+          ENTITY_DYNAMIC_MAPPING_ENTITY_RELATION_NAME_MANDATORY);
+    }
+    if (targetIdentifiersExpressions == null || targetIdentifiersExpressions.isEmpty()) {
+      throw new EntityDynamicMappingConfigurationException(
+          ENTITY_DYNAMIC_MAPPING_ENTITY_RELATION_EXPRESSIONS_LIST_MESSAGE);
+    }
+    if (targetIdentifiersExpressions.stream()
+        .anyMatch(expression -> expression == null || expression.isBlank())) {
+      throw new EntityDynamicMappingConfigurationException(
+          ENTITY_DYNAMIC_MAPPING_ENTITY_RELATION_EXPRESSIONS_LIST_MESSAGE);
+    }
+    targetIdentifiersExpressions = List.copyOf(targetIdentifiersExpressions);
+  }
 }

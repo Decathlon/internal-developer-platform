@@ -2,6 +2,7 @@ package com.decathlon.idp_core.infrastructure.adapters.api.handler;
 
 import static org.springframework.http.HttpStatus.NOT_FOUND;
 
+import java.util.List;
 import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -35,6 +36,9 @@ import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import tools.jackson.core.JacksonException;
+import tools.jackson.databind.exc.InvalidFormatException;
+import tools.jackson.databind.exc.MismatchedInputException;
 
 /// Global exception handler providing centralized error handling for all API
 /// endpoints.
@@ -289,15 +293,40 @@ public class ApiExceptionHandler {
       HttpMessageNotReadableException ex) {
     log.warn("HTTP message not readable: {}", ex.getMessage());
 
+    if (ex.getCause()instanceof MismatchedInputException mismatch
+        && !(ex.getCause() instanceof InvalidFormatException)) {
+      String fieldPath = extractLastFieldNameFromPath(mismatch.getPath());
+      String targetType = extractTargetType(mismatch.getOriginalMessage());
+
+      if (!targetType.isEmpty() && !fieldPath.isEmpty()) {
+        return createErrorResponse(HttpStatus.BAD_REQUEST,
+            "Invalid type for '" + fieldPath + "': expected " + targetType);
+      }
+    }
+
     String errorMessage = parseHttpMessageNotReadableError(ex.getMessage());
     return createErrorResponse(HttpStatus.BAD_REQUEST, errorMessage);
   }
 
-  /// Handles invalid dynamic mapping expressions (JSLT) provided in webhook
+  /// Extracts the deepest (last) field name from a Jackson path reference list.
+  ///
+  /// Jackson populates `MismatchedInputException.getPath()` with references from
+  /// the root to the failing field. The last named reference is the most specific
+  /// field name to show in the error message.
+  private String extractLastFieldNameFromPath(List<JacksonException.Reference> path) {
+    if (path == null || path.isEmpty()) {
+      return "";
+    }
+    return path.reversed().stream().map(JacksonException.Reference::getPropertyName)
+        .filter(name -> name != null && !name.isBlank()).findFirst().orElse("");
+  }
+
+  /// Handles invalid dynamic mapping targetIdentifiersExpressions (JSLT) provided
+  /// in webhook
   /// configuration.
   ///
   /// **HTTP mapping:** Maps domain mapping configuration failures to HTTP 400,
-  /// because clients can fix these expressions and retry.
+  /// because clients can fix these targetIdentifiersExpressions and retry.
   @ExceptionHandler(EntityDynamicMappingConfigurationException.class)
   public ResponseEntity<ErrorResponse> handleEntityDynamicMappingConfigurationException(
       EntityDynamicMappingConfigurationException ex) {
@@ -459,7 +488,10 @@ public class ApiExceptionHandler {
     Matcher matcher = typePattern.matcher(message);
     if (matcher.find()) {
       String fullType = matcher.group(1);
-      return fullType.substring(fullType.lastIndexOf('.') + 1);
+      String rawType = fullType.contains("<")
+          ? fullType.substring(0, fullType.indexOf('<'))
+          : fullType;
+      return rawType.substring(rawType.lastIndexOf('.') + 1);
     }
     return "";
   }

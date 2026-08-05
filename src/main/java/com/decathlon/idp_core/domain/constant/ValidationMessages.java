@@ -133,15 +133,14 @@ public class ValidationMessages {
   public static final String ENTITY_DYNAMIC_MAPPING_ENTITY_MANDATORY = "Dynamic mapping entity section is mandatory";
   public static final String ENTITY_DYNAMIC_MAPPING_ENTITY_NAME_MANDATORY = "Entity name is mandatory";
   public static final String ENTITY_DYNAMIC_MAPPING_ENTITY_IDENTIFIER_MANDATORY = "Entity identifier is mandatory";
-  public static final String ENTITY_DYNAMIC_MAPPING_ENTITY_RELATIONS_MANDATORY = "Entity relations section is mandatory";
-  public static final String ENTITY_DYNAMIC_MAPPING_ENTITY_PROPERTIES_MANDATORY = "Entity properties section is mandatory";
+  public static final String ENTITY_DYNAMIC_MAPPING_ENTITY_RELATION_NAME_MANDATORY = "Entity relations name is mandatory in Dynamic mapping entity relation section";
+  public static final String ENTITY_DYNAMIC_MAPPING_ENTITY_RELATION_EXPRESSIONS_LIST_MESSAGE = "Target entity identifiers is mandatory in Dynamic mapping entity relation section when section is setUse a JSON array of strings for relation targetIdentifiersExpressions";
 
   public static final String WEBHOOK_CONNECTOR_SECURITY_TYPE_MANDATORY = "Webhook security type is mandatory";
   public static final String WEBHOOK_CONNECTOR_SECURITY_CONFIG_MANDATORY = "Webhook security config is mandatory";
   public static final String WEBHOOK_CONNECTOR_IDENTIFIER_MAX_LENGTH = "Webhook identifier must not exceed 255 characters";
   public static final String WEBHOOK_CONNECTOR_NAME_MAX_LENGTH = "Webhook name must not exceed 255 characters";
   public static final String WEBHOOK_CONNECTOR_NAME_MANDATORY = "Webhook name is mandatory";
-  public static final String PROPERTY_NOT_EXPECTED_FORMAT = "Property '%s' does not match expected format";
   public static final String ENTITY_DYNAMIC_MAPPING_ENTITY_PROPERTIES_MISSING = "The mapping is missing required properties: %s";
   public static final String ENTITY_DYNAMIC_MAPPING_ENTITY_RELATIONS_MISSING = "The mapping is missing required relations: %s";
 
@@ -150,6 +149,5 @@ public class ValidationMessages {
 
   // Dry-run result messages
   public static final String DRY_RUN_FILTER_SKIPPED = "Filter expression returned false";
-  public static final String DRY_RUN_EXPRESSION_EVAL_FAILED = "Expression evaluation failed for '%s': %s";
 
 }

@@ -9,7 +9,10 @@ import org.springframework.stereotype.Component;
 import com.decathlon.idp_core.domain.model.entity_mapping.RelationMapping;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ArrayNode;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 
 /// Technical helper for JSONB serialization/deserialization in the persistence layer.
 ///
@@ -33,7 +36,7 @@ public class EntityDynamicMappingJsonbHelper {
       return Map.of();
     }
     try {
-      return OBJECT_MAPPER.readValue(json, new TypeReference<Map<String, String>>() {
+      return OBJECT_MAPPER.readValue(json, new TypeReference<>() {
       });
     } catch (JsonProcessingException e) {
       throw new IllegalArgumentException("Invalid JSON mapping configuration", e);
@@ -56,25 +59,85 @@ public class EntityDynamicMappingJsonbHelper {
 
   /// Converts JSONB array string to `List<RelationMapping>`.
   ///
-  /// Expected format: `[{"name": "owner", "expression": ".sender.login"}]`
+  /// Expected format: `[{"name": "owner", "targetIdentifiersExpressions":
+  /// [".sender.login"]}]`
+  ///
+  /// Backward compatibility:
+  /// - Legacy entries using singular `expression` are normalized to
+  /// `targetIdentifiersExpressions: [<expression>]` before deserialization.
+  /// - Legacy pre-migration object format `{"relation":"<expression>"}` is
+  /// also supported.
+  ///
+  /// Handles edge cases:
+  /// - Java `null` or empty/blank string → returns empty list.
+  /// - JSON `null` literal (e.g. PostgreSQL `NULL` cast to text) → returns empty
+  /// list.
   ///
   /// Used when loading relations from database.
   @Named("jsonStringToRelationList")
   public List<RelationMapping> toRelationList(String json) {
-    if (json == null || json.trim().isEmpty()) {
+    if (json == null || json.trim().isEmpty() || "null".equalsIgnoreCase(json.trim())) {
       return List.of();
     }
     try {
-      return OBJECT_MAPPER.readValue(json, new TypeReference<List<RelationMapping>>() {
-      });
+      JsonNode relationsNode = OBJECT_MAPPER.readTree(json);
+      if (relationsNode == null || relationsNode.isNull()) {
+        return List.of();
+      }
+
+      if (relationsNode.isObject()) {
+        Map<String, String> legacyMap = OBJECT_MAPPER.convertValue(relationsNode,
+            new TypeReference<>() {
+            });
+        return legacyMap.entrySet().stream()
+            .map(entry -> new RelationMapping(entry.getKey(), List.of(entry.getValue()))).toList();
+      }
+
+      if (!relationsNode.isArray()) {
+        throw new IllegalArgumentException("Invalid JSON relation list configuration");
+      }
+
+      ArrayNode normalizedRelations = OBJECT_MAPPER.createArrayNode();
+      relationsNode.forEach(
+          relationNode -> normalizedRelations.add(normalizeLegacyRelationNode(relationNode)));
+
+      return OBJECT_MAPPER.readValue(OBJECT_MAPPER.writeValueAsString(normalizedRelations),
+          new TypeReference<>() {
+          });
     } catch (JsonProcessingException e) {
       throw new IllegalArgumentException("Invalid JSON relation list configuration", e);
     }
   }
 
+  private JsonNode normalizeLegacyRelationNode(JsonNode relationNode) {
+    if (!(relationNode instanceof ObjectNode objectNode)) {
+      return relationNode;
+    }
+
+    if (objectNode.has("targetIdentifiersExpressions") || !objectNode.has("expression")) {
+      return objectNode;
+    }
+
+    ObjectNode normalizedNode = objectNode.deepCopy();
+    JsonNode legacyExpression = normalizedNode.remove("expression");
+
+    ArrayNode expressionsNode = OBJECT_MAPPER.createArrayNode();
+    if (legacyExpression != null && !legacyExpression.isNull()) {
+      if (legacyExpression.isArray()) {
+        legacyExpression.forEach(expressionsNode::add);
+      } else {
+        expressionsNode.add(legacyExpression.asText());
+      }
+    }
+
+    normalizedNode.set("targetIdentifiersExpressions", expressionsNode);
+    return normalizedNode;
+  }
+
   /// Converts `List<RelationMapping>` to JSONB array string.
   ///
-  /// Output format: `[{"name": "owner", "expression": ".sender.login"}]`
+  /// Output format: `[{"name": "owner", "targetIdentifiersExpressions":
+  /// [".sender.login"]}]`
   ///
   /// Used when persisting relations to database.
   @Named("relationListToJsonString")

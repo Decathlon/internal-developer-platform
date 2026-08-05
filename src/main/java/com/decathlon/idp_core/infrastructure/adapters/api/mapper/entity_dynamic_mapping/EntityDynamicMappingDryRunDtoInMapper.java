@@ -8,18 +8,21 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 
 import lombok.RequiredArgsConstructor;
 
-/**
- * Transport-level mapper for dry-run requests. Normalizes inbound JSON payload
- * structures (ObjectNode or Raw String) into a JSON string for domain port
- * processing.
- */
+/// Transport-level mapper for dry-run requests.
+///
+/// Normalizes inbound JSON payload structures (ObjectNode or raw String)
+/// into a JSON string for domain port processing.
+///
+/// The Spring-managed `ObjectMapper` is injected so that dry-run payload
+/// normalization uses the same Jackson configuration (modules, naming strategy,
+/// date/time handling, etc.) as the rest of the API layer.
 @Component
 @RequiredArgsConstructor
 public class EntityDynamicMappingDryRunDtoInMapper {
 
-  private final ObjectMapper objectMapper = new ObjectMapper();
+  private final ObjectMapper objectMapper;
 
-  public String toRawPayload(Object payload) {
+  public String normalizePayloadToJsonString(Object payload) {
     if (payload instanceof String payloadString) {
       return payloadString;
     }

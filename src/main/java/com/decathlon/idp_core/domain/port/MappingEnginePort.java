@@ -13,7 +13,8 @@ public interface MappingEnginePort {
 
   Entity mapToEntity(String rawPayload, EntityDynamicMapping mapping);
 
-  /// Extracts values from a payload using the mapping's property expressions.
+  /// Extracts values from a payload using the mapping's property
+  /// targetIdentifiersExpressions.
   ///
   /// @param rawPayload the raw JSON string
   /// @param propertyExpressions map of property name to expression

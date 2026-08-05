@@ -36,7 +36,7 @@ class JsltEntityMappingValidatorTest {
   class ValidateTests {
 
     @Test
-    @DisplayName("Should pass when all JSLT expressions are valid")
+    @DisplayName("Should pass when all JSLT targetIdentifiersExpressions are valid")
     void shouldPassWhenAllExpressionsValid() {
       var mapping = buildMapping(".action == \"pushed\"", ".repository.full_name",
           ".repository.name", Map.of("applicationName", ".repository.name"),

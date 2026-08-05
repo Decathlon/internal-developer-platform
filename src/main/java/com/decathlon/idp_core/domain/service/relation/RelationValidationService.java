@@ -120,6 +120,16 @@ public class RelationValidationService {
   /// the process
   public void validateRelationsAgainstTemplate(EntityTemplate template,
       List<Relation> providedRelations, Violations violations) {
+    validateRelationsAgainstTemplate(template, providedRelations, violations, false);
+  }
+
+  /// Internal unified relation validation used by both normal and dry-run
+  /// workflows.
+  ///
+  /// @param skipDatabaseChecks when true, skips target-entity existence checks
+  /// in repository-backed validation
+  private void validateRelationsAgainstTemplate(EntityTemplate template,
+      List<Relation> providedRelations, Violations violations, boolean skipDatabaseChecks) {
 
     List<RelationDefinition> definitions = template.relationsDefinitions() != null
         ? template.relationsDefinitions()
@@ -136,7 +146,7 @@ public class RelationValidationService {
     for (Relation relation : relations) {
       if (relation.name() != null && !definitionsByName.containsKey(relation.name())) {
         violations.add(RELATION_NOT_DEFINED_IN_TEMPLATE, relation.name(), template.identifier());
-      } else {
+      } else if (!skipDatabaseChecks) {
         validateRelationTargetEntityExistence(relation, violations);
       }
     }
@@ -171,37 +181,7 @@ public class RelationValidationService {
   /// the process
   public void validateRelationsAgainstTemplateForDryRun(EntityTemplate template,
       List<Relation> providedRelations, Violations violations) {
-
-    List<RelationDefinition> definitions = template.relationsDefinitions() != null
-        ? template.relationsDefinitions()
-        : List.of();
-    List<Relation> relations = providedRelations != null ? providedRelations : List.of();
-
-    Map<String, RelationDefinition> definitionsByName = definitions.stream()
-        .filter(def -> def.name() != null).collect(Collectors.toMap(RelationDefinition::name,
-            def -> def, (existing, replacement) -> existing));
-
-    Map<String, Relation> relationsByName = relations.stream().filter(rel -> rel.name() != null)
-        .collect(Collectors.toMap(Relation::name, rel -> rel, (existing, replacement) -> existing));
-
-    for (Relation relation : relations) {
-      if (relation.name() != null && !definitionsByName.containsKey(relation.name())) {
-        violations.add(RELATION_NOT_DEFINED_IN_TEMPLATE, relation.name(), template.identifier());
-      }
-    }
-
-    for (RelationDefinition definition : definitions) {
-      Relation relation = relationsByName.get(definition.name());
-      List<String> validTargets = extractValidTargetIdentifiers(relation);
-
-      if (definition.required() && validTargets.isEmpty()) {
-        violations.add(RELATION_REQUIRED_MISSING, definition.name(), template.identifier());
-      }
-
-      if (relation != null && !definition.toMany() && validTargets.size() > 1) {
-        violations.add(RELATION_TOO_MANY_TARGETS, definition.name(), template.identifier());
-      }
-    }
+    validateRelationsAgainstTemplate(template, providedRelations, violations, true);
   }
 
   /// Validates that all target entity identifiers in the relation actually exist

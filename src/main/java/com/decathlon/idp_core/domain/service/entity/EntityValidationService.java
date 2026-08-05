@@ -101,6 +101,7 @@ public class EntityValidationService {
 
   /// Validates entity properties against the template's property definitions,
   /// enforcing required fields and value rules.
+  ///
   /// @param template the entity template whose property definitions are used for
   /// validation
   /// @param entity the entity being validated, containing the actual property
@@ -130,6 +131,7 @@ public class EntityValidationService {
 
   /// Checks for existing entity with same template and identifier to prevent
   /// duplicates.
+  ///
   /// @param entity the entity to check for existence
   /// @throws EntityAlreadyExistsException if an entity with the same template and
   /// identifier already exists

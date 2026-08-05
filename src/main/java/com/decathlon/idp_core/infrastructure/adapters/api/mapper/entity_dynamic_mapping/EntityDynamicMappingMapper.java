@@ -9,8 +9,8 @@ import com.decathlon.idp_core.domain.model.entity_mapping.EntityDynamicMapping;
 import com.decathlon.idp_core.domain.model.entity_mapping.RelationMapping;
 import com.decathlon.idp_core.infrastructure.adapters.api.dto.in.EntityDynamicMappingCreateDtoIn;
 import com.decathlon.idp_core.infrastructure.adapters.api.dto.in.EntityDynamicMappingDtoInCommonFields;
+import com.decathlon.idp_core.infrastructure.adapters.api.dto.in.EntityDynamicMappingRelationDtoIn;
 import com.decathlon.idp_core.infrastructure.adapters.api.dto.in.EntityDynamicMappingUpdateDtoIn;
-import com.decathlon.idp_core.infrastructure.adapters.api.dto.in.RelationMappingDtoIn;
 import com.decathlon.idp_core.infrastructure.adapters.api.dto.out.entity_dynamic_mapping.EntityDynamicMappingDtoOut;
 import com.decathlon.idp_core.infrastructure.adapters.api.dto.out.entity_dynamic_mapping.RelationMappingDtoOut;
 
@@ -29,7 +29,7 @@ public class EntityDynamicMappingMapper {
     return new EntityDynamicMapping(null, // id (assigned by persistence layer)
         mapping.identifier(), // identifier
         fields.entityTemplateIdentifier(), // entityTemplateIdentifier
-        fields.filter(), // filter
+        defaultFilter(fields.filter()), // filter
         fields.name(), // name
         fields.description(), fields.entity().identifier(), // entityIdentifier
         fields.entity().name(), // entityName
@@ -70,6 +70,11 @@ public class EntityDynamicMappingMapper {
         toRelationMappings(fields.entity().relations())); // relations
   }
 
+  /// For create/dry-run payloads, a missing filter means "process everything".
+  private String defaultFilter(String filter) {
+    return (filter == null || filter.isBlank()) ? "true" : filter;
+  }
+
   private Map<String, String> safeMap(Map<String, String> input) {
     return input == null ? Map.of() : Map.copyOf(input);
   }
@@ -77,7 +82,7 @@ public class EntityDynamicMappingMapper {
   /// Converts inbound relation DTOs to domain RelationMapping records.
   /// Preserves declaration order; duplicates are handled by downstream
   /// validation.
-  private List<RelationMapping> toRelationMappings(List<RelationMappingDtoIn> input) {
+  private List<RelationMapping> toRelationMappings(List<EntityDynamicMappingRelationDtoIn> input) {
     if (input == null || input.isEmpty()) {
       return List.of();
     }
@@ -87,14 +92,17 @@ public class EntityDynamicMappingMapper {
   }
 
   /// Converts domain RelationMapping records to output DTOs.
-  /// Handles null safety for relations, relation names, and expressions.
+  /// Handles null safety for relations, relation names, and
+  /// targetIdentifiersExpressions.
   private List<RelationMappingDtoOut> toRelationMappingDtoOut(List<RelationMapping> relations) {
     if (relations == null || relations.isEmpty()) {
       return List.of();
     }
     return relations.stream().filter(rm -> rm != null && rm.name() != null)
         .map(rm -> new RelationMappingDtoOut(rm.name(),
-            rm.expressions() == null ? List.of() : List.copyOf(rm.expressions())))
+            rm.targetIdentifiersExpressions() == null
+                ? List.of()
+                : List.copyOf(rm.targetIdentifiersExpressions())))
         .toList();
   }
 }

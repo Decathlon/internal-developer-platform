@@ -77,8 +77,6 @@ public class PropertyValidationService {
   /// quick lookup
   /// @param violations the accumulator for any validation violations found during
   /// the process
-  /// @throws EntityValidationException if any required property is missing or if
-  /// any property value violates its definition rules
   /// @implNote This method focuses on validating the presence and correctness of
   /// properties as defined by the template. It iterates through each property
   /// definition, checks for the corresponding provided property, and applies the
@@ -128,7 +126,7 @@ public class PropertyValidationService {
     propertyNames.stream().filter(name -> !definedPropertyNames.contains(name)).findFirst()
         .ifPresent(name -> {
           throw new PropertyNameNotFoundEntityTemplatePropertiesException(
-              PROPERTY_NOT_EXPECTED_FORMAT.formatted(name));
+              PROPERTY_NOT_DEFINED_IN_TEMPLATE.formatted(name, template.identifier()));
         });
   }
 

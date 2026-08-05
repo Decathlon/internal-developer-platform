@@ -20,10 +20,10 @@ SET relations = (
 )
 WHERE jsonb_typeof(relations) = 'object';
 
--- Normalize NULL relations to empty array (defensive guard for any unexpected NULLs)
+-- Normalize NULL relations (SQL NULL or JSONB null) to empty array (defensive guard)
 UPDATE entity_dynamic_mapping
 SET relations = '[]'::jsonb
-WHERE relations IS NULL;
+WHERE relations IS NULL OR relations = 'null'::jsonb;
 
 COMMENT ON COLUMN entity_dynamic_mapping.relations IS
     'JSLT relation mappings stored as a JSON array: [{"name":"<relation>","expressions":["<jslt>", ...]}]';
