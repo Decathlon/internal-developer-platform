@@ -1,100 +1,125 @@
 package com.decathlon.idp_core.infrastructure.adapters.ingestion.route;
 
-import static com.decathlon.idp_core.infrastructure.adapters.ingestion.configuration.IngestionConstants.*;
+import java.util.zip.ZipException;
 
-import com.decathlon.idp_core.infrastructure.adapters.ingestion.exception_handler.WebhookExceptionRouteBuilder;
 import org.apache.camel.Exchange;
 import org.apache.camel.LoggingLevel;
 import org.apache.camel.builder.RouteBuilder;
 import org.springframework.stereotype.Component;
 
-import com.decathlon.idp_core.domain.exception.webhook.WebhookConfigurationMissingException;
+import com.decathlon.idp_core.domain.exception.webhook.WebhookConnectorNotFoundException;
 import com.decathlon.idp_core.domain.exception.webhook.WebhookDisabledException;
 import com.decathlon.idp_core.domain.model.inbound_connectors.webhook.WebhookConnector;
 import com.decathlon.idp_core.domain.service.webhook.WebhookConnectorService;
+import com.decathlon.idp_core.infrastructure.adapters.ingestion.processor.DecodingProcessor;
+import com.decathlon.idp_core.infrastructure.adapters.ingestion.processor.IngestionProcessor;
 import com.decathlon.idp_core.infrastructure.adapters.ingestion.processor.SecurityProcessor;
-import com.decathlon.idp_core.infrastructure.adapters.ingestion.processor.decoder.DecodingProcessor;
 
 import lombok.RequiredArgsConstructor;
 
-/// Generic Camel Route pipeline handling inbound webhook fetching, status validation, and payload decoding.
 @Component
 @RequiredArgsConstructor
 public class GenericInboundEventRouteBuilder extends RouteBuilder {
 
+  /// Domain service resolving the persisted webhook connector configuration
+  /// by identifier.
   private final WebhookConnectorService webhookConnectorService;
-  private final DecodingProcessor decodingProcessor;
   private final SecurityProcessor securityProcessor;
-    private final WebhookExceptionRouteBuilder webhookExceptionRouteBuilder;
+  private final IngestionProcessor ingestionProcessor;
+  private final DecodingProcessor decodingProcessor;
+
   @Override
   public void configure() throws Exception {
-    webhookExceptionRouteBuilder.configureExceptions(this);
 
-      from(DIRECT_PROCESS_EVENT).routeId(ROUTE_ID_WEBHOOK_PIPELINE)
-              .setProperty(RAW_PAYLOAD_BODY_PROPERTY, body())
-              .to(DIRECT_FETCH_CONFIGURATION)
-              .to(DIRECT_VALIDATE_ENABLED)
-              .to(DIRECT_VALIDATE_SECURITY)
-              .to(DIRECT_DECODE_PAYLOAD)
-              .setHeader(Exchange.HTTP_RESPONSE_CODE, constant(HTTP_CREATED))
-              .setHeader(Exchange.CONTENT_TYPE, constant(APPLICATION_JSON))
-              .setBody(constant(SUCCESS_BODY_CONFIGURATION_LOADED));
+    // ---------------------------------------------------------------------------
+    // Exception handlers — must be declared before any from() route in the same
+    // RouteBuilder instance so that Camel registers them on the routes below.
+    // ---------------------------------------------------------------------------
 
-      // --- Step A: Fetch Configuration ---
-    from(DIRECT_FETCH_CONFIGURATION).routeId(ROUTE_ID_FETCH_WEBHOOK_CONFIG)
+    onException(WebhookConnectorNotFoundException.class).handled(true)
+        .log(LoggingLevel.WARN,
+            "No webhook connector found for identifier: ${exchangeProperty.connectorIdentifier}")
+        .setHeader(Exchange.HTTP_RESPONSE_CODE, constant(404))
+        .setBody(constant("{\"error\": \"Webhook configuration not found\"}"));
+
+    onException(ZipException.class).handled(true)
+        .log(LoggingLevel.WARN, "Error occurred while processing ZIP payload: ${exception.message}")
+        .setHeader(Exchange.HTTP_RESPONSE_CODE, constant(400))
+        .setBody(constant("{\"error\": \"Invalid ZIP payload\"}"));
+
+    onException(WebhookDisabledException.class).handled(true)
+        .log(LoggingLevel.WARN,
+            "Webhook connector is disabled: ${exchangeProperty.connectorIdentifier}")
+        .setHeader(Exchange.HTTP_RESPONSE_CODE, constant(403))
+        .setBody(constant("{\"error\": \"Webhook connector is disabled\"}"));
+
+    onException(Exception.class).handled(true).setHeader(Exchange.HTTP_RESPONSE_CODE, constant(500))
+        .log(LoggingLevel.ERROR, "Error occurred: ${exception.message}")
+        .setBody(constant("{\"error\": \"Internal server error processing ingestion payload\"}"));
+
+    // Main pipeline configuration
+    from("direct:process-event").routeId("webhook-pipeline").setProperty("rawPayloadBody", body())
+        // Step A: Load Webhook Configuration
+        .to("direct:fetch-configuration")
+        // Step A.1: Validate webhook is enabled
+        .to("direct:validate-enabled")
+        // Step B: Validate Security (HMAC, JWT, etc.) using the loaded configuration
+        .to("direct:validate-security")
+        // Step C: decode payload if necessary (e.g., gzip) using the header information
+        .to("direct:decode-payload")
+        // Step D: Map and ingest-payload
+        .to("direct:ingest-payload")
+
+        // Step E: Return HTTP 200 OK Response
+        .setHeader(Exchange.HTTP_RESPONSE_CODE, constant(200))
+        .setHeader(Exchange.CONTENT_TYPE, constant("application/json")).setBody(constant(
+            "{\"status\": \"SUCCESS\", \"message\": \"Webhook processed and saved successfully.\"}"));
+
+    // Pipeline steps
+
+    // --- Step A: Fetch Configuration ---
+    from("direct:fetch-configuration").routeId("fetch-webhook-config")
         .log(LoggingLevel.DEBUG,
             "Fetching configuration for webhook ID: ${exchangeProperty.connectorIdentifier}")
-        .process(exchange -> {
-          String connectorIdentifier = exchange.getProperty(CONNECTOR_IDENTIFIER_PROPERTY,
-              String.class);
-          WebhookConnector webhookConnector = webhookConnectorService
-              .getWebhookConnector(connectorIdentifier);
-          exchange.setProperty(WEBHOOK_CONFIG_PROPERTY, webhookConnector);
-        });
+        .bean(webhookConnectorService,
+            "getWebhookConnector(${exchangeProperty.connectorIdentifier})")
+        // Evaluates bean without overwriting exchange body
+        .setProperty("webhookConfig", method(webhookConnectorService,
+            "getWebhookConnector(${exchangeProperty.connectorIdentifier})"));
 
-    // --- Step A.1: Validate Webhook Status ---
-    from(DIRECT_VALIDATE_ENABLED).routeId(ROUTE_ID_VALIDATE_WEBHOOK_ENABLED)
+    // --- Step A.1: Validate Webhook is Enabled ---
+    from("direct:validate-enabled").routeId("validate-webhook-enabled")
         .log(LoggingLevel.DEBUG,
-            "Validating webhook availability for ID: ${exchangeProperty.connectorIdentifier}")
+            "Validating webhook is enabled: ${exchangeProperty.connectorIdentifier}")
         .process(exchange -> {
-          WebhookConnector config = exchange.getProperty(WEBHOOK_CONFIG_PROPERTY,
-              WebhookConnector.class);
-          if (config == null) {
-            String connectorIdentifier = exchange.getProperty(CONNECTOR_IDENTIFIER_PROPERTY,
-                String.class);
-            throw new WebhookConfigurationMissingException(connectorIdentifier);
-          }
+          // Resolve the connector from the exchange property and check the enabled flag.
+          // The exception is thrown at runtime with the actual identifier value.
+          var config = exchange.getProperty("webhookConfig", WebhookConnector.class);
           if (!config.enabled()) {
             throw new WebhookDisabledException(config.identifier());
           }
         });
 
-    // --- Step A.2: Validate Webhook Security ---
-    from(DIRECT_VALIDATE_SECURITY).routeId(ROUTE_ID_VALIDATE_WEBHOOK_SECURITY)
+    // --- Step B: Security Validation ---
+    from("direct:validate-security").routeId("validate-webhook-security")
         .log(LoggingLevel.DEBUG,
-            "Validating webhook security for ID: ${exchangeProperty.connectorIdentifier}")
-        .process(exchange -> {
-          WebhookConnector config = exchange.getProperty(WEBHOOK_CONFIG_PROPERTY,
-              WebhookConnector.class);
-          if (config == null) {
-            String connectorIdentifier = exchange.getProperty(CONNECTOR_IDENTIFIER_PROPERTY,
-                String.class);
-            throw new WebhookConfigurationMissingException(connectorIdentifier);
-          }
-          Object rawPayload = exchange.getProperty(RAW_PAYLOAD_BODY_PROPERTY);
-          securityProcessor.validate(exchange.getIn().getHeaders(), rawPayload, config);
-        });
+            "Applying security strategy for webhook: ${exchangeProperty.connectorIdentifier}")
+        // Passes headers (e.g. HMAC signatures/tokens), and config to validator
+        .bean(securityProcessor, "validate(${headers}, ${exchangeProperty.webhookConfig})");
 
-    // --- Step B: Decode Payload ---
-    from(DIRECT_DECODE_PAYLOAD).routeId(ROUTE_ID_DECODE_PAYLOAD)
+    // --- Step C: Decode payload if necessary---
+    from("direct:decode-payload").routeId("decode-payload")
         .log(LoggingLevel.DEBUG,
-            "Decoding payload for webhook ID: ${exchangeProperty.connectorIdentifier}")
-        .process(exchange -> {
-          Object rawPayload = exchange.getProperty(RAW_PAYLOAD_BODY_PROPERTY);
-          String decodedPayload = decodingProcessor.decode(rawPayload,
-              exchange.getIn().getHeaders());
-          exchange.getIn().setBody(decodedPayload);
-          exchange.getIn().removeHeader(CONTENT_ENCODING_HEADER);
-        });
+            "Decoding payload for webhook: ${exchangeProperty.connectorIdentifier}")
+        // Passes body (raw payload), headers (e.g. HMAC signatures/tokens)
+        .bean(decodingProcessor, "decode(${exchangeProperty.rawPayloadBody}, ${headers})")
+        .setProperty("decodedPayloadBody", body());
+
+    // --- Step D: Entity ingestion ---
+    from("direct:ingest-payload").routeId("ingest-payload")
+        .log(LoggingLevel.DEBUG, "Transforming payload to entity using configuration rules...")
+        .bean(ingestionProcessor,
+            "ingest(${exchangeProperty.decodedPayloadBody}, ${exchangeProperty.webhookConfig})")
+        .setProperty("mappedEntity", body()); // Store domain entity in Exchange property
   }
 }
