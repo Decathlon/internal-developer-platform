@@ -62,13 +62,13 @@ public class GenericInboundEventRouteBuilder extends RouteBuilder {
         // Step A: Load Webhook Configuration
         .to("direct:fetch-configuration")
         // Step A.1: Validate webhook is enabled
-        .to("direct:validate-enabled")
+        .to("direct:validate-enabled") // 1st version
         // Step B: Validate Security (HMAC, JWT, etc.) using the loaded configuration
-        .to("direct:validate-security")
+        .to("direct:validate-security") // 3rd version
         // Step C: decode payload if necessary (e.g., gzip) using the header information
-        .to("direct:decode-payload")
+        .to("direct:decode-payload") // 2nd version
         // Step D: Map and ingest-payload
-        .to("direct:ingest-payload")
+        .to("direct:ingest-payload") // 4th version
 
         // Step E: Return HTTP 200 OK Response
         .setHeader(Exchange.HTTP_RESPONSE_CODE, constant(200))
