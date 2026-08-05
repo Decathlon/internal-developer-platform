@@ -295,6 +295,40 @@ class EntityDynamicMappingControllerTest extends AbstractIntegrationTest {
 
     @Test
     @WithMockUser
+    @DisplayName("Should return 400 with explicit message when target_entity_identifiers is a plain string instead of an array")
+    void postMapping_400_target_entity_identifiers_is_string() throws Exception {
+      var payload = """
+          {
+            "identifier": "test-mapping-string-target",
+            "entity_template_identifier": "microservice",
+            "filter": ".action == \\"pushed\\"",
+            "name": "test mapping name",
+            "description": "description",
+            "entity": {
+              "identifier": ".repository.full_name",
+              "name": ".repository.name",
+              "properties": {},
+              "relations": [
+                {
+                  "name": "api-link",
+                  "target_entity_identifiers": ".repository.full_name"
+                }
+              ]
+            }
+          }
+          """;
+
+      mockMvc
+          .perform(MockMvcRequestBuilders.post(MAPPING_PATH).contentType(APPLICATION_JSON)
+              .accept(APPLICATION_JSON).with(csrf()).content(payload))
+          .andExpect(status().isBadRequest()).andExpect(jsonPath("$.error").value("BAD_REQUEST"))
+          .andExpect(
+              jsonPath("$.error_description").value(containsString("target_entity_identifiers")))
+          .andExpect(jsonPath("$.error_description").value(containsString("expected")));
+    }
+
+    @Test
+    @WithMockUser
     @DisplayName("Should return 422 when entity properties is null and required properties are missing")
     void postMapping_422_entity_properties_null() throws Exception {
       var payload = """
@@ -621,6 +655,25 @@ class EntityDynamicMappingControllerTest extends AbstractIntegrationTest {
   @Order(6)
   class PostDryRunMappingTests {
 
+    private void createGithubRepositoryTestTemplate() throws Exception {
+      String templatePayload = """
+          {
+            "identifier": "github_repository-test",
+            "name": "GitHub Repository Test",
+            "description": "Template used for dry-run tests without properties or relations"
+          }
+          """;
+
+      int statusCode = mockMvc
+          .perform(
+              MockMvcRequestBuilders.post("/api/v1/entity-templates").contentType(APPLICATION_JSON)
+                  .accept(APPLICATION_JSON).with(csrf()).content(templatePayload))
+          .andReturn().getResponse().getStatus();
+
+      Assertions.assertTrue(statusCode == 201 || statusCode == 409,
+          "GitHub repository test template creation should return 201 or 409");
+    }
+
     private void createApimApiTemplate() throws Exception {
       // Step 1: Create the component template (target of apim-api relations).
       // Must be created first so the apim-api template can reference it.
@@ -883,6 +936,35 @@ class EntityDynamicMappingControllerTest extends AbstractIntegrationTest {
           """;
     }
 
+    private String buildDryRunPayloadWithoutPropertiesAndRelations() {
+      return """
+          {
+            "mapping": {
+              "identifier": "test mapping",
+              "entity_template_identifier": "github_repository-test",
+              "name": "test mapping",
+              "description": "test mapping description",
+              "entity": {
+                "identifier": ".identifier",
+                "name": ".name"
+              }
+            },
+            "payload": {
+              "identifier": "pushed",
+              "repository": {
+                "full_name": "my-org/my-repo",
+                "name": "my-repo",
+                "language": "Java"
+              },
+              "name": "refs/heads/main",
+              "sender": {
+                "email": "user@example.com"
+              }
+            }
+          }
+          """;
+    }
+
     @Test
     @DisplayName("Should return 401 without authentication")
     void dryRunMapping_401_without_user_token() throws Exception {
@@ -961,6 +1043,30 @@ class EntityDynamicMappingControllerTest extends AbstractIntegrationTest {
           .andExpect(jsonPath("$.results[0].entity").doesNotExist())
           .andExpect(jsonPath("$.results[0].error.type").value("SKIPPED"))
           .andExpect(jsonPath("$.results[0].error.message").value(containsString("Filter")));
+    }
+
+    @Test
+    @WithMockUser
+    @DisplayName("Should return 200 when mapping has no properties and no relations")
+    void dryRunMapping_200_without_properties_and_relations() throws Exception {
+      createGithubRepositoryTestTemplate();
+
+      mockMvc
+          .perform(MockMvcRequestBuilders.post(MAPPING_PATH + "/dry-run")
+              .contentType(APPLICATION_JSON).accept(APPLICATION_JSON).with(csrf())
+              .content(buildDryRunPayloadWithoutPropertiesAndRelations()))
+          .andExpect(status().isOk()).andExpect(content().contentType(APPLICATION_JSON))
+          .andExpect(jsonPath("$.results").isArray())
+          .andExpect(jsonPath("$.results[0].success").value(true))
+          .andExpect(
+              jsonPath("$.results[0].mapping_template_identifier").value("github_repository-test"))
+          .andExpect(jsonPath("$.results[0].entity.identifier").value("pushed"))
+          .andExpect(jsonPath("$.results[0].entity.name").value("refs/heads/main"))
+          .andExpect(jsonPath("$.results[0].entity.properties").isMap())
+          .andExpect(jsonPath("$.results[0].entity.properties").isEmpty())
+          .andExpect(jsonPath("$.results[0].entity.relations").isArray())
+          .andExpect(jsonPath("$.results[0].entity.relations").isEmpty())
+          .andExpect(jsonPath("$.results[0].error").doesNotExist());
     }
 
     @Test

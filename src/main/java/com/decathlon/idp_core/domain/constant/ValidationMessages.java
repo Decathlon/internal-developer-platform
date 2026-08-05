@@ -141,7 +141,6 @@ public class ValidationMessages {
   public static final String WEBHOOK_CONNECTOR_IDENTIFIER_MAX_LENGTH = "Webhook identifier must not exceed 255 characters";
   public static final String WEBHOOK_CONNECTOR_NAME_MAX_LENGTH = "Webhook name must not exceed 255 characters";
   public static final String WEBHOOK_CONNECTOR_NAME_MANDATORY = "Webhook name is mandatory";
-  public static final String PROPERTY_NOT_EXPECTED_FORMAT = "Property '%s' does not match expected format";
   public static final String ENTITY_DYNAMIC_MAPPING_ENTITY_PROPERTIES_MISSING = "The mapping is missing required properties: %s";
   public static final String ENTITY_DYNAMIC_MAPPING_ENTITY_RELATIONS_MISSING = "The mapping is missing required relations: %s";
 
@@ -150,6 +149,5 @@ public class ValidationMessages {
 
   // Dry-run result messages
   public static final String DRY_RUN_FILTER_SKIPPED = "Filter expression returned false";
-  public static final String DRY_RUN_EXPRESSION_EVAL_FAILED = "Expression evaluation failed for '%s': %s";
 
 }
