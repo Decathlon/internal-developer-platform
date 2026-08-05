@@ -273,6 +273,6 @@ class EntityDynamicMappingAdaptorTest {
 
   private EntityDynamicMapping buildDomainMapping(String identifier) {
     return new EntityDynamicMapping(UUID.randomUUID(), identifier, "web-service", ".filter", "name",
-        "desc", ".id", ".title", Map.of(), Map.of());
+        "desc", ".id", ".title", Map.of(), List.of());
   }
 }

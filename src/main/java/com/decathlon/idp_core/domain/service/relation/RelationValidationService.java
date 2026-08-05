@@ -103,7 +103,7 @@ public class RelationValidationService {
   }
 
   private Set<String> getDefinedRelationNames(EntityTemplate template) {
-    if (template.relationsDefinitions() == null) {
+    if (template.relationsDefinitions().isEmpty()) {
       return Set.of();
     }
     return template.relationsDefinitions().stream().map(RelationDefinition::name)
@@ -120,6 +120,16 @@ public class RelationValidationService {
   /// the process
   public void validateRelationsAgainstTemplate(EntityTemplate template,
       List<Relation> providedRelations, Violations violations) {
+    validateRelationsAgainstTemplate(template, providedRelations, violations, false);
+  }
+
+  /// Internal unified relation validation used by both normal and dry-run
+  /// workflows.
+  ///
+  /// @param skipDatabaseChecks when true, skips target-entity existence checks
+  /// in repository-backed validation
+  private void validateRelationsAgainstTemplate(EntityTemplate template,
+      List<Relation> providedRelations, Violations violations, boolean skipDatabaseChecks) {
 
     List<RelationDefinition> definitions = template.relationsDefinitions() != null
         ? template.relationsDefinitions()
@@ -136,7 +146,7 @@ public class RelationValidationService {
     for (Relation relation : relations) {
       if (relation.name() != null && !definitionsByName.containsKey(relation.name())) {
         violations.add(RELATION_NOT_DEFINED_IN_TEMPLATE, relation.name(), template.identifier());
-      } else {
+      } else if (!skipDatabaseChecks) {
         validateRelationTargetEntityExistence(relation, violations);
       }
     }
@@ -153,6 +163,25 @@ public class RelationValidationService {
         violations.add(RELATION_TOO_MANY_TARGETS, definition.name(), template.identifier());
       }
     }
+  }
+
+  /// Validates entity relations for dry-run executions.
+  ///
+  /// Keeps structural validation (relation names, required relations,
+  /// cardinality)
+  /// and skips database existence checks for target entity identifiers.
+  ///
+  /// This method is intentionally additive and does not change the behavior of
+  /// [#validateRelationsAgainstTemplate].
+  ///
+  /// @param template the entity template whose relation definitions are used for
+  /// validation
+  /// @param providedRelations the actual relations provided by mapping extraction
+  /// @param violations the accumulator for any validation violations found during
+  /// the process
+  public void validateRelationsAgainstTemplateForDryRun(EntityTemplate template,
+      List<Relation> providedRelations, Violations violations) {
+    validateRelationsAgainstTemplate(template, providedRelations, violations, true);
   }
 
   /// Validates that all target entity identifiers in the relation actually exist

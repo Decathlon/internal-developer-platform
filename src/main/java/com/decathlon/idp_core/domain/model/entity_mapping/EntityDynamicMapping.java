@@ -2,6 +2,7 @@ package com.decathlon.idp_core.domain.model.entity_mapping;
 
 import static com.decathlon.idp_core.domain.constant.ValidationMessages.*;
 
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
@@ -16,7 +17,7 @@ import com.decathlon.idp_core.domain.exception.entity_dynamic_mapping.EntityDyna
 /// (persisted in entity_dynamic_mapping table) and is NOT part of the domain model.
 public record EntityDynamicMapping(UUID id, String identifier, String entityTemplateIdentifier,
     String filter, String name, String description, String entityIdentifier, String entityName,
-    Map<String, String> properties, Map<String, String> relations) {
+    Map<String, String> properties, List<RelationMapping> relations) {
 
   public EntityDynamicMapping {
     if (isBlank(identifier)) {
@@ -46,7 +47,7 @@ public record EntityDynamicMapping(UUID id, String identifier, String entityTemp
     }
 
     properties = properties == null ? Map.of() : Map.copyOf(properties);
-    relations = relations == null ? Map.of() : Map.copyOf(relations);
+    relations = relations == null ? List.of() : List.copyOf(relations);
   }
 
   private static boolean isBlank(String value) {

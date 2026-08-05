@@ -10,6 +10,7 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
 import com.decathlon.idp_core.domain.model.entity_mapping.EntityDynamicMapping;
+import com.decathlon.idp_core.domain.model.entity_mapping.RelationMapping;
 import com.decathlon.idp_core.domain.model.enums.WebhookSecurityType;
 import com.decathlon.idp_core.domain.model.inbound_connectors.webhook.WebhookConnector;
 import com.decathlon.idp_core.infrastructure.adapters.api.dto.in.InboundWebhookCreateDtoIn;
@@ -27,7 +28,8 @@ class InboundWebhookMapperTest {
   private static EntityDynamicMapping resolvedMapping() {
     return new EntityDynamicMapping(UUID.randomUUID(), "deployment-mapping", "deployment",
         ".eventType == \"DEPLOYED\"", "deployment mapping", "deployment mapping description", ".id",
-        ".name", Map.of("environment", ".env"), Map.of("service", ".service"));
+        ".name", Map.of("environment", ".env"),
+        List.of(new RelationMapping("service", List.of(".service"))));
   }
 
   @Test
