@@ -8,6 +8,8 @@ import org.apache.camel.builder.RouteBuilder;
 import org.springframework.stereotype.Component;
 
 import com.decathlon.idp_core.domain.exception.webhook.WebhookConnectorNotFoundException;
+import com.decathlon.idp_core.domain.exception.webhook.WebhookDisabledException;
+import com.decathlon.idp_core.domain.model.inbound_connectors.webhook.WebhookConnector;
 import com.decathlon.idp_core.domain.service.webhook.WebhookConnectorService;
 import com.decathlon.idp_core.infrastructure.adapters.ingestion.processor.DecodingProcessor;
 import com.decathlon.idp_core.infrastructure.adapters.ingestion.processor.IngestionProcessor;
@@ -45,6 +47,12 @@ public class GenericInboundEventRouteBuilder extends RouteBuilder {
         .setHeader(Exchange.HTTP_RESPONSE_CODE, constant(400))
         .setBody(constant("{\"error\": \"Invalid ZIP payload\"}"));
 
+    onException(WebhookDisabledException.class).handled(true)
+        .log(LoggingLevel.WARN,
+            "Webhook connector is disabled: ${exchangeProperty.connectorIdentifier}")
+        .setHeader(Exchange.HTTP_RESPONSE_CODE, constant(403))
+        .setBody(constant("{\"error\": \"Webhook connector is disabled\"}"));
+
     onException(Exception.class).handled(true).setHeader(Exchange.HTTP_RESPONSE_CODE, constant(500))
         .log(LoggingLevel.ERROR, "Error occurred: ${exception.message}")
         .setBody(constant("{\"error\": \"Internal server error processing ingestion payload\"}"));
@@ -53,6 +61,8 @@ public class GenericInboundEventRouteBuilder extends RouteBuilder {
     from("direct:process-event").routeId("webhook-pipeline").setProperty("rawPayloadBody", body())
         // Step A: Load Webhook Configuration
         .to("direct:fetch-configuration")
+        // Step A.1: Validate webhook is enabled
+        .to("direct:validate-enabled")
         // Step B: Validate Security (HMAC, JWT, etc.) using the loaded configuration
         .to("direct:validate-security")
         // Step C: decode payload if necessary (e.g., gzip) using the header information
@@ -60,7 +70,7 @@ public class GenericInboundEventRouteBuilder extends RouteBuilder {
         // Step D: Map and ingest-payload
         .to("direct:ingest-payload")
 
-        // Step E: Return HTTP 202 Accepted Response
+        // Step E: Return HTTP 200 OK Response
         .setHeader(Exchange.HTTP_RESPONSE_CODE, constant(200))
         .setHeader(Exchange.CONTENT_TYPE, constant("application/json")).setBody(constant(
             "{\"status\": \"SUCCESS\", \"message\": \"Webhook processed and saved successfully.\"}"));
@@ -76,6 +86,19 @@ public class GenericInboundEventRouteBuilder extends RouteBuilder {
         // Evaluates bean without overwriting exchange body
         .setProperty("webhookConfig", method(webhookConnectorService,
             "getWebhookConnector(${exchangeProperty.connectorIdentifier})"));
+
+    // --- Step A.1: Validate Webhook is Enabled ---
+    from("direct:validate-enabled").routeId("validate-webhook-enabled")
+        .log(LoggingLevel.DEBUG,
+            "Validating webhook is enabled: ${exchangeProperty.connectorIdentifier}")
+        .process(exchange -> {
+          // Resolve the connector from the exchange property and check the enabled flag.
+          // The exception is thrown at runtime with the actual identifier value.
+          var config = exchange.getProperty("webhookConfig", WebhookConnector.class);
+          if (!config.enabled()) {
+            throw new WebhookDisabledException(config.identifier());
+          }
+        });
 
     // --- Step B: Security Validation ---
     from("direct:validate-security").routeId("validate-webhook-security")
