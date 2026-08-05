@@ -252,6 +252,7 @@ jobs:
     needs: check-openapi-static-swagger-update
     if: github.event_name == 'pull_request'
     permissions:
+      contents: read
       pull-requests: write
     steps:
       - name: Checkout repository
@@ -427,7 +428,6 @@ jobs:
         with:
           header: flyway-migration-order
           message: ${{ steps.flyway_message.outputs.message }}
-          delete: true
 
       - name: Remove Migration Order Comment (If fixed)
         if: steps.flyway_check.outputs.order_broken == 'false'
