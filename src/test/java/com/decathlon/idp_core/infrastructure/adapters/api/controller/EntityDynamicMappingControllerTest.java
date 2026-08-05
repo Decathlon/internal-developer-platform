@@ -308,6 +308,7 @@ class EntityDynamicMappingControllerTest extends AbstractIntegrationTest {
             "identifier": "test-mapping-string-target",
             "entity_template_identifier": "microservice",
             "filter": ".action == \\"pushed\\"",
+            "action": "UPSERT",
             "name": "test mapping name",
             "description": "description",
             "entity": {
@@ -1630,6 +1631,7 @@ class EntityDynamicMappingControllerTest extends AbstractIntegrationTest {
               "identifier": "component-dry-run-undefined-relation",
               "entity_template_identifier": "component-template-no-relations",
               "filter": ".action == \\"deployed\\"",
+              "action": "UPSERT",
               "name": "component mapping with undefined relation",
               "description": "test undefined relation in dry-run",
               "entity": {

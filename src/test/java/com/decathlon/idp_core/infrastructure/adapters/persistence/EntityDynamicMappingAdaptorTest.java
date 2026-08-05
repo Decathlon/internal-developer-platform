@@ -269,7 +269,7 @@ class EntityDynamicMappingAdaptorTest {
     // name,
     // description, entityIdentifier, entityName, properties, relations
     return new EntityDynamicMappingJpaEntity(UUID.randomUUID(), identifier, UUID.randomUUID(), null,
-        ".filter", "name", "desc", ".id", ".title", "{}", "{}");
+        ".filter", MappingAction.UPSERT, "name", "desc", ".id", ".title", "{}", "{}");
   }
 
   private EntityDynamicMapping buildDomainMapping(String identifier) {
