@@ -1,5 +1,6 @@
 package com.decathlon.idp_core.infrastructure.adapters.ingestion.processor;
 
+import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.Map;
@@ -92,7 +93,7 @@ public class DecodingProcessor {
   }
 
   /// Converts payload to ByteArrayInputStream for GZIPInputStream.
-  private java.io.ByteArrayInputStream toByteArrayInputStream(Object payload) {
-    return new java.io.ByteArrayInputStream(toByteArray(payload));
+  private ByteArrayInputStream toByteArrayInputStream(Object payload) {
+    return new ByteArrayInputStream(toByteArray(payload));
   }
 }
