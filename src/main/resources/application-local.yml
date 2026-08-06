@@ -54,3 +54,7 @@ camel:
   component:
     platform-http:
       engine: "servlet"
+
+management:
+  tracing:
+    enabled: false

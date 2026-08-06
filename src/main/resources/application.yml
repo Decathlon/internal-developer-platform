@@ -124,6 +124,18 @@ logging:
     org.springframework.context.support.PostProcessorRegistrationDelegate: ERROR
 
 management:
+  tracing:
+    # Tracing is disabled by default and only enabled via environment variables (OTEL_TRACING_ENABLED).
+    enabled: false
+    sampling:
+      probability: 1.0  # 100% des traces
+
+  otlp:
+    tracing:
+      endpoint: ${OPEN_TELEMETRY_URL:""}
+      headers:
+        Authorization: ${OPEN_TELEMETRY_TOKEN:""}
+
   endpoint:
     health:
       probes:

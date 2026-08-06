@@ -357,7 +357,7 @@ public class ApiExceptionHandler {
   public ResponseEntity<ErrorResponse> handlePropertyNameNotFoundEntityTemplatePropertiesException(
       PropertyNameNotFoundEntityTemplatePropertiesException ex) {
     log.warn("Webhook mapping references unknown property: {}", ex.getMessage());
-    return createErrorResponse(HttpStatus.UNPROCESSABLE_CONTENT, ex.getMessage());
+    return createErrorResponse(HttpStatus.BAD_REQUEST, ex.getMessage());
   }
 
   @ExceptionHandler(RelationNameNotFoundEntityTemplateRelationsException.class)
