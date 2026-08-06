@@ -49,6 +49,7 @@ spring:
     baseline-on-migrate: true
     # Verifies migration checksums on startup. Fails fast if a script was changed after running.
     validate-on-migrate: true
+    out-of-order: true
 
   security:
     oauth2:
