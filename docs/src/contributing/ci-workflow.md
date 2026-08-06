@@ -24,6 +24,10 @@ flowchart TD
         FailPipeline[❌ Fail Pipeline]
 
         LintCode --> License2[License Compliance]
+        LintCode --> FlywayOrder[Flyway Migration Order Check]
+        FlywayOrder --> MigrationOrder{Version below main?}
+        MigrationOrder -->|Yes| FailPipeline
+        MigrationOrder -->|No| PassMigration[✅ Migration Order Kept]
         OpenAPI --> BreakingChange
         BreakingChange -->|Yes| CheckCommit
         CheckCommit -->|Yes| AllowBreaking
@@ -67,9 +71,9 @@ flowchart TD
     classDef container fill:#fff3e0,stroke:#ff6f00,stroke-width:2px,stroke-dasharray: 5 5;
 
     class StartPR,StartMain,StartRelease trigger;
-    class LintTitle,LintCode,License,License2,Build,Sonar,Coverage,Security,DockerTest,OpenAPI,BuildProd,TagImage,PushReg step;
-    class BreakingChange,CheckCommit decision;
-    class PassBreaking,AllowBreaking success;
+    class LintTitle,LintCode,License,License2,Build,Sonar,Coverage,Security,DockerTest,OpenAPI,FlywayOrder,BuildProd,TagImage,PushReg step;
+    class BreakingChange,CheckCommit,MigrationOrder decision;
+    class PassBreaking,PassMigration,AllowBreaking success;
     class FailPipeline failure;
     class SharedChecks,PR_Checks,Deploy_Flow container;
 ```
@@ -86,6 +90,7 @@ The `Basic Code Checks` workflow runs on every **pull request** targeting `main`
 | GitHub Coverage Report | ✅ | ✅ |
 | Security Scan (SpotBugs / OWASP) | ✅ | ✅ |
 | OpenAPI Breaking Change Check | ✅ | — |
+| Flyway Migration Order Check | ✅ | — |
 | Docker Image Build Test | ✅ | ✅ |
 
 1. **Conventional Commits**: PR titles must follow `feat:`, `fix:`, etc. We also control the scope, for example `feat(domain): ...`.
@@ -94,6 +99,10 @@ The `Basic Code Checks` workflow runs on every **pull request** targeting `main`
     * Unannounced breaking changes **fail the pipeline**.
 3. **Tests**: Unit tests and integration tests using Testcontainers must pass. Coverage should be at least 80%.
 4. **Coverage reporting**: SonarCloud and GitHub quality both receive coverage data on every push to `main` and on every PR.
+5. **Flyway migration order**: New migrations must keep the version order of `main`.
+    * A new migration must use a version **strictly greater** than the highest version already merged on `main`. For example, when `main` holds `V5_2` and `V6_1`, adding `V5_3` **fails the pipeline** because environments already at `V6_1` never apply it.
+    * A migration already merged on `main` must never be modified, renamed, or deleted: Flyway stores its checksum in the schema history table.
+    * The job posts a report as a pull request comment and removes it once the versions are fixed.
 
 ## Release Process
 
