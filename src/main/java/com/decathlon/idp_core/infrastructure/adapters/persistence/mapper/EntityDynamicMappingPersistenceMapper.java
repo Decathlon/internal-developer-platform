@@ -18,7 +18,7 @@ import com.decathlon.idp_core.infrastructure.adapters.persistence.model.entity_d
 public interface EntityDynamicMappingPersistenceMapper {
 
   @Mapping(target = "properties", qualifiedByName = "jsonStringToMap")
-  @Mapping(target = "relations", qualifiedByName = "jsonStringToMap")
+  @Mapping(target = "relations", qualifiedByName = "jsonStringToRelationList")
   @Mapping(target = "entityTemplateIdentifier", source = "template.identifier")
   // Explicit self-mapping: MapStruct otherwise silently drops the
   // `entityIdentifier` property, leaving the NOT NULL column unset.
@@ -27,7 +27,7 @@ public interface EntityDynamicMappingPersistenceMapper {
   EntityDynamicMapping toDomain(EntityDynamicMappingJpaEntity jpa);
 
   @Mapping(target = "properties", qualifiedByName = "mapToJsonString")
-  @Mapping(target = "relations", qualifiedByName = "mapToJsonString")
+  @Mapping(target = "relations", qualifiedByName = "relationListToJsonString")
   // The template foreign key (UUID) is resolved from the business identifier and
   // set by the persistence adapter, so both template fields are ignored here.
   @Mapping(target = "entityTemplateId", ignore = true)

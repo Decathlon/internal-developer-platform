@@ -34,6 +34,7 @@ public class SwaggerDescription {
   public static final String CONFLICT_CODE = "409";
   public static final String SERVICE_UNAVAILABLE_CODE = "503";
   public static final String INTERNAL_SERVER_ERROR_CODE = "500";
+  public static final String UNPROCESSABLE_CONTENT_CODE = "422";
 
   /// Entity Template API endpoint constants
   public static final String ENDPOINT_GET_TEMPLATES_SUMMARY = "Get all templates";
@@ -145,6 +146,10 @@ public class SwaggerDescription {
   public static final String RESPONSE_ENTITY_DYNAMIC_MAPPING_NOT_FOUND_IDENTIFIER = "Entity dynamic mapping not found with the provided identifier";
   public static final String RESPONSE_ENTITY_DYNAMIC_MAPPING_FOUND = "Entity dynamic mapping found";
   public static final String RESPONSE_ENTITY_DYNAMIC_MAPPING_UPDATED = "Entity dynamic mapping updated successfully";
+  public static final String RESPONSE_ENTITY_DYNAMIC_MAPPING_UPDATE_INVALID_TEMPLATE = "Entity template identifier is mandatory or target entity template not found";
+  public static final String RESPONSE_ENTITY_DYNAMIC_MAPPING_UPDATE_CONFLICT = "Target entity template not found or identifier already exists";
+  public static final String RESPONSE_ENTITY_DYNAMIC_MAPPING_DRY_RUN_VALIDATION_ERROR = "Mapping validation, template validation or expression evaluation error";
+  public static final String RESPONSE_ENTITY_DYNAMIC_MAPPING_DRY_RUN_TEMPLATE_NOT_FOUND = "Entity template not found with the provided identifier";
 
   // --- Schema (class) descriptions ---
   public static final String SCHEMA_ENTITY_TEMPLATE_CREATE_IN = "Input DTO for creating an entity template";
@@ -248,5 +253,27 @@ public class SwaggerDescription {
       template, identifier, name, properties, relations, and reverse relations.""";
   public static final String RESPONSE_SEARCH_SUCCESS = "Entities retrieved successfully";
   public static final String RESPONSE_INVALID_SEARCH_QUERY = "Invalid search filter";
+
+  //
+  public static final String ENDPOINT_POST_ENTITY_DYNAMIC_MAPPING_DRY_RUN_SUMMARY = "Validate a single entity dynamic mapping with a dry-run";
+  public static final String ENDPOINT_POST_ENTITY_DYNAMIC_MAPPING_DRY_RUN_DESCRIPTION = "Validate one JSLT mapping definition against a sample payload and target template identifier without persisting any data";
+  public static final String RESPONSE_ENTITY_DYNAMIC_MAPPING_DRY_RUN_SUCCESS = "Dry-run completed successfully";
+  public static final String WEBHOOK_DRY_RUN_PAYLOAD_DESCRIPTION = "Sample JSON payload to test against the webhook mapping configuration";
+
+  public static final String SCHEMA_DRY_RUN_RESULT = "Result of an entity dynamic mapping dry-run validation";
+  public static final String SCHEMA_DRY_RUN_RESULTS = "List of entity mapping results";
+  public static final String SCHEMA_DRY_RUN_MAPPING_TEMPLATE_IDENTIFIER = "Template identifier for this mapping";
+  public static final String SCHEMA_DRY_RUN_SUCCESS = "Whether the mapping was successful";
+  public static final String SCHEMA_DRY_RUN_ENTITY = "Mapped entity data";
+  public static final String SCHEMA_DRY_RUN_ERROR = "Error details";
+  public static final String SCHEMA_DRY_RUN_TEMPLATE_IDENTIFIER = "Target template identifier";
+  public static final String SCHEMA_DRY_RUN_ENTITY_NAME = "Entity name";
+  public static final String SCHEMA_DRY_RUN_ENTITY_IDENTIFIER = "Entity identifier";
+  public static final String SCHEMA_DRY_RUN_PROPERTIES = "Extracted properties";
+  public static final String SCHEMA_DRY_RUN_RELATIONS = "Extracted relations";
+  public static final String SCHEMA_DRY_RUN_RELATION_NAME = "Relation name";
+  public static final String SCHEMA_DRY_RUN_RELATION_TARGET_IDENTIFIERS = "Target entity identifiers extracted from payload";
+  public static final String SCHEMA_DRY_RUN_ERROR_TYPE = "Error type";
+  public static final String SCHEMA_DRY_RUN_ERROR_MESSAGE = "Error message";
 
 }

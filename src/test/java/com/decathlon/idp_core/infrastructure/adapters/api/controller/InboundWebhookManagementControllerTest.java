@@ -68,7 +68,7 @@ class InboundWebhookManagementControllerTest extends AbstractIntegrationTest {
               "port": "8080",
               "programmingLanguage": ".repository.language"
             },
-            "relations": {}
+            "relations": []
           }
         }
         """.formatted(mappingIdentifier);

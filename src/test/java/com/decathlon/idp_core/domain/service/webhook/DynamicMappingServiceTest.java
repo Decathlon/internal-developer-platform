@@ -27,6 +27,7 @@ import com.decathlon.idp_core.domain.exception.entity_dynamic_mapping.EntityDyna
 import com.decathlon.idp_core.domain.exception.entity_dynamic_mapping.EntityDynamicMappingAlreadyInUseException;
 import com.decathlon.idp_core.domain.exception.entity_dynamic_mapping.EntityDynamicMappingNotFoundException;
 import com.decathlon.idp_core.domain.model.entity_mapping.EntityDynamicMapping;
+import com.decathlon.idp_core.domain.model.entity_mapping.RelationMapping;
 import com.decathlon.idp_core.domain.model.enums.WebhookSecurityType;
 import com.decathlon.idp_core.domain.model.inbound_connectors.webhook.WebhookConnector;
 import com.decathlon.idp_core.domain.model.inbound_connectors.webhook.WebhookSecurity;
@@ -159,7 +160,7 @@ class DynamicMappingServiceTest {
       EntityDynamicMapping existing = buildMapping();
       EntityDynamicMapping incoming = new EntityDynamicMapping(null, "ignored-id",
           "new-entityTemplateIdentifier", ".newFilter", "New Name", "New Desc", ".newId",
-          ".newTitle", Map.of("prop", ".val"), Map.of());
+          ".newTitle", Map.of("prop", ".val"), List.of());
 
       when(entityDynamicMappingPort.findByIdentifier(MAPPING_IDENTIFIER))
           .thenReturn(Optional.of(existing));
@@ -178,7 +179,7 @@ class DynamicMappingServiceTest {
       EntityDynamicMapping existing = buildMapping();
       EntityDynamicMapping incoming = new EntityDynamicMapping(null, "ignored",
           "new-entityTemplateIdentifier", ".newFilter", "New Name", "New Desc", ".newId",
-          ".newTitle", Map.of("k", ".v"), Map.of("rel", ".r"));
+          ".newTitle", Map.of("k", ".v"), List.of(new RelationMapping("rel", List.of(".rel"))));
 
       when(entityDynamicMappingPort.findByIdentifier(MAPPING_IDENTIFIER))
           .thenReturn(Optional.of(existing));
@@ -228,7 +229,7 @@ class DynamicMappingServiceTest {
       EntityDynamicMapping existing = buildMapping();
       EntityDynamicMapping incoming = new EntityDynamicMapping(null, "ignored",
           "updated-entityTemplateIdentifier", ".updated", "Updated Name", "Updated Desc", ".uid",
-          ".utitle", Map.of(), Map.of());
+          ".utitle", Map.of(), List.of());
 
       when(entityDynamicMappingPort.findByIdentifier(MAPPING_IDENTIFIER))
           .thenReturn(Optional.of(existing));
@@ -324,7 +325,7 @@ class DynamicMappingServiceTest {
   private EntityDynamicMapping buildMapping() {
     return new EntityDynamicMapping(UUID.randomUUID(), MAPPING_IDENTIFIER,
         "github_deployment_status", ".deployment_status != null", "github deployment status name",
-        "github deployment status description", ".id", ".name", Map.of(), Map.of());
+        "github deployment status description", ".id", ".name", Map.of(), List.of());
   }
 
   private WebhookConnector buildWebhookConnector(String identifier) {

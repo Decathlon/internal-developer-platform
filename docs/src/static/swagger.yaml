@@ -166,7 +166,8 @@ paths:
               schema:
                 $ref: "#/components/schemas/EntityDynamicMappingDtoOut"
         "400":
-          description: Bad Request
+          description: Entity template identifier is mandatory or target entity template
+            not found
           content:
             "*/*":
               schema:
@@ -178,7 +179,7 @@ paths:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
         "409":
-          description: Conflict
+          description: Target entity template not found or identifier already exists
           content:
             "*/*":
               schema:
@@ -578,6 +579,46 @@ paths:
             "*/*":
               schema:
                 $ref: "#/components/schemas/EntityDynamicMappingDtoOut"
+  /api/v1/entity_dynamic_mappings/dry-run:
+    post:
+      tags:
+        - Entity dynamic mapping
+      summary: Validate a single entity dynamic mapping with a dry-run
+      description: Validate one JSLT mapping definition against a sample payload and
+        target template identifier without persisting any data
+      operationId: dryRunMapping
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/EntityDynamicMappingDryRunDtoIn"
+        required: true
+      responses:
+        "200":
+          description: Dry-run completed successfully
+          content:
+            "*/*":
+              schema:
+                $ref: "#/components/schemas/EntityDynamicMappingDryRunDtoOut"
+        "400":
+          description: Invalid entity dynamic mapping data provided
+          content:
+            "*/*":
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Entity template not found with the provided identifier
+          content:
+            "*/*":
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "422":
+          description: Mapping validation, template validation or expression evaluation
+            error
+          content:
+            "*/*":
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
   /api/v1/entity-templates:
     get:
       tags:
@@ -1010,9 +1051,9 @@ components:
           additionalProperties:
             type: string
         relations:
-          type: object
-          additionalProperties:
-            type: string
+          type: array
+          items:
+            $ref: "#/components/schemas/RelationMappingDtoOut"
     InboundWebhookSecurityDtoOut:
       type: object
       properties:
@@ -1021,6 +1062,15 @@ components:
         config:
           type: object
           additionalProperties:
+            type: string
+    RelationMappingDtoOut:
+      type: object
+      properties:
+        name:
+          type: string
+        target_entity_identifiers:
+          type: array
+          items:
             type: string
     ErrorResponse:
       type: object
@@ -1064,14 +1114,29 @@ components:
           additionalProperties:
             type: string
         relations:
-          type: object
-          additionalProperties:
-            type: string
+          type: array
+          items:
+            $ref: "#/components/schemas/RelationMappingDtoIn"
       required:
         - identifier
         - name
         - properties
         - relations
+    RelationMappingDtoIn:
+      type: object
+      properties:
+        name:
+          type: string
+          minLength: 1
+        target_entity_identifiers:
+          type: array
+          items:
+            type: string
+            minLength: 1
+          minItems: 1
+      required:
+        - name
+        - target_entity_identifiers
     EntityTemplateUpdateDtoIn:
       type: object
       description: Input DTO for updating an entity template
@@ -1444,6 +1509,83 @@ components:
         - filter
         - identifier
         - name
+    EntityDynamicMappingDryRunDtoIn:
+      type: object
+      description: Request payload for a single entity dynamic mapping dry-run validation
+      properties:
+        mapping:
+          $ref: "#/components/schemas/EntityDynamicMappingCreateDtoIn"
+        payload:
+          description: Sample JSON payload to test against the webhook mapping configuration
+      required:
+        - mapping
+        - payload
+    DryRunEntityDto:
+      type: object
+      properties:
+        template_identifier:
+          type: string
+          description: Target template identifier
+        name:
+          type: string
+          description: Entity name
+        identifier:
+          type: string
+          description: Entity identifier
+        properties:
+          type: object
+          additionalProperties:
+            type: string
+          description: Extracted properties
+        relations:
+          type: array
+          description: Extracted relations
+          items:
+            $ref: "#/components/schemas/DryRunRelationDto"
+    DryRunEntityResultDto:
+      type: object
+      properties:
+        mapping_template_identifier:
+          type: string
+          description: Template identifier for this mapping
+        success:
+          type: boolean
+          description: Whether the mapping was successful
+        entity:
+          $ref: "#/components/schemas/DryRunEntityDto"
+          description: Mapped entity data
+        error:
+          $ref: "#/components/schemas/DryRunErrorDto"
+          description: Error details
+    DryRunErrorDto:
+      type: object
+      properties:
+        type:
+          type: string
+          description: Error type
+        message:
+          type: string
+          description: Error message
+    DryRunRelationDto:
+      type: object
+      properties:
+        name:
+          type: string
+          description: Relation name
+        target_entity_identifiers:
+          type: array
+          description: Target entity identifiers extracted from payload
+          items:
+            type: string
+    EntityDynamicMappingDryRunDtoOut:
+      type: object
+      description: Result of an entity dynamic mapping dry-run validation
+      properties:
+        results:
+          type: array
+          description: List of entity mapping results
+          items:
+            $ref: "#/components/schemas/DryRunEntityResultDto"
     EntityTemplateCreateDtoIn:
       type: object
       description: Input DTO for creating an entity template
@@ -1582,18 +1724,18 @@ components:
             $ref: "#/components/schemas/EntityDtoOut"
         pageable:
           $ref: "#/components/schemas/PageableObject"
-        totalElements:
-          type: integer
-          format: int64
+        last:
+          type: boolean
         totalPages:
           type: integer
           format: int32
-        last:
+        totalElements:
+          type: integer
+          format: int64
+        first:
           type: boolean
         sort:
           $ref: "#/components/schemas/SortObject"
-        first:
-          type: boolean
         numberOfElements:
           type: integer
           format: int32
@@ -1642,18 +1784,18 @@ components:
             $ref: "#/components/schemas/InboundWebhookDtoOut"
         pageable:
           $ref: "#/components/schemas/PageableObject"
-        totalElements:
-          type: integer
-          format: int64
+        last:
+          type: boolean
         totalPages:
           type: integer
           format: int32
-        last:
+        totalElements:
+          type: integer
+          format: int64
+        first:
           type: boolean
         sort:
           $ref: "#/components/schemas/SortObject"
-        first:
-          type: boolean
         numberOfElements:
           type: integer
           format: int32
@@ -1675,18 +1817,18 @@ components:
             $ref: "#/components/schemas/EntityDynamicMappingDtoOut"
         pageable:
           $ref: "#/components/schemas/PageableObject"
-        totalElements:
-          type: integer
-          format: int64
+        last:
+          type: boolean
         totalPages:
           type: integer
           format: int32
-        last:
+        totalElements:
+          type: integer
+          format: int64
+        first:
           type: boolean
         sort:
           $ref: "#/components/schemas/SortObject"
-        first:
-          type: boolean
         numberOfElements:
           type: integer
           format: int32
@@ -1708,18 +1850,18 @@ components:
             $ref: "#/components/schemas/EntityTemplateDtoOut"
         pageable:
           $ref: "#/components/schemas/PageableObject"
-        totalElements:
-          type: integer
-          format: int64
+        last:
+          type: boolean
         totalPages:
           type: integer
           format: int32
-        last:
+        totalElements:
+          type: integer
+          format: int64
+        first:
           type: boolean
         sort:
           $ref: "#/components/schemas/SortObject"
-        first:
-          type: boolean
         numberOfElements:
           type: integer
           format: int32
