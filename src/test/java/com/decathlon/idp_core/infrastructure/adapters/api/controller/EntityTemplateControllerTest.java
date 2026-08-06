@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.containsString;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.springframework.http.MediaType.APPLICATION_JSON;
+import static org.springframework.http.MediaType.APPLICATION_PROBLEM_JSON;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
@@ -382,9 +383,10 @@ class EntityTemplateControllerTest extends AbstractIntegrationTest {
               .accept(APPLICATION_JSON).with(csrf())
               .content(getJsonTestFileContent(ENTITY_TEMPLATE_JSON_TEST_PATH
                   + "postEntityTemplate_409_identifier_already_exists.json")))
-          .andExpect(status().isConflict()).andExpect(content().contentType(APPLICATION_JSON))
-          .andExpect(jsonPath("$.error_description").exists()).andExpect(
-              jsonPath("$.error_description").value(TEMPLATE_ALREADY_EXISTS + ":web-service"));
+          .andExpect(status().isConflict())
+          .andExpect(content().contentType(APPLICATION_PROBLEM_JSON))
+          .andExpect(jsonPath("$.detail").exists())
+          .andExpect(jsonPath("$.detail").value(TEMPLATE_ALREADY_EXISTS + ":web-service"));
     }
 
     /// Tests the POST /api/v1/entity-templates endpoint when property type contains
@@ -477,8 +479,8 @@ class EntityTemplateControllerTest extends AbstractIntegrationTest {
               .accept(APPLICATION_JSON).with(csrf())
               .content(getJsonTestFileContent(ENTITY_TEMPLATE_JSON_TEST_PATH
                   + "postEntityTemplate_400_duplicate_property_names.json")))
-          .andExpect(status().isBadRequest()).andExpect(jsonPath("$.error").value("BAD_REQUEST"))
-          .andExpect(jsonPath("$.error_description").value(
+          .andExpect(status().isBadRequest()).andExpect(jsonPath("$.title").value("Bad Request"))
+          .andExpect(jsonPath("$.status").value(400)).andExpect(jsonPath("$.detail").value(
               "Property name 'applicationname' already exists within the template. Property names must be unique."));
     }
 
@@ -495,8 +497,8 @@ class EntityTemplateControllerTest extends AbstractIntegrationTest {
               .accept(APPLICATION_JSON).with(csrf())
               .content(getJsonTestFileContent(ENTITY_TEMPLATE_JSON_TEST_PATH
                   + "postEntityTemplate_400_duplicate_relation_names.json")))
-          .andExpect(status().isBadRequest()).andExpect(jsonPath("$.error").value("BAD_REQUEST"))
-          .andExpect(jsonPath("$.error_description").value(
+          .andExpect(status().isBadRequest()).andExpect(jsonPath("$.title").value("Bad Request"))
+          .andExpect(jsonPath("$.status").value(400)).andExpect(jsonPath("$.detail").value(
               "Relation name 'belongsto' already exists within the template. Relation names must be unique."));
     }
 
@@ -512,8 +514,8 @@ class EntityTemplateControllerTest extends AbstractIntegrationTest {
               .accept(APPLICATION_JSON).with(csrf())
               .content(getJsonTestFileContent(ENTITY_TEMPLATE_JSON_TEST_PATH
                   + "postEntityTemplate_400_target_template_not_found.json")))
-          .andExpect(status().isBadRequest()).andExpect(jsonPath("$.error").value("BAD_REQUEST"))
-          .andExpect(jsonPath("$.error_description")
+          .andExpect(status().isBadRequest()).andExpect(jsonPath("$.title").value("Bad Request"))
+          .andExpect(jsonPath("$.status").value(400)).andExpect(jsonPath("$.detail")
               .value("Target template with identifier 'non-existent-template' does not exist."));
     }
 
@@ -530,8 +532,9 @@ class EntityTemplateControllerTest extends AbstractIntegrationTest {
               .accept(APPLICATION_JSON).with(csrf())
               .content(getJsonTestFileContent(ENTITY_TEMPLATE_JSON_TEST_PATH
                   + "postTemplate_400_relation_target_references_itself.json")))
-          .andExpect(status().isBadRequest()).andExpect(jsonPath("$.error").value("BAD_REQUEST"))
-          .andExpect(jsonPath("$.error_description").value(containsString(
+          .andExpect(status().isBadRequest()).andExpect(jsonPath("$.title").value("Bad Request"))
+          .andExpect(jsonPath("$.status").value(400))
+          .andExpect(jsonPath("$.detail").value(containsString(
               "Relation 'circular' cannot reference its own template 'self-ref-template'")));
     }
 
@@ -758,8 +761,9 @@ class EntityTemplateControllerTest extends AbstractIntegrationTest {
               .contentType(APPLICATION_JSON).accept(APPLICATION_JSON).with(csrf())
               .content(getJsonTestFileContent(
                   "integration_test/json/entity-template/v1/putEntityTemplate_200.json")))
-          .andExpect(status().isNotFound()).andExpect(content().string(
-              "{\"error\":\"NOT_FOUND\",\"error_description\":\"Template not found with identifier: unknown-identifier\"}"));
+          .andExpect(status().isNotFound()).andExpect(jsonPath("$.title").value("Not Found"))
+          .andExpect(jsonPath("$.status").value(404)).andExpect(
+              jsonPath("$.detail").value("Template not found with identifier: unknown-identifier"));
     }
 
     @Test
@@ -770,8 +774,9 @@ class EntityTemplateControllerTest extends AbstractIntegrationTest {
           .contentType(APPLICATION_JSON).accept(APPLICATION_JSON).with(csrf())
           .content(getJsonTestFileContent(
               "integration_test/json/entity-template/v1/putEntityTemplate_400_propertyNameIsMissing.json")))
-          .andExpect(status().isBadRequest()).andExpect(content().string(
-              "{\"error\":\"BAD_REQUEST\",\"error_description\":\"Property name is mandatory and cannot be blank\"}"));
+          .andExpect(status().isBadRequest()).andExpect(jsonPath("$.title").value("Bad Request"))
+          .andExpect(jsonPath("$.status").value(400))
+          .andExpect(jsonPath("$.detail").value("Property name is mandatory and cannot be blank"));
     }
 
     @Test
@@ -782,8 +787,9 @@ class EntityTemplateControllerTest extends AbstractIntegrationTest {
           .contentType(APPLICATION_JSON).accept(APPLICATION_JSON).with(csrf())
           .content(getJsonTestFileContent(
               "integration_test/json/entity-template/v1/putEntityTemplate_400_propertyNameIsBlank.json")))
-          .andExpect(status().isBadRequest()).andExpect(content().string(
-              "{\"error\":\"BAD_REQUEST\",\"error_description\":\"Property name is mandatory and cannot be blank\"}"));
+          .andExpect(status().isBadRequest()).andExpect(jsonPath("$.title").value("Bad Request"))
+          .andExpect(jsonPath("$.status").value(400))
+          .andExpect(jsonPath("$.detail").value("Property name is mandatory and cannot be blank"));
     }
 
     @Test
@@ -794,8 +800,9 @@ class EntityTemplateControllerTest extends AbstractIntegrationTest {
           .contentType(APPLICATION_JSON).accept(APPLICATION_JSON).with(csrf())
           .content(getJsonTestFileContent(
               "integration_test/json/entity-template/v1/putEntityTemplate_400_propertyDescriptionIsBlank.json")))
-          .andExpect(status().isBadRequest()).andExpect(content().string(
-              "{\"error\":\"BAD_REQUEST\",\"error_description\":\"Property description is mandatory and cannot be blank\"}"));
+          .andExpect(status().isBadRequest()).andExpect(jsonPath("$.title").value("Bad Request"))
+          .andExpect(jsonPath("$.status").value(400)).andExpect(
+              jsonPath("$.detail").value("Property description is mandatory and cannot be blank"));
     }
 
     @Test
@@ -806,8 +813,9 @@ class EntityTemplateControllerTest extends AbstractIntegrationTest {
           .contentType(APPLICATION_JSON).accept(APPLICATION_JSON).with(csrf())
           .content(getJsonTestFileContent(
               "integration_test/json/entity-template/v1/putEntityTemplate_400_propertyDescriptionIsMissing.json")))
-          .andExpect(status().isBadRequest()).andExpect(content().string(
-              "{\"error\":\"BAD_REQUEST\",\"error_description\":\"Property description is mandatory and cannot be blank\"}"));
+          .andExpect(status().isBadRequest()).andExpect(jsonPath("$.title").value("Bad Request"))
+          .andExpect(jsonPath("$.status").value(400)).andExpect(
+              jsonPath("$.detail").value("Property description is mandatory and cannot be blank"));
     }
 
     @Test
@@ -818,8 +826,9 @@ class EntityTemplateControllerTest extends AbstractIntegrationTest {
           .contentType(APPLICATION_JSON).accept(APPLICATION_JSON).with(csrf())
           .content(getJsonTestFileContent(
               "integration_test/json/entity-template/v1/putEntityTemplate_400_propertyTypeIsMissing.json")))
-          .andExpect(status().isBadRequest()).andExpect(content().string(
-              "{\"error\":\"BAD_REQUEST\",\"error_description\":\"Property type is mandatory\"}"));
+          .andExpect(status().isBadRequest()).andExpect(jsonPath("$.title").value("Bad Request"))
+          .andExpect(jsonPath("$.status").value(400))
+          .andExpect(jsonPath("$.detail").value("Property type is mandatory"));
     }
 
     @Test
@@ -833,8 +842,9 @@ class EntityTemplateControllerTest extends AbstractIntegrationTest {
           .contentType(APPLICATION_JSON).accept(APPLICATION_JSON).with(csrf())
           .content(getJsonTestFileContent(
               "integration_test/json/entity-template/v1/putEntityTemplate_409_withIdentifierAlreadyExists.json")))
-          .andExpect(status().isConflict()).andExpect(content().string(
-              "{\"error\":\"CONFLICT\",\"error_description\":\"The entity template name Microservice already exists\"}"));
+          .andExpect(status().isConflict()).andExpect(jsonPath("$.title").value("Conflict"))
+          .andExpect(jsonPath("$.status").value(409)).andExpect(
+              jsonPath("$.detail").value("The entity template name Microservice already exists"));
     }
 
     /// Tests the PUT /api/v1/entity-templates/{identifier} endpoint when the name
@@ -852,9 +862,9 @@ class EntityTemplateControllerTest extends AbstractIntegrationTest {
           .contentType(APPLICATION_JSON).accept(APPLICATION_JSON).with(csrf())
           .content(getJsonTestFileContent(
               "integration_test/json/entity-template/v1/putEntityTemplate_400_name_missing.json")))
-          .andExpect(status().isBadRequest()).andExpect(jsonPath("$.error").value("BAD_REQUEST"))
-          .andExpect(
-              jsonPath("$.error_description").value(ValidationMessages.TEMPLATE_NAME_MANDATORY));
+          .andExpect(status().isBadRequest()).andExpect(jsonPath("$.title").value("Bad Request"))
+          .andExpect(jsonPath("$.status").value(400))
+          .andExpect(jsonPath("$.detail").value(ValidationMessages.TEMPLATE_NAME_MANDATORY));
     }
 
     /// Tests the PUT /api/v1/entity-templates/{identifier} endpoint when name field
@@ -872,8 +882,8 @@ class EntityTemplateControllerTest extends AbstractIntegrationTest {
           .contentType(APPLICATION_JSON).accept(APPLICATION_JSON).with(csrf())
           .content(getJsonTestFileContent(
               "integration_test/json/entity-template/v1/putEntityTemplate_400_name_blank.json")))
-          .andExpect(status().isBadRequest()).andExpect(jsonPath("$.error").value("BAD_REQUEST"))
-          .andExpect(jsonPath("$.error_description")
+          .andExpect(status().isBadRequest()).andExpect(jsonPath("$.title").value("Bad Request"))
+          .andExpect(jsonPath("$.status").value(400)).andExpect(jsonPath("$.detail")
               .value(containsString(ValidationMessages.TEMPLATE_NAME_MANDATORY)));
     }
 
@@ -891,8 +901,9 @@ class EntityTemplateControllerTest extends AbstractIntegrationTest {
           .contentType(APPLICATION_JSON).accept(APPLICATION_JSON).with(csrf())
           .content(getJsonTestFileContent(
               "integration_test/json/entity-template/v1/putEntityTemplate_409_name_already_exists.json")))
-          .andExpect(status().isConflict()).andExpect(content().string(
-              "{\"error\":\"CONFLICT\",\"error_description\":\"The entity template name Microservice already exists\"}"));
+          .andExpect(status().isConflict()).andExpect(jsonPath("$.title").value("Conflict"))
+          .andExpect(jsonPath("$.status").value(409)).andExpect(
+              jsonPath("$.detail").value("The entity template name Microservice already exists"));
     }
 
     /// Tests the PUT /api/v1/entity-templates/{identifier} endpoint when name field
@@ -910,9 +921,9 @@ class EntityTemplateControllerTest extends AbstractIntegrationTest {
           .contentType(APPLICATION_JSON).accept(APPLICATION_JSON).with(csrf())
           .content(getJsonTestFileContent(
               "integration_test/json/entity-template/v1/putEntityTemplate_400_name_wrong_size.json")))
-          .andExpect(status().isBadRequest()).andExpect(jsonPath("$.error").value("BAD_REQUEST"))
-          .andExpect(
-              jsonPath("$.error_description").value(ValidationMessages.TEMPLATE_NAME_MAX_SIZE));
+          .andExpect(status().isBadRequest()).andExpect(jsonPath("$.title").value("Bad Request"))
+          .andExpect(jsonPath("$.status").value(400))
+          .andExpect(jsonPath("$.detail").value(ValidationMessages.TEMPLATE_NAME_MAX_SIZE));
     }
 
     /// Tests the PUT /api/v1/entity-templates/{identifier} endpoint when name field
@@ -930,9 +941,9 @@ class EntityTemplateControllerTest extends AbstractIntegrationTest {
           .contentType(APPLICATION_JSON).accept(APPLICATION_JSON).with(csrf())
           .content(getJsonTestFileContent(
               "integration_test/json/entity-template/v1/putEntityTemplate_400_name_invalid_pattern.json")))
-          .andExpect(status().isBadRequest()).andExpect(jsonPath("$.error").value("BAD_REQUEST"))
-          .andExpect(
-              jsonPath("$.error_description").value(ValidationMessages.TEMPLATE_NAME_FORMAT));
+          .andExpect(status().isBadRequest()).andExpect(jsonPath("$.title").value("Bad Request"))
+          .andExpect(jsonPath("$.status").value(400))
+          .andExpect(jsonPath("$.detail").value(ValidationMessages.TEMPLATE_NAME_FORMAT));
     }
 
     /// Tests that the PUT /api/v1/entity-templates/{identifier} endpoint rejects
@@ -973,8 +984,8 @@ class EntityTemplateControllerTest extends AbstractIntegrationTest {
               .contentType(APPLICATION_JSON).accept(APPLICATION_JSON).with(csrf())
               .content(getJsonTestFileContent(PostTemplateTests.ENTITY_TEMPLATE_JSON_TEST_PATH
                   + "putTemplate_400_type_change.json")))
-          .andExpect(status().isBadRequest()).andExpect(jsonPath("$.error").value("BAD_REQUEST"))
-          .andExpect(jsonPath("$.error_description").value(
+          .andExpect(status().isBadRequest()).andExpect(jsonPath("$.title").value("Bad Request"))
+          .andExpect(jsonPath("$.status").value(400)).andExpect(jsonPath("$.detail").value(
               "Cannot change type of property 'name' from STRING to NUMBER. Property types cannot be modified after creation. Please delete and recreate the property instead."));
     }
 
@@ -992,8 +1003,9 @@ class EntityTemplateControllerTest extends AbstractIntegrationTest {
               .contentType(APPLICATION_JSON).accept(APPLICATION_JSON).with(csrf())
               .content(getJsonTestFileContent(PostTemplateTests.ENTITY_TEMPLATE_JSON_TEST_PATH
                   + "putTemplate_400_target_template_identifier_change.json")))
-          .andExpect(status().isBadRequest()).andExpect(jsonPath("$.error").value("BAD_REQUEST"))
-          .andExpect(jsonPath("$.error_description").value(containsString(
+          .andExpect(status().isBadRequest()).andExpect(jsonPath("$.title").value("Bad Request"))
+          .andExpect(jsonPath("$.status").value(400))
+          .andExpect(jsonPath("$.detail").value(containsString(
               "Cannot change target template of relation 'dependencies' from 'service' to 'service-modified'")));
     }
 
@@ -1037,9 +1049,10 @@ class EntityTemplateControllerTest extends AbstractIntegrationTest {
       mockMvc
           .perform(MockMvcRequestBuilders.delete(ENTITY_TEMPLATE_PATH + "/" + nonExistentId)
               .accept(APPLICATION_JSON).with(csrf()))
-          .andExpect(status().isNotFound()).andExpect(content().contentType(APPLICATION_JSON))
-          .andExpect(jsonPath("$.error").value("NOT_FOUND"))
-          .andExpect(jsonPath("$.error_description").exists());
+          .andExpect(status().isNotFound())
+          .andExpect(content().contentType(APPLICATION_PROBLEM_JSON))
+          .andExpect(jsonPath("$.title").value("Not Found"))
+          .andExpect(jsonPath("$.status").value(404)).andExpect(jsonPath("$.detail").exists());
 
       assertNotNull(nonExistentId, "Test executed successfully");
     }

@@ -7,6 +7,8 @@ import static com.tngtech.archunit.library.GeneralCodingRules.NO_CLASSES_SHOULD_
 import static com.tngtech.archunit.library.GeneralCodingRules.NO_CLASSES_SHOULD_USE_JAVA_UTIL_LOGGING;
 import static com.tngtech.archunit.library.dependencies.SlicesRuleDefinition.slices;
 
+import java.util.Map;
+
 import com.tngtech.archunit.core.importer.ImportOption.DoNotIncludeTests;
 import com.tngtech.archunit.junit.AnalyzeClasses;
 import com.tngtech.archunit.junit.ArchTest;
@@ -122,4 +124,90 @@ class MaintainabilityArchitectureTest {
   static final ArchRule MAPPERS_LIVE_IN_MAPPER_PACKAGE = classes().that()
       .haveSimpleNameEndingWith("Mapper").should().resideInAPackage("..mapper..")
       .because("mappers are grouped in a dedicated mapper package per adapter");
+
+  // ---------------------------------------------------------------------------------------
+  // 5. Exception registration
+  // ---------------------------------------------------------------------------------------
+
+  /// Every domain exception must be registered in
+  /// `ApiExceptionHandler.STATUS_BY_EXCEPTION`
+  /// so that it maps to an HTTP status and does not silently degrade to 500.
+  @ArchTest
+  static void allDomainExceptionsAreRegistered(com.tngtech.archunit.core.domain.JavaClasses classes)
+      throws ClassNotFoundException, NoSuchFieldException, IllegalAccessException {
+    java.util.Objects.requireNonNull(classes, "ArchUnit provided classes must not be null");
+    var classLoader = Thread.currentThread().getContextClassLoader();
+
+    // List of known domain exception classes that should be registered
+    String[] exceptionClassNames = {
+        "com.decathlon.idp_core.domain.exception.entity.EntityAlreadyExistsException",
+        "com.decathlon.idp_core.domain.exception.entity.EntityDeletionBlockedException",
+        "com.decathlon.idp_core.domain.exception.entity.EntityNotFoundException",
+        "com.decathlon.idp_core.domain.exception.entity.EntityValidationException",
+        "com.decathlon.idp_core.domain.exception.entity_dynamic_mapping.EntityDynamicMappingAlreadyExistsException",
+        "com.decathlon.idp_core.domain.exception.entity_dynamic_mapping.EntityDynamicMappingAlreadyInUseException",
+        "com.decathlon.idp_core.domain.exception.entity_dynamic_mapping.EntityDynamicMappingConfigurationException",
+        "com.decathlon.idp_core.domain.exception.entity_dynamic_mapping.EntityDynamicMappingHasNoPropertiesException",
+        "com.decathlon.idp_core.domain.exception.entity_dynamic_mapping.EntityDynamicMappingHasNoRelationsException",
+        "com.decathlon.idp_core.domain.exception.entity_dynamic_mapping.EntityDynamicMappingJsltErrorException",
+        "com.decathlon.idp_core.domain.exception.entity_dynamic_mapping.EntityDynamicMappingNotFoundException",
+        "com.decathlon.idp_core.domain.exception.entity_dynamic_mapping.ExpressionEvaluationFailedException",
+        "com.decathlon.idp_core.domain.exception.entity_template.EntityTemplateAlreadyExistsException",
+        "com.decathlon.idp_core.domain.exception.entity_template.EntityTemplateIdentifierCannotChangeException",
+        "com.decathlon.idp_core.domain.exception.entity_template.EntityTemplateNameAlreadyExistsException",
+        "com.decathlon.idp_core.domain.exception.entity_template.EntityTemplateNotFoundException",
+        "com.decathlon.idp_core.domain.exception.entity_template.EntityTemplateUsedByDynamicMappingException",
+        "com.decathlon.idp_core.domain.exception.entity_template.PropertyDefinitionRulesConflictException",
+        "com.decathlon.idp_core.domain.exception.entity_template.PropertyNameAlreadyExistsException",
+        "com.decathlon.idp_core.domain.exception.entity_template.PropertyNameNotFoundEntityTemplatePropertiesException",
+        "com.decathlon.idp_core.domain.exception.entity_template.PropertyTypeChangeException",
+        "com.decathlon.idp_core.domain.exception.entity_template.RelationCannotTargetItselfException",
+        "com.decathlon.idp_core.domain.exception.entity_template.RelationNameAlreadyExistsException",
+        "com.decathlon.idp_core.domain.exception.entity_template.RelationNameNotFoundEntityTemplateRelationsException",
+        "com.decathlon.idp_core.domain.exception.entity_template.RelationTargetTemplateChangeException",
+        "com.decathlon.idp_core.domain.exception.entity_template.TargetTemplateNotFoundException",
+        "com.decathlon.idp_core.domain.exception.filter.InvalidFilterDslException",
+        "com.decathlon.idp_core.domain.exception.mock.MockSecurityConfigurationException",
+        "com.decathlon.idp_core.domain.exception.search.InvalidSearchQueryException",
+        "com.decathlon.idp_core.domain.exception.webhook.WebhookAuthenticationException",
+        "com.decathlon.idp_core.domain.exception.webhook.WebhookConnectorAlreadyExistException",
+        "com.decathlon.idp_core.domain.exception.webhook.WebhookConnectorConfigurationException",
+        "com.decathlon.idp_core.domain.exception.webhook.WebhookConnectorNotFoundException",
+        "com.decathlon.idp_core.domain.exception.webhook.WebhookConnectorTitleAlreadyExistsException",
+        "com.decathlon.idp_core.domain.exception.webhook.WebhookSecurityConfigurationException",};
+
+    // Load the STATUS_BY_EXCEPTION map from ApiExceptionHandler
+    var apiExceptionHandler = classLoader.loadClass(
+        "com.decathlon.idp_core.infrastructure.adapters.api.handler.ApiExceptionHandler");
+    var statusByExceptionField = apiExceptionHandler.getDeclaredField("STATUS_BY_EXCEPTION");
+    statusByExceptionField.setAccessible(true);
+    @SuppressWarnings("unchecked")
+    Map<Class<?>, ?> statusByException = (Map<Class<?>, ?>) statusByExceptionField.get(null);
+
+    // Check all known exceptions are registered
+    var unregistered = new java.util.ArrayList<String>();
+    var missingExceptionClasses = new java.util.ArrayList<String>();
+    for (String exceptionClassName : exceptionClassNames) {
+      try {
+        var exceptionClass = classLoader.loadClass(exceptionClassName);
+        if (!statusByException.containsKey(exceptionClass)) {
+          unregistered.add(exceptionClass.getSimpleName());
+        }
+      } catch (ClassNotFoundException ignored) {
+        missingExceptionClasses.add(exceptionClassName);
+      }
+    }
+
+    if (!missingExceptionClasses.isEmpty()) {
+      throw new AssertionError(
+          "The following exception classes listed in the architecture test cannot be loaded: "
+              + missingExceptionClasses);
+    }
+
+    if (!unregistered.isEmpty()) {
+      throw new AssertionError(
+          "The following domain exceptions are not registered in ApiExceptionHandler.STATUS_BY_EXCEPTION: "
+              + unregistered);
+    }
+  }
 }

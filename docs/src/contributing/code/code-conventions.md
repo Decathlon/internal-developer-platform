@@ -117,26 +117,23 @@ public class InvalidIdentifierException extends DomainException {
 
 ### Global Exception Handler
 
+The exception handler uses a centralized **map-driven approach** instead of one `@ExceptionHandler` per exception. To support a new domain exception, add one entry to the `STATUS_BY_EXCEPTION` map:
+
 ```java
-@RestControllerAdvice
-public class GlobalExceptionHandler {
-
-    @ExceptionHandler(EntityNotFoundException.class)
-    public ResponseEntity<ErrorResponse> handleNotFound(EntityNotFoundException ex) {
-        return ResponseEntity.status(HttpStatus.NOT_FOUND)
-            .body(new ErrorResponse(ex.getCode(), ex.getMessage()));
-    }
-
-    @ExceptionHandler(MethodArgumentNotValidException.class)
-    public ResponseEntity<ErrorResponse> handleValidation(MethodArgumentNotValidException ex) {
-        var errors = ex.getBindingResult().getFieldErrors().stream()
-            .map(e -> e.getField() + ": " + e.getDefaultMessage())
-            .toList();
-        return ResponseEntity.badRequest()
-            .body(new ErrorResponse("VALIDATION_ERROR", String.join(", ", errors)));
-    }
-}
+// In ApiExceptionHandler.java, within STATUS_BY_EXCEPTION map:
+private static final Map<Class<? extends RuntimeException>, HttpStatus> STATUS_BY_EXCEPTION = Map
+    .ofEntries(
+        // 400 Bad Request — client can fix and retry
+        entry(MyNewBusinessException.class, BAD_REQUEST),
+        // 404 Not Found
+        entry(MyResourceNotFoundException.class, NOT_FOUND),
+        // 409 Conflict
+        entry(MyAlreadyExistsException.class, CONFLICT)
+        // ...
+    );
 ```
+
+The handler automatically catches, logs, and converts the exception to an RFC 9457 `ProblemDetail` response. **All domain exceptions must be registered** ; if you forget, the exception silently becomes HTTP 500, but an ArchUnit test (`MaintainabilityArchitectureTest.allDomainExceptionsAreRegistered()`) will catch it.
 
 ---
 
