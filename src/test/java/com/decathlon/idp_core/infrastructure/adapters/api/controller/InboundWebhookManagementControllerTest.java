@@ -188,8 +188,8 @@ class InboundWebhookManagementControllerTest extends AbstractIntegrationTest {
               .accept(APPLICATION_JSON).with(csrf())
               .content(getJsonTestFileContent(
                   JSON_PATH + "postWebhook_409_identifier_already_exists.json")))
-          .andExpect(status().isConflict()).andExpect(jsonPath("$.error").value("CONFLICT"))
-          .andExpect(jsonPath("$.error_description")
+          .andExpect(status().isConflict()).andExpect(jsonPath("$.title").value("Conflict"))
+          .andExpect(jsonPath("$.status").value(409)).andExpect(jsonPath("$.detail")
               .value(containsString(ValidationMessages.WEBHOOK_CONNECTOR_ALREADY_EXIST)));
     }
 
@@ -243,8 +243,9 @@ class InboundWebhookManagementControllerTest extends AbstractIntegrationTest {
       mockMvc
           .perform(MockMvcRequestBuilders.post(WEBHOOK_PATH).contentType(APPLICATION_JSON)
               .accept(APPLICATION_JSON).with(csrf()).content(payload))
-          .andExpect(status().isNotFound()).andExpect(jsonPath("$.error").value("NOT_FOUND"))
-          .andExpect(jsonPath("$.error_description").value(containsString("non-existent-mapping")));
+          .andExpect(status().isNotFound()).andExpect(jsonPath("$.title").value("Not Found"))
+          .andExpect(jsonPath("$.status").value(404))
+          .andExpect(jsonPath("$.detail").value(containsString("non-existent-mapping")));
     }
 
     @Test
@@ -269,8 +270,9 @@ class InboundWebhookManagementControllerTest extends AbstractIntegrationTest {
       mockMvc
           .perform(MockMvcRequestBuilders.post(WEBHOOK_PATH).contentType(APPLICATION_JSON)
               .accept(APPLICATION_JSON).with(csrf()).content(payload))
-          .andExpect(status().isBadRequest()).andExpect(jsonPath("$.error").value("BAD_REQUEST"))
-          .andExpect(jsonPath("$.error_description").value(containsString("secret_alias")));
+          .andExpect(status().isBadRequest()).andExpect(jsonPath("$.title").value("Bad Request"))
+          .andExpect(jsonPath("$.status").value(400))
+          .andExpect(jsonPath("$.detail").value(containsString("secret_alias")));
     }
 
     @Test
@@ -395,7 +397,8 @@ class InboundWebhookManagementControllerTest extends AbstractIntegrationTest {
       mockMvc
           .perform(MockMvcRequestBuilders.post(WEBHOOK_PATH).contentType(APPLICATION_JSON)
               .accept(APPLICATION_JSON).with(csrf()).content(payload))
-          .andExpect(status().isBadRequest()).andExpect(jsonPath("$.error").value("BAD_REQUEST"));
+          .andExpect(status().isBadRequest()).andExpect(jsonPath("$.title").value("Bad Request"))
+          .andExpect(jsonPath("$.status").value(400));
     }
 
     @Test
@@ -418,7 +421,8 @@ class InboundWebhookManagementControllerTest extends AbstractIntegrationTest {
       mockMvc
           .perform(MockMvcRequestBuilders.post(WEBHOOK_PATH).contentType(APPLICATION_JSON)
               .accept(APPLICATION_JSON).with(csrf()).content(payload))
-          .andExpect(status().isBadRequest()).andExpect(jsonPath("$.error").value("BAD_REQUEST"));
+          .andExpect(status().isBadRequest()).andExpect(jsonPath("$.title").value("Bad Request"))
+          .andExpect(jsonPath("$.status").value(400));
     }
 
     @Test
@@ -443,8 +447,9 @@ class InboundWebhookManagementControllerTest extends AbstractIntegrationTest {
       mockMvc
           .perform(MockMvcRequestBuilders.post(WEBHOOK_PATH).contentType(APPLICATION_JSON)
               .accept(APPLICATION_JSON).with(csrf()).content(payload))
-          .andExpect(status().isBadRequest()).andExpect(jsonPath("$.error").value("BAD_REQUEST"))
-          .andExpect(jsonPath("$.error_description").value(containsString("secret_alias")));
+          .andExpect(status().isBadRequest()).andExpect(jsonPath("$.title").value("Bad Request"))
+          .andExpect(jsonPath("$.status").value(400))
+          .andExpect(jsonPath("$.detail").value(containsString("secret_alias")));
     }
   }
 
@@ -524,8 +529,8 @@ class InboundWebhookManagementControllerTest extends AbstractIntegrationTest {
     @DisplayName("Should return 404 when connector does not exist")
     void getWebhook_404_not_found() throws Exception {
       mockMvc.perform(get(WEBHOOK_PATH + "/non-existent-connector").accept(APPLICATION_JSON))
-          .andExpect(status().isNotFound()).andExpect(jsonPath("$.error").value("NOT_FOUND"))
-          .andExpect(jsonPath("$.error_description").exists());
+          .andExpect(status().isNotFound()).andExpect(jsonPath("$.title").value("Not Found"))
+          .andExpect(jsonPath("$.status").value(404)).andExpect(jsonPath("$.detail").exists());
     }
 
     @Test
@@ -583,8 +588,8 @@ class InboundWebhookManagementControllerTest extends AbstractIntegrationTest {
           .perform(MockMvcRequestBuilders.put(WEBHOOK_PATH + "/non-existent-connector")
               .contentType(APPLICATION_JSON).accept(APPLICATION_JSON).with(csrf())
               .content(buildPutPayload("Updated Title", false, "microservice-mapping")))
-          .andExpect(status().isNotFound()).andExpect(jsonPath("$.error").value("NOT_FOUND"))
-          .andExpect(jsonPath("$.error_description").exists());
+          .andExpect(status().isNotFound()).andExpect(jsonPath("$.title").value("Not Found"))
+          .andExpect(jsonPath("$.status").value(404)).andExpect(jsonPath("$.detail").exists());
     }
 
     @Test
@@ -638,8 +643,9 @@ class InboundWebhookManagementControllerTest extends AbstractIntegrationTest {
       mockMvc
           .perform(MockMvcRequestBuilders.put(WEBHOOK_PATH + "/connector-put-bad-security")
               .contentType(APPLICATION_JSON).accept(APPLICATION_JSON).with(csrf()).content(payload))
-          .andExpect(status().isBadRequest()).andExpect(jsonPath("$.error").value("BAD_REQUEST"))
-          .andExpect(jsonPath("$.error_description").value(containsString("secret_alias")));
+          .andExpect(status().isBadRequest()).andExpect(jsonPath("$.title").value("Bad Request"))
+          .andExpect(jsonPath("$.status").value(400))
+          .andExpect(jsonPath("$.detail").value(containsString("secret_alias")));
     }
   }
 
@@ -666,7 +672,8 @@ class InboundWebhookManagementControllerTest extends AbstractIntegrationTest {
 
       // Verify the webhook no longer exists
       mockMvc.perform(get(WEBHOOK_PATH + "/connector-delete-204").accept(APPLICATION_JSON))
-          .andExpect(status().isNotFound()).andExpect(jsonPath("$.error").value("NOT_FOUND"));
+          .andExpect(status().isNotFound()).andExpect(jsonPath("$.title").value("Not Found"))
+          .andExpect(jsonPath("$.status").value(404));
     }
 
     @Test
@@ -676,8 +683,8 @@ class InboundWebhookManagementControllerTest extends AbstractIntegrationTest {
       mockMvc
           .perform(MockMvcRequestBuilders.delete(WEBHOOK_PATH + "/non-existent-connector")
               .accept(APPLICATION_JSON).with(csrf()))
-          .andExpect(status().isNotFound()).andExpect(jsonPath("$.error").value("NOT_FOUND"))
-          .andExpect(jsonPath("$.error_description").exists());
+          .andExpect(status().isNotFound()).andExpect(jsonPath("$.title").value("Not Found"))
+          .andExpect(jsonPath("$.status").value(404)).andExpect(jsonPath("$.detail").exists());
     }
   }
 
@@ -804,8 +811,9 @@ class InboundWebhookManagementControllerTest extends AbstractIntegrationTest {
               .accept(APPLICATION_JSON).with(csrf())
               .content(buildSecurityPayload("sec-hmac-no-header", "HMAC No Header", "HMAC_SHA256",
                   config)))
-          .andExpect(status().isBadRequest()).andExpect(jsonPath("$.error").value("BAD_REQUEST"))
-          .andExpect(jsonPath("$.error_description").value(containsString("header_name")));
+          .andExpect(status().isBadRequest()).andExpect(jsonPath("$.title").value("Bad Request"))
+          .andExpect(jsonPath("$.status").value(400))
+          .andExpect(jsonPath("$.detail").value(containsString("header_name")));
     }
 
     @Test
@@ -820,8 +828,9 @@ class InboundWebhookManagementControllerTest extends AbstractIntegrationTest {
               .accept(APPLICATION_JSON).with(csrf())
               .content(buildSecurityPayload("sec-hmac-no-secret", "HMAC No Secret", "HMAC_SHA256",
                   config)))
-          .andExpect(status().isBadRequest()).andExpect(jsonPath("$.error").value("BAD_REQUEST"))
-          .andExpect(jsonPath("$.error_description").value(containsString("secret_alias")));
+          .andExpect(status().isBadRequest()).andExpect(jsonPath("$.title").value("Bad Request"))
+          .andExpect(jsonPath("$.status").value(400))
+          .andExpect(jsonPath("$.detail").value(containsString("secret_alias")));
     }
 
     @Test
@@ -836,8 +845,9 @@ class InboundWebhookManagementControllerTest extends AbstractIntegrationTest {
               .accept(APPLICATION_JSON).with(csrf())
               .content(buildSecurityPayload("sec-hmac-bad-alias", "HMAC Bad Alias", "HMAC_SHA256",
                   config)))
-          .andExpect(status().isBadRequest()).andExpect(jsonPath("$.error").value("BAD_REQUEST"))
-          .andExpect(jsonPath("$.error_description").value(containsString("UPPER_SNAKE_CASE")));
+          .andExpect(status().isBadRequest()).andExpect(jsonPath("$.title").value("Bad Request"))
+          .andExpect(jsonPath("$.status").value(400))
+          .andExpect(jsonPath("$.detail").value(containsString("UPPER_SNAKE_CASE")));
     }
 
     @Test
@@ -888,7 +898,7 @@ class InboundWebhookManagementControllerTest extends AbstractIntegrationTest {
               .content(buildSecurityPayload("sec-token-no-header", "Token No Header",
                   "STATIC_TOKEN", config)))
           .andExpect(status().isBadRequest())
-          .andExpect(jsonPath("$.error_description").value(containsString("header_name")));
+          .andExpect(jsonPath("$.detail").value(containsString("header_name")));
     }
 
     @Test
@@ -904,7 +914,7 @@ class InboundWebhookManagementControllerTest extends AbstractIntegrationTest {
               .content(buildSecurityPayload("sec-token-no-secret", "Token No Secret",
                   "STATIC_TOKEN", config)))
           .andExpect(status().isBadRequest())
-          .andExpect(jsonPath("$.error_description").value(containsString("secret_alias")));
+          .andExpect(jsonPath("$.detail").value(containsString("secret_alias")));
     }
 
     // -----------------------------------------------------------------------
@@ -938,7 +948,7 @@ class InboundWebhookManagementControllerTest extends AbstractIntegrationTest {
               .accept(APPLICATION_JSON).with(csrf()).content(
                   buildSecurityPayload("sec-basic-no-user", "Basic No User", "BASIC_AUTH", config)))
           .andExpect(status().isBadRequest())
-          .andExpect(jsonPath("$.error_description").value(containsString("username")));
+          .andExpect(jsonPath("$.detail").value(containsString("username")));
     }
 
     @Test
@@ -954,7 +964,7 @@ class InboundWebhookManagementControllerTest extends AbstractIntegrationTest {
               .content(buildSecurityPayload("sec-basic-no-secret", "Basic No Secret", "BASIC_AUTH",
                   config)))
           .andExpect(status().isBadRequest())
-          .andExpect(jsonPath("$.error_description").value(containsString("secret_alias")));
+          .andExpect(jsonPath("$.detail").value(containsString("secret_alias")));
     }
 
     // -----------------------------------------------------------------------
@@ -1003,7 +1013,7 @@ class InboundWebhookManagementControllerTest extends AbstractIntegrationTest {
               .accept(APPLICATION_JSON).with(csrf())
               .content(buildSecurityPayload("sec-jwt-no-uri", "JWT No URI", "JWT_BEARER", config)))
           .andExpect(status().isBadRequest())
-          .andExpect(jsonPath("$.error_description").value(containsString("jwks_uri")));
+          .andExpect(jsonPath("$.detail").value(containsString("jwks_uri")));
     }
   }
 

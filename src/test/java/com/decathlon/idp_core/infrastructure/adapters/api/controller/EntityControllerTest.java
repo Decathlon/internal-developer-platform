@@ -192,8 +192,8 @@ public class EntityControllerTest extends AbstractIntegrationTest {
       mockMvc
           .perform(get(ENTITIES_BY_TEMPLATE_IDENTIFIER_PATH, TEMPLATE_IDENTIFIER)
               .param("q", "noOperator").accept(APPLICATION_JSON))
-          .andExpect(status().isBadRequest()).andExpect(jsonPath("$.error_description")
-              .value("Invalid query format, expected field:operator:value"));
+          .andExpect(status().isBadRequest()).andExpect(
+              jsonPath("$.detail").value("Invalid query format, expected field:operator:value"));
     }
 
     @Test
@@ -203,7 +203,7 @@ public class EntityControllerTest extends AbstractIntegrationTest {
       mockMvc
           .perform(get(ENTITIES_BY_TEMPLATE_IDENTIFIER_PATH, TEMPLATE_IDENTIFIER)
               .param("q", "name=A;name=B").accept(APPLICATION_JSON))
-          .andExpect(status().isBadRequest()).andExpect(jsonPath("$.error_description")
+          .andExpect(status().isBadRequest()).andExpect(jsonPath("$.detail")
               .value("Multiple filters for the same property are not supported"));
     }
 
@@ -216,8 +216,8 @@ public class EntityControllerTest extends AbstractIntegrationTest {
       mockMvc
           .perform(get(ENTITIES_BY_TEMPLATE_IDENTIFIER_PATH, TEMPLATE_IDENTIFIER).param("q", query)
               .accept(APPLICATION_JSON))
-          .andExpect(status().isBadRequest()).andExpect(
-              jsonPath("$.error_description").value("Filter query exceeds maximum of 10 criteria"));
+          .andExpect(status().isBadRequest())
+          .andExpect(jsonPath("$.detail").value("Filter query exceeds maximum of 10 criteria"));
     }
 
     @ParameterizedTest(name = "comparison filter ''{0}'' returns 400")
@@ -240,7 +240,7 @@ public class EntityControllerTest extends AbstractIntegrationTest {
           .perform(get(ENTITIES_BY_TEMPLATE_IDENTIFIER_PATH, TEMPLATE_IDENTIFIER)
               .param("q", query.trim()).accept(APPLICATION_JSON))
           .andExpect(status().isBadRequest())
-          .andExpect(jsonPath("$.error_description").value(
+          .andExpect(jsonPath("$.detail").value(
               "Operation '%s' is not applicable for property 'programmingLanguage': only NUMBER properties support comparison operators."
                   .formatted(query.trim().contains("<") ? "<" : ">")));
     }
@@ -316,8 +316,8 @@ public class EntityControllerTest extends AbstractIntegrationTest {
       mockMvc
           .perform(get(ENTITIES_BY_TEMPLATE_IDENTIFIER_PATH, TEMPLATE_IDENTIFIER)
               .param("q", "relation<api-link").accept(APPLICATION_JSON))
-          .andExpect(status().isBadRequest()).andExpect(jsonPath("$.error_description")
-              .value("Operation '<' is not applicable for field 'relation'."));
+          .andExpect(status().isBadRequest()).andExpect(
+              jsonPath("$.detail").value("Operation '<' is not applicable for field 'relation'."));
     }
 
     @Test
@@ -327,7 +327,7 @@ public class EntityControllerTest extends AbstractIntegrationTest {
       mockMvc
           .perform(get(ENTITIES_BY_TEMPLATE_IDENTIFIER_PATH, "microservice")
               .param("q", "relations_as_target.api-link.language=JAVA").accept(APPLICATION_JSON))
-          .andExpect(status().isBadRequest()).andExpect(jsonPath("$.error_description").value(
+          .andExpect(status().isBadRequest()).andExpect(jsonPath("$.detail").value(
               "Invalid property 'language' in criterion 'relations_as_target.api-link.language=JAVA': only 'identifier' and 'name' are supported for relations_as_target"));
     }
 
@@ -338,7 +338,7 @@ public class EntityControllerTest extends AbstractIntegrationTest {
       mockMvc
           .perform(get(ENTITIES_BY_TEMPLATE_IDENTIFIER_PATH, "microservice")
               .param("q", "relation.api-link.template=foo").accept(APPLICATION_JSON))
-          .andExpect(status().isBadRequest()).andExpect(jsonPath("$.error_description").value(
+          .andExpect(status().isBadRequest()).andExpect(jsonPath("$.detail").value(
               "Invalid property 'template' in criterion 'relation.api-link.template=foo': only 'identifier' and 'name' are supported for relation"));
     }
   }
@@ -408,8 +408,8 @@ public class EntityControllerTest extends AbstractIntegrationTest {
               .contentType(APPLICATION_JSON).accept(APPLICATION_JSON).with(csrf())
               .content(getJsonTestFileContent(
                   ENTITY_JSON_FILES_TEST_PATH + "postEntity_400_required_properties_missing.json")))
-          .andExpect(status().isBadRequest()).andExpect(jsonPath("$.error").value("BAD_REQUEST"))
-          .andExpect(jsonPath("$.error_description").value(
+          .andExpect(status().isBadRequest()).andExpect(jsonPath("$.title").value("Bad Request"))
+          .andExpect(jsonPath("$.status").value(400)).andExpect(jsonPath("$.detail").value(
               org.hamcrest.Matchers.containsString("Property 'applicationName' is required")));
     }
 
@@ -423,8 +423,8 @@ public class EntityControllerTest extends AbstractIntegrationTest {
                   .contentType(APPLICATION_JSON).accept(APPLICATION_JSON).with(csrf())
                   .content(getJsonTestFileContent(
                       ENTITY_JSON_FILES_TEST_PATH + "postEntity_400_property_type_mismatch.json")))
-          .andExpect(status().isBadRequest()).andExpect(jsonPath("$.error").value("BAD_REQUEST"))
-          .andExpect(jsonPath("$.error_description").value(
+          .andExpect(status().isBadRequest()).andExpect(jsonPath("$.title").value("Bad Request"))
+          .andExpect(jsonPath("$.status").value(400)).andExpect(jsonPath("$.detail").value(
               org.hamcrest.Matchers.containsString("Property 'port' must be of type NUMBER")));
     }
 
@@ -438,8 +438,9 @@ public class EntityControllerTest extends AbstractIntegrationTest {
                   .contentType(APPLICATION_JSON).accept(APPLICATION_JSON).with(csrf())
                   .content(getJsonTestFileContent(ENTITY_JSON_FILES_TEST_PATH
                       + "postEntity_400_property_rules_not_respected.json")))
-          .andExpect(status().isBadRequest()).andExpect(jsonPath("$.error").value("BAD_REQUEST"))
-          .andExpect(jsonPath("$.error_description").value(org.hamcrest.Matchers.allOf(
+          .andExpect(status().isBadRequest()).andExpect(jsonPath("$.title").value("Bad Request"))
+          .andExpect(jsonPath("$.status").value(400))
+          .andExpect(jsonPath("$.detail").value(org.hamcrest.Matchers.allOf(
               org.hamcrest.Matchers
                   .containsString("Property 'ownerEmail' does not match expected format"),
               org.hamcrest.Matchers
@@ -462,8 +463,9 @@ public class EntityControllerTest extends AbstractIntegrationTest {
                   .contentType(APPLICATION_JSON).accept(APPLICATION_JSON).with(csrf())
                   .content(getJsonTestFileContent(ENTITY_JSON_FILES_TEST_PATH
                       + "postEntity_400_property_not_defined_in_template.json")))
-          .andExpect(status().isBadRequest()).andExpect(jsonPath("$.error").value("BAD_REQUEST"))
-          .andExpect(jsonPath("$.error_description").value(org.hamcrest.Matchers
+          .andExpect(status().isBadRequest()).andExpect(jsonPath("$.title").value("Bad Request"))
+          .andExpect(jsonPath("$.status").value(400))
+          .andExpect(jsonPath("$.detail").value(org.hamcrest.Matchers
               .containsString("Property 'status' is not defined in template 'web-service'")));
     }
 
@@ -477,8 +479,9 @@ public class EntityControllerTest extends AbstractIntegrationTest {
                   .contentType(APPLICATION_JSON).accept(APPLICATION_JSON).with(csrf())
                   .content(getJsonTestFileContent(ENTITY_JSON_FILES_TEST_PATH
                       + "postEntity_400_relation_target_entity_does_not_exist.json")))
-          .andExpect(status().isBadRequest()).andExpect(jsonPath("$.error").value("BAD_REQUEST"))
-          .andExpect(jsonPath("$.error_description").value(org.hamcrest.Matchers.containsString(
+          .andExpect(status().isBadRequest()).andExpect(jsonPath("$.title").value("Bad Request"))
+          .andExpect(jsonPath("$.status").value(400))
+          .andExpect(jsonPath("$.detail").value(org.hamcrest.Matchers.containsString(
               "Relation 'database': target entity 'missing-database' does not exist")));
     }
 
@@ -532,8 +535,8 @@ public class EntityControllerTest extends AbstractIntegrationTest {
               .contentType(APPLICATION_JSON).accept(APPLICATION_JSON).with(csrf())
               .content(getJsonTestFileContent(
                   ENTITY_JSON_FILES_TEST_PATH + "putEntity_400_required_properties_missing.json")))
-          .andExpect(status().isBadRequest()).andExpect(jsonPath("$.error").value("BAD_REQUEST"))
-          .andExpect(jsonPath("$.error_description").value(
+          .andExpect(status().isBadRequest()).andExpect(jsonPath("$.title").value("Bad Request"))
+          .andExpect(jsonPath("$.status").value(400)).andExpect(jsonPath("$.detail").value(
               org.hamcrest.Matchers.containsString("Property 'applicationName' is required")));
     }
 
@@ -546,8 +549,8 @@ public class EntityControllerTest extends AbstractIntegrationTest {
               .contentType(APPLICATION_JSON).accept(APPLICATION_JSON).with(csrf())
               .content(getJsonTestFileContent(
                   ENTITY_JSON_FILES_TEST_PATH + "putEntity_400_property_type_mismatch.json")))
-          .andExpect(status().isBadRequest()).andExpect(jsonPath("$.error").value("BAD_REQUEST"))
-          .andExpect(jsonPath("$.error_description").value(
+          .andExpect(status().isBadRequest()).andExpect(jsonPath("$.title").value("Bad Request"))
+          .andExpect(jsonPath("$.status").value(400)).andExpect(jsonPath("$.detail").value(
               org.hamcrest.Matchers.containsString("Property 'port' must be of type NUMBER")));
     }
 
@@ -560,8 +563,9 @@ public class EntityControllerTest extends AbstractIntegrationTest {
               .contentType(APPLICATION_JSON).accept(APPLICATION_JSON).with(csrf())
               .content(getJsonTestFileContent(
                   ENTITY_JSON_FILES_TEST_PATH + "putEntity_400_property_rules_not_respected.json")))
-          .andExpect(status().isBadRequest()).andExpect(jsonPath("$.error").value("BAD_REQUEST"))
-          .andExpect(jsonPath("$.error_description").value(org.hamcrest.Matchers.allOf(
+          .andExpect(status().isBadRequest()).andExpect(jsonPath("$.title").value("Bad Request"))
+          .andExpect(jsonPath("$.status").value(400))
+          .andExpect(jsonPath("$.detail").value(org.hamcrest.Matchers.allOf(
               org.hamcrest.Matchers
                   .containsString("Property 'ownerEmail' does not match expected format"),
               org.hamcrest.Matchers
@@ -583,8 +587,9 @@ public class EntityControllerTest extends AbstractIntegrationTest {
               .contentType(APPLICATION_JSON).accept(APPLICATION_JSON).with(csrf())
               .content(getJsonTestFileContent(ENTITY_JSON_FILES_TEST_PATH
                   + "putEntity_400_property_not_defined_and_relation_target_missing.json")))
-          .andExpect(status().isBadRequest()).andExpect(jsonPath("$.error").value("BAD_REQUEST"))
-          .andExpect(jsonPath("$.error_description").value(org.hamcrest.Matchers.allOf(
+          .andExpect(status().isBadRequest()).andExpect(jsonPath("$.title").value("Bad Request"))
+          .andExpect(jsonPath("$.status").value(400))
+          .andExpect(jsonPath("$.detail").value(org.hamcrest.Matchers.allOf(
               org.hamcrest.Matchers
                   .containsString("Property 'status' is not defined in template 'web-service'"),
               org.hamcrest.Matchers.containsString(
@@ -1075,7 +1080,7 @@ public class EntityControllerTest extends AbstractIntegrationTest {
                     "size": 20
                   }
                   """))
-          .andExpect(status().isBadRequest()).andExpect(jsonPath("$.error_description")
+          .andExpect(status().isBadRequest()).andExpect(jsonPath("$.detail")
               .value("Invalid connector 'INVALID_CONNECTOR'. Supported values: AND, OR"));
     }
 
@@ -1096,7 +1101,7 @@ public class EntityControllerTest extends AbstractIntegrationTest {
                     "size": 20
                   }
                   """))
-          .andExpect(status().isBadRequest()).andExpect(jsonPath("$.error_description").value(
+          .andExpect(status().isBadRequest()).andExpect(jsonPath("$.detail").value(
               "Invalid operation 'LIKE'. Supported values: EQ, NEQ, CONTAINS, NOT_CONTAINS, STARTS_WITH, ENDS_WITH, GT, GTE, LT, LTE"));
     }
 
@@ -1134,27 +1139,25 @@ public class EntityControllerTest extends AbstractIntegrationTest {
                     "size": 20
                   }
                   """))
-          .andExpect(status().isBadRequest()).andExpect(jsonPath("$.error_description")
-              .value("A criterion node must have a non-blank 'field'"));
+          .andExpect(status().isBadRequest())
+          .andExpect(jsonPath("$.detail").value("A criterion node must have a non-blank 'field'"));
     }
 
     @Test
     @DisplayName("Should return 400 when group is missing criteria")
     @WithMockUser
     void search_400_groupMissingCriteria() throws Exception {
-      mockMvc
-          .perform(MockMvcRequestBuilders.post(SEARCH_PATH).contentType(APPLICATION_JSON)
-              .accept(APPLICATION_JSON).with(csrf()).content("""
-                  {
-                    "filter": {
-                      "connector": "AND"
-                    },
-                    "page": 0,
-                    "size": 20
-                  }
-                  """))
-          .andExpect(status().isBadRequest()).andExpect(jsonPath("$.error_description")
-              .value("A group node must have a non-empty 'criteria' list"));
+      mockMvc.perform(MockMvcRequestBuilders.post(SEARCH_PATH).contentType(APPLICATION_JSON)
+          .accept(APPLICATION_JSON).with(csrf()).content("""
+              {
+                "filter": {
+                  "connector": "AND"
+                },
+                "page": 0,
+                "size": 20
+              }
+              """)).andExpect(status().isBadRequest()).andExpect(
+              jsonPath("$.detail").value("A group node must have a non-empty 'criteria' list"));
     }
 
     @Test
@@ -1295,8 +1298,8 @@ public class EntityControllerTest extends AbstractIntegrationTest {
               .accept(APPLICATION_JSON).with(csrf()).content("""
                   { "query": "%s", "page": 0, "size": 20 }
                   """.formatted(tooLong)))
-          .andExpect(status().isBadRequest()).andExpect(
-              jsonPath("$.error_description").value("Search query must not exceed 255 characters"));
+          .andExpect(status().isBadRequest())
+          .andExpect(jsonPath("$.detail").value("Search query must not exceed 255 characters"));
     }
 
     @Test
@@ -1316,29 +1319,27 @@ public class EntityControllerTest extends AbstractIntegrationTest {
                     "page": 0, "size": 20
                   }
                   """))
-          .andExpect(status().isBadRequest()).andExpect(
-              jsonPath("$.error_description").value(org.hamcrest.Matchers.containsString("GT")));
+          .andExpect(status().isBadRequest())
+          .andExpect(jsonPath("$.detail").value(org.hamcrest.Matchers.containsString("GT")));
     }
 
     @Test
     @WithMockUser
     @DisplayName("Should return 400 when GT operator is used with a non-numeric value")
     void search_400_numericOperator_nonNumericValue() throws Exception {
-      mockMvc
-          .perform(MockMvcRequestBuilders.post(SEARCH_PATH).contentType(APPLICATION_JSON)
-              .accept(APPLICATION_JSON).with(csrf()).content("""
-                  {
-                    "filter": {
-                      "connector": "AND",
-                      "criteria": [
-                        { "field": "property.port", "operation": "GT", "value": "not-a-number" }
-                      ]
-                    },
-                    "page": 0, "size": 20
-                  }
-                  """))
-          .andExpect(status().isBadRequest()).andExpect(jsonPath("$.error_description")
-              .value(org.hamcrest.Matchers.containsString("not-a-number")));
+      mockMvc.perform(MockMvcRequestBuilders.post(SEARCH_PATH).contentType(APPLICATION_JSON)
+          .accept(APPLICATION_JSON).with(csrf()).content("""
+              {
+                "filter": {
+                  "connector": "AND",
+                  "criteria": [
+                    { "field": "property.port", "operation": "GT", "value": "not-a-number" }
+                  ]
+                },
+                "page": 0, "size": 20
+              }
+              """)).andExpect(status().isBadRequest()).andExpect(
+              jsonPath("$.detail").value(org.hamcrest.Matchers.containsString("not-a-number")));
     }
 
     @Test
@@ -1361,7 +1362,7 @@ public class EntityControllerTest extends AbstractIntegrationTest {
                       }
                       """))
           .andExpect(status().isBadRequest())
-          .andExpect(jsonPath("$.error_description").value(org.hamcrest.Matchers.allOf(
+          .andExpect(jsonPath("$.detail").value(org.hamcrest.Matchers.allOf(
               org.hamcrest.Matchers.containsString("programmingLanguage"),
               org.hamcrest.Matchers.containsString("STRING"))));
     }
@@ -1449,7 +1450,7 @@ public class EntityControllerTest extends AbstractIntegrationTest {
               .accept(APPLICATION_JSON).with(csrf()).content("""
                   { "page": 0, "size": 501 }
                   """))
-          .andExpect(status().isBadRequest()).andExpect(jsonPath("$.error_description")
+          .andExpect(status().isBadRequest()).andExpect(jsonPath("$.detail")
               .value("Page size must not exceed %d".formatted(SearchConstraints.MAX_PAGE_SIZE)));
     }
 
@@ -1462,7 +1463,7 @@ public class EntityControllerTest extends AbstractIntegrationTest {
               .accept(APPLICATION_JSON).with(csrf()).content("""
                   { "page": 0, "size": 20, "sort": "badField:asc" }
                   """))
-          .andExpect(status().isBadRequest()).andExpect(jsonPath("$.error_description").value(
+          .andExpect(status().isBadRequest()).andExpect(jsonPath("$.detail").value(
               "Invalid sort field 'badField'. Supported fields: identifier, name, templateIdentifier"));
     }
 
@@ -1847,9 +1848,9 @@ public class EntityControllerTest extends AbstractIntegrationTest {
                     "page": 0, "size": 5
                   }
                   """))
-          .andExpect(status().isBadRequest()).andExpect(jsonPath("$.error").value("BAD_REQUEST"))
-          .andExpect(jsonPath("$.error_description")
-              .value("A group node must have a non-empty 'criteria' list"));
+          .andExpect(status().isBadRequest()).andExpect(jsonPath("$.title").value("Bad Request"))
+          .andExpect(jsonPath("$.status").value(400)).andExpect(
+              jsonPath("$.detail").value("A group node must have a non-empty 'criteria' list"));
     }
   }
 
@@ -2144,8 +2145,9 @@ public class EntityControllerTest extends AbstractIntegrationTest {
       mockMvc
           .perform(delete(ENTITIES_BY_IDENTIFIER_PATH, "team", teamIdentifier)
               .accept(APPLICATION_JSON).with(csrf()))
-          .andExpect(status().isConflict()).andExpect(jsonPath("$.error").value("CONFLICT"))
-          .andExpect(jsonPath("$.error_description").value(org.hamcrest.Matchers.allOf(
+          .andExpect(status().isConflict()).andExpect(jsonPath("$.title").value("Conflict"))
+          .andExpect(jsonPath("$.status").value(409))
+          .andExpect(jsonPath("$.detail").value(org.hamcrest.Matchers.allOf(
               org.hamcrest.Matchers.containsString("Cannot delete entity"),
               org.hamcrest.Matchers.containsString(teamIdentifier),
               org.hamcrest.Matchers.containsString("required relations"),

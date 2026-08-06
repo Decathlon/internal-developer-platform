@@ -181,14 +181,19 @@ sequenceDiagram
 
 ### Error Flow
 
+Domain exceptions never carry HTTP semantics; they are mapped to HTTP statuses exclusively in the infrastructure layer. The `ApiExceptionHandler` uses a `STATUS_BY_EXCEPTION` map to keep a single centralized entry point for all exception handling.
+
 ```mermaid
 sequenceDiagram
     participant DomainService
     participant ApiExceptionHandler
     participant Client
-    DomainService->>ApiExceptionHandler: Throw domain exception
-    ApiExceptionHandler->>Client: Map to HTTP status + ErrorResponse DTO
+    DomainService->>ApiExceptionHandler: Throw domain exception (e.g., EntityNotFoundException)
+    ApiExceptionHandler->>ApiExceptionHandler: Look up HTTP status from STATUS_BY_EXCEPTION map
+    ApiExceptionHandler->>Client: Return RFC 9457 ProblemDetail (status, title, detail)
 ```
+
+**Why the map instead of one handler per exception?** All domain exceptions follow the same response structure (log + HTTP status + message). Centralizing the map in one place keeps the handler lean and makes adding a new exception a one-line change.
 
 ---
 

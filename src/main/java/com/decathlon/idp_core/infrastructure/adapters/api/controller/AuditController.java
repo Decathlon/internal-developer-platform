@@ -20,6 +20,7 @@ import java.util.List;
 
 import jakarta.validation.constraints.NotBlank;
 
+import org.springframework.http.ProblemDetail;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -30,7 +31,6 @@ import org.springframework.web.bind.annotation.RestController;
 import com.decathlon.idp_core.domain.model.entity.EntityAuditInfo;
 import com.decathlon.idp_core.domain.service.entity.EntityAuditService;
 import com.decathlon.idp_core.infrastructure.adapters.api.dto.out.entity.audit.EntityAuditDtoOut;
-import com.decathlon.idp_core.infrastructure.adapters.api.handler.ApiExceptionHandler.ErrorResponse;
 import com.decathlon.idp_core.infrastructure.adapters.api.mapper.entity.EntityAuditDtoOutMapper;
 
 import io.swagger.v3.oas.annotations.Operation;
@@ -77,14 +77,14 @@ public class AuditController {
   @ApiResponse(responseCode = OK_CODE, description = RESPONSE_ENTITY_AUDIT_SUCCESS, content = {
       @Content(array = @ArraySchema(schema = @Schema(implementation = EntityAuditDtoOut.class)))})
   @ApiResponse(responseCode = BAD_REQUEST_CODE, description = "Invalid template or entity identifier", content = {
-      @Content(schema = @Schema(implementation = ErrorResponse.class))})
+      @Content(schema = @Schema(implementation = ProblemDetail.class))})
   @ApiResponse(responseCode = UNAUTHORIZED_CODE, description = RESPONSE_UNAUTHORIZED, content = @Content)
   @ApiResponse(responseCode = FORBIDDEN_CODE, description = RESPONSE_INSUFFICIENT_RIGHTS, content = @Content)
   @ApiResponse(responseCode = NOT_FOUND_CODE, description = RESPONSE_TEMPLATE_NOT_FOUND_IDENTIFIER
       + " or " + RESPONSE_ENTITY_NOT_FOUND_IDENTIFIER, content = {
-          @Content(schema = @Schema(implementation = ErrorResponse.class))})
+          @Content(schema = @Schema(implementation = ProblemDetail.class))})
   @ApiResponse(responseCode = INTERNAL_SERVER_ERROR_CODE, description = RESPONSE_UNEXPECTED_SERVER_ERROR, content = {
-      @Content(schema = @Schema(implementation = ErrorResponse.class))})
+      @Content(schema = @Schema(implementation = ProblemDetail.class))})
   @GetMapping("entities/{templateIdentifier}/{entityIdentifier}")
   @ResponseStatus(OK)
   public List<EntityAuditDtoOut> getEntityAuditHistory(

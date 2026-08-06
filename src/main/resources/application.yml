@@ -1,5 +1,11 @@
 ---
 spring:
+  mvc:
+    problemdetails:
+      # Enables Spring's native RFC 7807 support: every exception handled by
+      # ResponseEntityExceptionHandler (and any @ExceptionHandler returning
+      # ProblemDetail) is serialized with the standard title/type/status/detail fields.
+      enabled: true
   web:
     resources:
       # Disables serving of static resources (HTML, JS, CSS, images).

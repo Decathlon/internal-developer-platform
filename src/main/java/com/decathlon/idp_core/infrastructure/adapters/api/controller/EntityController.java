@@ -55,6 +55,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.http.ProblemDetail;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -81,8 +82,6 @@ import com.decathlon.idp_core.infrastructure.adapters.api.dto.in.EntityCreateDto
 import com.decathlon.idp_core.infrastructure.adapters.api.dto.in.EntitySearchRequestDtoIn;
 import com.decathlon.idp_core.infrastructure.adapters.api.dto.in.EntityUpdateDtoIn;
 import com.decathlon.idp_core.infrastructure.adapters.api.dto.out.entity.EntityDtoOut;
-import com.decathlon.idp_core.infrastructure.adapters.api.handler.ApiExceptionHandler;
-import com.decathlon.idp_core.infrastructure.adapters.api.handler.ApiExceptionHandler.ErrorResponse;
 import com.decathlon.idp_core.infrastructure.adapters.api.mapper.entity.EntityDtoInMapper;
 import com.decathlon.idp_core.infrastructure.adapters.api.mapper.entity.EntityDtoOutMapper;
 import com.decathlon.idp_core.infrastructure.adapters.api.mapper.entity.SearchFilterMapper;
@@ -136,9 +135,9 @@ public class EntityController {
   @Operation(summary = ENDPOINT_GET_ENTITIES_SUMMARY, description = ENDPOINT_GET_ENTITIES_PAGINATED_DESCRIPTION)
   @ApiResponse(responseCode = OK_CODE, description = RESPONSE_ENTITIES_PAGINATED_SUCCESS, content = @Content(schema = @Schema(implementation = EntityPageResponse.class)))
   @ApiResponse(responseCode = BAD_REQUEST_CODE, description = RESPONSE_INVALID_PAGINATION, content = {
-      @Content(schema = @Schema(implementation = ApiExceptionHandler.ErrorResponse.class))})
+      @Content(schema = @Schema(implementation = ProblemDetail.class))})
   @ApiResponse(responseCode = BAD_REQUEST_CODE, description = RESPONSE_INVALID_QUERY, content = {
-      @Content(schema = @Schema(implementation = ApiExceptionHandler.ErrorResponse.class))})
+      @Content(schema = @Schema(implementation = ProblemDetail.class))})
   @Parameter(name = "page", description = PARAM_PAGE_DESCRIPTION, in = ParameterIn.QUERY, content = @Content(schema = @Schema(type = "integer", defaultValue = "0")))
   @Parameter(name = "size", description = PARAM_SIZE_DESCRIPTION, in = ParameterIn.QUERY, content = @Content(schema = @Schema(type = "integer", defaultValue = "20")))
   @Parameter(name = "sort", description = PARAM_SORT_DESCRIPTION, in = ParameterIn.QUERY, content = @Content(schema = @Schema(type = "string", defaultValue = "identifier,asc")))
@@ -169,7 +168,7 @@ public class EntityController {
   @ApiResponse(responseCode = OK_CODE, description = RESPONSE_ENTITY_FOUND, content = {
       @Content(schema = @Schema(implementation = EntityDtoOut.class))})
   @ApiResponse(responseCode = NOT_FOUND_CODE, description = RESPONSE_ENTITY_NOT_FOUND_IDENTIFIER, content = {
-      @Content(schema = @Schema(implementation = ApiExceptionHandler.ErrorResponse.class))})
+      @Content(schema = @Schema(implementation = ProblemDetail.class))})
   @GetMapping("/{templateIdentifier}/{entityIdentifier}")
   @ResponseStatus(OK)
   public EntityDtoOut getEntity(@PathVariable String templateIdentifier,
@@ -196,15 +195,15 @@ public class EntityController {
   @ApiResponse(responseCode = CREATED_CODE, description = RESPONSE_ENTITY_CREATED, content = {
       @Content(schema = @Schema(implementation = EntityDtoOut.class))})
   @ApiResponse(responseCode = BAD_REQUEST_CODE, description = RESPONSE_INVALID_ENTITY_DATA, content = {
-      @Content(schema = @Schema(implementation = ErrorResponse.class))})
+      @Content(schema = @Schema(implementation = ProblemDetail.class))})
   @ApiResponse(responseCode = UNAUTHORIZED_CODE, description = RESPONSE_UNAUTHORIZED, content = @Content)
   @ApiResponse(responseCode = FORBIDDEN_CODE, description = RESPONSE_INSUFFICIENT_RIGHTS, content = @Content)
   @ApiResponse(responseCode = CONFLICT_CODE, description = RESPONSE_ENTITY_CONFLICT, content = {
-      @Content(schema = @Schema(implementation = ErrorResponse.class))})
+      @Content(schema = @Schema(implementation = ProblemDetail.class))})
   @ApiResponse(responseCode = NOT_FOUND_CODE, description = RESPONSE_TEMPLATE_NOT_FOUND_IDENTIFIER, content = {
-      @Content(schema = @Schema(implementation = ErrorResponse.class))})
+      @Content(schema = @Schema(implementation = ProblemDetail.class))})
   @ApiResponse(responseCode = INTERNAL_SERVER_ERROR_CODE, description = RESPONSE_UNEXPECTED_SERVER_ERROR, content = {
-      @Content(schema = @Schema(implementation = ErrorResponse.class))})
+      @Content(schema = @Schema(implementation = ProblemDetail.class))})
   @PostMapping("/{templateIdentifier}")
   @ResponseStatus(CREATED)
   public EntityDtoOut createEntity(@NotBlank @PathVariable String templateIdentifier,
@@ -234,13 +233,13 @@ public class EntityController {
   @ApiResponse(responseCode = OK_CODE, description = RESPONSE_ENTITY_UPDATED, content = {
       @Content(schema = @Schema(implementation = EntityDtoOut.class))})
   @ApiResponse(responseCode = BAD_REQUEST_CODE, description = RESPONSE_INVALID_ENTITY_DATA, content = {
-      @Content(schema = @Schema(implementation = ErrorResponse.class))})
+      @Content(schema = @Schema(implementation = ProblemDetail.class))})
   @ApiResponse(responseCode = UNAUTHORIZED_CODE, description = RESPONSE_UNAUTHORIZED, content = @Content)
   @ApiResponse(responseCode = FORBIDDEN_CODE, description = RESPONSE_INSUFFICIENT_RIGHTS, content = @Content)
   @ApiResponse(responseCode = NOT_FOUND_CODE, description = RESPONSE_ENTITY_NOT_FOUND_IDENTIFIER, content = {
-      @Content(schema = @Schema(implementation = ErrorResponse.class))})
+      @Content(schema = @Schema(implementation = ProblemDetail.class))})
   @ApiResponse(responseCode = INTERNAL_SERVER_ERROR_CODE, description = RESPONSE_UNEXPECTED_SERVER_ERROR, content = {
-      @Content(schema = @Schema(implementation = ErrorResponse.class))})
+      @Content(schema = @Schema(implementation = ProblemDetail.class))})
   @PutMapping("/{templateIdentifier}/{entityIdentifier}")
   @ResponseStatus(OK)
   public EntityDtoOut updateEntity(@NotBlank @PathVariable String templateIdentifier,
@@ -266,15 +265,15 @@ public class EntityController {
   @Operation(summary = ENDPOINT_DELETE_ENTITY_SUMMARY, description = ENDPOINT_DELETE_ENTITY_DESCRIPTION)
   @ApiResponse(responseCode = NO_CONTENT_CODE, description = RESPONSE_ENTITY_DELETED)
   @ApiResponse(responseCode = BAD_REQUEST_CODE, description = RESPONSE_INVALID_ENTITY_DATA, content = {
-      @Content(schema = @Schema(implementation = ErrorResponse.class))})
+      @Content(schema = @Schema(implementation = ProblemDetail.class))})
   @ApiResponse(responseCode = UNAUTHORIZED_CODE, description = RESPONSE_UNAUTHORIZED, content = @Content)
   @ApiResponse(responseCode = FORBIDDEN_CODE, description = RESPONSE_INSUFFICIENT_RIGHTS, content = @Content)
   @ApiResponse(responseCode = NOT_FOUND_CODE, description = RESPONSE_ENTITY_NOT_FOUND_IDENTIFIER, content = {
-      @Content(schema = @Schema(implementation = ErrorResponse.class))})
+      @Content(schema = @Schema(implementation = ProblemDetail.class))})
   @ApiResponse(responseCode = CONFLICT_CODE, description = RESPONSE_ENTITY_RELATION_CONFLICT, content = {
-      @Content(schema = @Schema(implementation = ErrorResponse.class))})
+      @Content(schema = @Schema(implementation = ProblemDetail.class))})
   @ApiResponse(responseCode = INTERNAL_SERVER_ERROR_CODE, description = RESPONSE_UNEXPECTED_SERVER_ERROR, content = {
-      @Content(schema = @Schema(implementation = ErrorResponse.class))})
+      @Content(schema = @Schema(implementation = ProblemDetail.class))})
   @DeleteMapping("/{templateIdentifier}/{entityIdentifier}")
   @ResponseStatus(NO_CONTENT)
   public void deleteEntity(@NotBlank @PathVariable String templateIdentifier,
@@ -297,7 +296,7 @@ public class EntityController {
   @Operation(summary = ENDPOINT_POST_SEARCH_SUMMARY, description = ENDPOINT_POST_SEARCH_DESCRIPTION)
   @ApiResponse(responseCode = OK_CODE, description = RESPONSE_SEARCH_SUCCESS, content = @Content(schema = @Schema(implementation = EntityPageResponse.class)))
   @ApiResponse(responseCode = BAD_REQUEST_CODE, description = RESPONSE_INVALID_SEARCH_QUERY, content = {
-      @Content(schema = @Schema(implementation = ErrorResponse.class))})
+      @Content(schema = @Schema(implementation = ProblemDetail.class))})
   @PostMapping("/search")
   @ResponseStatus(OK)
   public Page<EntityDtoOut> searchEntities(@RequestBody EntitySearchRequestDtoIn searchRequest) {
