@@ -641,6 +641,18 @@ public class EntityService {
     return entityRepository.search(filter, query, paginationCriteria);
   }
 
+  /// Checks whether an entity exists for the given template and entity identifier
+  /// without raising an exception.
+  ///
+  /// @param templateIdentifier business identifier of the entity template
+  /// @param entityIdentifier unique business identifier of the entity
+  /// @return true if entity exists, false otherwise
+  @Transactional(readOnly = true)
+  public boolean entityExists(String templateIdentifier, String entityIdentifier) {
+    return entityRepository
+        .findByTemplateIdentifierAndIdentifier(templateIdentifier, entityIdentifier).isPresent();
+  }
+
   private void validatePaginationCriteria(PaginationCriteria criteria) {
     if (criteria.page() < 0) {
       throw new InvalidSearchQueryException(ValidationMessages.SEARCH_PAGE_INVALID);

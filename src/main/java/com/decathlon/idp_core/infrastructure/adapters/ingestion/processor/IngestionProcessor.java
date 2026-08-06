@@ -1,17 +1,12 @@
-<<<<<<<< HEAD:src/main/java/com/decathlon/idp_core/infrastructure/adapters/ingestion/processors/IngestionProcessor.java
-package com.decathlon.idp_core.infrastructure.adapters.ingestion.processors;
-========
 package com.decathlon.idp_core.infrastructure.adapters.ingestion.processor;
->>>>>>>> ca258db (feat(core): init camel ingestion route):src/main/java/com/decathlon/idp_core/infrastructure/adapters/ingestion/processor/IngestionProcessor.java
+
+import java.util.List;
 
 import org.springframework.stereotype.Component;
 
 import com.decathlon.idp_core.domain.model.entity.Entity;
-<<<<<<<< HEAD:src/main/java/com/decathlon/idp_core/infrastructure/adapters/ingestion/processors/IngestionProcessor.java
-import com.decathlon.idp_core.domain.model.entity_mapping.MappingAction;
-========
 import com.decathlon.idp_core.domain.model.entity_mapping.EntityDynamicMapping;
->>>>>>>> ca258db (feat(core): init camel ingestion route):src/main/java/com/decathlon/idp_core/infrastructure/adapters/ingestion/processor/IngestionProcessor.java
+import com.decathlon.idp_core.domain.model.entity_mapping.MappingAction;
 import com.decathlon.idp_core.domain.model.inbound_connectors.webhook.WebhookConnector;
 import com.decathlon.idp_core.domain.port.MappingEnginePort;
 import com.decathlon.idp_core.domain.service.entity.EntityService;
@@ -43,65 +38,7 @@ public class IngestionProcessor {
   public void ingest(String payload, WebhookConnector webhookConnectorConfiguration) {
     log.info("Starting ingestion for webhook connector: {}",
         webhookConnectorConfiguration.identifier());
-
-<<<<<<<< HEAD:src/main/java/com/decathlon/idp_core/infrastructure/adapters/ingestion/processors/IngestionProcessor.java
-    webhookConnectorConfiguration.mappings().forEach(mapping -> {
-      log.debug("Applying mapping: {} to template: {}", mapping.identifier(),
-          mapping.entityTemplateIdentifier());
-
-      try {
-
-        // Map the raw payload to a domain entity using JSLT expressions
-        Entity entity = mappingEngine.mapToEntity(payload, mapping);
-
-        // Skip if the mapping filter excluded this payload (returned null)
-        if (entity == null) {
-          log.debug("Mapping filter excluded payload for template: {}",
-              mapping.entityTemplateIdentifier());
-          return;
-        }
-
-        switch (mapping.action()) {
-          case MappingAction.UPSERT :
-            log.debug("Call entity service upsert");
-            // check if entity exists
-            // If not create entity
-            // If exists patch entity
-            break;
-          case MappingAction.UPSERT_PROPERTIES :
-            // check if entity exists
-            // If not create entity only with the properties information from mapped entity
-            // If exists update only the properties information from mmaped entity
-            log.debug("Call entity service upsert entity properties");
-            break;
-          case MappingAction.UPSERT_RELATIONS :
-            // check if entity exists
-            // If not create entity only with the relations information from mmaped entity
-            // If exists update only the relations information from mmaped entity
-            log.debug("Call entity service upsert entity relations");
-            break;
-          case MappingAction.DELETE :
-            entityService.deleteEntity(entity.templateIdentifier(), entity.identifier());
-            log.debug("Call entity service to delete ");
-            break;
-          default :
-            log.debug("Not supported action");
-            break;
-        }
-
-        log.info("Successfully ingested entity: {} for template: {}", entity.identifier(),
-            entity.templateIdentifier());
-
-      } catch (Exception e) {
-        log.error("Failed to ingest entity for mapping: {} and template: {}", mapping.identifier(),
-            mapping.entityTemplateIdentifier(), e);
-        throw e; // Fail-fast: propagate exception to caller
-      }
-    });
-========
     webhookConnectorConfiguration.mappings().forEach(mapping -> applyMapping(payload, mapping));
->>>>>>>> ca258db (feat(core): init camel ingestion route):src/main/java/com/decathlon/idp_core/infrastructure/adapters/ingestion/processor/IngestionProcessor.java
-
     log.info("Completed ingestion for webhook connector: {}",
         webhookConnectorConfiguration.identifier());
   }
@@ -113,23 +50,89 @@ public class IngestionProcessor {
   /// @param payload the raw JSON payload from the webhook
   /// @param mapping the mapping definition to apply
   private void applyMapping(String payload, EntityDynamicMapping mapping) {
-    log.debug("Applying mapping: {} to template: {}", mapping.identifier(),
-        mapping.entityTemplateIdentifier());
-
-    // Map the raw payload to a domain entity using JSLT expressions
     Entity entity = mappingEngine.mapToEntity(payload, mapping);
 
-    // Skip if the mapping filter excluded this payload (returned null)
     if (entity == null) {
       log.debug("Mapping filter excluded payload for template: {}",
-          mapping.entityTemplateIdentifier());
+              mapping.entityTemplateIdentifier());
       return;
     }
 
-    // Persist the mapped entity via the domain service
-    entityService.createEntity(entity);
+    boolean exists = entityService.entityExists(entity.templateIdentifier(), entity.identifier());
 
-    log.info("Successfully ingested entity: {} for template: {}", entity.identifier(),
+    switch (mapping.action()) {
+      case UPSERT -> handleUpsert(entity, exists);
+      case UPSERT_PROPERTIES -> handleUpsertProperties(entity, exists);
+      case UPSERT_RELATIONS -> handleUpsertRelations(entity, exists);
+      case DELETE -> handleDelete(entity);
+      case null, default -> log.warn("Unsupported or null mapping action: {}", mapping.action());
+    }
+
+    log.info("Successfully processed action {} for entity: {} under template: {}",
+            mapping.action(), entity.identifier(), entity.templateIdentifier());
+  }
+
+  /// Handles the upsert action for an entity.
+  ///
+  /// If the entity exists, it is patched with the new data.
+  /// If the entity does not exist, it is created.
+  ///
+  /// @param entity the entity to upsert
+  /// @param exists whether the entity already exists
+  private void handleUpsert(Entity entity, boolean exists) {
+    if (exists) {
+      entityService.patchEntity(entity.templateIdentifier(), entity.identifier(), entity);
+    } else {
+      entityService.createEntity(entity);
+    }
+  }
+
+  /// Handles the upsert properties action for an entity.
+  ///
+  /// If the entity exists, only its properties are patched.
+  /// If the entity does not exist, it is created with only its properties.
+  ///
+  /// @param entity the entity to upsert properties for
+  /// @param exists whether the entity already exists
+  private void handleUpsertProperties(Entity entity, boolean exists) {
+    // Strip relations before invoking entity service
+    Entity propertiesOnlyEntity = new Entity(entity.id(), entity.templateIdentifier(),
+        entity.name(), entity.identifier(), entity.properties(), List.of());
+
+    if (exists) {
+      entityService.patchEntity(entity.templateIdentifier(), entity.identifier(),
+          propertiesOnlyEntity);
+    } else {
+      entityService.createEntity(propertiesOnlyEntity);
+    }
+  }
+
+  /// Handles the upsert relations action for an entity.
+  ///
+  /// If the entity exists, only its relations are patched.
+  /// If the entity does not exist, it is created with only its relations.
+  ///
+  /// @param entity the entity to upsert relations for
+  /// @param exists whether the entity already exists
+  private void handleUpsertRelations(Entity entity, boolean exists) {
+    // Strip properties before invoking entity service
+    Entity relationsOnlyEntity = new Entity(entity.id(), entity.templateIdentifier(), entity.name(),
+        entity.identifier(), List.of(), entity.relations());
+
+    if (exists) {
+      entityService.patchEntity(entity.templateIdentifier(), entity.identifier(),
+          relationsOnlyEntity);
+    } else {
+      entityService.createEntity(relationsOnlyEntity);
+    }
+  }
+
+  /// Handles the delete action for an entity.
+  ///
+  /// @param entity the entity to delete
+  private void handleDelete(Entity entity) {
+    entityService.deleteEntity(entity.templateIdentifier(), entity.identifier());
+    log.debug("Deleted entity: {} for template: {}", entity.identifier(),
         entity.templateIdentifier());
   }
 }
