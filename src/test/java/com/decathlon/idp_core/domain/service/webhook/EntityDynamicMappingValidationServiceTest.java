@@ -22,6 +22,7 @@ import com.decathlon.idp_core.domain.exception.entity_template.EntityTemplateNot
 import com.decathlon.idp_core.domain.exception.entity_template.PropertyNameNotFoundEntityTemplatePropertiesException;
 import com.decathlon.idp_core.domain.exception.entity_template.RelationNameNotFoundEntityTemplateRelationsException;
 import com.decathlon.idp_core.domain.model.entity_mapping.EntityDynamicMapping;
+import com.decathlon.idp_core.domain.model.entity_mapping.RelationMapping;
 import com.decathlon.idp_core.domain.model.entity_template.EntityTemplate;
 import com.decathlon.idp_core.domain.model.entity_template.PropertyDefinition;
 import com.decathlon.idp_core.domain.model.entity_template.RelationDefinition;
@@ -63,7 +64,16 @@ class EntityDynamicMappingValidationServiceTest {
       String entityDynamicMappingIdentifier, Map<String, String> properties,
       Map<String, String> relations) {
     return new EntityDynamicMapping(null, entityDynamicMappingIdentifier, templateIdentifier,
-        ".eventType == \"DEPLOYED\"", "name", "description", ".id", ".name", properties, relations);
+        ".eventType == \"DEPLOYED\"", "name", "description", ".id", ".name", properties,
+        toRelationMappings(relations));
+  }
+
+  private List<RelationMapping> toRelationMappings(Map<String, String> relations) {
+    if (relations == null) {
+      return null;
+    }
+    return relations.entrySet().stream()
+        .map(entry -> new RelationMapping(entry.getKey(), List.of(entry.getValue()))).toList();
   }
 
   private EntityTemplate buildEntityTemplate(List<PropertyDefinition> properties,
@@ -152,7 +162,7 @@ class EntityDynamicMappingValidationServiceTest {
       EntityTemplate template2 = buildEntityTemplate(List.of(property2), List.of());
       EntityDynamicMapping mapping2 = new EntityDynamicMapping(null, "service_mapping", "service",
           ".type == \"SERVICE\"", "service mapping", "service mapping description", ".id", ".name",
-          Map.of("version", ".ver"), Map.of());
+          Map.of("version", ".ver"), List.of());
 
       when(entityTemplateService.getEntityTemplateByIdentifier("deployment")).thenReturn(template1);
       when(entityTemplateService.getEntityTemplateByIdentifier("service")).thenReturn(template2);

@@ -10,13 +10,19 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.web.bind.annotation.*;
 
+import com.decathlon.idp_core.domain.model.entity_mapping.DryRunResult;
 import com.decathlon.idp_core.domain.model.entity_mapping.EntityDynamicMapping;
+import com.decathlon.idp_core.domain.service.entity_dynamic_mapping.EntityDynamicMappingDryRunService;
 import com.decathlon.idp_core.domain.service.entity_dynamic_mapping.EntityDynamicMappingService;
 import com.decathlon.idp_core.infrastructure.adapters.api.configuration.SwaggerConfiguration;
 import com.decathlon.idp_core.infrastructure.adapters.api.dto.in.EntityDynamicMappingCreateDtoIn;
+import com.decathlon.idp_core.infrastructure.adapters.api.dto.in.EntityDynamicMappingDryRunDtoIn;
 import com.decathlon.idp_core.infrastructure.adapters.api.dto.in.EntityDynamicMappingUpdateDtoIn;
+import com.decathlon.idp_core.infrastructure.adapters.api.dto.out.entity_dynamic_mapping.EntityDynamicMappingDryRunDtoOut;
 import com.decathlon.idp_core.infrastructure.adapters.api.dto.out.entity_dynamic_mapping.EntityDynamicMappingDtoOut;
 import com.decathlon.idp_core.infrastructure.adapters.api.handler.ApiExceptionHandler;
+import com.decathlon.idp_core.infrastructure.adapters.api.mapper.entity_dynamic_mapping.EntityDynamicMappingDryRunDtoInMapper;
+import com.decathlon.idp_core.infrastructure.adapters.api.mapper.entity_dynamic_mapping.EntityDynamicMappingDryRunDtoOutMapper;
 import com.decathlon.idp_core.infrastructure.adapters.api.mapper.entity_dynamic_mapping.EntityDynamicMappingMapper;
 
 import io.swagger.v3.oas.annotations.Operation;
@@ -36,6 +42,9 @@ public class EntityDynamicMappingController {
 
   private final EntityDynamicMappingMapper dynamicMappingMapper;
   private final EntityDynamicMappingService dynamicMappingService;
+  private final EntityDynamicMappingDryRunService dynamicMappingDryRunService;
+  private final EntityDynamicMappingDryRunDtoOutMapper entityDynamicMappingDryRunDtoOutMapper;
+  private final EntityDynamicMappingDryRunDtoInMapper entityDynamicMappingDryRunDtoInMapper;
 
   @Operation(summary = ENDPOINT_POST_ENTITY_DYNAMIC_MAPPING_SUMMARY, description = ENDPOINT_POST_ENTITY_DYNAMIC_MAPPING_DESCRIPTION)
   @ApiResponse(responseCode = CREATED_CODE, description = RESPONSE_ENTITY_DYNAMIC_MAPPING_CREATED)
@@ -94,9 +103,9 @@ public class EntityDynamicMappingController {
       @Content(schema = @Schema(implementation = EntityDynamicMappingDtoOut.class))})
   @ApiResponse(responseCode = NOT_FOUND_CODE, description = RESPONSE_ENTITY_DYNAMIC_MAPPING_NOT_FOUND_IDENTIFIER, content = {
       @Content(schema = @Schema(implementation = ApiExceptionHandler.ErrorResponse.class))})
-  @ApiResponse(responseCode = BAD_REQUEST_CODE, description = "", content = {
+  @ApiResponse(responseCode = BAD_REQUEST_CODE, description = RESPONSE_ENTITY_DYNAMIC_MAPPING_UPDATE_INVALID_TEMPLATE, content = {
       @Content(schema = @Schema(implementation = ApiExceptionHandler.ErrorResponse.class))})
-  @ApiResponse(responseCode = CONFLICT_CODE, description = "", content = {
+  @ApiResponse(responseCode = CONFLICT_CODE, description = RESPONSE_ENTITY_DYNAMIC_MAPPING_UPDATE_CONFLICT, content = {
       @Content(schema = @Schema(implementation = ApiExceptionHandler.ErrorResponse.class))})
   @PutMapping("/{identifier}")
   @ResponseStatus(OK)
@@ -105,5 +114,26 @@ public class EntityDynamicMappingController {
     return dynamicMappingMapper
         .fromEntityMappingToDto(dynamicMappingService.updateEntityDynamicMapping(identifier,
             dynamicMappingMapper.toDomainForUpdate(identifier, entityDynamicMappingDtoIn)));
+  }
+
+  @Operation(summary = ENDPOINT_POST_ENTITY_DYNAMIC_MAPPING_DRY_RUN_SUMMARY, description = ENDPOINT_POST_ENTITY_DYNAMIC_MAPPING_DRY_RUN_DESCRIPTION)
+  @ApiResponse(responseCode = OK_CODE, description = RESPONSE_ENTITY_DYNAMIC_MAPPING_DRY_RUN_SUCCESS, content = {
+      @Content(schema = @Schema(implementation = EntityDynamicMappingDryRunDtoOut.class))})
+  @ApiResponse(responseCode = BAD_REQUEST_CODE, description = RESPONSE_ENTITY_DYNAMIC_MAPPING_DATA, content = {
+      @Content(schema = @Schema(implementation = ApiExceptionHandler.ErrorResponse.class))})
+  @ApiResponse(responseCode = NOT_FOUND_CODE, description = RESPONSE_ENTITY_DYNAMIC_MAPPING_DRY_RUN_TEMPLATE_NOT_FOUND, content = {
+      @Content(schema = @Schema(implementation = ApiExceptionHandler.ErrorResponse.class))})
+  @ApiResponse(responseCode = UNPROCESSABLE_CONTENT_CODE, description = RESPONSE_ENTITY_DYNAMIC_MAPPING_DRY_RUN_VALIDATION_ERROR, content = {
+      @Content(schema = @Schema(implementation = ApiExceptionHandler.ErrorResponse.class))})
+  @PostMapping("/dry-run")
+  @ResponseStatus(OK)
+  public EntityDynamicMappingDryRunDtoOut executeDryRun(
+      @Valid @RequestBody EntityDynamicMappingDryRunDtoIn dryRunRequest) {
+    EntityDynamicMapping mappingToValidate = dynamicMappingMapper.toDomain(dryRunRequest.mapping());
+    String normalizedPayload = entityDynamicMappingDryRunDtoInMapper
+        .normalizePayloadToJsonString(dryRunRequest.payload());
+    DryRunResult dryRunResult = dynamicMappingDryRunService.executeDryRun(mappingToValidate,
+        normalizedPayload);
+    return entityDynamicMappingDryRunDtoOutMapper.toDto(dryRunResult);
   }
 }
