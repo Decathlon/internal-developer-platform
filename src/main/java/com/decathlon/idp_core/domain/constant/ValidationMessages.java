@@ -141,6 +141,7 @@ public class ValidationMessages {
   public static final String WEBHOOK_CONNECTOR_IDENTIFIER_MAX_LENGTH = "Webhook identifier must not exceed 255 characters";
   public static final String WEBHOOK_CONNECTOR_NAME_MAX_LENGTH = "Webhook name must not exceed 255 characters";
   public static final String WEBHOOK_CONNECTOR_NAME_MANDATORY = "Webhook name is mandatory";
+  public static final String WEBHOOK_CONFIGURATION_MISSING = "Webhook configuration is missing for identifier '%s' during ingestion validation";
   public static final String ENTITY_DYNAMIC_MAPPING_ENTITY_PROPERTIES_MISSING = "The mapping is missing required properties: %s";
   public static final String ENTITY_DYNAMIC_MAPPING_ENTITY_RELATIONS_MISSING = "The mapping is missing required relations: %s";
 

@@ -1,5 +1,14 @@
 package com.decathlon.idp_core.infrastructure.adapters.ingestion.configuration;
 
+import static com.decathlon.idp_core.infrastructure.adapters.ingestion.configuration.IngestionConstants.CONNECTOR_IDENTIFIER_PROPERTY;
+import static com.decathlon.idp_core.infrastructure.adapters.ingestion.configuration.IngestionConstants.DIRECT_PROCESS_EVENT;
+import static com.decathlon.idp_core.infrastructure.adapters.ingestion.configuration.IngestionConstants.DIRECT_WEBHOOK_INGESTION;
+import static com.decathlon.idp_core.infrastructure.adapters.ingestion.configuration.IngestionConstants.ROUTE_ID_GENERIC_WEBHOOK_ENTRYPOINT;
+import static com.decathlon.idp_core.infrastructure.adapters.ingestion.configuration.IngestionConstants.TRACE_METHOD_LOG_INBOUND_REQUEST;
+import static com.decathlon.idp_core.infrastructure.adapters.ingestion.configuration.IngestionConstants.WEBHOOK_BASE_PATH;
+import static com.decathlon.idp_core.infrastructure.adapters.ingestion.configuration.IngestionConstants.WEBHOOK_IDENTIFIER_HEADER;
+import static com.decathlon.idp_core.infrastructure.adapters.ingestion.configuration.IngestionConstants.WEBHOOK_IDENTIFIER_PATH;
+
 import org.apache.camel.LoggingLevel;
 import org.apache.camel.builder.RouteBuilder;
 import org.springframework.stereotype.Component;
@@ -29,14 +38,14 @@ public class CamelRestConfiguration extends RouteBuilder {
         // Use platform-http instead of servlet for better Spring Boot integration
         .component("platform-http").bindingMode(org.apache.camel.model.rest.RestBindingMode.off);
 
-    rest("/webhooks").post("/{webhookIdentifier}").description("Generic webhook ingestion endpoint")
-        .to("direct:webhook-ingestion");
+    rest(WEBHOOK_BASE_PATH).post(WEBHOOK_IDENTIFIER_PATH)
+        .description("Generic webhook ingestion endpoint").to(DIRECT_WEBHOOK_INGESTION);
 
-    from("direct:webhook-ingestion").routeId("generic-webhook-entrypoint")
+    from(DIRECT_WEBHOOK_INGESTION).routeId(ROUTE_ID_GENERIC_WEBHOOK_ENTRYPOINT)
         .log(LoggingLevel.INFO,
             "Received generic request for identifier: ${header.webhookIdentifier}")
-        .setProperty("connectorIdentifier", header("webhookIdentifier"))
-        .bean(tracingProcessor, "logInboundRequest").to("direct:process-event");
+        .setProperty(CONNECTOR_IDENTIFIER_PROPERTY, header(WEBHOOK_IDENTIFIER_HEADER))
+        .bean(tracingProcessor, TRACE_METHOD_LOG_INBOUND_REQUEST).to(DIRECT_PROCESS_EVENT);
 
   }
 }

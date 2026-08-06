@@ -1,5 +1,22 @@
 package com.decathlon.idp_core.infrastructure.adapters.ingestion.processor;
 
+import static com.decathlon.idp_core.infrastructure.adapters.ingestion.configuration.IngestionConstants.CONNECTOR_IDENTIFIER_PROPERTY;
+import static com.decathlon.idp_core.infrastructure.adapters.ingestion.configuration.IngestionConstants.CONTENT_ENCODING_GZIP;
+import static com.decathlon.idp_core.infrastructure.adapters.ingestion.configuration.IngestionConstants.OTEL_ATTR_EXCEPTION_TYPE;
+import static com.decathlon.idp_core.infrastructure.adapters.ingestion.configuration.IngestionConstants.OTEL_ATTR_HTTP_CONTENT_TYPE;
+import static com.decathlon.idp_core.infrastructure.adapters.ingestion.configuration.IngestionConstants.OTEL_ATTR_HTTP_METHOD;
+import static com.decathlon.idp_core.infrastructure.adapters.ingestion.configuration.IngestionConstants.OTEL_ATTR_HTTP_RESPONSE_STATUS_CODE;
+import static com.decathlon.idp_core.infrastructure.adapters.ingestion.configuration.IngestionConstants.OTEL_ATTR_WEBHOOK_IDENTIFIER;
+import static com.decathlon.idp_core.infrastructure.adapters.ingestion.configuration.IngestionConstants.OTEL_ATTR_WEBHOOK_PAYLOAD_SHA256;
+import static com.decathlon.idp_core.infrastructure.adapters.ingestion.configuration.IngestionConstants.OTEL_ATTR_WEBHOOK_PAYLOAD_SIZE;
+import static com.decathlon.idp_core.infrastructure.adapters.ingestion.configuration.IngestionConstants.OTEL_SPAN_CONFIGURATION_LOADED;
+import static com.decathlon.idp_core.infrastructure.adapters.ingestion.configuration.IngestionConstants.OTEL_SPAN_ENABLED_VALIDATION_PASSED;
+import static com.decathlon.idp_core.infrastructure.adapters.ingestion.configuration.IngestionConstants.OTEL_SPAN_REQUEST_FAILED;
+import static com.decathlon.idp_core.infrastructure.adapters.ingestion.configuration.IngestionConstants.OTEL_SPAN_REQUEST_RECEIVED;
+import static com.decathlon.idp_core.infrastructure.adapters.ingestion.configuration.IngestionConstants.OTEL_TRACER_NAME;
+import static com.decathlon.idp_core.infrastructure.adapters.ingestion.configuration.IngestionConstants.RAW_ENCODING_MODE;
+import static com.decathlon.idp_core.infrastructure.adapters.ingestion.configuration.IngestionConstants.UNKNOWN_VALUE;
+
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
@@ -32,15 +49,12 @@ public class WebhookIngestionTracingProcessor {
 
   private static final Logger LOGGER = LoggerFactory
       .getLogger(WebhookIngestionTracingProcessor.class);
-  private static final String TRACER_NAME = "com.decathlon.idp_core.ingestion.webhook";
-  private static final String UNKNOWN_VALUE = "unknown";
-  private static final String CONNECTOR_IDENTIFIER_PROPERTY = "connectorIdentifier";
   private static final int MAX_LOGGED_BODY_LENGTH = 8_192;
   private static final Set<String> SENSITIVE_HEADERS = Set.of("authorization", "cookie",
       "set-cookie", "proxy-authorization", "x-api-key", "x-auth-token", "x-forwarded-access-token",
       "traceparent", "tracestate", "baggage");
 
-  private final Tracer tracer = GlobalOpenTelemetry.getTracer(TRACER_NAME);
+  private final Tracer tracer = GlobalOpenTelemetry.getTracer(OTEL_TRACER_NAME);
 
   /**
    * Logs a sanitized inbound webhook payload with non-sensitive headers only.
@@ -71,7 +85,7 @@ public class WebhookIngestionTracingProcessor {
    *          Camel exchange carrying request headers and body
    */
   public void traceInboundRequest(Exchange exchange) {
-    Span span = tracer.spanBuilder("webhook.ingestion.request.received").startSpan();
+    Span span = tracer.spanBuilder(OTEL_SPAN_REQUEST_RECEIVED).startSpan();
     try (Scope scope = span.makeCurrent()) {
       String connectorIdentifier = exchange.getProperty(CONNECTOR_IDENTIFIER_PROPERTY,
           String.class);
@@ -79,12 +93,13 @@ public class WebhookIngestionTracingProcessor {
       String contentType = exchange.getIn().getHeader(Exchange.CONTENT_TYPE, String.class);
       Object payload = exchange.getIn().getBody();
 
-      span.setAttribute("webhook.identifier",
+      span.setAttribute(OTEL_ATTR_WEBHOOK_IDENTIFIER,
           connectorIdentifier == null ? UNKNOWN_VALUE : connectorIdentifier);
-      span.setAttribute("http.method", httpMethod == null ? UNKNOWN_VALUE : httpMethod);
-      span.setAttribute("http.content_type", contentType == null ? UNKNOWN_VALUE : contentType);
-      span.setAttribute("webhook.payload.size_bytes", estimatePayloadSize(payload));
-      span.setAttribute("webhook.payload.sha256", toSha256(payload));
+      span.setAttribute(OTEL_ATTR_HTTP_METHOD, httpMethod == null ? UNKNOWN_VALUE : httpMethod);
+      span.setAttribute(OTEL_ATTR_HTTP_CONTENT_TYPE,
+          contentType == null ? UNKNOWN_VALUE : contentType);
+      span.setAttribute(OTEL_ATTR_WEBHOOK_PAYLOAD_SIZE, estimatePayloadSize(payload));
+      span.setAttribute(OTEL_ATTR_WEBHOOK_PAYLOAD_SHA256, toSha256(payload));
     } finally {
       span.end();
     }
@@ -97,11 +112,11 @@ public class WebhookIngestionTracingProcessor {
    *          Camel exchange with resolved `webhookConfig` property
    */
   public void traceConfigurationLoaded(Exchange exchange) {
-    Span span = tracer.spanBuilder("webhook.configuration.loaded").startSpan();
+    Span span = tracer.spanBuilder(OTEL_SPAN_CONFIGURATION_LOADED).startSpan();
     try (Scope scope = span.makeCurrent()) {
       String connectorIdentifier = exchange.getProperty(CONNECTOR_IDENTIFIER_PROPERTY,
           String.class);
-      span.setAttribute("webhook.identifier",
+      span.setAttribute(OTEL_ATTR_WEBHOOK_IDENTIFIER,
           connectorIdentifier == null ? UNKNOWN_VALUE : connectorIdentifier);
     } finally {
       span.end();
@@ -115,11 +130,11 @@ public class WebhookIngestionTracingProcessor {
    *          Camel exchange of the current webhook request
    */
   public void traceEnabledValidationPassed(Exchange exchange) {
-    Span span = tracer.spanBuilder("webhook.enabled.validation.passed").startSpan();
+    Span span = tracer.spanBuilder(OTEL_SPAN_ENABLED_VALIDATION_PASSED).startSpan();
     try (Scope scope = span.makeCurrent()) {
       String connectorIdentifier = exchange.getProperty(CONNECTOR_IDENTIFIER_PROPERTY,
           String.class);
-      span.setAttribute("webhook.identifier",
+      span.setAttribute(OTEL_ATTR_WEBHOOK_IDENTIFIER,
           connectorIdentifier == null ? UNKNOWN_VALUE : connectorIdentifier);
     } finally {
       span.end();
@@ -133,7 +148,7 @@ public class WebhookIngestionTracingProcessor {
    *          Camel exchange containing the caught exception and response code
    */
   public void traceFailure(Exchange exchange) {
-    Span span = tracer.spanBuilder("webhook.ingestion.request.failed").startSpan();
+    Span span = tracer.spanBuilder(OTEL_SPAN_REQUEST_FAILED).startSpan();
     try (Scope scope = span.makeCurrent()) {
       Throwable throwable = exchange.getProperty(Exchange.EXCEPTION_CAUGHT, Throwable.class);
       String connectorIdentifier = exchange.getProperty(CONNECTOR_IDENTIFIER_PROPERTY,
@@ -141,15 +156,15 @@ public class WebhookIngestionTracingProcessor {
       Integer responseCode = exchange.getMessage().getHeader(Exchange.HTTP_RESPONSE_CODE,
           Integer.class);
 
-      span.setAttribute("webhook.identifier",
+      span.setAttribute(OTEL_ATTR_WEBHOOK_IDENTIFIER,
           connectorIdentifier == null ? UNKNOWN_VALUE : connectorIdentifier);
       if (responseCode != null) {
-        span.setAttribute("http.response.status_code", responseCode);
+        span.setAttribute(OTEL_ATTR_HTTP_RESPONSE_STATUS_CODE, responseCode);
       }
       if (throwable != null) {
         span.recordException(throwable);
         span.setStatus(StatusCode.ERROR, throwable.getMessage());
-        span.setAttribute("exception.type", throwable.getClass().getName());
+        span.setAttribute(OTEL_ATTR_EXCEPTION_TYPE, throwable.getClass().getName());
       }
     } finally {
       span.end();
@@ -226,11 +241,11 @@ public class WebhookIngestionTracingProcessor {
 
   private static String resolveEncodingMode(String contentEncoding) {
     if (contentEncoding == null || contentEncoding.isBlank()) {
-      return "raw";
+      return RAW_ENCODING_MODE;
     }
     String normalizedEncoding = contentEncoding.toLowerCase(Locale.ROOT);
-    if (normalizedEncoding.contains("gzip")) {
-      return "gzip";
+    if (normalizedEncoding.contains(CONTENT_ENCODING_GZIP)) {
+      return CONTENT_ENCODING_GZIP;
     }
     return normalizedEncoding;
   }

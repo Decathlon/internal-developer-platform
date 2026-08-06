@@ -1,5 +1,9 @@
 package com.decathlon.idp_core.infrastructure.adapters.ingestion.processor;
 
+import static com.decathlon.idp_core.infrastructure.adapters.ingestion.configuration.IngestionConstants.CONTENT_ENCODING_GZIP;
+import static com.decathlon.idp_core.infrastructure.adapters.ingestion.configuration.IngestionConstants.CONTENT_ENCODING_HEADER;
+import static com.decathlon.idp_core.infrastructure.adapters.ingestion.configuration.IngestionConstants.CONTENT_ENCODING_IDENTITY;
+
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
@@ -40,12 +44,12 @@ public class DecodingProcessor {
     log.debug("Content-Encoding: {}", contentEncoding != null ? contentEncoding : "none");
 
     // Return payload as-is if no encoding or identity encoding
-    if (contentEncoding == null || contentEncoding.equalsIgnoreCase("identity")) {
+    if (contentEncoding == null || contentEncoding.equalsIgnoreCase(CONTENT_ENCODING_IDENTITY)) {
       return payloadToString(encodedPayload);
     }
 
     // Handle gzip encoding
-    if (contentEncoding.equalsIgnoreCase("gzip")) {
+    if (contentEncoding.equalsIgnoreCase(CONTENT_ENCODING_GZIP)) {
       return decodeGzip(encodedPayload);
     }
 
@@ -61,7 +65,7 @@ public class DecodingProcessor {
       return null;
     }
 
-    return headers.keySet().stream().filter(key -> key.equalsIgnoreCase("Content-Encoding"))
+    return headers.keySet().stream().filter(key -> key.equalsIgnoreCase(CONTENT_ENCODING_HEADER))
         .map(key -> (String) headers.get(key)).findFirst().orElse(null);
   }
 

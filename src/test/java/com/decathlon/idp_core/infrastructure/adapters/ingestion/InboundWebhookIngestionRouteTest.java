@@ -31,7 +31,7 @@ class InboundWebhookIngestionRouteTest extends AbstractIntegrationTest {
 
   @Test
   @DisplayName("Route returns 200 when webhook exists and is enabled")
-  void postWebhookRoute_200_whenWebhookExistsAndEnabled() throws Exception {
+  void postWebhookRoute_200_whenWebhookExistsAndEnabled() {
     Exchange exchange = invokeIngestionRoute("public-connector");
 
     assertEquals(200, exchange.getMessage().getHeader(Exchange.HTTP_RESPONSE_CODE));
@@ -43,23 +43,24 @@ class InboundWebhookIngestionRouteTest extends AbstractIntegrationTest {
 
   @Test
   @DisplayName("Route returns 404 when webhook does not exist")
-  void postWebhookRoute_404_whenWebhookDoesNotExist() throws Exception {
+  void postWebhookRoute_404_whenWebhookDoesNotExist() {
     Exchange exchange = invokeIngestionRoute("does-not-exist");
 
     assertEquals(404, exchange.getMessage().getHeader(Exchange.HTTP_RESPONSE_CODE));
     assertEquals("application/json", exchange.getMessage().getHeader(Exchange.CONTENT_TYPE));
-    assertEquals("{\"error\": \"Webhook configuration not found\"}",
+    assertEquals(
+        "{\"error\":\"NOT_FOUND\",\"errorDescription\":\"Webhook configuration not found\"}",
         exchange.getMessage().getBody(String.class));
   }
 
   @Test
   @DisplayName("Route returns 403 when webhook exists but is disabled")
-  void postWebhookRoute_403_whenWebhookIsDisabled() throws Exception {
+  void postWebhookRoute_403_whenWebhookIsDisabled() {
     Exchange exchange = invokeIngestionRoute("disabled-connector");
 
     assertEquals(403, exchange.getMessage().getHeader(Exchange.HTTP_RESPONSE_CODE));
     assertEquals("application/json", exchange.getMessage().getHeader(Exchange.CONTENT_TYPE));
-    assertEquals("{\"error\": \"Webhook connector is disabled\"}",
+    assertEquals("{\"error\":\"FORBIDDEN\",\"errorDescription\":\"Webhook connector is disabled\"}",
         exchange.getMessage().getBody(String.class));
   }
 }
