@@ -8,7 +8,6 @@ import static com.tngtech.archunit.library.GeneralCodingRules.NO_CLASSES_SHOULD_
 import static com.tngtech.archunit.library.dependencies.SlicesRuleDefinition.slices;
 
 import java.util.Map;
-import java.util.stream.Collectors;
 
 import com.tngtech.archunit.core.importer.ImportOption.DoNotIncludeTests;
 import com.tngtech.archunit.junit.AnalyzeClasses;
@@ -136,6 +135,7 @@ class MaintainabilityArchitectureTest {
   @ArchTest
   static void allDomainExceptionsAreRegistered(com.tngtech.archunit.core.domain.JavaClasses classes)
       throws ClassNotFoundException, NoSuchFieldException, IllegalAccessException {
+    java.util.Objects.requireNonNull(classes, "ArchUnit provided classes must not be null");
     var classLoader = Thread.currentThread().getContextClassLoader();
 
     // List of known domain exception classes that should be registered
@@ -186,15 +186,22 @@ class MaintainabilityArchitectureTest {
 
     // Check all known exceptions are registered
     var unregistered = new java.util.ArrayList<String>();
+    var missingExceptionClasses = new java.util.ArrayList<String>();
     for (String exceptionClassName : exceptionClassNames) {
       try {
         var exceptionClass = classLoader.loadClass(exceptionClassName);
         if (!statusByException.containsKey(exceptionClass)) {
           unregistered.add(exceptionClass.getSimpleName());
         }
-      } catch (ClassNotFoundException e) {
-        // Exception class not found (might not exist in this version)
+      } catch (ClassNotFoundException ignored) {
+        missingExceptionClasses.add(exceptionClassName);
       }
+    }
+
+    if (!missingExceptionClasses.isEmpty()) {
+      throw new AssertionError(
+          "The following exception classes listed in the architecture test cannot be loaded: "
+              + missingExceptionClasses);
     }
 
     if (!unregistered.isEmpty()) {
