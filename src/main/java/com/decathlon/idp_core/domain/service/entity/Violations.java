@@ -31,11 +31,11 @@ public final class Violations {
     messages.add("%s[%d]: %s".formatted(collection, index, message));
   }
 
-  boolean isEmpty() {
+  public boolean isEmpty() {
     return messages.isEmpty();
   }
 
-  List<String> asList() {
+  public List<String> asList() {
     return List.copyOf(messages);
   }
 }
