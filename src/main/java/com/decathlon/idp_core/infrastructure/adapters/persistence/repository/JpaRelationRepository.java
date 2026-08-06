@@ -19,26 +19,44 @@ public interface JpaRelationRepository
       RevisionRepository<RelationJpaEntity, UUID, Long> {
 
   /**
-   * Find relation summaries where the given entity identifiers are targets. Uses
-   * a native query to efficiently join through the relation_target_entities
-   * table.
+   * Finds inbound relation summaries where specified entities (by UUID) are
+   * targets.
    *
-   * @param targetEntityIdentifiers
-   *          List of entity identifiers to search for
-   * @return List of relation summaries where these entities are targets
+   * **Purpose:** Discovers all relationships where the given entities are
+   * referenced as targets. Essential for bidirectional graph traversal and entity
+   * deletion safety checks.
+   *
+   * **UUID-Based Lookup:** Matches by `target_entity_uuid` column (database
+   * primary key reference) to guarantee correct entity matching regardless of
+   * identifier duplicates across templates.
+   *
+   * **Design:** Uses native SQL with `DISTINCT` to eliminate duplicate results
+   * when multiple relations point to the same target entity.
+   *
+   * **Performance:** Single query join across entity, entity_relations, relation,
+   * and relation_target_entities tables. Filtered by IN clause on
+   * target_entity_uuid.
+   *
+   * @param targetEntityUuids
+   *          list of entity database UUIDs to query for inbound relations
+   * @return list of relation summaries containing source entity details
+   *         (identifier, name, template identifier) and relation metadata
+   *         (relation name). Results are distinct to avoid duplicates when
+   *         multiple relations target the same entity
    */
   @Query(value = """
-      SELECT
+      SELECT DISTINCT
           rte.target_entity_identifier AS targetEntityIdentifier,
           r.name AS relationName,
           e.identifier AS sourceEntityIdentifier,
-          e.name AS sourceEntityName
+          e.name AS sourceEntityName,
+          e.template_identifier AS sourceTemplateIdentifier
       FROM idp_core.entity e
       JOIN idp_core.entity_relations er ON er.entity_id = e.id
       JOIN idp_core.relation r ON r.id = er.relation_id
       JOIN idp_core.relation_target_entities rte ON rte.relation_id = r.id
-      WHERE rte.target_entity_identifier IN :targetEntityIdentifiers
+      WHERE rte.target_entity_uuid IN :targetEntityUuids
       """, nativeQuery = true)
-  List<RelationAsTargetSummary> findRelationsSummariesByTargetEntityIdentifiers(
-      @Param("targetEntityIdentifiers") List<String> targetEntityIdentifiers);
+  List<RelationAsTargetSummary> findRelationsSummariesByTargetEntityUuids(
+      @Param("targetEntityUuids") List<UUID> targetEntityUuids);
 }

@@ -34,8 +34,6 @@ spring:
         jwt:
           jwk-set-uri: http://localhost:8080/auth/.well-known/jwks.json
 app:
-  security:
-    mock-enabled: true
   full-refresh-at-startup: true
   idp-core-prefix-url: http://localhost:8084
 logging:

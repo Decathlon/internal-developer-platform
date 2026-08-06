@@ -15,7 +15,6 @@
         "ownerEmail": "owner@example.com"
       },
       "relations": {},
-      "relations_as_target": {},
       "template_identifier": "web-service"
     }
   ],
