@@ -52,6 +52,7 @@ V<major>_<minor>__<description>.sql
 - **Minor version**: Increment for additions within a feature domain
 - Always check existing migrations to determine the next version number
 - Never modify an existing migration that has been applied to any environment
+- A new migration must always be **strictly above** the highest version already merged on `main`. Inserting a version in the middle of the existing ones (for example `V5_3` when `V6_1` exists) is a breaking change: the `Flyway Migration Order Check` CI job rejects it.
 
 ## Writing Migration Scripts
 
