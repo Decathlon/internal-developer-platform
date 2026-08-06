@@ -203,6 +203,58 @@ public class EntityService {
     return existingEntity;
   }
 
+  /// Partially updates an existing entity identified by template and entity
+  /// identifiers.
+  ///
+  /// **Contract:** Validates template existence, then entity existence within the
+  /// template scope. Merges the existing entity with the provided patch data,
+  /// validates the merged entity against the template constraints, and persists
+  /// changes if there are actual modifications.
+  ///
+  /// @param templateIdentifier template identifier from the request path
+  /// @param entityIdentifier entity identifier from the request path
+  /// @param patchData validated entity patch payload
+  /// @return persisted updated entity
+  /// @throws EntityTemplateNotFoundException when template doesn't exist
+  /// @throws EntityNotFoundException when target entity doesn't exist
+  /// @throws EntityValidationException when payload violates
+  /// template constraints
+  @Transactional
+  public Entity patchEntity(String templateIdentifier, String entityIdentifier,
+      @Valid Entity patchData) {
+
+    EntityTemplate template = entityTemplateService
+        .getEntityTemplateByIdentifier(templateIdentifier);
+    Entity existingEntity = retrieveEntity(templateIdentifier, entityIdentifier);
+
+    Map<String, Property> mergedProperties = existingEntity.properties().stream()
+        .collect(Collectors.toMap(Property::name, p -> p));
+
+    if (patchData.properties() != null) {
+      patchData.properties().forEach(p -> mergedProperties.put(p.name(), p));
+    }
+
+    Map<String, Relation> mergedRelations = existingEntity.relations().stream()
+        .collect(Collectors.toMap(Relation::name, r -> r));
+
+    if (patchData.relations() != null) {
+      patchData.relations().forEach(r -> mergedRelations.put(r.name(), r));
+    }
+
+    Entity entityToSave = new Entity(existingEntity.id(), templateIdentifier,
+        patchData.name() != null ? patchData.name() : existingEntity.name(), entityIdentifier,
+        new ArrayList<>(mergedProperties.values()), new ArrayList<>(mergedRelations.values()));
+
+    Entity updatedEntity = enrichRelationsWithTargetTemplates(entityToSave, template);
+    entityValidationService.validateForUpdate(updatedEntity, template);
+
+    if (hasEntityChanged(existingEntity, updatedEntity)) {
+      return entityRepository.save(updatedEntity);
+    }
+
+    return existingEntity;
+  }
+
   /// Detects if an entity has actually changed by comparing its core fields,
   /// properties, and relations with the incoming entity.
   ///

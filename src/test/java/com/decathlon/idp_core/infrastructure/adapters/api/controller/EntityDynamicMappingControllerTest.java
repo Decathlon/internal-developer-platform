@@ -957,6 +957,7 @@ class EntityDynamicMappingControllerTest extends AbstractIntegrationTest {
             "mapping": {
               "identifier": "test mapping",
               "entity_template_identifier": "github_repository-test",
+              "action": "UPSERT",
               "name": "test mapping",
               "description": "test mapping description",
               "entity": {

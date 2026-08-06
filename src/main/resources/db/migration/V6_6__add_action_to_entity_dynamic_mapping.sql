@@ -3,7 +3,7 @@
 
 -- Add action column with a default value to handle existing rows
 ALTER TABLE entity_dynamic_mapping
-ADD COLUMN action TEXT NOT NULL DEFAULT 'UPSERT';
+ADD COLUMN action SMALLINT NOT NULL DEFAULT 0;
 
 -- Add column comment
-COMMENT ON COLUMN entity_dynamic_mapping.action IS 'Action type for the entity dynamic mapping';
+COMMENT ON COLUMN entity_dynamic_mapping.action IS 'Action type for the entity dynamic mapping (UPSERT=0, UPSERT_PROPERTIES=1, UPSERT_RELATIONS=2, DELETE=3)';
