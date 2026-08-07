@@ -19,8 +19,9 @@ import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 /// Spring Security configuration for OAuth2 resource server with JWT authentication.
 ///
 /// **Security policy rationale:**
-/// - Public access: Actuator endpoints for health monitoring, Swagger UI for API documentation
-/// - Protected access: All `/api/v1/**` endpoints require full authentication via JWT
+/// - Public access: Actuator endpoints for health monitoring, Swagger UI for API documentation,
+///   and `/webhooks/**` for inbound integrations
+/// - Protected access: All `/api/**` endpoints require full authentication via JWT
 /// - OAuth2 integration: JWT tokens validated against configured JWKS endpoint
 ///
 /// **Infrastructure specifics:**
@@ -44,7 +45,8 @@ public class SecurityConfiguration {
   public SecurityFilterChain securityFilterChain(HttpSecurity http) {
     http.authorizeHttpRequests(authorize -> authorize.requestMatchers("/actuator/**").permitAll()
         .requestMatchers("/", "/swagger-ui/**", "/swagger-ui.html", "/v3/api-docs/**").permitAll()
-        .requestMatchers("/api/v1/**").fullyAuthenticated().anyRequest().authenticated())
+        .requestMatchers("/webhooks/**").permitAll().requestMatchers("/api/**").fullyAuthenticated()
+        .anyRequest().authenticated()).csrf(csrf -> csrf.ignoringRequestMatchers("/webhooks/**"))
         .cors(withDefaults()).oauth2ResourceServer(oauth2 -> oauth2.jwt(Customizer.withDefaults()));
     return http.build();
   }

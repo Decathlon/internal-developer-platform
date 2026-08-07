@@ -10,6 +10,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.test.context.jdbc.Sql;
 
 import com.decathlon.idp_core.AbstractIntegrationTest;
+import com.fasterxml.jackson.databind.JsonNode;
 
 /**
  * Integration tests for Camel webhook ingestion entrypoint.
@@ -29,38 +30,61 @@ class InboundWebhookIngestionRouteTest extends AbstractIntegrationTest {
     });
   }
 
+  private Exchange invokeValidationWithoutWebhookConfig() {
+    return producerTemplate.request("direct:validate-enabled",
+        exchange -> exchange.setProperty("connectorIdentifier", "missing-config-connector"));
+  }
+
+  private void assertJsonSuccessResponse(Exchange exchange) throws Exception {
+    JsonNode response = objectMapper.readTree(exchange.getMessage().getBody(String.class));
+    assertEquals("SUCCESS", response.get("status").asText());
+    assertEquals("Webhook configuration loaded and enabled.", response.get("message").asText());
+  }
+
+  private void assertJsonErrorResponse(Exchange exchange, String expectedError,
+      String expectedDescription) throws Exception {
+    JsonNode response = objectMapper.readTree(exchange.getMessage().getBody(String.class));
+    assertEquals(expectedError, response.get("error").asText());
+    assertEquals(expectedDescription, response.get("errorDescription").asText());
+  }
+
   @Test
   @DisplayName("Route returns 200 when webhook exists and is enabled")
-  void postWebhookRoute_200_whenWebhookExistsAndEnabled() {
+  void postWebhookRoute_200_whenWebhookExistsAndEnabled() throws Exception {
     Exchange exchange = invokeIngestionRoute("public-connector");
 
     assertEquals(200, exchange.getMessage().getHeader(Exchange.HTTP_RESPONSE_CODE));
     assertEquals("application/json", exchange.getMessage().getHeader(Exchange.CONTENT_TYPE));
-    assertEquals(
-        "{\"status\": \"SUCCESS\", \"message\": \"Webhook configuration loaded and enabled.\"}",
-        exchange.getMessage().getBody(String.class));
+    assertJsonSuccessResponse(exchange);
   }
 
   @Test
   @DisplayName("Route returns 404 when webhook does not exist")
-  void postWebhookRoute_404_whenWebhookDoesNotExist() {
+  void postWebhookRoute_404_whenWebhookDoesNotExist() throws Exception {
     Exchange exchange = invokeIngestionRoute("does-not-exist");
 
     assertEquals(404, exchange.getMessage().getHeader(Exchange.HTTP_RESPONSE_CODE));
     assertEquals("application/json", exchange.getMessage().getHeader(Exchange.CONTENT_TYPE));
-    assertEquals(
-        "{\"error\":\"NOT_FOUND\",\"errorDescription\":\"Webhook configuration not found\"}",
-        exchange.getMessage().getBody(String.class));
+    assertJsonErrorResponse(exchange, "NOT_FOUND", "Webhook configuration not found");
   }
 
   @Test
   @DisplayName("Route returns 403 when webhook exists but is disabled")
-  void postWebhookRoute_403_whenWebhookIsDisabled() {
+  void postWebhookRoute_403_whenWebhookIsDisabled() throws Exception {
     Exchange exchange = invokeIngestionRoute("disabled-connector");
 
     assertEquals(403, exchange.getMessage().getHeader(Exchange.HTTP_RESPONSE_CODE));
     assertEquals("application/json", exchange.getMessage().getHeader(Exchange.CONTENT_TYPE));
-    assertEquals("{\"error\":\"FORBIDDEN\",\"errorDescription\":\"Webhook connector is disabled\"}",
-        exchange.getMessage().getBody(String.class));
+    assertJsonErrorResponse(exchange, "FORBIDDEN", "Webhook connector is disabled");
+  }
+
+  @Test
+  @DisplayName("Route returns 500 when internal webhook configuration invariant is broken")
+  void postWebhookRoute_500_whenWebhookConfigurationIsMissing() throws Exception {
+    Exchange exchange = invokeValidationWithoutWebhookConfig();
+
+    assertEquals(500, exchange.getMessage().getHeader(Exchange.HTTP_RESPONSE_CODE));
+    assertEquals("application/json", exchange.getMessage().getHeader(Exchange.CONTENT_TYPE));
+    assertJsonErrorResponse(exchange, "INTERNAL_SERVER_ERROR", "Webhook configuration unavailable");
   }
 }

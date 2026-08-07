@@ -4,7 +4,6 @@ import static com.decathlon.idp_core.infrastructure.adapters.ingestion.configura
 import static com.decathlon.idp_core.infrastructure.adapters.ingestion.configuration.IngestionConstants.DIRECT_PROCESS_EVENT;
 import static com.decathlon.idp_core.infrastructure.adapters.ingestion.configuration.IngestionConstants.DIRECT_WEBHOOK_INGESTION;
 import static com.decathlon.idp_core.infrastructure.adapters.ingestion.configuration.IngestionConstants.ROUTE_ID_GENERIC_WEBHOOK_ENTRYPOINT;
-import static com.decathlon.idp_core.infrastructure.adapters.ingestion.configuration.IngestionConstants.TRACE_METHOD_LOG_INBOUND_REQUEST;
 import static com.decathlon.idp_core.infrastructure.adapters.ingestion.configuration.IngestionConstants.WEBHOOK_BASE_PATH;
 import static com.decathlon.idp_core.infrastructure.adapters.ingestion.configuration.IngestionConstants.WEBHOOK_IDENTIFIER_HEADER;
 import static com.decathlon.idp_core.infrastructure.adapters.ingestion.configuration.IngestionConstants.WEBHOOK_IDENTIFIER_PATH;
@@ -12,8 +11,6 @@ import static com.decathlon.idp_core.infrastructure.adapters.ingestion.configura
 import org.apache.camel.LoggingLevel;
 import org.apache.camel.builder.RouteBuilder;
 import org.springframework.stereotype.Component;
-
-import com.decathlon.idp_core.infrastructure.adapters.ingestion.processor.WebhookIngestionTracingProcessor;
 
 import lombok.RequiredArgsConstructor;
 
@@ -29,8 +26,6 @@ import lombok.RequiredArgsConstructor;
 @RequiredArgsConstructor
 public class CamelRestConfiguration extends RouteBuilder {
 
-  private final WebhookIngestionTracingProcessor tracingProcessor;
-
   @Override
   public void configure() throws Exception {
 
@@ -45,7 +40,7 @@ public class CamelRestConfiguration extends RouteBuilder {
         .log(LoggingLevel.INFO,
             "Received generic request for identifier: ${header.webhookIdentifier}")
         .setProperty(CONNECTOR_IDENTIFIER_PROPERTY, header(WEBHOOK_IDENTIFIER_HEADER))
-        .bean(tracingProcessor, TRACE_METHOD_LOG_INBOUND_REQUEST).to(DIRECT_PROCESS_EVENT);
+        .to(DIRECT_PROCESS_EVENT);
 
   }
 }

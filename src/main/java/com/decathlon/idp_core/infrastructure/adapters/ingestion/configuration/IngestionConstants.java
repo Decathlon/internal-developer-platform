@@ -27,31 +27,18 @@ public final class IngestionConstants {
   public static final String ROUTE_ID_FETCH_WEBHOOK_CONFIG = "fetch-webhook-config";
   public static final String ROUTE_ID_VALIDATE_WEBHOOK_ENABLED = "validate-webhook-enabled";
 
-  public static final String TRACE_METHOD_FAILURE = "traceFailure";
-  public static final String TRACE_METHOD_ENABLED_VALIDATION_PASSED = "traceEnabledValidationPassed";
-  public static final String TRACE_METHOD_CONFIGURATION_LOADED = "traceConfigurationLoaded";
-  public static final String TRACE_METHOD_LOG_INBOUND_REQUEST = "logInboundRequest";
-
-  public static final String OTEL_TRACER_NAME = "com.decathlon.idp_core.ingestion.webhook";
-  public static final String OTEL_SPAN_REQUEST_RECEIVED = "webhook.ingestion.request.received";
-  public static final String OTEL_SPAN_CONFIGURATION_LOADED = "webhook.configuration.loaded";
-  public static final String OTEL_SPAN_ENABLED_VALIDATION_PASSED = "webhook.enabled.validation.passed";
-  public static final String OTEL_SPAN_REQUEST_FAILED = "webhook.ingestion.request.failed";
-
-  public static final String OTEL_ATTR_WEBHOOK_IDENTIFIER = "webhook.identifier";
-  public static final String OTEL_ATTR_HTTP_METHOD = "http.method";
-  public static final String OTEL_ATTR_HTTP_CONTENT_TYPE = "http.content_type";
-  public static final String OTEL_ATTR_WEBHOOK_PAYLOAD_SIZE = "webhook.payload.size_bytes";
-  public static final String OTEL_ATTR_WEBHOOK_PAYLOAD_SHA256 = "webhook.payload.sha256";
-  public static final String OTEL_ATTR_HTTP_RESPONSE_STATUS_CODE = "http.response.status_code";
-  public static final String OTEL_ATTR_EXCEPTION_TYPE = "exception.type";
+  public static final int HTTP_OK = 200;
+  public static final String ERROR_DESCRIPTION_WEBHOOK_NOT_FOUND = "Webhook configuration not found";
+  public static final String ERROR_DESCRIPTION_WEBHOOK_DISABLED = "Webhook connector is disabled";
+  public static final String ERROR_DESCRIPTION_WEBHOOK_CONFIGURATION_MISSING = "Webhook configuration unavailable";
+  public static final String ERROR_DESCRIPTION_INTERNAL_SERVER_ERROR = "Internal server error processing ingestion payload";
+  public static final String SUCCESS_BODY_CONFIGURATION_LOADED = "{\"status\": \"SUCCESS\", \"message\": \"Webhook configuration loaded and enabled.\"}";
 
   public static final String CONTENT_ENCODING_GZIP = "gzip";
   public static final String CONTENT_ENCODING_IDENTITY = "identity";
   public static final String CONTENT_ENCODING_HEADER = "Content-Encoding";
 
   public static final String UNKNOWN_VALUE = "unknown";
-  public static final String RAW_ENCODING_MODE = "raw";
 
   private IngestionConstants() {
   }

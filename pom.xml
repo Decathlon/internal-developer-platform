@@ -80,13 +80,6 @@
         <type>pom</type>
         <scope>import</scope>
       </dependency>
-      <dependency>
-        <groupId>io.opentelemetry</groupId>
-        <artifactId>opentelemetry-bom</artifactId>
-        <version>1.44.1</version>
-        <type>pom</type>
-        <scope>import</scope>
-      </dependency>
     </dependencies>
   </dependencyManagement>
 
@@ -328,17 +321,6 @@
       <artifactId>camel-rest-starter</artifactId>
     </dependency>
 
-    <!-- OpenTelemetry API for tracing (needed for custom spans in WebhookIngestionTracingProcessor) -->
-    <dependency>
-      <groupId>io.opentelemetry</groupId>
-      <artifactId>opentelemetry-api</artifactId>
-    </dependency>
-
-    <!-- Camel OpenTelemetry instrumentation (auto-instruments Camel routes via agent) -->
-    <dependency>
-      <groupId>org.apache.camel.springboot</groupId>
-      <artifactId>camel-opentelemetry-starter</artifactId>
-    </dependency>
   </dependencies>
 
   <build>
