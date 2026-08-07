@@ -56,7 +56,7 @@ dependencies = [
 
 [package.metadata]
 requires-dist = [
-    { name = "mkdocs-swagger-ui-tag", specifier = ">=0.7.2" },
+    { name = "mkdocs-swagger-ui-tag", specifier = ">=0.8.1" },
     { name = "zensical", specifier = ">=0.0.53" },
 ]
 
@@ -113,14 +113,14 @@ wheels = [
 
 [[package]]
 name = "mkdocs-swagger-ui-tag"
-version = "0.8.0"
+version = "0.8.1"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "beautifulsoup4" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/78/86/cca19224ee2c400204f083f973020104c45194856df55fc4047ec4d60af4/mkdocs_swagger_ui_tag-0.8.0.tar.gz", hash = "sha256:e6db4ae95aa224e153837cc1fd347bdb6b66be776ae7f36ca0db505e5aa87c43", size = 1279492, upload-time = "2026-02-22T08:44:34.319Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/e8/ba/c660d28947d1b57a980f7dd5156fb994134c20146a7948c1adb796a80d7f/mkdocs_swagger_ui_tag-0.8.1.tar.gz", hash = "sha256:15f199ca7734c50c088c53bfe9ec806768ad97816badb3a4e72af4e9434252db", size = 1285972, upload-time = "2026-07-10T09:26:21.634Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/c0/82/4752d86d2539779fe20e2afbde73dd757f5e6bb28b9de2352abca64cdb40/mkdocs_swagger_ui_tag-0.8.0-py3-none-any.whl", hash = "sha256:30fe515bcd6daa911d7b42948f99b1cd21fb749cdc20e1474e1fc6ee1ff78afb", size = 1293775, upload-time = "2026-02-22T08:44:32.313Z" },
+    { url = "https://files.pythonhosted.org/packages/28/28/4709ae7156a1326a9530d8a51632a3369d42392588929969b1d0aa221ff5/mkdocs_swagger_ui_tag-0.8.1-py3-none-any.whl", hash = "sha256:f5d6d0558ed6cfafce54a9f0d874d9e24be0a9b02b2429553afefced61c9e55f", size = 1300296, upload-time = "2026-07-10T09:26:19.494Z" },
 ]
 
 [[package]]
