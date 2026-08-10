@@ -7,7 +7,12 @@ import static com.decathlon.idp_core.infrastructure.adapters.ingestion.configura
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
+import java.util.Arrays;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Locale;
 import java.util.Map;
+import java.util.Objects;
 import java.util.zip.GZIPInputStream;
 
 import org.springframework.stereotype.Component;
@@ -18,13 +23,21 @@ import lombok.extern.slf4j.Slf4j;
 ///
 /// Supports:
 /// - gzip: Decompresses gzip-encoded payloads
-/// - deflate: Decompresses deflate-encoded payloads
 /// - identity/no encoding: Returns payload as-is
 ///
-/// The Content-Encoding header drives which decompression strategy is applied.
+/// Any unknown encoding is logged and treated as pass-through to keep ingestion resilient.
 @Component
 @Slf4j
 public class DecodingProcessor {
+
+  private final Map<String, PayloadDecoder> decoders;
+
+  public DecodingProcessor() {
+    LinkedHashMap<String, PayloadDecoder> availableDecoders = new LinkedHashMap<String, PayloadDecoder>();
+    availableDecoders.put(CONTENT_ENCODING_IDENTITY, this::decodeIdentity);
+    availableDecoders.put(CONTENT_ENCODING_GZIP, this::decodeGzip);
+    decoders = Map.copyOf(availableDecoders);
+  }
 
   /// Decodes a webhook payload based on the Content-Encoding header.
   ///
@@ -38,24 +51,28 @@ public class DecodingProcessor {
   /// @return the decoded payload as a String
   /// @throws IOException if decompression fails (e.g., corrupted gzip data)
   public String decode(Object encodedPayload, Map<String, Object> headers) throws IOException {
-    // Extract Content-Encoding header (case-insensitive)
     String contentEncoding = extractContentEncodingHeader(headers);
+    List<String> encodingChain = parseEncodingChain(contentEncoding);
 
-    log.debug("Content-Encoding: {}", contentEncoding != null ? contentEncoding : "none");
+    log.debug("Content-Encoding chain: {}",
+        contentEncoding != null ? contentEncoding : CONTENT_ENCODING_IDENTITY);
 
-    // Return payload as-is if no encoding or identity encoding
-    if (contentEncoding == null || contentEncoding.equalsIgnoreCase(CONTENT_ENCODING_IDENTITY)) {
+    // No encoding header means identity.
+    if (encodingChain.isEmpty()) {
       return payloadToString(encodedPayload);
     }
 
-    // Handle gzip encoding
-    if (contentEncoding.equalsIgnoreCase(CONTENT_ENCODING_GZIP)) {
-      return decodeGzip(encodedPayload);
+    if (encodingChain.stream().anyMatch(encoding -> !decoders.containsKey(encoding))) {
+      log.warn("Unsupported Content-Encoding chain: {}. Returning payload as-is.", contentEncoding);
+      return payloadToString(encodedPayload);
     }
 
-    // Unknown encoding: log and return as-is
-    log.warn("Unknown Content-Encoding: {}. Returning payload as-is.", contentEncoding);
-    return payloadToString(encodedPayload);
+    // Decode in reverse order because codings are listed in application order.
+    byte[] decodedPayload = toByteArray(encodedPayload);
+    for (int index = encodingChain.size() - 1; index >= 0; index--) {
+      decodedPayload = decoders.get(encodingChain.get(index)).decode(decodedPayload);
+    }
+    return new String(decodedPayload, StandardCharsets.UTF_8);
   }
 
   /// Extracts the Content-Encoding header from the headers map
@@ -66,19 +83,36 @@ public class DecodingProcessor {
     }
 
     return headers.keySet().stream().filter(key -> key.equalsIgnoreCase(CONTENT_ENCODING_HEADER))
-        .map(key -> (String) headers.get(key)).findFirst().orElse(null);
+        .map(headers::get).filter(Objects::nonNull).map(Object::toString).findFirst().orElse(null);
+  }
+
+  private List<String> parseEncodingChain(String contentEncoding) {
+    if (contentEncoding == null || contentEncoding.isBlank()) {
+      return List.of();
+    }
+
+    return Arrays.stream(contentEncoding.split(",")).map(String::trim)
+        .filter(value -> !value.isEmpty()).map(value -> value.toLowerCase(Locale.ROOT)).toList();
+  }
+
+  private byte[] decodeIdentity(byte[] payload) {
+    return payload;
   }
 
   /// Decompresses a gzip-encoded payload.
-  private String decodeGzip(Object encodedPayload) throws IOException {
-    try (GZIPInputStream gzipInput = new GZIPInputStream(toByteArrayInputStream(encodedPayload))) {
-      return new String(gzipInput.readAllBytes(), StandardCharsets.UTF_8);
+  private byte[] decodeGzip(byte[] encodedPayload) throws IOException {
+    try (
+        GZIPInputStream gzipInput = new GZIPInputStream(new ByteArrayInputStream(encodedPayload))) {
+      return gzipInput.readAllBytes();
     }
   }
 
   /// Converts payload to String, handling both byte arrays and strings using
   /// pattern matching.
   private String payloadToString(Object payload) {
+    if (payload == null) {
+      return "";
+    }
     return switch (payload) {
       case String string -> string;
       case byte[] byteArray -> new String(byteArray, StandardCharsets.UTF_8);
@@ -89,6 +123,9 @@ public class DecodingProcessor {
   /// Converts payload to byte array for decompression operations using pattern
   /// matching.
   private byte[] toByteArray(Object payload) {
+    if (payload == null) {
+      return new byte[0];
+    }
     return switch (payload) {
       case byte[] byteArray -> byteArray;
       case String string -> string.getBytes(StandardCharsets.UTF_8);
@@ -96,8 +133,9 @@ public class DecodingProcessor {
     };
   }
 
-  /// Converts payload to ByteArrayInputStream for GZIPInputStream.
-  private ByteArrayInputStream toByteArrayInputStream(Object payload) {
-    return new ByteArrayInputStream(toByteArray(payload));
+  @FunctionalInterface
+  private interface PayloadDecoder {
+
+    byte[] decode(byte[] payload) throws IOException;
   }
 }
