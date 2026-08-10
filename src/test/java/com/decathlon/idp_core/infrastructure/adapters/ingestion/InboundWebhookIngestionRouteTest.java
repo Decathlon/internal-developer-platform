@@ -2,6 +2,10 @@ package com.decathlon.idp_core.infrastructure.adapters.ingestion;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
+import java.io.ByteArrayOutputStream;
+import java.nio.charset.StandardCharsets;
+import java.util.zip.GZIPOutputStream;
+
 import org.apache.camel.Exchange;
 import org.apache.camel.ProducerTemplate;
 import org.junit.jupiter.api.DisplayName;
@@ -24,10 +28,27 @@ class InboundWebhookIngestionRouteTest extends AbstractIntegrationTest {
   private ProducerTemplate producerTemplate;
 
   private Exchange invokeIngestionRoute(String connectorIdentifier) {
+    return invokeIngestionRoute(connectorIdentifier, "{\"event\":\"ping\"}", null);
+  }
+
+  private Exchange invokeIngestionRoute(String connectorIdentifier, Object payload,
+      String contentEncoding) {
     return producerTemplate.request("direct:process-event", exchange -> {
       exchange.setProperty("connectorIdentifier", connectorIdentifier);
-      exchange.getIn().setBody("{\"event\":\"ping\"}");
+      exchange.getIn().setBody(payload);
+      if (contentEncoding != null) {
+        exchange.getIn().setHeader("Content-Encoding", contentEncoding);
+      }
     });
+  }
+
+  private byte[] gzip(String payload) throws Exception {
+    try (ByteArrayOutputStream output = new ByteArrayOutputStream();
+        GZIPOutputStream gzipOutput = new GZIPOutputStream(output)) {
+      gzipOutput.write(payload.getBytes(StandardCharsets.UTF_8));
+      gzipOutput.finish();
+      return output.toByteArray();
+    }
   }
 
   private Exchange invokeValidationWithoutWebhookConfig() {
@@ -86,5 +107,27 @@ class InboundWebhookIngestionRouteTest extends AbstractIntegrationTest {
     assertEquals(500, exchange.getMessage().getHeader(Exchange.HTTP_RESPONSE_CODE));
     assertEquals("application/json", exchange.getMessage().getHeader(Exchange.CONTENT_TYPE));
     assertJsonErrorResponse(exchange, "INTERNAL_SERVER_ERROR", "Webhook configuration unavailable");
+  }
+
+  @Test
+  @DisplayName("Route accepts payload without encoding and returns 200")
+  void postWebhookRoute_200_withIdentityPayload() throws Exception {
+    Exchange exchange = invokeIngestionRoute("public-connector", "{\"event\":\"identity\"}",
+        "identity");
+
+    assertEquals(200, exchange.getMessage().getHeader(Exchange.HTTP_RESPONSE_CODE));
+    assertEquals("application/json", exchange.getMessage().getHeader(Exchange.CONTENT_TYPE));
+    assertJsonSuccessResponse(exchange);
+  }
+
+  @Test
+  @DisplayName("Route accepts gzip payload and returns 200")
+  void postWebhookRoute_200_withGzipPayload() throws Exception {
+    byte[] compressedPayload = gzip("{\"event\":\"gzip\"}");
+    Exchange exchange = invokeIngestionRoute("public-connector", compressedPayload, "gzip");
+
+    assertEquals(200, exchange.getMessage().getHeader(Exchange.HTTP_RESPONSE_CODE));
+    assertEquals("application/json", exchange.getMessage().getHeader(Exchange.CONTENT_TYPE));
+    assertJsonSuccessResponse(exchange);
   }
 }

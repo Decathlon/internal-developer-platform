@@ -20,6 +20,7 @@ import com.decathlon.idp_core.domain.exception.webhook.WebhookConfigurationMissi
 import com.decathlon.idp_core.domain.exception.webhook.WebhookConnectorNotFoundException;
 import com.decathlon.idp_core.domain.exception.webhook.WebhookDisabledException;
 import com.decathlon.idp_core.infrastructure.adapters.common.model.ErrorResponse;
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import lombok.RequiredArgsConstructor;
@@ -59,7 +60,7 @@ public class WebhookExceptionRouteBuilder {
   }
 
   private void setJsonErrorResponse(Exchange exchange, HttpStatus httpStatus,
-      String errorDescription) throws Exception {
+      String errorDescription) throws JsonProcessingException {
     ErrorResponse errorResponse = new ErrorResponse(httpStatus.name(), errorDescription);
 
     exchange.getMessage().setHeader(Exchange.HTTP_RESPONSE_CODE, httpStatus.value());
@@ -85,6 +86,6 @@ public class WebhookExceptionRouteBuilder {
     }
     LOGGER.warn(structuredMessage, errorCode, statusCode,
         connectorIdentifier == null ? UNKNOWN_VALUE : connectorIdentifier, exceptionType,
-        exceptionMessage, throwable);
+        exceptionMessage);
   }
 }

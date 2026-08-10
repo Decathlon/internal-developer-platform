@@ -11,6 +11,7 @@ public final class IngestionConstants {
 
   public static final String CONNECTOR_IDENTIFIER_PROPERTY = "connectorIdentifier";
   public static final String WEBHOOK_CONFIG_PROPERTY = "webhookConfig";
+  public static final String RAW_PAYLOAD_BODY_PROPERTY = "rawPayloadBody";
   public static final String APPLICATION_JSON = "application/json";
 
   public static final String WEBHOOK_BASE_PATH = "/webhooks";
@@ -20,11 +21,13 @@ public final class IngestionConstants {
   public static final String DIRECT_WEBHOOK_INGESTION = "direct:webhook-ingestion";
   public static final String DIRECT_PROCESS_EVENT = "direct:process-event";
   public static final String DIRECT_FETCH_CONFIGURATION = "direct:fetch-configuration";
+  public static final String DIRECT_DECODE_PAYLOAD = "direct:decode-payload";
   public static final String DIRECT_VALIDATE_ENABLED = "direct:validate-enabled";
 
   public static final String ROUTE_ID_GENERIC_WEBHOOK_ENTRYPOINT = "generic-webhook-entrypoint";
   public static final String ROUTE_ID_WEBHOOK_PIPELINE = "webhook-pipeline";
   public static final String ROUTE_ID_FETCH_WEBHOOK_CONFIG = "fetch-webhook-config";
+  public static final String ROUTE_ID_DECODE_PAYLOAD = "decode-payload";
   public static final String ROUTE_ID_VALIDATE_WEBHOOK_ENABLED = "validate-webhook-enabled";
 
   public static final int HTTP_OK = 200;
