@@ -24,7 +24,7 @@ jobs:
 
       - name: Lint GitHub Actions Workflows
         if: github.event_name == 'pull_request'
-        uses: reviewdog/action-actionlint@50842263c20a7c46bd0065b9e624d3c569db061e  # v1.73.0
+        uses: reviewdog/action-actionlint@d63ba7532e0942965320cd8d73cbae4c7b3c5283  # v1.73.1
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           reporter: github-pr-review
@@ -101,7 +101,7 @@ jobs:
             -B
 
       - name: Upload code coverage to GitHub
-        uses: actions/upload-code-coverage@1c15be36fc3733ba839b1dd643bd9556e4426dc1  # v1
+        uses: actions/upload-code-coverage@d8e329117199404bba6fc81efe8093dc7c015e34  # v1.4.2
         with:
           file: target/cobertura.xml
           language: Java
@@ -371,7 +371,7 @@ jobs:
       pull-requests: write
     steps:
       - name: Checkout repository
-        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0  # v7.0.0
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
         with:
           fetch-depth: 0
 
