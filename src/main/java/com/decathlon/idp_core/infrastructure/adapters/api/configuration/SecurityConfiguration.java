@@ -8,6 +8,7 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.core.annotation.Order;
 import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
@@ -16,11 +17,11 @@ import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
-/// Spring Security configuration for OAuth2 resource server with JWT authentication.
+/// API and platform Spring Security configuration for OAuth2 resource server with JWT
+/// authentication.
 ///
 /// **Security policy rationale:**
-/// - Public access: Actuator endpoints for health monitoring, Swagger UI for API documentation,
-///   and `/webhooks/**` for inbound integrations
+/// - Public access: Actuator endpoints for health monitoring and Swagger UI for API documentation
 /// - Protected access: All `/api/**` endpoints require full authentication via JWT
 /// - OAuth2 integration: JWT tokens validated against configured JWKS endpoint
 ///
@@ -42,11 +43,11 @@ public class SecurityConfiguration {
   }
 
   @Bean
-  public SecurityFilterChain securityFilterChain(HttpSecurity http) {
+  @Order(2)
+  public SecurityFilterChain apiSecurityFilterChain(HttpSecurity http) {
     http.authorizeHttpRequests(authorize -> authorize.requestMatchers("/actuator/**").permitAll()
         .requestMatchers("/", "/swagger-ui/**", "/swagger-ui.html", "/v3/api-docs/**").permitAll()
-        .requestMatchers("/webhooks/**").permitAll().requestMatchers("/api/**").fullyAuthenticated()
-        .anyRequest().authenticated()).csrf(csrf -> csrf.ignoringRequestMatchers("/webhooks/**"))
+        .requestMatchers("/api/**").fullyAuthenticated().anyRequest().authenticated())
         .cors(withDefaults()).oauth2ResourceServer(oauth2 -> oauth2.jwt(Customizer.withDefaults()));
     return http.build();
   }

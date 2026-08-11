@@ -14,8 +14,6 @@ public final class IngestionConstants {
   public static final String RAW_PAYLOAD_BODY_PROPERTY = "rawPayloadBody";
   public static final String APPLICATION_JSON = "application/json";
 
-  public static final String WEBHOOK_BASE_PATH = "/webhooks";
-  public static final String WEBHOOK_IDENTIFIER_PATH = "/{webhookIdentifier}";
   public static final String WEBHOOK_IDENTIFIER_HEADER = "webhookIdentifier";
 
   public static final String DIRECT_WEBHOOK_INGESTION = "direct:webhook-ingestion";
@@ -34,6 +32,7 @@ public final class IngestionConstants {
   public static final String ERROR_DESCRIPTION_WEBHOOK_NOT_FOUND = "Webhook configuration not found";
   public static final String ERROR_DESCRIPTION_WEBHOOK_DISABLED = "Webhook connector is disabled";
   public static final String ERROR_DESCRIPTION_WEBHOOK_CONFIGURATION_MISSING = "Webhook configuration unavailable";
+  public static final String ERROR_DESCRIPTION_INVALID_COMPRESSED_PAYLOAD = "Invalid or corrupted compressed payload";
   public static final String ERROR_DESCRIPTION_INTERNAL_SERVER_ERROR = "Internal server error processing ingestion payload";
   public static final String SUCCESS_BODY_CONFIGURATION_LOADED = "{\"status\": \"SUCCESS\", \"message\": \"Webhook configuration loaded and enabled.\"}";
 

@@ -111,6 +111,10 @@ springdoc:
     urls-primary-name: internal
 
 app:
+  ingestion:
+    webhook:
+      base-path: /webhooks
+      identifier-path: /{webhookIdentifier}
   # Base URL of this service, used to build self-referencing links.
   idp-core-prefix-url: ${IDP_CORE_PREFIX_URL}
 
