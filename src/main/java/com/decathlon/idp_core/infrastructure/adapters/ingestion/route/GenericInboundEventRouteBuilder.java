@@ -31,12 +31,10 @@ public class GenericInboundEventRouteBuilder extends RouteBuilder {
     from(DIRECT_PROCESS_EVENT).routeId(ROUTE_ID_WEBHOOK_PIPELINE)
         .setProperty(RAW_PAYLOAD_BODY_PROPERTY, body())
         // Step A: Load Webhook Configuration
-        .to(DIRECT_FETCH_CONFIGURATION)
-        // Step B: Decode incoming payload based on Content-Encoding.
+        .to(DIRECT_FETCH_CONFIGURATION).to(DIRECT_VALIDATE_ENABLED)
+        // Step B: Decode incoming payload based on Content-Encoding
         .to(DIRECT_DECODE_PAYLOAD)
-        // Step A.1: Validate webhook is enabled
-        .to(DIRECT_VALIDATE_ENABLED)
-        // Return 200 once configuration is found and enabled.
+        // Return 200 once configuration is found, enabled, and payload decoded
         .setHeader(Exchange.HTTP_RESPONSE_CODE, constant(HTTP_OK))
         .setHeader(Exchange.CONTENT_TYPE, constant(APPLICATION_JSON))
         .setBody(constant(SUCCESS_BODY_CONFIGURATION_LOADED));
@@ -51,17 +49,6 @@ public class GenericInboundEventRouteBuilder extends RouteBuilder {
           WebhookConnector webhookConnector = webhookConnectorService
               .getWebhookConnector(connectorIdentifier);
           exchange.setProperty(WEBHOOK_CONFIG_PROPERTY, webhookConnector);
-        });
-
-    // --- Step B: Decode Payload ---
-    from(DIRECT_DECODE_PAYLOAD).routeId(ROUTE_ID_DECODE_PAYLOAD)
-        .log(LoggingLevel.DEBUG,
-            "Decoding payload for webhook ID: ${exchangeProperty.connectorIdentifier}")
-        .process(exchange -> {
-          Object rawPayload = exchange.getProperty(RAW_PAYLOAD_BODY_PROPERTY);
-          String decodedPayload = decodingProcessor.decode(rawPayload,
-              exchange.getIn().getHeaders());
-          exchange.getIn().setBody(decodedPayload);
         });
 
     // --- Step A.1: Validate Webhook is Enabled ---
@@ -79,6 +66,18 @@ public class GenericInboundEventRouteBuilder extends RouteBuilder {
           if (!config.enabled()) {
             throw new WebhookDisabledException(config.identifier());
           }
+        });
+
+    // --- Step B: Decode Payload ---
+    from(DIRECT_DECODE_PAYLOAD).routeId(ROUTE_ID_DECODE_PAYLOAD)
+        .log(LoggingLevel.DEBUG,
+            "Decoding payload for webhook ID: ${exchangeProperty.connectorIdentifier}")
+        .process(exchange -> {
+          Object rawPayload = exchange.getProperty(RAW_PAYLOAD_BODY_PROPERTY);
+          String decodedPayload = decodingProcessor.decode(rawPayload,
+              exchange.getIn().getHeaders());
+          exchange.getIn().setBody(decodedPayload);
+          exchange.getIn().removeHeader(CONTENT_ENCODING_HEADER);
         });
   }
 

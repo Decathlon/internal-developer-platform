@@ -87,5 +87,9 @@ public class WebhookExceptionRouteBuilder {
     LOGGER.warn(structuredMessage, errorCode, statusCode,
         connectorIdentifier == null ? UNKNOWN_VALUE : connectorIdentifier, exceptionType,
         exceptionMessage);
+
+    if (LOGGER.isDebugEnabled() && throwable != null) {
+      LOGGER.debug("Detailed stacktrace for handled webhook exception:", throwable);
+    }
   }
 }
