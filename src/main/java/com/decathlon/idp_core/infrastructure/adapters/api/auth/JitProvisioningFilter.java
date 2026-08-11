@@ -7,14 +7,18 @@ import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 
+import org.springframework.http.server.PathContainer;
 import org.springframework.lang.NonNull;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
+import org.springframework.web.util.pattern.PathPatternParser;
 
 import com.decathlon.idp_core.domain.model.principal.PrincipalInfo;
 import com.decathlon.idp_core.domain.service.principal.PrincipalProvisioningService;
+import com.decathlon.idp_core.infrastructure.adapters.api.configuration.AuthenticationProperties;
+import com.decathlon.idp_core.infrastructure.adapters.api.configuration.SecurityConfiguration;
 import com.decathlon.idp_core.infrastructure.adapters.api.principal.PrincipalExtractor;
 
 import lombok.RequiredArgsConstructor;
@@ -31,6 +35,15 @@ import lombok.extern.slf4j.Slf4j;
 /// **Design rationale:** Positioned after Spring Security authentication but before
 /// controllers, ensuring JIT provisioning happens transparently for all API endpoints.
 /// Failures are logged but don't block the request (fail-open for availability).
+///
+/// **Excluded Paths:** Public endpoints (health checks, documentation, etc.) are excluded
+/// from JIT provisioning to avoid unnecessary database queries and log pollution.
+/// Excluded paths are configured via `app.security.authentication.jit-provisioning-excluded-paths`
+/// in `application.yml`. **Important:** Keep these paths in sync with SecurityConfiguration's
+/// permitAll() matchers to maintain consistent security policy.
+///
+/// @see AuthenticationProperties
+/// @see SecurityConfiguration
 @Slf4j
 @Component
 @RequiredArgsConstructor
@@ -38,6 +51,8 @@ public class JitProvisioningFilter extends OncePerRequestFilter {
 
   private final PrincipalExtractor principalExtractor;
   private final PrincipalProvisioningService provisioningService;
+  private final AuthenticationProperties authProperties;
+  private final PathPatternParser patternParser = new PathPatternParser();
 
   @Override
   protected void doFilterInternal(@NonNull HttpServletRequest request,
@@ -75,8 +90,7 @@ public class JitProvisioningFilter extends OncePerRequestFilter {
   @Override
   protected boolean shouldNotFilter(@NonNull HttpServletRequest request) {
     String path = request.getRequestURI();
-    // Skip JIT provisioning for public endpoints
-    return path.startsWith("/actuator/") || path.startsWith("/swagger-ui/")
-        || path.startsWith("/v3/api-docs/") || path.equals("/");
+    return authProperties.jitProvisioningExcludedPaths().stream()
+        .anyMatch(pattern -> patternParser.parse(pattern).matches(PathContainer.parsePath(path)));
   }
 }

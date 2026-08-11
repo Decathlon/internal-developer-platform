@@ -1,4 +1,6 @@
-package com.decathlon.idp_core.infrastructure.adapters.api.auth.mock;
+package com.decathlon.idp_core.infrastructure.adapters.api.configuration.security.chains;
+
+import static org.springframework.security.config.Customizer.withDefaults;
 
 import java.io.IOException;
 import java.time.Instant;
@@ -15,8 +17,8 @@ import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.core.annotation.Order;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
-import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.GrantedAuthority;
@@ -25,9 +27,11 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationToken;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.authentication.AnonymousAuthenticationFilter;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import com.decathlon.idp_core.domain.exception.mock.MockSecurityConfigurationException;
+import com.decathlon.idp_core.infrastructure.adapters.api.auth.JitProvisioningFilter;
 
 /// Local mock security configuration that mirrors OAuth2/JWT behavior for local development.
 ///
@@ -43,9 +47,14 @@ import com.decathlon.idp_core.domain.exception.mock.MockSecurityConfigurationExc
 /// - Additional claims: Mock user information
 ///
 @Configuration
-@EnableWebSecurity
-@ConditionalOnProperty(name = "app.security.mock-enabled", havingValue = "true")
-public class MockSecurityConfiguration {
+@ConditionalOnProperty(prefix = "app.security.authentication", name = "mechanism", havingValue = "mock")
+public class MockFilterChainConfig {
+
+  private final JitProvisioningFilter jitProvisioningFilter;
+
+  public MockFilterChainConfig(JitProvisioningFilter jitProvisioningFilter) {
+    this.jitProvisioningFilter = jitProvisioningFilter;
+  }
 
   /// Security filter chain for local mocking with JWT-like behavior.
   ///
@@ -60,13 +69,21 @@ public class MockSecurityConfiguration {
   /// @param http HttpSecurity to configure
   /// @return Configured security filter chain
   @Bean
-  public SecurityFilterChain securityFilterChainMock(HttpSecurity http) {
+  @Order(4)
+  public SecurityFilterChain mockSecurityFilterChain(HttpSecurity http) throws Exception {
     try {
       http.sessionManagement(
           session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-          .authorizeHttpRequests(authMocked -> authMocked.anyRequest().permitAll())
-          .addFilterBefore(new MockJwtAuthenticationFilter(),
-              org.springframework.security.web.authentication.AnonymousAuthenticationFilter.class);
+          .cors(withDefaults())
+          // Public paths are already permitted by PublicFilterChainConfig (@Order 1)
+          // Everything reaching here must be authenticated via our mock filter
+          .authorizeHttpRequests(auth -> auth.anyRequest().authenticated())
+          // 1. Inject the fake JWT token into the SecurityContext
+          .addFilterBefore(new MockJwtAuthenticationFilter(), AnonymousAuthenticationFilter.class)
+          // 2. Trigger JIT provisioning based on the fake token (tests production
+          // behavior locally)
+          .addFilterAfter(jitProvisioningFilter, MockJwtAuthenticationFilter.class);
+
     } catch (Exception e) {
       throw new MockSecurityConfigurationException("Failed to configure mock security filter chain",
           e);

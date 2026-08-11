@@ -1,375 +1,975 @@
 package com.decathlon.idp_core.domain.service.principal;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
-import org.springframework.security.oauth2.jose.jws.SignatureAlgorithm;
-import org.springframework.security.oauth2.jwt.Jwt;
+import org.springframework.security.oauth2.core.oidc.OidcIdToken;
+import org.springframework.security.oauth2.core.oidc.user.DefaultOidcUser;
+import org.springframework.security.oauth2.core.user.DefaultOAuth2User;
+import org.springframework.security.oauth2.core.user.OAuth2User;
 import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationToken;
 
 import com.decathlon.idp_core.domain.model.principal.PrincipalInfo;
 import com.decathlon.idp_core.domain.model.principal.PrincipalKind;
+import com.decathlon.idp_core.infrastructure.adapters.api.configuration.AuthenticationProperties;
+import com.decathlon.idp_core.infrastructure.adapters.api.configuration.AuthenticationProperties.ServiceAccountDetection;
+import com.decathlon.idp_core.infrastructure.adapters.api.principal.PrincipalExtractionStrategy;
 import com.decathlon.idp_core.infrastructure.adapters.api.principal.PrincipalExtractor;
+import com.decathlon.idp_core.infrastructure.adapters.api.principal.strategies.JwtPrincipalExtractionStrategy;
+import com.decathlon.idp_core.infrastructure.adapters.api.principal.strategies.OAuth2UserPrincipalExtractionStrategy;
 
-/// Unit tests for PrincipalExtractor verifying correct extraction of principal
-/// information from various authentication types.
+/**
+ * Comprehensive unit tests for PrincipalExtractor and principal extraction
+ * strategies.
+ *
+ * This test suite covers: - **PrincipalExtractor orchestration**: Strategy
+ * selection, ordering, and fallback behavior -
+ * **JwtPrincipalExtractionStrategy**: JWT token extraction for both human users
+ * and service accounts - **OAuth2UserPrincipalExtractionStrategy**: OAuth2 and
+ * OIDC user extraction
+ *
+ * All strategies are tested with various configurations and edge cases to
+ * ensure full coverage.
+ */
+@ExtendWith(MockitoExtension.class)
 class PrincipalExtractorTest {
 
   private PrincipalExtractor principalExtractor;
 
-  @BeforeEach
-  void setUp() {
-    principalExtractor = new PrincipalExtractor();
+  @Nested
+  @DisplayName("PrincipalExtractor Orchestration Tests")
+  class PrincipalExtractorOrchestrationTests {
+
+    @Test
+    @DisplayName("Should use applicable strategy when supported")
+    void shouldUseApplicableStrategyWhenSupported() {
+      // Given: A strategy that supports the authentication and returns a principal
+      PrincipalInfo expectedPrincipal = new PrincipalInfo("test-id", PrincipalKind.HUMAN,
+          "Test User", Map.of(), List.of());
+
+      PrincipalExtractionStrategy supportingStrategy = mock(PrincipalExtractionStrategy.class);
+      when(supportingStrategy.supports(any())).thenReturn(true);
+      when(supportingStrategy.extract(any())).thenReturn(expectedPrincipal);
+
+      principalExtractor = new PrincipalExtractor(List.of(supportingStrategy));
+      Authentication authentication = mock(Authentication.class);
+
+      // When: Extract principal info
+      PrincipalInfo principalInfo = principalExtractor.extractPrincipalInfo(authentication);
+
+      // Then: The strategy was used to extract the principal
+      assertThat(principalInfo).isEqualTo(expectedPrincipal);
+    }
+
+    @Test
+    @DisplayName("Should fallback when no strategy supports authentication")
+    void shouldFallbackWhenNoStrategySupportsAuthentication() {
+      // Given: No strategy supports the authentication type
+      PrincipalExtractionStrategy unsupportingStrategy = mock(PrincipalExtractionStrategy.class);
+      when(unsupportingStrategy.supports(any())).thenReturn(false);
+
+      principalExtractor = new PrincipalExtractor(List.of(unsupportingStrategy));
+      Authentication authentication = new UsernamePasswordAuthenticationToken("testuser",
+          "password");
+
+      // When: Extract principal info from unsupported authentication
+      PrincipalInfo principalInfo = principalExtractor.extractPrincipalInfo(authentication);
+
+      // Then: Fallback principal is created
+      assertThat(principalInfo.identifier()).isEqualTo("testuser");
+      assertThat(principalInfo.kind()).isEqualTo(PrincipalKind.HUMAN);
+      assertThat(principalInfo.name()).isEqualTo("testuser");
+      assertThat(principalInfo.attributes()).isEmpty();
+      assertThat(principalInfo.groups()).isEmpty();
+    }
+
+    @Test
+    @DisplayName("Should use first supporting strategy from multiple strategies")
+    void shouldUseFirstSupportingStrategyFromList() {
+      // Given: Multiple strategies, first one supports the authentication
+      PrincipalInfo expectedPrincipal = new PrincipalInfo("first-strategy", PrincipalKind.HUMAN,
+          "First Strategy", Map.of(), List.of());
+
+      PrincipalExtractionStrategy firstStrategy = mock(PrincipalExtractionStrategy.class);
+      when(firstStrategy.supports(any())).thenReturn(true);
+      when(firstStrategy.extract(any())).thenReturn(expectedPrincipal);
+
+      PrincipalExtractionStrategy secondStrategy = mock(PrincipalExtractionStrategy.class);
+
+      principalExtractor = new PrincipalExtractor(List.of(firstStrategy, secondStrategy));
+      Authentication authentication = mock(Authentication.class);
+
+      // When: Extract principal info
+      PrincipalInfo principalInfo = principalExtractor.extractPrincipalInfo(authentication);
+
+      // Then: First strategy's principal is returned
+      assertThat(principalInfo).isEqualTo(expectedPrincipal);
+    }
+
+    @Test
+    @DisplayName("Should use second strategy when first doesn't support")
+    void shouldUseSecondStrategyWhenFirstDoesntSupport() {
+      // Given: Multiple strategies, first doesn't support but second does
+      PrincipalInfo expectedPrincipal = new PrincipalInfo("second-strategy", PrincipalKind.HUMAN,
+          "Second Strategy", Map.of(), List.of());
+
+      PrincipalExtractionStrategy firstStrategy = mock(PrincipalExtractionStrategy.class);
+      when(firstStrategy.supports(any())).thenReturn(false);
+
+      PrincipalExtractionStrategy secondStrategy = mock(PrincipalExtractionStrategy.class);
+      when(secondStrategy.supports(any())).thenReturn(true);
+      when(secondStrategy.extract(any())).thenReturn(expectedPrincipal);
+
+      principalExtractor = new PrincipalExtractor(List.of(firstStrategy, secondStrategy));
+      Authentication authentication = mock(Authentication.class);
+
+      // When: Extract principal info
+      PrincipalInfo principalInfo = principalExtractor.extractPrincipalInfo(authentication);
+
+      // Then: Second strategy's principal is returned
+      assertThat(principalInfo).isEqualTo(expectedPrincipal);
+    }
+
+    @Test
+    @DisplayName("Should fallback when null authentication")
+    void shouldFallbackWhenAuthenticationIsNull() {
+      // Given: Extractor with no strategies
+      principalExtractor = new PrincipalExtractor(List.of());
+
+      // When: Extract principal info with null authentication
+      PrincipalInfo principalInfo = principalExtractor.extractPrincipalInfo(null);
+
+      // Then: Fallback principal with UNKNOWN is created
+      assertThat(principalInfo.identifier()).isEqualTo("UNKNOWN");
+      assertThat(principalInfo.name()).isEqualTo("UNKNOWN");
+      assertThat(principalInfo.kind()).isEqualTo(PrincipalKind.HUMAN);
+      assertThat(principalInfo.attributes()).isEmpty();
+      assertThat(principalInfo.groups()).isEmpty();
+    }
+
+    @Test
+    @DisplayName("Should fallback with empty strategies list")
+    void shouldFallbackWithEmptyStrategiesList() {
+      // Given: Extractor with empty strategy list
+      principalExtractor = new PrincipalExtractor(List.of());
+      Authentication authentication = new UsernamePasswordAuthenticationToken("user123",
+          "password");
+
+      // When: Extract principal info
+      PrincipalInfo principalInfo = principalExtractor.extractPrincipalInfo(authentication);
+
+      // Then: Fallback uses authentication name
+      assertThat(principalInfo.identifier()).isEqualTo("user123");
+      assertThat(principalInfo.name()).isEqualTo("user123");
+    }
   }
 
-  @Test
-  void shouldExtractHumanPrincipalFromJwtToken() {
-    // Given: JWT token for human user with standard OIDC claims
-    Map<String, Object> claims = Map.of("sub", "alice-sub-123", "preferred_username", "alice",
-        "name", "Alice Dupont", "email", "alice.dupont@decathlon.com", "groups",
-        List.of("platform-team", "admins"));
+  @Nested
+  @DisplayName("JwtPrincipalExtractionStrategy Tests")
+  class JwtPrincipalExtractionStrategyTests {
 
-    Jwt jwt = createJwt(claims);
-    Authentication authentication = new JwtAuthenticationToken(jwt);
+    private AuthenticationProperties authProperties;
+    private JwtPrincipalExtractionStrategy jwtStrategy;
 
-    // When: Extract principal info
-    PrincipalInfo principalInfo = principalExtractor.extractPrincipalInfo(authentication);
+    @BeforeEach
+    void setUp() {
+      // Default configuration for tests
+      Map<String, String> claimMappings = new HashMap<>();
+      claimMappings.put("preferred_username", "preferred_username");
+      claimMappings.put("name", "name");
+      claimMappings.put("email", "email");
+      claimMappings.put("groups", "groups");
+      claimMappings.put("client_id", "client_id");
+      claimMappings.put("azp", "azp");
+      claimMappings.put("service_name", "service_name");
+      claimMappings.put("grant_type", "grant_type");
+      claimMappings.put("gty", "gty");
 
-    // Then: Human principal correctly extracted
-    assertThat(principalInfo.identifier()).isEqualTo("alice");
-    assertThat(principalInfo.kind()).isEqualTo(PrincipalKind.HUMAN);
-    assertThat(principalInfo.name()).isEqualTo("Alice Dupont");
-    assertThat(principalInfo.attributes()).containsEntry("email", "alice.dupont@decathlon.com");
-    assertThat(principalInfo.groups()).containsExactlyInAnyOrder("platform-team", "admins");
+      authProperties = new AuthenticationProperties(claimMappings, new ServiceAccountDetection(true,
+          "legacy", "token_type", "m2m", List.of("grant_type", "service_name")), List.of());
+      jwtStrategy = new JwtPrincipalExtractionStrategy(authProperties);
+    }
+
+    @Test
+    @DisplayName("Should support JwtAuthenticationToken")
+    void shouldSupportJwtAuthenticationToken() {
+      // Given: JwtAuthenticationToken
+      var jwtToken = mock(org.springframework.security.oauth2.jwt.Jwt.class);
+      var auth = new JwtAuthenticationToken(jwtToken);
+
+      // When/Then: Strategy supports this authentication
+      assertThat(jwtStrategy.supports(auth)).isTrue();
+    }
+
+    @Test
+    @DisplayName("Should not support non-JWT authentication")
+    void shouldNotSupportNonJwtAuthentication() {
+      // Given: Non-JWT authentication
+      Authentication auth = new UsernamePasswordAuthenticationToken("user", "pass");
+
+      // When/Then: Strategy does not support this authentication
+      assertThat(jwtStrategy.supports(auth)).isFalse();
+    }
+
+    @Test
+    @DisplayName("Should extract human principal from JWT with all claims")
+    void shouldExtractHumanFromJwtWithAllClaims() {
+      // Given: JWT with human user claims
+      Map<String, Object> claims = new HashMap<>();
+      claims.put("preferred_username", "john.doe");
+      claims.put("name", "John Doe");
+      claims.put("email", "john@example.com");
+      claims.put("groups", List.of("admin", "users"));
+
+      var jwtToken = mock(org.springframework.security.oauth2.jwt.Jwt.class);
+      when(jwtToken.getSubject()).thenReturn("user-123");
+      when(jwtToken.getClaims()).thenReturn(claims);
+
+      var auth = new JwtAuthenticationToken(jwtToken);
+
+      // When: Extract principal
+      PrincipalInfo principal = jwtStrategy.extract(auth);
+
+      // Then: Principal is extracted correctly
+      assertThat(principal.identifier()).isEqualTo("john.doe");
+      assertThat(principal.name()).isEqualTo("John Doe");
+      assertThat(principal.kind()).isEqualTo(PrincipalKind.HUMAN);
+      assertThat(principal.attributes()).containsEntry("email", "john@example.com");
+      assertThat(principal.groups()).containsExactly("admin", "users");
+    }
+
+    @Test
+    @DisplayName("Should fall back to subject when preferred_username missing")
+    void shouldFallbackToSubjectWhenPreferredUsernameMissing() {
+      // Given: JWT without preferred_username
+      Map<String, Object> claims = new HashMap<>();
+      claims.put("name", "John Doe");
+      claims.put("email", "john@example.com");
+
+      var jwtToken = mock(org.springframework.security.oauth2.jwt.Jwt.class);
+      when(jwtToken.getSubject()).thenReturn("user-123");
+      when(jwtToken.getClaims()).thenReturn(claims);
+
+      var auth = new JwtAuthenticationToken(jwtToken);
+
+      // When: Extract principal
+      PrincipalInfo principal = jwtStrategy.extract(auth);
+
+      // Then: Falls back to subject
+      assertThat(principal.identifier()).isEqualTo("user-123");
+      assertThat(principal.name()).isEqualTo("John Doe");
+    }
+
+    @Test
+    @DisplayName("Should fall back to identifier when name claim missing")
+    void shouldFallbackToIdentifierWhenNameMissing() {
+      // Given: JWT without name claim
+      Map<String, Object> claims = new HashMap<>();
+      claims.put("preferred_username", "john.doe");
+
+      var jwtToken = mock(org.springframework.security.oauth2.jwt.Jwt.class);
+      when(jwtToken.getSubject()).thenReturn("user-123");
+      when(jwtToken.getClaims()).thenReturn(claims);
+
+      var auth = new JwtAuthenticationToken(jwtToken);
+
+      // When: Extract principal
+      PrincipalInfo principal = jwtStrategy.extract(auth);
+
+      // Then: Name falls back to identifier
+      assertThat(principal.name()).isEqualTo("john.doe");
+    }
+
+    @Test
+    @DisplayName("Should skip email attribute when not present")
+    void shouldSkipEmailAttributeWhenNotPresent() {
+      // Given: JWT without email claim
+      Map<String, Object> claims = new HashMap<>();
+      claims.put("preferred_username", "john.doe");
+      claims.put("name", "John Doe");
+
+      var jwtToken = mock(org.springframework.security.oauth2.jwt.Jwt.class);
+      when(jwtToken.getSubject()).thenReturn("user-123");
+      when(jwtToken.getClaims()).thenReturn(claims);
+
+      var auth = new JwtAuthenticationToken(jwtToken);
+
+      // When: Extract principal
+      PrincipalInfo principal = jwtStrategy.extract(auth);
+
+      // Then: Email not included in attributes
+      assertThat(principal.attributes()).doesNotContainKey("email");
+    }
+
+    @Test
+    @DisplayName("Should return empty groups when groups claim missing")
+    void shouldReturnEmptyGroupsWhenMissing() {
+      // Given: JWT without groups claim
+      Map<String, Object> claims = new HashMap<>();
+      claims.put("preferred_username", "john.doe");
+
+      var jwtToken = mock(org.springframework.security.oauth2.jwt.Jwt.class);
+      when(jwtToken.getSubject()).thenReturn("user-123");
+      when(jwtToken.getClaims()).thenReturn(claims);
+
+      var auth = new JwtAuthenticationToken(jwtToken);
+
+      // When: Extract principal
+      PrincipalInfo principal = jwtStrategy.extract(auth);
+
+      // Then: Groups is empty list
+      assertThat(principal.groups()).isEmpty();
+    }
+
+    @Test
+    @DisplayName("Should filter non-string values from groups")
+    void shouldFilterNonStringValuesFromGroups() {
+      // Given: JWT with mixed-type groups
+      Map<String, Object> claims = new HashMap<>();
+      claims.put("preferred_username", "john.doe");
+      claims.put("groups", java.util.Arrays.asList("admin", 123, "users", null));
+
+      var jwtToken = mock(org.springframework.security.oauth2.jwt.Jwt.class);
+      when(jwtToken.getSubject()).thenReturn("user-123");
+      when(jwtToken.getClaims()).thenReturn(claims);
+
+      var auth = new JwtAuthenticationToken(jwtToken);
+
+      // When: Extract principal
+      PrincipalInfo principal = jwtStrategy.extract(auth);
+
+      // Then: Only string groups are included
+      assertThat(principal.groups()).containsExactly("admin", "users");
+    }
+
+    @Test
+    @DisplayName("Should detect service account with legacy mode - grant_type client_credentials")
+    void shouldDetectServiceAccountLegacyGrantType() {
+      // Given: JWT with grant_type=client_credentials (legacy mode enabled)
+      Map<String, Object> claims = new HashMap<>();
+      claims.put("client_id", "my-service");
+      claims.put("name", "My Service");
+      claims.put("grant_type", "client_credentials");
+
+      var jwtToken = mock(org.springframework.security.oauth2.jwt.Jwt.class);
+      when(jwtToken.getSubject()).thenReturn("my-service");
+      when(jwtToken.getClaims()).thenReturn(claims);
+
+      var auth = new JwtAuthenticationToken(jwtToken);
+
+      // When: Extract principal
+      PrincipalInfo principal = jwtStrategy.extract(auth);
+
+      // Then: Detected as service account
+      assertThat(principal.kind()).isEqualTo(PrincipalKind.SERVICE_ACCOUNT);
+      assertThat(principal.identifier()).isEqualTo("my-service");
+      assertThat(principal.name()).isEqualTo("My Service");
+    }
+
+    @Test
+    @DisplayName("Should detect service account with gty claim")
+    void shouldDetectServiceAccountWithGtyClaim() {
+      // Given: JWT with gty=client_credentials
+      Map<String, Object> claims = new HashMap<>();
+      claims.put("client_id", "my-service");
+      claims.put("gty", "client_credentials");
+
+      var jwtToken = mock(org.springframework.security.oauth2.jwt.Jwt.class);
+      when(jwtToken.getSubject()).thenReturn("my-service");
+      when(jwtToken.getClaims()).thenReturn(claims);
+
+      var auth = new JwtAuthenticationToken(jwtToken);
+
+      // When: Extract principal
+      PrincipalInfo principal = jwtStrategy.extract(auth);
+
+      // Then: Detected as service account
+      assertThat(principal.kind()).isEqualTo(PrincipalKind.SERVICE_ACCOUNT);
+    }
+
+    @Test
+    @DisplayName("Should detect service account with service_name claim")
+    void shouldDetectServiceAccountWithServiceNameClaim() {
+      // Given: JWT with service_name claim
+      Map<String, Object> claims = new HashMap<>();
+      claims.put("service_name", "my-service");
+      claims.put("client_id", "my-service");
+
+      var jwtToken = mock(org.springframework.security.oauth2.jwt.Jwt.class);
+      when(jwtToken.getSubject()).thenReturn("my-service");
+      when(jwtToken.getClaims()).thenReturn(claims);
+
+      var auth = new JwtAuthenticationToken(jwtToken);
+
+      // When: Extract principal
+      PrincipalInfo principal = jwtStrategy.extract(auth);
+
+      // Then: Detected as service account
+      assertThat(principal.kind()).isEqualTo(PrincipalKind.SERVICE_ACCOUNT);
+    }
+
+    @Test
+    @DisplayName("Should detect service account when sub equals client_id")
+    void shouldDetectServiceAccountWhenSubEqualsClientId() {
+      // Given: JWT where sub equals client_id
+      Map<String, Object> claims = new HashMap<>();
+      claims.put("client_id", "my-service");
+
+      var jwtToken = mock(org.springframework.security.oauth2.jwt.Jwt.class);
+      when(jwtToken.getSubject()).thenReturn("my-service");
+      when(jwtToken.getClaims()).thenReturn(claims);
+
+      var auth = new JwtAuthenticationToken(jwtToken);
+
+      // When: Extract principal
+      PrincipalInfo principal = jwtStrategy.extract(auth);
+
+      // Then: Detected as service account
+      assertThat(principal.kind()).isEqualTo(PrincipalKind.SERVICE_ACCOUNT);
+    }
+
+    @Test
+    @DisplayName("Should extract service account with client_id and fallback to azp")
+    void shouldExtractServiceAccountWithClientIdFallbackToAzp() {
+      // Given: JWT with azp instead of client_id
+      Map<String, Object> claims = new HashMap<>();
+      claims.put("azp", "authorized-party");
+      claims.put("grant_type", "client_credentials");
+
+      var jwtToken = mock(org.springframework.security.oauth2.jwt.Jwt.class);
+      when(jwtToken.getSubject()).thenReturn("authorized-party");
+      when(jwtToken.getClaims()).thenReturn(claims);
+
+      var auth = new JwtAuthenticationToken(jwtToken);
+
+      // When: Extract principal
+      PrincipalInfo principal = jwtStrategy.extract(auth);
+
+      // Then: Uses azp as client_id
+      assertThat(principal.kind()).isEqualTo(PrincipalKind.SERVICE_ACCOUNT);
+      assertThat(principal.attributes()).containsEntry("client_id", "authorized-party");
+    }
+
+    @Test
+    @DisplayName("Should extract service account with service_name fallback to name")
+    void shouldExtractServiceAccountWithServiceNameFallbackToName() {
+      // Given: JWT with name instead of service_name
+      Map<String, Object> claims = new HashMap<>();
+      claims.put("client_id", "my-service");
+      claims.put("name", "My Service Name");
+      claims.put("grant_type", "client_credentials");
+
+      var jwtToken = mock(org.springframework.security.oauth2.jwt.Jwt.class);
+      when(jwtToken.getSubject()).thenReturn("my-service");
+      when(jwtToken.getClaims()).thenReturn(claims);
+
+      var auth = new JwtAuthenticationToken(jwtToken);
+
+      // When: Extract principal
+      PrincipalInfo principal = jwtStrategy.extract(auth);
+
+      // Then: Uses name for service account
+      assertThat(principal.name()).isEqualTo("My Service Name");
+    }
+
+    @Test
+    @DisplayName("Should include origin in service account attributes")
+    void shouldIncludeOriginInServiceAccountAttributes() {
+      // Given: JWT with origin claim for service account
+      Map<String, Object> claims = new HashMap<>();
+      claims.put("client_id", "my-service");
+      claims.put("origin", "https://origin.example.com");
+      claims.put("grant_type", "client_credentials");
+
+      var jwtToken = mock(org.springframework.security.oauth2.jwt.Jwt.class);
+      when(jwtToken.getSubject()).thenReturn("my-service");
+      when(jwtToken.getClaims()).thenReturn(claims);
+
+      var auth = new JwtAuthenticationToken(jwtToken);
+
+      // When: Extract principal
+      PrincipalInfo principal = jwtStrategy.extract(auth);
+
+      // Then: Origin is included in attributes
+      assertThat(principal.attributes()).containsEntry("origin", "https://origin.example.com");
+    }
+
+    @Test
+    @DisplayName("Should extract service account groups")
+    void shouldExtractServiceAccountGroups() {
+      // Given: Service account JWT with groups
+      Map<String, Object> claims = new HashMap<>();
+      claims.put("client_id", "my-service");
+      claims.put("grant_type", "client_credentials");
+      claims.put("groups", List.of("service-admins", "integrations"));
+
+      var jwtToken = mock(org.springframework.security.oauth2.jwt.Jwt.class);
+      when(jwtToken.getSubject()).thenReturn("my-service");
+      when(jwtToken.getClaims()).thenReturn(claims);
+
+      var auth = new JwtAuthenticationToken(jwtToken);
+
+      // When: Extract principal
+      PrincipalInfo principal = jwtStrategy.extract(auth);
+
+      // Then: Groups are extracted for service account
+      assertThat(principal.groups()).containsExactly("service-admins", "integrations");
+    }
+
+    @Test
+    @DisplayName("Should disable service account detection when disabled in config")
+    void shouldDisableServiceAccountDetectionWhenDisabled() {
+      // Given: Service account detection disabled
+      AuthenticationProperties disabledConfig = new AuthenticationProperties(
+          authProperties.claimMappings(),
+          new ServiceAccountDetection(false, "legacy", "token_type", "m2m",
+              List.of("grant_type", "service_name")),
+          authProperties.jitProvisioningExcludedPaths());
+      JwtPrincipalExtractionStrategy strategyDisabled = new JwtPrincipalExtractionStrategy(
+          disabledConfig);
+
+      Map<String, Object> claims = new HashMap<>();
+      claims.put("client_id", "my-service");
+      claims.put("grant_type", "client_credentials");
+
+      var jwtToken = mock(org.springframework.security.oauth2.jwt.Jwt.class);
+      when(jwtToken.getSubject()).thenReturn("my-service");
+      when(jwtToken.getClaims()).thenReturn(claims);
+
+      var auth = new JwtAuthenticationToken(jwtToken);
+
+      // When: Extract principal
+      PrincipalInfo principal = strategyDisabled.extract(auth);
+
+      // Then: Treated as human even with M2M indicators
+      assertThat(principal.kind()).isEqualTo(PrincipalKind.HUMAN);
+    }
+
+    @Test
+    @DisplayName("Should use strict mode for service account detection")
+    void shouldUseStrictModeForServiceAccountDetection() {
+      // Given: Strict mode configuration
+      AuthenticationProperties strictConfig = new AuthenticationProperties(
+          authProperties.claimMappings(),
+          new ServiceAccountDetection(true, "strict", "token_type", "m2m",
+              List.of("grant_type", "service_name")),
+          authProperties.jitProvisioningExcludedPaths());
+      JwtPrincipalExtractionStrategy strategyStrict = new JwtPrincipalExtractionStrategy(
+          strictConfig);
+
+      Map<String, Object> claims = new HashMap<>();
+      claims.put("token_type", "m2m");
+      claims.put("client_id", "my-service");
+
+      var jwtToken = mock(org.springframework.security.oauth2.jwt.Jwt.class);
+      when(jwtToken.getSubject()).thenReturn("my-service");
+      when(jwtToken.getClaims()).thenReturn(claims);
+
+      var auth = new JwtAuthenticationToken(jwtToken);
+
+      // When: Extract principal
+      PrincipalInfo principal = strategyStrict.extract(auth);
+
+      // Then: Detected with strict mode
+      assertThat(principal.kind()).isEqualTo(PrincipalKind.SERVICE_ACCOUNT);
+    }
+
+    @Test
+    @DisplayName("Should not detect service account in strict mode with wrong claim value")
+    void shouldNotDetectServiceAccountInStrictModeWithWrongValue() {
+      // Given: Strict mode with wrong claim value
+      AuthenticationProperties strictConfig = new AuthenticationProperties(
+          authProperties.claimMappings(),
+          new ServiceAccountDetection(true, "strict", "token_type", "m2m",
+              List.of("grant_type", "service_name")),
+          authProperties.jitProvisioningExcludedPaths());
+      JwtPrincipalExtractionStrategy strategyStrict = new JwtPrincipalExtractionStrategy(
+          strictConfig);
+
+      Map<String, Object> claims = new HashMap<>();
+      claims.put("token_type", "human"); // Wrong value
+      claims.put("client_id", "my-service");
+      claims.put("grant_type", "client_credentials"); // Would match in legacy mode
+
+      var jwtToken = mock(org.springframework.security.oauth2.jwt.Jwt.class);
+      when(jwtToken.getSubject()).thenReturn("my-service");
+      when(jwtToken.getClaims()).thenReturn(claims);
+
+      var auth = new JwtAuthenticationToken(jwtToken);
+
+      // When: Extract principal
+      PrincipalInfo principal = strategyStrict.extract(auth);
+
+      // Then: Not detected as service account (strict mode doesn't check grant_type)
+      assertThat(principal.kind()).isEqualTo(PrincipalKind.HUMAN);
+    }
   }
 
-  @Test
-  void shouldExtractServiceAccountFromJwtTokenWithServiceName() {
-    // Given: JWT token for service account with service_name claim
-    Map<String, Object> claims = Map.of("sub", "service-sub-456", "client_id", "github-connector",
-        "service_name", "GitHub Actions Webhook", "origin", "github", "groups",
-        List.of("devops-tools"));
+  @Nested
+  @DisplayName("OAuth2UserPrincipalExtractionStrategy Tests")
+  class OAuth2UserPrincipalExtractionStrategyTests {
 
-    Jwt jwt = createJwt(claims);
-    Authentication authentication = new JwtAuthenticationToken(jwt);
+    private OAuth2UserPrincipalExtractionStrategy oauth2Strategy;
 
-    // When: Extract principal info
-    PrincipalInfo principalInfo = principalExtractor.extractPrincipalInfo(authentication);
+    @BeforeEach
+    void setUp() {
+      oauth2Strategy = new OAuth2UserPrincipalExtractionStrategy();
+    }
 
-    // Then: Service account correctly extracted
-    assertThat(principalInfo.identifier()).isEqualTo("github-connector");
-    assertThat(principalInfo.kind()).isEqualTo(PrincipalKind.SERVICE_ACCOUNT);
-    assertThat(principalInfo.name()).isEqualTo("GitHub Actions Webhook");
-    assertThat(principalInfo.attributes()).containsEntry("client_id", "github-connector")
-        .containsEntry("origin", "github");
-    assertThat(principalInfo.groups()).containsExactly("devops-tools");
-  }
+    @Test
+    @DisplayName("Should support OAuth2User authentication")
+    void shouldSupportOAuth2User() {
+      // Given: OAuth2User in authentication
+      Map<String, Object> attributes = new HashMap<>();
+      attributes.put("sub", "user-123");
+      OAuth2User oauth2User = new DefaultOAuth2User(List.of(), attributes, "sub");
 
-  @Test
-  void shouldExtractServiceAccountFromJwtWithClientCredentialsGrant() {
-    // Given: JWT token with grant_type = client_credentials (definitive M2M proof)
-    Map<String, Object> claims = Map.of("sub", "api-client-123", "client_id", "api-service",
-        "grant_type", "client_credentials", "origin", "corporate");
+      Authentication auth = mock(Authentication.class);
+      when(auth.getPrincipal()).thenReturn(oauth2User);
 
-    Jwt jwt = createJwt(claims);
-    Authentication authentication = new JwtAuthenticationToken(jwt);
+      // When/Then: Strategy supports this authentication
+      assertThat(oauth2Strategy.supports(auth)).isTrue();
+    }
 
-    // When: Extract principal info
-    PrincipalInfo principalInfo = principalExtractor.extractPrincipalInfo(authentication);
+    @Test
+    @DisplayName("Should support OidcUser authentication (subclass of OAuth2User)")
+    void shouldSupportOidcUser() {
+      // Given: OidcUser (OIDC implementation of OAuth2User)
+      var idToken = mock(OidcIdToken.class);
+      when(idToken.getClaims()).thenReturn(Map.of("sub", "user-123", "preferred_username",
+          "john.doe", "name", "John Doe", "email", "john@example.com"));
 
-    // Then: Service account correctly identified by grant_type
-    assertThat(principalInfo.identifier()).isEqualTo("api-service");
-    assertThat(principalInfo.kind()).isEqualTo(PrincipalKind.SERVICE_ACCOUNT);
-    assertThat(principalInfo.attributes()).containsEntry("client_id", "api-service")
-        .containsEntry("origin", "corporate");
-  }
+      var oidcUser = new DefaultOidcUser(List.of(), idToken);
+      Authentication auth = mock(Authentication.class);
+      when(auth.getPrincipal()).thenReturn(oidcUser);
 
-  @Test
-  void shouldExtractServiceAccountFromJwtWithGtyClaim() {
-    // Given: JWT token with gty (grant type) claim instead of grant_type
-    Map<String, Object> claims = Map.of("sub", "api-client-456", "client_id", "automation-service",
-        "gty", "client_credentials", "origin", "automation");
+      // When/Then: Strategy supports OIDC users
+      assertThat(oauth2Strategy.supports(auth)).isTrue();
+    }
 
-    Jwt jwt = createJwt(claims);
-    Authentication authentication = new JwtAuthenticationToken(jwt);
+    @Test
+    @DisplayName("Should not support non-OAuth2 authentication")
+    void shouldNotSupportNonOAuth2Authentication() {
+      // Given: Non-OAuth2 authentication
+      Authentication auth = new UsernamePasswordAuthenticationToken("user", "pass");
 
-    // When: Extract principal info
-    PrincipalInfo principalInfo = principalExtractor.extractPrincipalInfo(authentication);
+      // When/Then: Strategy does not support this
+      assertThat(oauth2Strategy.supports(auth)).isFalse();
+    }
 
-    // Then: Service account correctly identified by gty claim
-    assertThat(principalInfo.identifier()).isEqualTo("automation-service");
-    assertThat(principalInfo.kind()).isEqualTo(PrincipalKind.SERVICE_ACCOUNT);
-    assertThat(principalInfo.attributes()).containsEntry("client_id", "automation-service");
-  }
+    @Test
+    @DisplayName("Should not support null authentication")
+    void shouldNotSupportNullAuthentication() {
+      // When/Then: Null authentication is not supported
+      assertThat(oauth2Strategy.supports(null)).isFalse();
+    }
 
-  @Test
-  void shouldExtractServiceAccountWhenSubEqualsClientId() {
-    // Given: JWT token where sub equals client_id (typical M2M flow)
-    Map<String, Object> claims = Map.of("sub", "C66c415a8b5cec7cb00ccd071892b4ff38042972e",
-        "client_id", "C66c415a8b5cec7cb00ccd071892b4ff38042972e", "origin", "corporate");
+    @Test
+    @DisplayName("Should extract OAuth2 user with all attributes")
+    void shouldExtractOAuth2UserWithAllAttributes() {
+      // Given: OAuth2User with all attributes
+      Map<String, Object> attributes = new HashMap<>();
+      attributes.put("sub", "user-123");
+      attributes.put("name", "John Doe");
+      attributes.put("email", "john@example.com");
+      attributes.put("groups", List.of("admin", "users"));
 
-    Jwt jwt = createJwt(claims);
-    Authentication authentication = new JwtAuthenticationToken(jwt);
+      OAuth2User oauth2User = new DefaultOAuth2User(List.of(), attributes, "sub");
+      Authentication auth = mock(Authentication.class);
+      when(auth.getPrincipal()).thenReturn(oauth2User);
 
-    // When: Extract principal info
-    PrincipalInfo principalInfo = principalExtractor.extractPrincipalInfo(authentication);
+      // When: Extract principal
+      PrincipalInfo principal = oauth2Strategy.extract(auth);
 
-    // Then: Service account correctly identified when sub == client_id
-    assertThat(principalInfo.identifier()).isEqualTo("C66c415a8b5cec7cb00ccd071892b4ff38042972e");
-    assertThat(principalInfo.kind()).isEqualTo(PrincipalKind.SERVICE_ACCOUNT);
-    assertThat(principalInfo.attributes()).containsEntry("client_id",
-        "C66c415a8b5cec7cb00ccd071892b4ff38042972e");
-  }
+      // Then: All attributes extracted correctly
+      assertThat(principal.identifier()).isEqualTo("user-123");
+      assertThat(principal.name()).isEqualTo("John Doe");
+      assertThat(principal.kind()).isEqualTo(PrincipalKind.HUMAN);
+      assertThat(principal.attributes()).containsEntry("email", "john@example.com");
+      assertThat(principal.groups()).containsExactly("admin", "users");
+    }
 
-  @Test
-  void shouldExtractHumanPrincipalFromJwtWithMinimalClaims() {
-    // Given: JWT token with minimal claims (only sub)
-    Map<String, Object> claims = Map.of("sub", "bob-sub-789", "email", "bob@example.com");
+    @Test
+    @DisplayName("Should fall back to name when sub not present in OAuth2User")
+    void shouldFallbackToNameWhenSubNotPresent() {
+      // Given: OAuth2User without sub claim
+      Map<String, Object> attributes = new HashMap<>();
+      attributes.put("name", "John Doe");
 
-    Jwt jwt = createJwt(claims);
-    Authentication authentication = new JwtAuthenticationToken(jwt);
+      OAuth2User oauth2User = new DefaultOAuth2User(List.of(), attributes, "name");
+      Authentication auth = mock(Authentication.class);
+      when(auth.getPrincipal()).thenReturn(oauth2User);
 
-    // When: Extract principal info
-    PrincipalInfo principalInfo = principalExtractor.extractPrincipalInfo(authentication);
+      // When: Extract principal
+      PrincipalInfo principal = oauth2Strategy.extract(auth);
 
-    // Then: Principal extracted with fallback values
-    assertThat(principalInfo.identifier()).isEqualTo("bob-sub-789");
-    assertThat(principalInfo.kind()).isEqualTo(PrincipalKind.HUMAN);
-    assertThat(principalInfo.name()).isEqualTo("bob-sub-789"); // Falls back to identifier
-    assertThat(principalInfo.attributes()).containsEntry("email", "bob@example.com");
-    assertThat(principalInfo.groups()).isEmpty();
-  }
+      // Then: Falls back to name (which is the OAuth2User.getName())
+      assertThat(principal.identifier()).isNotBlank();
+    }
 
-  @Test
-  void shouldExtractServiceAccountWithAzpClaim() {
-    // Given: JWT token with azp (authorized party) claim where sub == azp
-    Map<String, Object> claims = Map.of("sub", "kafka-connector", "azp", "kafka-connector", "name",
-        "Kafka Event Producer");
+    @Test
+    @DisplayName("Should fall back to identifier when name not present in OAuth2User")
+    void shouldFallbackToIdentifierWhenNameNotPresent() {
+      // Given: OAuth2User without name attribute
+      Map<String, Object> attributes = new HashMap<>();
+      attributes.put("sub", "user-123");
 
-    Jwt jwt = createJwt(claims);
-    Authentication authentication = new JwtAuthenticationToken(jwt);
+      OAuth2User oauth2User = new DefaultOAuth2User(List.of(), attributes, "sub");
+      Authentication auth = mock(Authentication.class);
+      when(auth.getPrincipal()).thenReturn(oauth2User);
 
-    // When: Extract principal info
-    PrincipalInfo principalInfo = principalExtractor.extractPrincipalInfo(authentication);
+      // When: Extract principal
+      PrincipalInfo principal = oauth2Strategy.extract(auth);
 
-    // Then: Service account extracted using azp as identifier
-    assertThat(principalInfo.identifier()).isEqualTo("kafka-connector");
-    assertThat(principalInfo.kind()).isEqualTo(PrincipalKind.SERVICE_ACCOUNT);
-    assertThat(principalInfo.name()).isEqualTo("Kafka Event Producer");
-    assertThat(principalInfo.attributes()).containsEntry("client_id", "kafka-connector");
-  }
+      // Then: Name falls back to identifier
+      assertThat(principal.name()).isEqualTo("user-123");
+    }
 
-  @Test
-  void shouldExtractHumanFromJwtWithClientIdPresent() {
-    // Given: JWT token for human user but client_id is present (identifies OAuth2
-    // client app)
-    // This is the real-world case: sub != client_id means it's a human using an
-    // OAuth2 client
-    Map<String, Object> claims = Map.of("sub", "RVANDO12", "client_id",
-        "C66c415a8b5cec7cb00ccd071892b4ff38042972e", "uid", "RVANDO12", "origin", "corporate");
+    @Test
+    @DisplayName("Should skip email when not present in OAuth2User")
+    void shouldSkipEmailWhenNotPresent() {
+      // Given: OAuth2User without email
+      Map<String, Object> attributes = new HashMap<>();
+      attributes.put("sub", "user-123");
+      attributes.put("name", "John Doe");
 
-    Jwt jwt = createJwt(claims);
-    Authentication authentication = new JwtAuthenticationToken(jwt);
+      OAuth2User oauth2User = new DefaultOAuth2User(List.of(), attributes, "sub");
+      Authentication auth = mock(Authentication.class);
+      when(auth.getPrincipal()).thenReturn(oauth2User);
 
-    // When: Extract principal info
-    PrincipalInfo principalInfo = principalExtractor.extractPrincipalInfo(authentication);
+      // When: Extract principal
+      PrincipalInfo principal = oauth2Strategy.extract(auth);
 
-    // Then: Human principal correctly identified despite client_id presence
-    assertThat(principalInfo.identifier()).isEqualTo("RVANDO12");
-    assertThat(principalInfo.kind()).isEqualTo(PrincipalKind.HUMAN);
-    assertThat(principalInfo.name()).isEqualTo("RVANDO12");
-  }
+      // Then: Email not in attributes
+      assertThat(principal.attributes()).doesNotContainKey("email");
+    }
 
-  @Test
-  void shouldNotConfuseHumanWithServiceAccountWhenGrantTypeDiffers() {
-    // Given: JWT token with grant_type other than client_credentials
-    Map<String, Object> claims = Map.of("sub", "user123", "client_id", "mobile-app", "grant_type",
-        "authorization_code", "email", "user@example.com");
+    @Test
+    @DisplayName("Should return empty groups when groups not present in OAuth2User")
+    void shouldReturnEmptyGroupsWhenNotPresent() {
+      // Given: OAuth2User without groups
+      Map<String, Object> attributes = new HashMap<>();
+      attributes.put("sub", "user-123");
 
-    Jwt jwt = createJwt(claims);
-    Authentication authentication = new JwtAuthenticationToken(jwt);
+      OAuth2User oauth2User = new DefaultOAuth2User(List.of(), attributes, "sub");
+      Authentication auth = mock(Authentication.class);
+      when(auth.getPrincipal()).thenReturn(oauth2User);
 
-    // When: Extract principal info
-    PrincipalInfo principalInfo = principalExtractor.extractPrincipalInfo(authentication);
+      // When: Extract principal
+      PrincipalInfo principal = oauth2Strategy.extract(auth);
 
-    // Then: Human principal correctly identified
-    assertThat(principalInfo.identifier()).isEqualTo("user123");
-    assertThat(principalInfo.kind()).isEqualTo(PrincipalKind.HUMAN);
-    assertThat(principalInfo.attributes()).containsEntry("email", "user@example.com");
-  }
+      // Then: Groups is empty
+      assertThat(principal.groups()).isEmpty();
+    }
 
-  @Test
-  void shouldExtractFallbackPrincipalFromBasicAuth() {
-    // Given: Basic authentication (no JWT)
-    Authentication authentication = new UsernamePasswordAuthenticationToken("testuser", "password");
+    @Test
+    @DisplayName("Should filter non-string values from OAuth2 groups")
+    void shouldFilterNonStringValuesFromOAuth2Groups() {
+      // Given: OAuth2User with mixed-type groups
+      Map<String, Object> attributes = new HashMap<>();
+      attributes.put("sub", "user-123");
+      attributes.put("groups", List.of("admin", 123, "users"));
 
-    // When: Extract principal info
-    PrincipalInfo principalInfo = principalExtractor.extractPrincipalInfo(authentication);
+      OAuth2User oauth2User = new DefaultOAuth2User(List.of(), attributes, "sub");
+      Authentication auth = mock(Authentication.class);
+      when(auth.getPrincipal()).thenReturn(oauth2User);
 
-    // Then: Fallback principal created
-    assertThat(principalInfo.identifier()).isEqualTo("testuser");
-    assertThat(principalInfo.kind()).isEqualTo(PrincipalKind.HUMAN);
-    assertThat(principalInfo.name()).isEqualTo("testuser");
-    assertThat(principalInfo.attributes()).isEmpty();
-    assertThat(principalInfo.groups()).isEmpty();
-  }
+      // When: Extract principal
+      PrincipalInfo principal = oauth2Strategy.extract(auth);
 
-  @Test
-  void shouldHandleEmptyGroupsClaim() {
-    // Given: JWT token with empty groups claim
-    Map<String, Object> claims = Map.of("sub", "charlie-sub", "preferred_username", "charlie",
-        "name", "Charlie Brown", "email", "charlie@example.com", "groups", List.of());
+      // Then: Only string groups included
+      assertThat(principal.groups()).containsExactly("admin", "users");
+    }
 
-    Jwt jwt = createJwt(claims);
-    Authentication authentication = new JwtAuthenticationToken(jwt);
+    @Test
+    @DisplayName("Should extract OIDC user with preferred username")
+    void shouldExtractOidcUserWithPreferredUsername() {
+      // Given: OIDC user with preferred_username
+      var idToken = mock(OidcIdToken.class);
+      when(idToken.getClaims()).thenReturn(Map.of("sub", "user-123", "preferred_username",
+          "john.doe", "name", "John Doe", "email", "john@example.com"));
 
-    // When: Extract principal info
-    PrincipalInfo principalInfo = principalExtractor.extractPrincipalInfo(authentication);
+      var oidcUser = new DefaultOidcUser(List.of(), idToken);
+      Authentication auth = mock(Authentication.class);
+      when(auth.getPrincipal()).thenReturn(oidcUser);
 
-    // Then: Groups list is empty
-    assertThat(principalInfo.groups()).isEmpty();
-  }
+      // When: Extract principal
+      PrincipalInfo principal = oauth2Strategy.extract(auth);
 
-  @Test
-  void shouldHandleMissingOptionalClaims() {
-    // Given: JWT token without optional claims (email, groups, etc.)
-    Map<String, Object> claims = Map.of("sub", "david-sub", "preferred_username", "david");
+      // Then: Uses preferred_username as identifier
+      assertThat(principal.identifier()).isEqualTo("john.doe");
+      assertThat(principal.name()).isEqualTo("John Doe");
+    }
 
-    Jwt jwt = createJwt(claims);
-    Authentication authentication = new JwtAuthenticationToken(jwt);
+    @Test
+    @DisplayName("Should fall back to subject when preferred username not present in OIDC")
+    void shouldFallbackToSubjectWhenPreferredUsernameNotPresent() {
+      // Given: OIDC user without preferred_username
+      var idToken = mock(OidcIdToken.class);
+      when(idToken.getClaims()).thenReturn(Map.of("sub", "user-123", "name", "John Doe"));
 
-    // When: Extract principal info
-    PrincipalInfo principalInfo = principalExtractor.extractPrincipalInfo(authentication);
+      var oidcUser = new DefaultOidcUser(List.of(), idToken);
+      Authentication auth = mock(Authentication.class);
+      when(auth.getPrincipal()).thenReturn(oidcUser);
 
-    // Then: preferred_username is used as identifier, optional fields are empty
-    assertThat(principalInfo.identifier()).isEqualTo("david");
-    assertThat(principalInfo.attributes()).doesNotContainKey("email");
-    assertThat(principalInfo.groups()).isEmpty();
-  }
+      // When: Extract principal
+      PrincipalInfo principal = oauth2Strategy.extract(auth);
 
-  @Test
-  void shouldExtractFromStandardOAuth2User() {
-    // Given: A standard OAuth2 user authentication
-    org.springframework.security.oauth2.core.user.OAuth2User oauth2User = mock(
-        org.springframework.security.oauth2.core.user.OAuth2User.class);
-    when(oauth2User.getName()).thenReturn("fallback-name");
-    when(oauth2User.getAttribute("sub")).thenReturn("oauth2-sub-123");
-    when(oauth2User.getAttribute("name")).thenReturn("OAuth2 User");
-    when(oauth2User.getAttribute("email")).thenReturn("oauth2@example.com");
-    when(oauth2User.getAttributes()).thenReturn(Map.of("sub", "oauth2-sub-123", "name",
-        "OAuth2 User", "email", "oauth2@example.com", "groups", List.of("oauth-group-1")));
+      // Then: Falls back to subject
+      assertThat(principal.identifier()).isEqualTo("user-123");
+    }
 
-    Authentication authentication = mock(Authentication.class);
-    when(authentication.getPrincipal()).thenReturn(oauth2User);
+    @Test
+    @DisplayName("Should use full name from OIDC user")
+    void shouldUseFullNameFromOidcUser() {
+      // Given: OIDC user with full name
+      var idToken = mock(OidcIdToken.class);
+      when(idToken.getClaims()).thenReturn(
+          Map.of("sub", "user-123", "preferred_username", "john.doe", "name", "John Michael Doe"));
 
-    // When
-    PrincipalInfo principalInfo = principalExtractor.extractPrincipalInfo(authentication);
+      var oidcUser = new DefaultOidcUser(List.of(), idToken);
+      Authentication auth = mock(Authentication.class);
+      when(auth.getPrincipal()).thenReturn(oidcUser);
 
-    // Then
-    assertThat(principalInfo.identifier()).isEqualTo("oauth2-sub-123");
-    assertThat(principalInfo.kind()).isEqualTo(PrincipalKind.HUMAN);
-    assertThat(principalInfo.name()).isEqualTo("OAuth2 User");
-    assertThat(principalInfo.attributes()).containsEntry("email", "oauth2@example.com");
-    assertThat(principalInfo.groups()).containsExactly("oauth-group-1");
-  }
+      // When: Extract principal
+      PrincipalInfo principal = oauth2Strategy.extract(auth);
 
-  @Test
-  void shouldExtractFromOidcUser() {
-    // Given: An OIDC user authentication
-    org.springframework.security.oauth2.core.oidc.user.OidcUser oidcUser = mock(
-        org.springframework.security.oauth2.core.oidc.user.OidcUser.class);
-    when(oidcUser.getSubject()).thenReturn("oidc-sub-456");
-    when(oidcUser.getPreferredUsername()).thenReturn("oidc-username");
-    when(oidcUser.getFullName()).thenReturn("OIDC Full Name");
-    when(oidcUser.getEmail()).thenReturn("oidc@example.com");
-    when(oidcUser.getAttributes())
-        .thenReturn(Map.of("groups", List.of("oidc-group-1", "oidc-group-2")));
+      // Then: Uses full name
+      assertThat(principal.name()).isEqualTo("John Michael Doe");
+    }
 
-    Authentication authentication = mock(Authentication.class);
-    when(authentication.getPrincipal()).thenReturn(oidcUser);
+    @Test
+    @DisplayName("Should fall back to given name when full name not present in OIDC")
+    void shouldFallbackToGivenNameWhenFullNameNotPresent() {
+      // Given: OIDC user with only given name
+      var idToken = mock(OidcIdToken.class);
+      when(idToken.getClaims()).thenReturn(
+          Map.of("sub", "user-123", "preferred_username", "john.doe", "given_name", "John"));
 
-    // When
-    PrincipalInfo principalInfo = principalExtractor.extractPrincipalInfo(authentication);
+      var oidcUser = new DefaultOidcUser(List.of(), idToken);
+      Authentication auth = mock(Authentication.class);
+      when(auth.getPrincipal()).thenReturn(oidcUser);
 
-    // Then
-    assertThat(principalInfo.identifier()).isEqualTo("oidc-username");
-    assertThat(principalInfo.kind()).isEqualTo(PrincipalKind.HUMAN);
-    assertThat(principalInfo.name()).isEqualTo("OIDC Full Name");
-    assertThat(principalInfo.attributes()).containsEntry("email", "oidc@example.com");
-    assertThat(principalInfo.groups()).containsExactlyInAnyOrder("oidc-group-1", "oidc-group-2");
-  }
+      // When: Extract principal
+      PrincipalInfo principal = oauth2Strategy.extract(auth);
 
-  @Test
-  void shouldExtractFromOidcUserWithMinimalClaims() {
-    // Given: An OIDC user with only a subject
-    org.springframework.security.oauth2.core.oidc.user.OidcUser oidcUser = mock(
-        org.springframework.security.oauth2.core.oidc.user.OidcUser.class);
-    when(oidcUser.getSubject()).thenReturn("oidc-minimal-sub");
-    when(oidcUser.getAttributes()).thenReturn(Map.of());
+      // Then: Uses given name
+      assertThat(principal.name()).isEqualTo("John");
+    }
 
-    Authentication authentication = mock(Authentication.class);
-    when(authentication.getPrincipal()).thenReturn(oidcUser);
+    @Test
+    @DisplayName("Should fall back to identifier when neither full nor given name present")
+    void shouldFallbackToIdentifierWhenNoNamePresent() {
+      // Given: OIDC user without full name or given name
+      var idToken = mock(OidcIdToken.class);
+      when(idToken.getClaims())
+          .thenReturn(Map.of("sub", "user-123", "preferred_username", "john.doe"));
 
-    // When
-    PrincipalInfo principalInfo = principalExtractor.extractPrincipalInfo(authentication);
+      var oidcUser = new DefaultOidcUser(List.of(), idToken);
+      Authentication auth = mock(Authentication.class);
+      when(auth.getPrincipal()).thenReturn(oidcUser);
 
-    // Then: Fallbacks to subject for identifier and name
-    assertThat(principalInfo.identifier()).isEqualTo("oidc-minimal-sub");
-    assertThat(principalInfo.name()).isEqualTo("oidc-minimal-sub");
-    assertThat(principalInfo.attributes()).isEmpty();
-    assertThat(principalInfo.groups()).isEmpty();
-  }
+      // When: Extract principal
+      PrincipalInfo principal = oauth2Strategy.extract(auth);
 
-  @Test
-  void shouldHandleMalformedGroupsClaimGracefully() {
-    // Given: JWT token where 'groups' is a String instead of a List
-    Map<String, Object> claims = Map.of("sub", "malformed-groups-sub", "email", "user@example.com",
-        "preferred_username", "user", "groups", "this-should-be-a-list-but-is-a-string");
+      // Then: Falls back to identifier
+      assertThat(principal.name()).isEqualTo("john.doe");
+    }
 
-    Jwt jwt = createJwt(claims);
-    Authentication authentication = new JwtAuthenticationToken(jwt);
+    @Test
+    @DisplayName("Should extract email from OIDC user")
+    void shouldExtractEmailFromOidcUser() {
+      // Given: OIDC user with email
+      var idToken = mock(OidcIdToken.class);
+      when(idToken.getClaims()).thenReturn(
+          Map.of("sub", "user-123", "preferred_username", "john.doe", "email", "john@example.com"));
 
-    // When
-    PrincipalInfo principalInfo = principalExtractor.extractPrincipalInfo(authentication);
+      var oidcUser = new DefaultOidcUser(List.of(), idToken);
+      Authentication auth = mock(Authentication.class);
+      when(auth.getPrincipal()).thenReturn(oidcUser);
 
-    // Then: Safe casting returns empty list instead of throwing ClassCastException
-    assertThat(principalInfo.groups()).isEmpty();
-  }
+      // When: Extract principal
+      PrincipalInfo principal = oauth2Strategy.extract(auth);
 
-  @Test
-  void shouldExtractGcpServiceAccountWithEmailClaim() {
-    // Given: GCP service account token with email claim (service account email, not
-    // user email)
-    // This is a real GCP workload identity token where sub == azp
-    Map<String, Object> claims = Map.of("aud",
-        "https://idp-back-245355900377.europe-west1.run.app/api/v1/events/products", "azp",
-        "107405014128022353937", "email",
-        "ps-fb25-product-events-produ@cpe-idp-stg-337o.iam.gserviceaccount.com", "email_verified",
-        true, "iss", "https://accounts.google.com", "sub", "107405014128022353937");
+      // Then: Email included
+      assertThat(principal.attributes()).containsEntry("email", "john@example.com");
+    }
 
-    Jwt jwt = createJwt(claims);
-    Authentication authentication = new JwtAuthenticationToken(jwt);
+    @Test
+    @DisplayName("Should extract groups from OIDC user claims")
+    void shouldExtractGroupsFromOidcUserClaims() {
+      // Given: OIDC user with groups in claims
+      Map<String, Object> claims = new HashMap<>();
+      claims.put("sub", "user-123");
+      claims.put("groups", List.of("admin", "developers"));
 
-    // When: Extract principal info
-    PrincipalInfo principalInfo = principalExtractor.extractPrincipalInfo(authentication);
+      var idToken = mock(OidcIdToken.class);
+      when(idToken.getClaims()).thenReturn(claims);
 
-    // Then: Service account correctly identified (sub == azp takes priority over
-    // email presence)
-    assertThat(principalInfo.identifier()).isEqualTo("107405014128022353937");
-    assertThat(principalInfo.kind()).isEqualTo(PrincipalKind.SERVICE_ACCOUNT);
-    assertThat(principalInfo.attributes()).containsEntry("client_id", "107405014128022353937");
-  }
+      var oidcUser = new DefaultOidcUser(List.of(), idToken);
+      Authentication auth = mock(Authentication.class);
+      when(auth.getPrincipal()).thenReturn(oidcUser);
 
-  private Jwt createJwt(Map<String, Object> claims) {
-    return Jwt.withTokenValue("mock-token").header("alg", SignatureAlgorithm.RS256.getName())
-        .claims(c -> c.putAll(claims)).build();
+      // When: Extract principal
+      PrincipalInfo principal = oauth2Strategy.extract(auth);
+
+      // Then: Groups extracted from claims
+      assertThat(principal.groups()).containsExactly("admin", "developers");
+    }
+
+    @Test
+    @DisplayName("Should handle OIDC user with minimal attributes")
+    void shouldHandleOidcUserWithMinimalAttributes() {
+      // Given: OIDC user with only subject
+      var idToken = mock(OidcIdToken.class);
+      when(idToken.getClaims()).thenReturn(Map.of("sub", "user-123"));
+
+      var oidcUser = new DefaultOidcUser(List.of(), idToken);
+      Authentication auth = mock(Authentication.class);
+      when(auth.getPrincipal()).thenReturn(oidcUser);
+
+      // When: Extract principal
+      PrincipalInfo principal = oauth2Strategy.extract(auth);
+
+      // Then: Still creates valid principal
+      assertThat(principal.identifier()).isEqualTo("user-123");
+      assertThat(principal.name()).isEqualTo("user-123");
+      assertThat(principal.kind()).isEqualTo(PrincipalKind.HUMAN);
+      assertThat(principal.attributes()).isEmpty();
+      assertThat(principal.groups()).isEmpty();
+    }
+
+    @Test
+    @DisplayName("Should not include email in OIDC attributes when null")
+    void shouldNotIncludeNullEmailFromOidcUser() {
+      // Given: OIDC user without email
+      var idToken = mock(OidcIdToken.class);
+      when(idToken.getClaims())
+          .thenReturn(Map.of("sub", "user-123", "preferred_username", "john.doe"));
+
+      var oidcUser = new DefaultOidcUser(List.of(), idToken);
+      Authentication auth = mock(Authentication.class);
+      when(auth.getPrincipal()).thenReturn(oidcUser);
+
+      // When: Extract principal
+      PrincipalInfo principal = oauth2Strategy.extract(auth);
+
+      // Then: Email not in attributes
+      assertThat(principal.attributes()).doesNotContainKey("email");
+    }
   }
 }

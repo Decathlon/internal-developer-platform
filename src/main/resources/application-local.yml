@@ -36,6 +36,12 @@ spring:
 app:
   full-refresh-at-startup: true
   idp-core-prefix-url: http://localhost:8084
+  security:
+    authentication:
+      jwt:
+        enabled: false
+      mock:
+        enabled: true
 logging:
   level:
     # Application log level, defaults to INFO. Override per environment via LOG_LEVEL env var.

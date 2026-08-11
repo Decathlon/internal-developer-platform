@@ -9,6 +9,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import java.io.IOException;
+import java.util.List;
 
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
@@ -32,6 +33,7 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import com.decathlon.idp_core.domain.model.principal.PrincipalInfo;
 import com.decathlon.idp_core.domain.model.principal.PrincipalKind;
 import com.decathlon.idp_core.domain.service.principal.PrincipalProvisioningService;
+import com.decathlon.idp_core.infrastructure.adapters.api.configuration.AuthenticationProperties;
 import com.decathlon.idp_core.infrastructure.adapters.api.principal.PrincipalExtractor;
 
 @ExtendWith(MockitoExtension.class)
@@ -42,6 +44,9 @@ class JitProvisioningFilterTest {
 
   @Mock
   private PrincipalProvisioningService provisioningService;
+
+  @Mock
+  private AuthenticationProperties authProperties;
 
   @Mock
   private HttpServletRequest request;
@@ -159,6 +164,9 @@ class JitProvisioningFilterTest {
       "/swagger-ui/", "/v3/api-docs/swagger-config", "/"})
   void shouldNotFilter_returnsTrueForPublicEndpoints(String path) {
     // Arrange
+    // Simulate the default paths loaded from application.yml
+    when(authProperties.jitProvisioningExcludedPaths()).thenReturn(
+        List.of("/", "/actuator/**", "/swagger-ui/**", "/swagger-ui.html", "/v3/api-docs/**"));
     when(request.getRequestURI()).thenReturn(path);
 
     // Act
@@ -172,6 +180,9 @@ class JitProvisioningFilterTest {
   @ValueSource(strings = {"/api/v1/users", "/api/v1/catalog", "/actuator-custom", "/swagger"})
   void shouldNotFilter_returnsFalseForProtectedEndpoints(String path) {
     // Arrange
+    // Simulate the default paths loaded from application.yml
+    when(authProperties.jitProvisioningExcludedPaths()).thenReturn(
+        List.of("/", "/actuator/**", "/swagger-ui/**", "/swagger-ui.html", "/v3/api-docs/**"));
     when(request.getRequestURI()).thenReturn(path);
 
     // Act

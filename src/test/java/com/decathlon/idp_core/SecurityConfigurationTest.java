@@ -103,18 +103,4 @@ class SecurityConfigurationTest {
     assertEquals(List.of("*"), config.getAllowedHeaders());
     assertTrue(config.getAllowCredentials());
   }
-
-  @Test
-  void securityFilterChain_shouldConfigureAndBuildHttpSecurity() {
-    // Arrange
-    // We use deep stubs to safely mock the highly fluent HttpSecurity builder API
-    // without throwing NPEs
-    HttpSecurity httpSecurityMock = mock(HttpSecurity.class, Answers.RETURNS_DEEP_STUBS);
-
-    // Act
-    securityConfiguration.securityFilterChain(httpSecurityMock);
-
-    // Assert
-    verify(httpSecurityMock).build();
-  }
 }
