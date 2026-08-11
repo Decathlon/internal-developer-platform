@@ -324,7 +324,7 @@ app:
 ```
 
 > [!IMPORTANT]
-> Keep the JIT excluded paths in sync with the `PublicFilterChainConfig` permitAll () matchers. If you add a public path
+> Keep the JIT excluded paths in sync with the `PublicFilterChainConfig` permission mechanism. If you add a public path
 to one, add it to both.
 
 ## API Key Authentication
@@ -691,7 +691,7 @@ public class CustomAuthenticationExtractionStrategy implements PrincipalExtracti
 After implementing your custom authentication method:
 
 - [ ] Configuration toggle in `application.yml` under `app.security.authentication.custom-auth.enabled`
-- [ ] `AuthenticationProperties.java` updated with your config record
+- [ ] `AuthenticationProperties.java` updated with your configuration record
 - [ ] Filter chain configuration class created with `@Order(5)` or next available
 - [ ] Filter chain uses `@ConditionalOnProperty` to load only when enabled
 - [ ] Custom authentication filter extracts and validates credentials
