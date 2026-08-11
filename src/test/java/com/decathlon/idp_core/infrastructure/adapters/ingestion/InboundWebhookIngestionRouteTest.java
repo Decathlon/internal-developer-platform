@@ -4,12 +4,17 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import java.io.ByteArrayOutputStream;
 import java.nio.charset.StandardCharsets;
+import java.util.Base64;
+import java.util.stream.Stream;
 import java.util.zip.GZIPOutputStream;
 
 import org.apache.camel.Exchange;
 import org.apache.camel.ProducerTemplate;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.test.context.jdbc.Sql;
 
@@ -42,13 +47,17 @@ class InboundWebhookIngestionRouteTest extends AbstractIntegrationTest {
     });
   }
 
-  private byte[] gzip(String payload) throws Exception {
+  private static byte[] gzipSamplePayload() throws Exception {
     try (ByteArrayOutputStream output = new ByteArrayOutputStream();
         GZIPOutputStream gzipOutput = new GZIPOutputStream(output)) {
-      gzipOutput.write(payload.getBytes(StandardCharsets.UTF_8));
+      gzipOutput.write("{\"event\":\"gzip\"}".getBytes(StandardCharsets.UTF_8));
       gzipOutput.finish();
       return output.toByteArray();
     }
+  }
+
+  private static String gzipSamplePayloadAsBase64() throws Exception {
+    return Base64.getEncoder().encodeToString(gzipSamplePayload());
   }
 
   private Exchange invokeValidationWithoutWebhookConfig() {
@@ -109,11 +118,12 @@ class InboundWebhookIngestionRouteTest extends AbstractIntegrationTest {
     assertJsonErrorResponse(exchange, "INTERNAL_SERVER_ERROR", "Webhook configuration unavailable");
   }
 
-  @Test
-  @DisplayName("Route accepts payload without encoding and returns 200")
-  void postWebhookRoute_200_withIdentityPayload() throws Exception {
-    Exchange exchange = invokeIngestionRoute("public-connector", "{\"event\":\"identity\"}",
-        "identity");
+  @ParameterizedTest(name = "[{index}]")
+  @MethodSource("successDecodingCases")
+  @DisplayName("Route returns 200 for supported decoding scenarios")
+  void postWebhookRoute_200_forSupportedDecodingScenarios(Object payload, String contentEncoding)
+      throws Exception {
+    Exchange exchange = invokeIngestionRoute("public-connector", payload, contentEncoding);
 
     assertEquals(200, exchange.getMessage().getHeader(Exchange.HTTP_RESPONSE_CODE));
     assertEquals("application/json", exchange.getMessage().getHeader(Exchange.CONTENT_TYPE));
@@ -121,13 +131,50 @@ class InboundWebhookIngestionRouteTest extends AbstractIntegrationTest {
   }
 
   @Test
-  @DisplayName("Route accepts gzip payload and returns 200")
-  void postWebhookRoute_200_withGzipPayload() throws Exception {
-    byte[] compressedPayload = gzip("{\"event\":\"gzip\"}");
-    Exchange exchange = invokeIngestionRoute("public-connector", compressedPayload, "gzip");
+  @DisplayName("Route returns 400 when gzip header is declared but payload is not compressed")
+  void postWebhookRoute_400_whenGzipHeaderPayloadIsCorrupted() throws Exception {
+    Exchange exchange = invokeIngestionRoute("public-connector", "{\"event\":\"not-gzip\"}",
+        "gzip");
+
+    assertEquals(400, exchange.getMessage().getHeader(Exchange.HTTP_RESPONSE_CODE));
+    assertEquals("application/json", exchange.getMessage().getHeader(Exchange.CONTENT_TYPE));
+    assertJsonErrorResponse(exchange, "BAD_REQUEST", "Invalid or corrupted compressed payload");
+  }
+
+  @Test
+  @DisplayName("Route returns 200 when webhook exists and gzip payload is provided as Base64")
+  void postWebhookRoute_200_whenWebhookExistsAndEnabled_withGzipBase64Payload() throws Exception {
+    Exchange exchange = invokeIngestionRoute("public-connector", gzipSamplePayloadAsBase64(),
+        "gzip");
 
     assertEquals(200, exchange.getMessage().getHeader(Exchange.HTTP_RESPONSE_CODE));
     assertEquals("application/json", exchange.getMessage().getHeader(Exchange.CONTENT_TYPE));
     assertJsonSuccessResponse(exchange);
+  }
+
+  @Test
+  @DisplayName("Route returns 400 when gzip header is declared with null payload")
+  void postWebhookRoute_400_whenGzipHeaderPayloadIsNull() throws Exception {
+    Exchange exchange = invokeIngestionRoute("public-connector", null, "gzip");
+
+    assertEquals(400, exchange.getMessage().getHeader(Exchange.HTTP_RESPONSE_CODE));
+    assertEquals("application/json", exchange.getMessage().getHeader(Exchange.CONTENT_TYPE));
+    assertJsonErrorResponse(exchange, "BAD_REQUEST", "Invalid or corrupted compressed payload");
+  }
+
+  @Test
+  @DisplayName("Route keeps compatibility when encoding header is unknown")
+  void postWebhookRoute_200_whenEncodingHeaderIsUnknown() throws Exception {
+    Exchange exchange = invokeIngestionRoute("public-connector", "{\"event\":\"plain\"}",
+        "gzip-weird");
+
+    assertEquals(200, exchange.getMessage().getHeader(Exchange.HTTP_RESPONSE_CODE));
+    assertEquals("application/json", exchange.getMessage().getHeader(Exchange.CONTENT_TYPE));
+    assertJsonSuccessResponse(exchange);
+  }
+
+  private static Stream<Arguments> successDecodingCases() throws Exception {
+    return Stream.of(Arguments.of("{\"event\":\"identity\"}", "identity"),
+        Arguments.of(gzipSamplePayload(), "gzip"), Arguments.of(null, null));
   }
 }
