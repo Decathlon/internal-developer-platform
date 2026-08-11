@@ -81,4 +81,5 @@ public class GenericInboundEventRouteBuilder extends RouteBuilder {
           }
         });
   }
+
 }

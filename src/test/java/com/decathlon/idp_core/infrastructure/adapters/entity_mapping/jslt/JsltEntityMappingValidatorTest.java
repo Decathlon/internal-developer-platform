@@ -3,6 +3,7 @@ package com.decathlon.idp_core.infrastructure.adapters.entity_mapping.jslt;
 import static org.assertj.core.api.Assertions.*;
 
 import java.lang.reflect.Method;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -24,7 +25,8 @@ class JsltEntityMappingValidatorTest {
 
   @BeforeEach
   void setUp() {
-    validator = new JsltEntityMappingValidator(new JsltEngine());
+    validator = new JsltEntityMappingValidator(new JsltEngine(Collections.emptyList()));
+
   }
 
   // ---------------------------------------------------------------------------
