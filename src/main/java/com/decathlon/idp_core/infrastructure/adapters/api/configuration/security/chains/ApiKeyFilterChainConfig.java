@@ -23,7 +23,7 @@ public class ApiKeyFilterChainConfig {
 
   @Bean
   @Order(3)
-  public SecurityFilterChain apiKeySecurityFilterChain(HttpSecurity http) throws Exception {
+  public SecurityFilterChain apiKeySecurityFilterChain(HttpSecurity http) {
     http.authorizeHttpRequests(auth -> auth.requestMatchers("/api/v1/**").fullyAuthenticated()
         .anyRequest().authenticated()).cors(withDefaults());
     return http.build();

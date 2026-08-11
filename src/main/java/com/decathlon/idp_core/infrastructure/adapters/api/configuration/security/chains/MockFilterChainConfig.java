@@ -47,7 +47,7 @@ import com.decathlon.idp_core.infrastructure.adapters.api.auth.JitProvisioningFi
 /// - Additional claims: Mock user information
 ///
 @Configuration
-@ConditionalOnProperty(prefix = "app.security.authentication", name = "mechanism", havingValue = "mock")
+@ConditionalOnProperty(prefix = "app.security.authentication.mock", name = "enabled", havingValue = "true")
 public class MockFilterChainConfig {
 
   private final JitProvisioningFilter jitProvisioningFilter;
@@ -70,7 +70,7 @@ public class MockFilterChainConfig {
   /// @return Configured security filter chain
   @Bean
   @Order(4)
-  public SecurityFilterChain mockSecurityFilterChain(HttpSecurity http) throws Exception {
+  public SecurityFilterChain mockSecurityFilterChain(HttpSecurity http) {
     try {
       http.sessionManagement(
           session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
@@ -135,12 +135,12 @@ public class MockFilterChainConfig {
     private Jwt createMockJwt() {
       Instant now = Instant.now();
       Instant expiresAt = now.plusSeconds(3600);
-
       Map<String, Object> headers = Map.of("alg", "RS256", "typ", "JWT");
 
-      Map<String, Object> claims = Map.of("sub", "local-developer", "client_id", "client-id",
-          "scope", "auth read write", "iat", now.getEpochSecond(), "exp",
-          expiresAt.getEpochSecond(), "user_id", "dev-user-001", "email", "developer@local.dev");
+      Map<String, Object> claims = Map.of("sub", "local-developer", "preferred_username",
+          "local-developer", "name", "Local Developer", "client_id", "client-id", "scope",
+          "auth read write", "iat", now.getEpochSecond(), "exp", expiresAt.getEpochSecond(),
+          "email", "developer@local.dev", "user_id", "dev-user-001");
 
       return new Jwt("mock-token-value", now, expiresAt, headers, claims);
     }

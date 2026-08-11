@@ -28,7 +28,7 @@ public class JwtFilterChainConfig {
 
   @Bean
   @Order(2)
-  public SecurityFilterChain jwtSecurityFilterChain(HttpSecurity http) throws Exception {
+  public SecurityFilterChain jwtSecurityFilterChain(HttpSecurity http) {
     http.authorizeHttpRequests(auth -> auth
         .requestMatchers("/api/v1/**").fullyAuthenticated().anyRequest().authenticated())
         .cors(withDefaults())

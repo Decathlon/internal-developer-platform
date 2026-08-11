@@ -17,6 +17,9 @@ import jakarta.servlet.ServletResponse;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.boot.autoconfigure.AutoConfigurations;
 import org.springframework.boot.test.context.runner.ApplicationContextRunner;
 import org.springframework.mock.web.MockHttpServletRequest;
@@ -36,7 +39,11 @@ import com.decathlon.idp_core.infrastructure.adapters.api.auth.JitProvisioningFi
 /// Unit tests for MockFilterChainConfig and MockJwtAuthenticationFilter.
 /// Covers mock security setup and JWT token generation for local development.
 @DisplayName("MockFilterChainConfig Tests")
+@ExtendWith(MockitoExtension.class)
 class MockFilterChainConfigTest {
+
+  @Mock
+  DefaultSecurityFilterChain securityFilterChain;
 
   @Test
   void shouldInjectMockJwtAuthenticationAndClearAfterwards() throws ServletException, IOException {
@@ -80,22 +87,23 @@ class MockFilterChainConfigTest {
 
   private HttpSecurity httpSecurity() {
     HttpSecurity http = mock(HttpSecurity.class, org.mockito.Answers.RETURNS_DEEP_STUBS);
-    when(http.build()).thenReturn(mock(DefaultSecurityFilterChain.class));
+    when(http.build()).thenReturn(securityFilterChain);
     return http;
   }
 
   @Test
   void shouldLoadConfigurationWhenMockIsEnabled() {
-    contextRunner.withPropertyValues("app.security.authentication.mechanism=mock").run(context -> {
-      assertThat(context).hasSingleBean(MockFilterChainConfig.class)
-          .hasSingleBean(SecurityFilterChain.class);
-      assertThat(context.getBean("mockSecurityFilterChain")).isNotNull();
-    });
+    contextRunner.withPropertyValues("app.security.authentication.mock.enabled=true")
+        .run(context -> {
+          assertThat(context).hasSingleBean(MockFilterChainConfig.class)
+              .hasSingleBean(SecurityFilterChain.class);
+          assertThat(context.getBean("mockSecurityFilterChain")).isNotNull();
+        });
   }
 
   @Test
   void shouldNotLoadConfigurationWhenMockIsDisabled() {
-    contextRunner.withPropertyValues("app.security.authentication.mechanism=jwt")
+    contextRunner.withPropertyValues("app.security.authentication.mock.enabled=false")
         .run(context -> assertThat(context).doesNotHaveBean(MockFilterChainConfig.class)
             .doesNotHaveBean("mockSecurityFilterChain"));
   }

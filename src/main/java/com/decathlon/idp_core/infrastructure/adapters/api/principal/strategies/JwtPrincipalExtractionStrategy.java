@@ -17,6 +17,7 @@ import com.decathlon.idp_core.infrastructure.adapters.api.principal.PrincipalExt
 @Component
 public class JwtPrincipalExtractionStrategy implements PrincipalExtractionStrategy {
 
+  public static final String CLIENT_ID = "client_id";
   private final AuthenticationProperties authProperties;
 
   public JwtPrincipalExtractionStrategy(AuthenticationProperties authProperties) {
@@ -133,7 +134,7 @@ public class JwtPrincipalExtractionStrategy implements PrincipalExtractionStrate
     }
 
     // Fallback: sub equals client_id (M2M flow where subject is the OAuth2 client)
-    String clientIdClaim = claimMappings.get("client_id");
+    String clientIdClaim = claimMappings.get(CLIENT_ID);
     String azpClaim = claimMappings.get("azp");
 
     String clientId = Optional.ofNullable(clientIdClaim)
@@ -175,7 +176,7 @@ public class JwtPrincipalExtractionStrategy implements PrincipalExtractionStrate
     Map<String, String> claimMappings = authProperties.claimMappings();
 
     // Extract client_id or azp, fallback to sub
-    String clientIdClaim = claimMappings.get("client_id");
+    String clientIdClaim = claimMappings.get(CLIENT_ID);
     String azpClaim = claimMappings.get("azp");
 
     String clientId = Optional.ofNullable(clientIdClaim)
@@ -193,7 +194,7 @@ public class JwtPrincipalExtractionStrategy implements PrincipalExtractionStrate
         .map(Object::toString).orElse(clientId);
 
     Map<String, String> attributes = new HashMap<>();
-    attributes.put("client_id", clientId);
+    attributes.put(CLIENT_ID, clientId);
 
     // Extract origin if present (non-standard, IdP-specific)
     String originValue = Optional.ofNullable(claims.get("origin")).map(Object::toString)

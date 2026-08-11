@@ -21,7 +21,7 @@ public class PublicFilterChainConfig {
 
   @Bean
   @Order(1) // Evaluated first
-  public SecurityFilterChain publicFilterChain(HttpSecurity http) throws Exception {
+  public SecurityFilterChain publicFilterChain(HttpSecurity http) {
     // Uses the DRY properties from YAML
     String[] publicPaths = authProperties.jitProvisioningExcludedPaths().toArray(new String[0]);
 
