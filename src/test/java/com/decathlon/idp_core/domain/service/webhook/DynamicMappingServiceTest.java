@@ -160,7 +160,7 @@ class DynamicMappingServiceTest {
     void shouldPreserveIdAndIdentifier() {
       EntityDynamicMapping existing = buildMapping();
       EntityDynamicMapping incoming = new EntityDynamicMapping(null, "ignored-id",
-          "new-entityTemplateIdentifier", ".newFilter", MappingAction.UPSERT, "New Name",
+          "new-entityTemplateIdentifier", ".newFilter", MappingAction.UPDATE_ENTITY, "New Name",
           "New Desc", ".newId", ".newTitle", Map.of("prop", ".val"), List.of());
 
       when(entityDynamicMappingPort.findByIdentifier(MAPPING_IDENTIFIER))
@@ -179,7 +179,7 @@ class DynamicMappingServiceTest {
     void shouldApplyIncomingFields() {
       EntityDynamicMapping existing = buildMapping();
       EntityDynamicMapping incoming = new EntityDynamicMapping(null, "ignored",
-          "new-entityTemplateIdentifier", ".newFilter", MappingAction.UPSERT, "New Name",
+          "new-entityTemplateIdentifier", ".newFilter", MappingAction.UPDATE_ENTITY, "New Name",
           "New Desc", ".newId", ".newTitle", Map.of("k", ".v"),
           List.of(new RelationMapping("rel", List.of(".rel"))));
 
@@ -230,7 +230,7 @@ class DynamicMappingServiceTest {
     void shouldSaveMergedMapping() {
       EntityDynamicMapping existing = buildMapping();
       EntityDynamicMapping incoming = new EntityDynamicMapping(null, "ignored",
-          "updated-entityTemplateIdentifier", ".updated", MappingAction.UPSERT, "Updated Name",
+          "updated-entityTemplateIdentifier", ".updated", MappingAction.UPDATE_ENTITY, "Updated Name",
           "Updated Desc", ".uid", ".utitle", Map.of(), List.of());
 
       when(entityDynamicMappingPort.findByIdentifier(MAPPING_IDENTIFIER))
@@ -326,7 +326,7 @@ class DynamicMappingServiceTest {
 
   private EntityDynamicMapping buildMapping() {
     return new EntityDynamicMapping(UUID.randomUUID(), MAPPING_IDENTIFIER,
-        "github_deployment_status", ".deployment_status != null", MappingAction.UPSERT,
+        "github_deployment_status", ".deployment_status != null", MappingAction.UPDATE_ENTITY,
         "github deployment status name", "github deployment status description", ".id", ".name",
         Map.of(), List.of());
   }

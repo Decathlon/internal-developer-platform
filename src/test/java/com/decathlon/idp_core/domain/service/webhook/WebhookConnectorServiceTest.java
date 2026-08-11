@@ -141,7 +141,7 @@ class WebhookConnectorServiceTest {
     @DisplayName("Should keep enabled as true when mappings are present")
     void shouldKeepEnabledWhenMappingsPresent() {
       EntityDynamicMapping mapping = new EntityDynamicMapping(UUID.randomUUID(),
-          "deployment-mapping", "deployment", "true", MappingAction.UPSERT, "deployment name",
+          "deployment-mapping", "deployment", "true", MappingAction.UPDATE_ENTITY, "deployment name",
           "deployment description", ".id", ".name", Map.of(), List.of());
       WebhookConnector toCreate = buildWebhookConnectorWithMappings(null, "github-dora",
           "GitHub DORA", "desc", true, List.of(mapping));
@@ -290,7 +290,7 @@ class WebhookConnectorServiceTest {
     @DisplayName("Should keep enabled value when update has mappings")
     void shouldKeepEnabledWhenUpdateHasMappings() {
       EntityDynamicMapping mapping = new EntityDynamicMapping(UUID.randomUUID(),
-          "deployment-mapping", "deployment", "true", MappingAction.UPSERT, "deployment name",
+          "deployment-mapping", "deployment", "true", MappingAction.UPDATE_ENTITY, "deployment name",
           "deployment description", ".id", ".name", Map.of(), List.of());
       WebhookConnector existing = buildWebhookConnector(EXISTING_ID, IDENTIFIER, "Old name",
           "Old desc", false);
@@ -430,7 +430,7 @@ class WebhookConnectorServiceTest {
 
     private EntityDynamicMapping buildMapping(String identifier) {
       return new EntityDynamicMapping(UUID.randomUUID(), identifier, "deployment", "true",
-          MappingAction.UPSERT, "deployment name", "deployment description", ".id", ".name",
+          MappingAction.UPDATE_ENTITY, "deployment name", "deployment description", ".id", ".name",
           Map.of(), List.of());
     }
   }

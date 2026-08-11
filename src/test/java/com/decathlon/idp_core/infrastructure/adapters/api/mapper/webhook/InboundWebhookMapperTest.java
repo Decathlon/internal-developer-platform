@@ -28,7 +28,7 @@ class InboundWebhookMapperTest {
 
   private static EntityDynamicMapping resolvedMapping() {
     return new EntityDynamicMapping(UUID.randomUUID(), "deployment-mapping", "deployment",
-        ".eventType == \"DEPLOYED\"", MappingAction.UPSERT, "deployment mapping",
+        ".eventType == \"DEPLOYED\"", MappingAction.UPDATE_ENTITY, "deployment mapping",
         "deployment mapping description", ".id", ".name", Map.of("environment", ".env"),
         List.of(new RelationMapping("service", List.of(".service"))));
   }

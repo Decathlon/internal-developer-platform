@@ -166,7 +166,7 @@ class JsltEntityMappingValidatorTest {
   private EntityDynamicMapping buildMapping(String filter, String entityIdentifier,
       String entityTitle, Map<String, String> properties, List<RelationMapping> relations) {
     return new EntityDynamicMapping(UUID.randomUUID(), "my-mapping", "microservice", filter,
-        MappingAction.UPSERT, "My Mapping", "description", entityIdentifier, entityTitle,
+        MappingAction.UPDATE_ENTITY, "My Mapping", "description", entityIdentifier, entityTitle,
         properties, relations);
   }
 

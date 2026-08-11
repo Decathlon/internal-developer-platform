@@ -65,7 +65,7 @@ class EntityDynamicMappingValidationServiceTest {
       String entityDynamicMappingIdentifier, Map<String, String> properties,
       Map<String, String> relations) {
     return new EntityDynamicMapping(null, entityDynamicMappingIdentifier, templateIdentifier,
-        ".eventType == \"DEPLOYED\"", MappingAction.UPSERT, "name", "description", ".id", ".name",
+        ".eventType == \"DEPLOYED\"", MappingAction.UPDATE_ENTITY, "name", "description", ".id", ".name",
         properties, toRelationMappings(relations));
   }
 
@@ -162,7 +162,7 @@ class EntityDynamicMappingValidationServiceTest {
       PropertyDefinition property2 = buildProperty("version", false);
       EntityTemplate template2 = buildEntityTemplate(List.of(property2), List.of());
       EntityDynamicMapping mapping2 = new EntityDynamicMapping(null, "service_mapping", "service",
-          ".type == \"SERVICE\"", MappingAction.UPSERT, "service mapping",
+          ".type == \"SERVICE\"", MappingAction.UPDATE_ENTITY, "service mapping",
           "service mapping description", ".id", ".name", Map.of("version", ".ver"), List.of());
 
       when(entityTemplateService.getEntityTemplateByIdentifier("deployment")).thenReturn(template1);

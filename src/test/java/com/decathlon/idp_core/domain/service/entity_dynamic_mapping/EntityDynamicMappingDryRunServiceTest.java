@@ -60,7 +60,7 @@ class EntityDynamicMappingDryRunServiceTest {
 
   private EntityDynamicMapping createValidMapping() {
     return new EntityDynamicMapping(null, "test-mapping", "microservice", ".action == \"pushed\"",
-        MappingAction.UPSERT, "Test Mapping", "Test Description", ".repository.full_name",
+        MappingAction.UPDATE_ENTITY, "Test Mapping", "Test Description", ".repository.full_name",
         ".repository.name",
         Map.of("applicationName", ".repository.name", "language", ".repository.language"),
         List.of());

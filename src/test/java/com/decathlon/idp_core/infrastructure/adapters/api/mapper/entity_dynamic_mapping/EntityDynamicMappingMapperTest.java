@@ -31,7 +31,7 @@ class EntityDynamicMappingMapperTest {
         new RelationMapping("dependency", List.of(".dependencies[*].identifier")));
 
     EntityDynamicMapping mapping = new EntityDynamicMapping(null, // id
-        "test-mapping", "microservice", ".action == \"pushed\"", MappingAction.UPSERT,
+        "test-mapping", "microservice", ".action == \"pushed\"", MappingAction.UPDATE_ENTITY,
         "Test Mapping", "Test Description", ".repository.full_name", ".repository.name",
         Map.of("applicationName", ".repository.name"), relations);
 
@@ -52,7 +52,7 @@ class EntityDynamicMappingMapperTest {
   @DisplayName("Should handle null relations list in entity mapping")
   void fromEntityMappingToDto_with_null_relations() {
     EntityDynamicMapping mapping = new EntityDynamicMapping(null, // id
-        "test-mapping", "microservice", ".action == \"pushed\"", MappingAction.UPSERT,
+        "test-mapping", "microservice", ".action == \"pushed\"", MappingAction.UPDATE_ENTITY,
         "Test Mapping", "Test Description", ".repository.full_name", ".repository.name",
         Map.of("applicationName", ".repository.name"), null); // null relations
 
@@ -67,7 +67,7 @@ class EntityDynamicMappingMapperTest {
   @DisplayName("Should handle empty relations list in entity mapping")
   void fromEntityMappingToDto_with_empty_relations() {
     EntityDynamicMapping mapping = new EntityDynamicMapping(null, // id
-        "test-mapping", "microservice", ".action == \"pushed\"", MappingAction.UPSERT,
+        "test-mapping", "microservice", ".action == \"pushed\"", MappingAction.UPDATE_ENTITY,
         "Test Mapping", "Test Description", ".repository.full_name", ".repository.name",
         Map.of("applicationName", ".repository.name"), List.of()); // empty relations
 
@@ -102,7 +102,7 @@ class EntityDynamicMappingMapperTest {
   @DisplayName("Should handle null properties in entity mapping")
   void fromEntityMappingToDto_with_null_properties() {
     EntityDynamicMapping mapping = new EntityDynamicMapping(null, "test-mapping", "microservice",
-        ".action == \"pushed\"", MappingAction.UPSERT, "Test Mapping", "Test Description",
+        ".action == \"pushed\"", MappingAction.UPDATE_ENTITY, "Test Mapping", "Test Description",
         ".repository.full_name", ".repository.name", null, // null properties
         List.of());
 
@@ -120,7 +120,7 @@ class EntityDynamicMappingMapperTest {
         .of(new RelationMapping("api-link", List.of(".repository.full_name")));
 
     EntityDynamicMapping mapping = new EntityDynamicMapping(null, // id
-        "test-mapping", "microservice", ".action == \"pushed\"", MappingAction.UPSERT,
+        "test-mapping", "microservice", ".action == \"pushed\"", MappingAction.UPDATE_ENTITY,
         "Test Mapping", "Test Description", ".repository.full_name", ".repository.name",
         Map.of("applicationName", ".repository.name"), originalRelations);
 

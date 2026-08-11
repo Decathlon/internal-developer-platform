@@ -269,11 +269,12 @@ class EntityDynamicMappingAdaptorTest {
     // name,
     // description, entityIdentifier, entityName, properties, relations
     return new EntityDynamicMappingJpaEntity(UUID.randomUUID(), identifier, UUID.randomUUID(), null,
-        ".filter", MappingAction.UPSERT, "name", "desc", ".id", ".title", "{}", "{}");
+        ".filter", MappingAction.UPDATE_ENTITY, "name", "desc", ".id", ".title", "{}", "{}");
   }
 
   private EntityDynamicMapping buildDomainMapping(String identifier) {
     return new EntityDynamicMapping(UUID.randomUUID(), identifier, "web-service", ".filter",
-        MappingAction.UPSERT, "name", "desc", ".id", ".title", Map.of(), List.of());
+        MappingAction.UPDATE_PROPERTIES, "name", "desc", ".id", ".title", Map.of(), List.of());
   }
+
 }
