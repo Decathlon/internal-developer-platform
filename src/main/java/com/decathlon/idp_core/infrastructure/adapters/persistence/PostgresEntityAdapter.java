@@ -16,6 +16,7 @@ import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Component;
 
 import com.decathlon.idp_core.domain.model.entity.Entity;
+import com.decathlon.idp_core.domain.model.entity.EntityCompositeKey;
 import com.decathlon.idp_core.domain.model.entity.EntityFilter;
 import com.decathlon.idp_core.domain.model.entity.EntitySummary;
 import com.decathlon.idp_core.domain.model.search.PaginatedResult;
@@ -87,6 +88,21 @@ public class PostgresEntityAdapter implements EntityRepositoryPort {
   @Override
   public List<EntitySummary> findByIdentifierIn(List<String> identifiers) {
     return jpaEntityRepository.findByIdentifierIn(identifiers);
+  }
+
+  @Override
+  public List<EntitySummary> findSummariesByCompositeKeys(List<EntityCompositeKey> compositeKeys) {
+    if (compositeKeys == null || compositeKeys.isEmpty()) {
+      return List.of();
+    }
+
+    // Split composite keys into parallel arrays for the native query
+    String[] templateIdentifiers = compositeKeys.stream()
+        .map(EntityCompositeKey::templateIdentifier).toArray(String[]::new);
+    String[] identifiers = compositeKeys.stream().map(EntityCompositeKey::identifier)
+        .toArray(String[]::new);
+
+    return jpaEntityRepository.findByCompositeKeys(templateIdentifiers, identifiers);
   }
 
   @Override

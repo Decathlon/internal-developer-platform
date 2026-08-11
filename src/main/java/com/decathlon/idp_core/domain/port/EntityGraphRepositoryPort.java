@@ -1,5 +1,6 @@
 package com.decathlon.idp_core.domain.port;
 
+import java.util.Collection;
 import java.util.Map;
 import java.util.UUID;
 
@@ -50,7 +51,7 @@ public interface EntityGraphRepositoryPort {
   /// @return an immutable map of all discovered entities keyed by their UUID,
   /// including the root entity. Returns an empty map if the root entity
   /// does not exist.
-  Map<UUID, Entity> findEntityGraph(UUID entityId, int depth, boolean includeProperties,
+  Map<UUID, Entity> findEntityGraph(Collection<UUID> rootIds, int depth, boolean includeProperties,
       EntityGraphTraversalMode mode);
 
 }

@@ -5,17 +5,15 @@
       "name": "Batch Job 1",
       "properties": {},
       "relations": {},
-      "relations_as_target": {},
       "template_identifier": "batch-job"
     },
     {
       "identifier": "microservice-1",
       "name": "Microservice 1",
       "properties": {},
-      "relations": {},
-      "relations_as_target": {
+      "relations": {
         "api-link": [
-          { "identifier": "web-api-1", "name": "Web API 1" }
+          { "identifier": "web-api-1", "name": "Web API 1", "template_identifier": "web-service" }
         ]
       },
       "template_identifier": "microservice"
