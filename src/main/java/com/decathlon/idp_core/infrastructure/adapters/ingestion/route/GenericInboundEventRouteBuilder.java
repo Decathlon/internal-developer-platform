@@ -2,6 +2,7 @@ package com.decathlon.idp_core.infrastructure.adapters.ingestion.route;
 
 import static com.decathlon.idp_core.infrastructure.adapters.ingestion.configuration.IngestionConstants.*;
 
+import com.decathlon.idp_core.infrastructure.adapters.ingestion.exception_handler.WebhookExceptionHandlerHelper;
 import org.apache.camel.Exchange;
 import org.apache.camel.LoggingLevel;
 import org.apache.camel.builder.RouteBuilder;
@@ -11,7 +12,6 @@ import com.decathlon.idp_core.domain.exception.webhook.WebhookConfigurationMissi
 import com.decathlon.idp_core.domain.exception.webhook.WebhookDisabledException;
 import com.decathlon.idp_core.domain.model.inbound_connectors.webhook.WebhookConnector;
 import com.decathlon.idp_core.domain.service.webhook.WebhookConnectorService;
-import com.decathlon.idp_core.infrastructure.adapters.ingestion.exception_handler.WebhookExceptionRouteBuilder;
 import com.decathlon.idp_core.infrastructure.adapters.ingestion.processor.SecurityProcessor;
 import com.decathlon.idp_core.infrastructure.adapters.ingestion.processor.decoder.DecodingProcessor;
 
@@ -25,22 +25,19 @@ public class GenericInboundEventRouteBuilder extends RouteBuilder {
   private final WebhookConnectorService webhookConnectorService;
   private final DecodingProcessor decodingProcessor;
   private final SecurityProcessor securityProcessor;
-  private final WebhookExceptionRouteBuilder webhookExceptionRouteBuilder;
-
+    private final WebhookExceptionRouteBuilder webhookExceptionRouteBuilder;
   @Override
   public void configure() throws Exception {
     webhookExceptionRouteBuilder.configureExceptions(this);
 
-    from(DIRECT_PROCESS_EVENT).routeId(ROUTE_ID_WEBHOOK_PIPELINE)
-        .setProperty(RAW_PAYLOAD_BODY_PROPERTY, body()).to(DIRECT_FETCH_CONFIGURATION)
-        .to(DIRECT_VALIDATE_ENABLED).to(DIRECT_DECODE_PAYLOAD)
-        .setHeader(Exchange.HTTP_RESPONSE_CODE, constant(HTTP_CREATED))
-        .to(DIRECT_VALIDATE_ENABLED).to(DIRECT_VALIDATE_SECURITY).to(DIRECT_DECODE_PAYLOAD)
-        .setHeader(Exchange.HTTP_RESPONSE_CODE, constant(HTTP_OK))
-        .setHeader(Exchange.CONTENT_TYPE, constant(APPLICATION_JSON))
-        .setBody(constant(SUCCESS_BODY_CONFIGURATION_LOADED));
+      from(DIRECT_PROCESS_EVENT).routeId(ROUTE_ID_WEBHOOK_PIPELINE)
+              .setProperty(RAW_PAYLOAD_BODY_PROPERTY, body()).to(DIRECT_FETCH_CONFIGURATION)
+              .to(DIRECT_VALIDATE_ENABLED).to(DIRECT_VALIDATE_SECURITY).to(DIRECT_DECODE_PAYLOAD)
+              .setHeader(Exchange.HTTP_RESPONSE_CODE, constant(HTTP_CREATED))
+              .setHeader(Exchange.CONTENT_TYPE, constant(APPLICATION_JSON))
+              .setBody(constant(SUCCESS_BODY_CONFIGURATION_LOADED));
 
-    // --- Step A: Fetch Configuration ---
+      // --- Step A: Fetch Configuration ---
     from(DIRECT_FETCH_CONFIGURATION).routeId(ROUTE_ID_FETCH_WEBHOOK_CONFIG)
         .log(LoggingLevel.DEBUG,
             "Fetching configuration for webhook ID: ${exchangeProperty.connectorIdentifier}")
