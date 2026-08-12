@@ -29,11 +29,9 @@ public final class IngestionConstants {
   public static final String ROUTE_ID_VALIDATE_WEBHOOK_ENABLED = "validate-webhook-enabled";
 
   public static final int HTTP_OK = 200;
-  public static final String ERROR_DESCRIPTION_WEBHOOK_NOT_FOUND = "Webhook configuration not found";
-  public static final String ERROR_DESCRIPTION_WEBHOOK_DISABLED = "Webhook connector is disabled";
-  public static final String ERROR_DESCRIPTION_WEBHOOK_CONFIGURATION_MISSING = "Webhook configuration unavailable";
-  public static final String ERROR_DESCRIPTION_INVALID_COMPRESSED_PAYLOAD = "Invalid or corrupted compressed payload";
-  public static final String ERROR_DESCRIPTION_INTERNAL_SERVER_ERROR = "Internal server error processing ingestion payload";
+  public static final int HTTP_BAD_REQUEST = 400;
+  public static final int HTTP_CREATED = 201;
+  public static final int HTTP_NO_CONTENT = 204;
   public static final String SUCCESS_BODY_CONFIGURATION_LOADED = "{\"status\": \"SUCCESS\", \"message\": \"Webhook configuration loaded and enabled.\"}";
 
   public static final String CONTENT_ENCODING_GZIP = "gzip";
