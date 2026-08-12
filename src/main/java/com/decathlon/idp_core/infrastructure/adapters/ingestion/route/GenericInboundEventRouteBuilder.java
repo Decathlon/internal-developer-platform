@@ -2,7 +2,7 @@ package com.decathlon.idp_core.infrastructure.adapters.ingestion.route;
 
 import static com.decathlon.idp_core.infrastructure.adapters.ingestion.configuration.IngestionConstants.*;
 
-import com.decathlon.idp_core.infrastructure.adapters.ingestion.exception_handler.WebhookExceptionHandlerHelper;
+import com.decathlon.idp_core.infrastructure.adapters.ingestion.exception_handler.WebhookExceptionRouteBuilder;
 import org.apache.camel.Exchange;
 import org.apache.camel.LoggingLevel;
 import org.apache.camel.builder.RouteBuilder;

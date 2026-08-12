@@ -60,8 +60,7 @@ public class DecodingProcessor {
     } catch (ZipException e) {
       throw new WebhookDecodingException("Corrupted or invalid compressed gzip stream", e);
     } catch (IOException e) {
-      throw new WebhookDecodingException(
-          "Failed to decompress payload for encoding: " + contentEncoding, e);
+      throw new WebhookDecodingException("Failed to decompress payload for encoding: " + contentEncoding, e);
     }
 
     return new String(decodedPayload, StandardCharsets.UTF_8);
