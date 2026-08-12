@@ -4,9 +4,11 @@ import static com.decathlon.idp_core.infrastructure.adapters.ingestion.configura
 import static com.decathlon.idp_core.infrastructure.adapters.ingestion.configuration.IngestionConstants.CONNECTOR_IDENTIFIER_PROPERTY;
 import static com.decathlon.idp_core.infrastructure.adapters.ingestion.configuration.IngestionConstants.ERROR_DESCRIPTION_INTERNAL_SERVER_ERROR;
 import static com.decathlon.idp_core.infrastructure.adapters.ingestion.configuration.IngestionConstants.ERROR_DESCRIPTION_INVALID_COMPRESSED_PAYLOAD;
+import static com.decathlon.idp_core.infrastructure.adapters.ingestion.configuration.IngestionConstants.ERROR_DESCRIPTION_WEBHOOK_AUTHENTICATION_FAILED;
 import static com.decathlon.idp_core.infrastructure.adapters.ingestion.configuration.IngestionConstants.ERROR_DESCRIPTION_WEBHOOK_CONFIGURATION_MISSING;
 import static com.decathlon.idp_core.infrastructure.adapters.ingestion.configuration.IngestionConstants.ERROR_DESCRIPTION_WEBHOOK_DISABLED;
 import static com.decathlon.idp_core.infrastructure.adapters.ingestion.configuration.IngestionConstants.ERROR_DESCRIPTION_WEBHOOK_NOT_FOUND;
+import static com.decathlon.idp_core.infrastructure.adapters.ingestion.configuration.IngestionConstants.ERROR_DESCRIPTION_WEBHOOK_SECURITY_CONFIGURATION_INVALID;
 import static com.decathlon.idp_core.infrastructure.adapters.ingestion.configuration.IngestionConstants.UNKNOWN_VALUE;
 
 import java.util.zip.ZipException;
@@ -19,9 +21,11 @@ import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Component;
 
+import com.decathlon.idp_core.domain.exception.webhook.WebhookAuthenticationException;
 import com.decathlon.idp_core.domain.exception.webhook.WebhookConfigurationMissingException;
 import com.decathlon.idp_core.domain.exception.webhook.WebhookConnectorNotFoundException;
 import com.decathlon.idp_core.domain.exception.webhook.WebhookDisabledException;
+import com.decathlon.idp_core.domain.exception.webhook.WebhookSecurityConfigurationException;
 import com.decathlon.idp_core.infrastructure.adapters.common.model.ErrorResponse;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -48,6 +52,18 @@ public class WebhookExceptionRouteBuilder {
             ERROR_DESCRIPTION_WEBHOOK_DISABLED))
         .process(exchange -> logHandledException(exchange, LoggingLevel.WARN,
             "webhook_connector_disabled", HttpStatus.FORBIDDEN.value()));
+
+    routeBuilder.onException(WebhookAuthenticationException.class).handled(true)
+        .process(exchange -> setJsonErrorResponse(exchange, HttpStatus.UNAUTHORIZED,
+            ERROR_DESCRIPTION_WEBHOOK_AUTHENTICATION_FAILED))
+        .process(exchange -> logHandledException(exchange, LoggingLevel.WARN,
+            "webhook_authentication_failed", HttpStatus.UNAUTHORIZED.value()));
+
+    routeBuilder.onException(WebhookSecurityConfigurationException.class).handled(true)
+        .process(exchange -> setJsonErrorResponse(exchange, HttpStatus.INTERNAL_SERVER_ERROR,
+            ERROR_DESCRIPTION_WEBHOOK_SECURITY_CONFIGURATION_INVALID))
+        .process(exchange -> logHandledException(exchange, LoggingLevel.ERROR,
+            "webhook_security_configuration_invalid", HttpStatus.INTERNAL_SERVER_ERROR.value()));
 
     routeBuilder.onException(ZipException.class).handled(true)
         .process(exchange -> setJsonErrorResponse(exchange, HttpStatus.BAD_REQUEST,
