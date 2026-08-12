@@ -1,12 +1,15 @@
-package com.decathlon.idp_core.infrastructure.adapters.ingestion.route;
+package com.decathlon.idp_core.infrastructure.adapters.ingestion.exception;
 
 import static com.decathlon.idp_core.infrastructure.adapters.ingestion.configuration.IngestionConstants.APPLICATION_JSON;
 import static com.decathlon.idp_core.infrastructure.adapters.ingestion.configuration.IngestionConstants.CONNECTOR_IDENTIFIER_PROPERTY;
 import static com.decathlon.idp_core.infrastructure.adapters.ingestion.configuration.IngestionConstants.ERROR_DESCRIPTION_INTERNAL_SERVER_ERROR;
+import static com.decathlon.idp_core.infrastructure.adapters.ingestion.configuration.IngestionConstants.ERROR_DESCRIPTION_INVALID_COMPRESSED_PAYLOAD;
 import static com.decathlon.idp_core.infrastructure.adapters.ingestion.configuration.IngestionConstants.ERROR_DESCRIPTION_WEBHOOK_CONFIGURATION_MISSING;
 import static com.decathlon.idp_core.infrastructure.adapters.ingestion.configuration.IngestionConstants.ERROR_DESCRIPTION_WEBHOOK_DISABLED;
 import static com.decathlon.idp_core.infrastructure.adapters.ingestion.configuration.IngestionConstants.ERROR_DESCRIPTION_WEBHOOK_NOT_FOUND;
 import static com.decathlon.idp_core.infrastructure.adapters.ingestion.configuration.IngestionConstants.UNKNOWN_VALUE;
+
+import java.util.zip.ZipException;
 
 import org.apache.camel.Exchange;
 import org.apache.camel.LoggingLevel;
@@ -46,6 +49,12 @@ public class WebhookExceptionRouteBuilder {
         .process(exchange -> logHandledException(exchange, LoggingLevel.WARN,
             "webhook_connector_disabled", HttpStatus.FORBIDDEN.value()));
 
+    routeBuilder.onException(ZipException.class).handled(true)
+        .process(exchange -> setJsonErrorResponse(exchange, HttpStatus.BAD_REQUEST,
+            ERROR_DESCRIPTION_INVALID_COMPRESSED_PAYLOAD))
+        .process(exchange -> logHandledException(exchange, LoggingLevel.WARN,
+            "invalid_compressed_payload", HttpStatus.BAD_REQUEST.value()));
+
     routeBuilder.onException(WebhookConfigurationMissingException.class).handled(true)
         .process(exchange -> setJsonErrorResponse(exchange, HttpStatus.INTERNAL_SERVER_ERROR,
             ERROR_DESCRIPTION_WEBHOOK_CONFIGURATION_MISSING))
@@ -65,8 +74,6 @@ public class WebhookExceptionRouteBuilder {
 
     exchange.getMessage().setHeader(Exchange.HTTP_RESPONSE_CODE, httpStatus.value());
     exchange.getMessage().setHeader(Exchange.CONTENT_TYPE, APPLICATION_JSON);
-
-    // Serialize with Jackson to guarantee valid JSON escaping and field encoding.
     exchange.getMessage().setBody(objectMapper.writeValueAsString(errorResponse));
   }
 

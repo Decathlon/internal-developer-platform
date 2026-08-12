@@ -36,6 +36,10 @@ spring:
 app:
   # security:
   #   mock-enabled: true
+  ingestion:
+    webhook:
+      base-path: /webhooks
+      identifier-path: /{webhookIdentifier}
   full-refresh-at-startup: true
   idp-core-prefix-url: http://localhost:8084
 logging:

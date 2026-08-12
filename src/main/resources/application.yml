@@ -99,6 +99,8 @@ spring:
           batch_versioned_data: true
 
 springdoc:
+    # Will expose the health endpoint in the OpenAPI spec.
+  show-actuator: true
   swagger-ui:
     # Sorts API tags alphabetically in the Swagger UI.
     # Improves readability of the API documentation.
@@ -111,6 +113,10 @@ springdoc:
     urls-primary-name: internal
 
 app:
+  ingestion:
+    webhook:
+      base-path: /webhooks
+      identifier-path: /{webhookIdentifier}
   # Base URL of this service, used to build self-referencing links.
   idp-core-prefix-url: ${IDP_CORE_PREFIX_URL}
 
@@ -136,6 +142,12 @@ management:
       headers:
         Authorization: ${OPEN_TELEMETRY_TOKEN:""}
 
+  endpoints:
+    web:
+      exposure:
+        # Explicitly restrict exposed actuator endpoints to health only.
+        # Prevents accidental exposure of env, beans, configprops, etc.
+        include: health
   endpoint:
     health:
       probes:
@@ -163,3 +175,18 @@ camel:
   component:
     platform-http:
       engine: "servlet"
+      # Never expose the health "details" map (e.g. database product name/version,
+      # validation query, disk space paths). Only UP/DOWN status is shown.
+      show-details: never
+      # Still surface per-component status (e.g. db: UP/DOWN) so direct
+      # dependencies can be checked, without leaking their details.
+      show-components: always
+  health:
+    diskspace:
+      # DiskSpace is not a direct dependency and its free/threshold values
+      # are not relevant to consumers checking service health.
+      enabled: false
+    ssl:
+      # SSL certificate/chain info is internal infrastructure detail and
+      # must not be exposed via actuator.
+      enabled: false

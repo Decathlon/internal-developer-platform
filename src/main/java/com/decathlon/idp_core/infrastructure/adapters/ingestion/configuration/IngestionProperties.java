@@ -7,7 +7,6 @@ import org.springframework.boot.context.properties.bind.DefaultValue;
 ///
 /// Allows externalizing the webhook base path and identifier path to avoid hardcoded endpoints.
 @ConfigurationProperties(prefix = "app.ingestion.webhook")
-public record IngestionProperties(
-    @DefaultValue("/webhooks") String basePath,
+public record IngestionProperties(@DefaultValue("/webhooks") String basePath,
     @DefaultValue("/{webhookIdentifier}") String identifierPath) {
 }

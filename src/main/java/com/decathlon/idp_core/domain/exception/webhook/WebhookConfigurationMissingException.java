@@ -8,8 +8,6 @@ import static com.decathlon.idp_core.domain.constant.ValidationMessages.WEBHOOK_
  */
 public class WebhookConfigurationMissingException extends RuntimeException {
 
-  private final String connectorIdentifier;
-
   /**
    * Creates a new exception for missing webhook configuration.
    *
@@ -18,15 +16,6 @@ public class WebhookConfigurationMissingException extends RuntimeException {
    */
   public WebhookConfigurationMissingException(String connectorIdentifier) {
     super(String.format(WEBHOOK_CONFIGURATION_MISSING, connectorIdentifier));
-    this.connectorIdentifier = connectorIdentifier;
   }
 
-  /**
-   * Returns the webhook identifier associated with the missing configuration.
-   *
-   * @return webhook identifier
-   */
-  public String getConnectorIdentifier() {
-    return connectorIdentifier;
-  }
 }

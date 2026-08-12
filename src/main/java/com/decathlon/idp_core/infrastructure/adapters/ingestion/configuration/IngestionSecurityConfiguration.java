@@ -7,28 +7,32 @@ import org.springframework.core.annotation.Order;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.web.SecurityFilterChain;
 
-/// Dedicated security filter chain for inbound webhook ingestion routes.
-///
-/// **Why a dedicated chain:**
-/// - Isolates ingestion security from API security to enable modular extraction
-/// - Keeps `/webhooks/**` intentionally public for external systems
-/// - Restricts CSRF bypass to webhook endpoints only
+// Dedicated security filter chain for inbound webhook ingestion routes.
+// Authentication model:
+// External callers do not authenticate through Spring Security for this entrypoint.
+// Authentication/authorization is enforced at application level in the ingestion
+// pipeline (for example HMAC, static token, or JWT subscription checks).
+// CSRF model (Sonar S4502):
+// CSRF attacks rely on browser sessions and cookies. Webhook ingestion is pure
+// machine-to-machine traffic, so browser CSRF protection does not apply. For this
+// reason, CSRF is intentionally ignored for `/webhooks/**`.
+@SuppressWarnings("java:S4502") // CSRF intentionally ignored for machine-to-machine webhook
+                                // endpoints
 @Configuration
 @ConditionalOnProperty(name = "app.security.mock-enabled", havingValue = "false", matchIfMissing = true)
 public class IngestionSecurityConfiguration {
 
-  /// Configures the ingestion-only security filter chain.
-  ///
-  /// **Scope:** applies only to `/webhooks/**` routes.
-  ///
-  /// @param http HttpSecurity used to build the ingestion filter chain
-  /// @return ingestion security filter chain
+  // Configures a dedicated filter chain for webhook ingestion.
+  // The chain is scoped to `/webhooks/**`, allows unauthenticated access at
+  // Spring
+  // Security level, and ignores CSRF for these M2M endpoints.
   @Bean
   @Order(1)
   public SecurityFilterChain ingestionSecurityFilterChain(HttpSecurity http) {
     http.securityMatcher("/webhooks/**")
         .authorizeHttpRequests(authorize -> authorize.anyRequest().permitAll())
         .csrf(csrf -> csrf.ignoringRequestMatchers("/webhooks/**"));
+
     return http.build();
   }
 }
