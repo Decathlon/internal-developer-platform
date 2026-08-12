@@ -26,4 +26,17 @@ public class StaticTokenSecurityValidator implements WebhookSecurityStrategy {
     WebhookSecurityConfigurationUtils.validateSecretAliasFormat(alias);
   }
 
+  @Override
+  public boolean validateRequest(Map<String, Object> headers, byte[] rawPayload,
+      Map<String, String> config) {
+    String headerName = WebhookSecurityConfigurationUtils.required(config, "header_name",
+        "headerName");
+    String alias = WebhookSecurityConfigurationUtils.required(config, "secret_alias",
+        "secretAlias");
+    String expectedToken = WebhookSecurityConfigurationUtils.resolveRuntimeSecret(alias);
+
+    String actualToken = WebhookSecurityConfigurationUtils.requiredHeader(headers, headerName);
+    return WebhookSecurityConfigurationUtils.constantTimeEquals(expectedToken, actualToken);
+  }
+
 }

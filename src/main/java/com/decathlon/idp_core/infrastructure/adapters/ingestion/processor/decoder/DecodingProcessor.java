@@ -1,19 +1,11 @@
 package com.decathlon.idp_core.infrastructure.adapters.ingestion.processor.decoder;
 
-import static com.decathlon.idp_core.infrastructure.adapters.ingestion.configuration.IngestionConstants.CONTENT_ENCODING_GZIP;
-import static com.decathlon.idp_core.infrastructure.adapters.ingestion.configuration.IngestionConstants.CONTENT_ENCODING_HEADER;
-import static com.decathlon.idp_core.infrastructure.adapters.ingestion.configuration.IngestionConstants.CONTENT_ENCODING_IDENTITY;
+import static com.decathlon.idp_core.infrastructure.adapters.ingestion.configuration.IngestionConstants.*;
 
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
-import java.util.Arrays;
-import java.util.Base64;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Locale;
-import java.util.Map;
-import java.util.Objects;
+import java.util.*;
 import java.util.zip.GZIPInputStream;
 import java.util.zip.ZipException;
 
@@ -124,6 +116,9 @@ public class DecodingProcessor {
             case byte[] byteArray -> byteArray;
             case String string -> {
                 String trimmed = string.trim();
+                if (isHex(trimmed)) {
+                    yield hexToBytes(trimmed);
+                }
                 if (isBase64(trimmed)) {
                     yield Base64.getDecoder().decode(trimmed);
                 }
@@ -132,6 +127,20 @@ public class DecodingProcessor {
             default -> payload.toString().getBytes(StandardCharsets.UTF_8);
         };
     }
+
+  private boolean isHex(String value) {
+    return value.length() % 2 == 0 && value.matches("^[0-9a-fA-F]+$");
+  }
+
+  private byte[] hexToBytes(String hex) {
+    int len = hex.length();
+    byte[] data = new byte[len / 2];
+    for (int i = 0; i < len; i += 2) {
+      data[i / 2] = (byte) ((Character.digit(hex.charAt(i), 16) << 4)
+          + Character.digit(hex.charAt(i + 1), 16));
+    }
+    return data;
+  }
 
   private boolean isBase64(String value) {
     if (value == null || value.isBlank() || value.length() % 4 != 0) {

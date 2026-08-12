@@ -27,4 +27,16 @@ public interface WebhookSecurityStrategy {
   /// if validation fails
   void validateConfiguration(Map<String, String> config);
 
+  /// Validates an incoming webhook request at runtime.
+  ///
+  /// @param headers the inbound HTTP headers
+  /// @param rawPayload the exact inbound payload bytes (before decoding)
+  /// @param config the persisted security configuration
+  /// @return true if authentication succeeds
+  /// @throws
+  /// com.decathlon.idp_core.domain.exception.webhook.WebhookAuthenticationException
+  /// if authentication fails
+  boolean validateRequest(Map<String, Object> headers, byte[] rawPayload,
+      Map<String, String> config);
+
 }
