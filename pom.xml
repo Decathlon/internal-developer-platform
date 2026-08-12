@@ -30,7 +30,7 @@
     <netty.version>4.2.16.Final</netty.version>
     <spring-security.version>7.1.0</spring-security.version>
     <spring-framework.version>7.0.8</spring-framework.version>
-    <postgresql.version>42.7.11</postgresql.version>
+    <postgresql.version>42.7.12</postgresql.version>
     <nimbus-jose-jwt.version>10.9.1</nimbus-jose-jwt.version>
     <test.groups/>
     <test.excludedGroups>security</test.excludedGroups>
@@ -72,6 +72,11 @@
       <dependency>
         <groupId>org.apache.tomcat.embed</groupId>
         <artifactId>tomcat-embed-el</artifactId>
+      </dependency>
+      <dependency>
+        <groupId>tools.jackson.core</groupId>
+        <artifactId>jackson-databind</artifactId>
+        <version>3.1.5</version>
       </dependency>
     </dependencies>
   </dependencyManagement>
