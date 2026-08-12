@@ -45,9 +45,16 @@ public final class DecodeBase64 implements Function {
 
   /// Decodes a Base64-encoded `JsonNode` string argument.
   ///
-  /// @param args array of JsonNode arguments; expects exactly one text node
-  /// @return a `TextNode` with the decoded string, or `NullNode` if input is
-  /// absent or blank
+  /// **Behavior:**
+  /// - Returns `NullNode` if the input is absent, null, or blank
+  /// - Attempts to parse the decoded string as JSON; falls back to plain text if parsing fails
+  /// - Throws `IllegalArgumentException` if the argument is non-textual (e.g., number, object, array)
+  /// - Throws `IllegalArgumentException` if the Base64 string is malformed
+  ///
+  /// @param input the JSLT input context (unused)
+  /// @param args array of JsonNode arguments; expects exactly one text node containing Base64-encoded data
+  /// @return a `JsonNode` (either parsed JSON, plain `TextNode`, or `NullNode`)
+  /// @throws IllegalArgumentException if arg is not textual or contains invalid Base64
   @Override
   public JsonNode call(JsonNode input, JsonNode[] args) {
     if (args == null || args.length == 0) {
