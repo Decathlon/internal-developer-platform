@@ -69,6 +69,15 @@ class DecodingProcessorTest {
         () -> decodingProcessor.decode(CORRUPTED_GZIP_PAYLOAD, GZIP_HEADERS));
   }
 
+  @Test
+  @DisplayName("Carries detailed message for null payload when gzip encoding is declared")
+  void decode_carriesDetailedMessage_whenPayloadIsNullAndGzipEncoding() {
+    WebhookDecodingException exception = assertThrows(WebhookDecodingException.class,
+        () -> decodingProcessor.decode(null, GZIP_HEADERS));
+
+    assertEquals("Empty payload cannot be decoded as gzip", exception.getMessage());
+  }
+
   private static Stream<Arguments> passThroughCases() {
     return Stream.of(Arguments.of("{\"event\":\"plain\"}", Map.of()),
         Arguments.of("{\"event\":\"identity\"}", Map.of("Content-Encoding", "identity")),

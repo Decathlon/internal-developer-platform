@@ -140,7 +140,7 @@ class InboundWebhookIngestionRouteTest extends AbstractIntegrationTest {
 
     assertEquals(HTTP_BAD_REQUEST, exchange.getMessage().getHeader(Exchange.HTTP_RESPONSE_CODE));
     assertEquals("application/json", exchange.getMessage().getHeader(Exchange.CONTENT_TYPE));
-    assertJsonErrorResponse(exchange, "BAD_REQUEST", "Invalid or corrupted compressed payload");
+    assertJsonErrorResponse(exchange, "BAD_REQUEST", "Corrupted or invalid compressed gzip stream");
   }
 
   @Test
@@ -161,7 +161,7 @@ class InboundWebhookIngestionRouteTest extends AbstractIntegrationTest {
 
     assertEquals(HTTP_BAD_REQUEST, exchange.getMessage().getHeader(Exchange.HTTP_RESPONSE_CODE));
     assertEquals("application/json", exchange.getMessage().getHeader(Exchange.CONTENT_TYPE));
-    assertJsonErrorResponse(exchange, "BAD_REQUEST", "Invalid or corrupted compressed payload");
+    assertJsonErrorResponse(exchange, "BAD_REQUEST", "Empty payload cannot be decoded as gzip");
   }
 
   @Test
