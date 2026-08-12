@@ -214,25 +214,25 @@ class InboundWebhookIngestionRouteTest extends AbstractIntegrationTest {
   }
 
   @Test
-  @DisplayName("Route returns 200 when STATIC_TOKEN header matches runtime secret")
-  void postWebhookRoute_200_whenStaticTokenAuthenticationSucceeds() throws Exception {
+  @DisplayName("Route returns 201 when STATIC_TOKEN header matches runtime secret")
+  void postWebhookRoute_201_whenStaticTokenAuthenticationSucceeds() throws Exception {
     Exchange exchange = invokeIngestionRoute("token-connector", "{\"event\":\"ping\"}", null,
         Map.of("X-Auth-Token", webhookTokenEnvValue));
 
-    assertEquals(200, exchange.getMessage().getHeader(Exchange.HTTP_RESPONSE_CODE));
+    assertEquals(HTTP_CREATED, exchange.getMessage().getHeader(Exchange.HTTP_RESPONSE_CODE));
     assertEquals("application/json", exchange.getMessage().getHeader(Exchange.CONTENT_TYPE));
     assertJsonSuccessResponse(exchange);
   }
 
   @Test
-  @DisplayName("Route returns 200 when HMAC signature matches runtime secret")
-  void postWebhookRoute_200_whenHmacAuthenticationSucceeds() throws Exception {
+  @DisplayName("Route returns 201 when HMAC signature matches runtime secret")
+  void postWebhookRoute_201_whenHmacAuthenticationSucceeds() throws Exception {
     String payload = "{\"action\":\"pushed\"}";
     String signature = computeHmacSha256Signature(payload);
     Exchange exchange = invokeIngestionRoute("github-dora-connector", payload, null,
         Map.of("X-Hub-Signature-256", signature));
 
-    assertEquals(200, exchange.getMessage().getHeader(Exchange.HTTP_RESPONSE_CODE));
+    assertEquals(HTTP_CREATED, exchange.getMessage().getHeader(Exchange.HTTP_RESPONSE_CODE));
     assertEquals("application/json", exchange.getMessage().getHeader(Exchange.CONTENT_TYPE));
     assertJsonSuccessResponse(exchange);
   }
