@@ -31,6 +31,9 @@ public final class IngestionConstants {
   public static final String ROUTE_ID_VALIDATE_WEBHOOK_ENABLED = "validate-webhook-enabled";
 
   public static final int HTTP_OK = 200;
+  public static final int HTTP_BAD_REQUEST = 400;
+  public static final int HTTP_CREATED = 201;
+  public static final int HTTP_NO_CONTENT = 204;
   public static final String ERROR_DESCRIPTION_WEBHOOK_NOT_FOUND = "Webhook configuration not found";
   public static final String ERROR_DESCRIPTION_WEBHOOK_DISABLED = "Webhook connector is disabled";
   public static final String ERROR_DESCRIPTION_WEBHOOK_AUTHENTICATION_FAILED = "Webhook authentication failed";
