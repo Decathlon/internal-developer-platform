@@ -230,8 +230,8 @@ class DynamicMappingServiceTest {
     void shouldSaveMergedMapping() {
       EntityDynamicMapping existing = buildMapping();
       EntityDynamicMapping incoming = new EntityDynamicMapping(null, "ignored",
-          "updated-entityTemplateIdentifier", ".updated", MappingAction.UPDATE_ENTITY, "Updated Name",
-          "Updated Desc", ".uid", ".utitle", Map.of(), List.of());
+          "updated-entityTemplateIdentifier", ".updated", MappingAction.UPDATE_ENTITY,
+          "Updated Name", "Updated Desc", ".uid", ".utitle", Map.of(), List.of());
 
       when(entityDynamicMappingPort.findByIdentifier(MAPPING_IDENTIFIER))
           .thenReturn(Optional.of(existing));

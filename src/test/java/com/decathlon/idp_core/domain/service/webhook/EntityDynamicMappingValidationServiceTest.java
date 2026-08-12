@@ -65,8 +65,8 @@ class EntityDynamicMappingValidationServiceTest {
       String entityDynamicMappingIdentifier, Map<String, String> properties,
       Map<String, String> relations) {
     return new EntityDynamicMapping(null, entityDynamicMappingIdentifier, templateIdentifier,
-        ".eventType == \"DEPLOYED\"", MappingAction.UPDATE_ENTITY, "name", "description", ".id", ".name",
-        properties, toRelationMappings(relations));
+        ".eventType == \"DEPLOYED\"", MappingAction.UPDATE_ENTITY, "name", "description", ".id",
+        ".name", properties, toRelationMappings(relations));
   }
 
   private List<RelationMapping> toRelationMappings(Map<String, String> relations) {

@@ -6,4 +6,4 @@ ALTER TABLE entity_dynamic_mapping
 ADD COLUMN action SMALLINT NOT NULL DEFAULT 0;
 
 -- Add column comment
-COMMENT ON COLUMN entity_dynamic_mapping.action IS 'Action type for the entity dynamic mapping (UPSERT=0, UPSERT_PROPERTIES=1, UPSERT_RELATIONS=2, DELETE=3)';
+COMMENT ON COLUMN entity_dynamic_mapping.action IS 'Action type for the entity dynamic mapping (UPDATE_ENTITY=0, UPDATE_PROPERTIES=1,UPDATE_RELATIONS=2, DELETE=3)';
