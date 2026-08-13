@@ -4,6 +4,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Map;
 
+import com.decathlon.idp_core.infrastructure.adapters.ingestion.exception.WebhookSecurityException;
 import org.springframework.stereotype.Component;
 
 import com.decathlon.idp_core.domain.exception.webhook.WebhookAuthenticationException;
@@ -34,19 +35,14 @@ public class SecurityProcessor {
 
     WebhookSecurityStrategy strategy = strategies.stream()
         .filter(candidate -> candidate.supports(security.type())).findFirst()
-        .orElseThrow(() -> new WebhookSecurityConfigurationException(
-            "No webhook security strategy registered for type: " + security.type()));
+        .orElseThrow(() -> new WebhookSecurityException("No webhook security strategy registered for type: " + security.type()));
 
-    boolean validated = strategy.validateRequest(headers, toByteArray(rawPayload),
-        security.config());
+    boolean validated = strategy.validateRequest(headers, toByteArray(rawPayload), security.config());
     if (!validated) {
-      throw new WebhookAuthenticationException(
-          "Webhook authentication failed for connector '%s' with strategy '%s'"
-              .formatted(webhookConnector.identifier(), security.type()));
+      throw new WebhookSecurityException("Webhook authentication failed for connector '%s' with strategy '%s'".formatted(webhookConnector.identifier(), security.type()));
     }
 
-    log.debug("Webhook security validation passed for connector '{}' with strategy '{}'.",
-        webhookConnector.identifier(), security.type());
+    log.debug("Webhook security validation passed for connector '{}' with strategy '{}'.", webhookConnector.identifier(), security.type());
   }
 
   private byte[] toByteArray(Object payload) {

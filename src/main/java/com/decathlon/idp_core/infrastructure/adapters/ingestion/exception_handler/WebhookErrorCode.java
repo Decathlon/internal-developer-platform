@@ -17,6 +17,9 @@ public enum WebhookErrorCode {
   INVALID_COMPRESSED_PAYLOAD("invalid_compressed_payload", HttpStatus.BAD_REQUEST,
       LoggingLevel.WARN, "Invalid or corrupted compressed payload"),
 
+  AUTHENTICATION_FAILED("webhook_authentication_failed", HttpStatus.UNAUTHORIZED,
+          LoggingLevel.WARN, "Webhook authentication failed"),
+
   CONFIGURATION_MISSING("webhook_configuration_missing", HttpStatus.INTERNAL_SERVER_ERROR,
       LoggingLevel.ERROR, "Webhook configuration unavailable"),
 

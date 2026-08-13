@@ -1,8 +1,10 @@
 package com.decathlon.idp_core.infrastructure.adapters.ingestion.exception_handler;
 
+import com.decathlon.idp_core.infrastructure.adapters.ingestion.exception.WebhookSecurityException;
 import org.apache.camel.builder.RouteBuilder;
 import org.springframework.stereotype.Component;
 
+import com.decathlon.idp_core.domain.exception.webhook.WebhookAuthenticationException;
 import com.decathlon.idp_core.domain.exception.webhook.WebhookConfigurationMissingException;
 import com.decathlon.idp_core.domain.exception.webhook.WebhookConnectorNotFoundException;
 import com.decathlon.idp_core.domain.exception.webhook.WebhookDisabledException;
@@ -24,10 +26,12 @@ public class WebhookExceptionRouteBuilder {
         WebhookErrorCode.CONNECTOR_NOT_FOUND);
     handlerHelper.registerHandler(routeBuilder, WebhookDisabledException.class,
         WebhookErrorCode.CONNECTOR_DISABLED);
+    handlerHelper.registerHandler(routeBuilder, WebhookConfigurationMissingException.class,
+            WebhookErrorCode.CONFIGURATION_MISSING);
     handlerHelper.registerHandler(routeBuilder, WebhookDecodingException.class,
         WebhookErrorCode.INVALID_COMPRESSED_PAYLOAD);
-    handlerHelper.registerHandler(routeBuilder, WebhookConfigurationMissingException.class,
-        WebhookErrorCode.CONFIGURATION_MISSING);
+    handlerHelper.registerHandler(routeBuilder, WebhookSecurityException.class,
+            WebhookErrorCode.AUTHENTICATION_FAILED);
     handlerHelper.registerHandler(routeBuilder, Exception.class, WebhookErrorCode.UNEXPECTED_ERROR);
   }
 }
