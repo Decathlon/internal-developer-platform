@@ -88,10 +88,10 @@ The JWT chain provides OAuth2 resource server authentication:
 Different Identity Providers (IdPs) use different claim names in their JWT tokens for the same semantic meaning. The
 claim mapping system allows you to configure these differences without code changes.
 
-### Optionnal Claim Mapping Configuration
+### Optional Claim Mapping Configuration
 
 Configure claim mappings in `application.yml` under `app.security.authentication.user-claim-mappings`:
-Notice that only this two information is mandatory when JWT authentication is enabled : 
+Notice that only this two information is mandatory when JWT authentication is enabled :
 
 - spring.security.oauth2.resourceserver.jwt.jwk-set-uri — required for signature validation.
 - A valid JWT signature and standard sub claim — sub is effectively required for JIT provisioning because it is the final identifier fallback.
