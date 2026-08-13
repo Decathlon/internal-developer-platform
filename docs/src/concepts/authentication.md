@@ -93,8 +93,8 @@ claim mapping system allows you to configure these differences without code chan
 Configure claim mappings in `application.yml` under `app.security.authentication.user-claim-mappings`:
 Notice that only this two information is mandatory when JWT authentication is enabled :
 
-- spring.security.oauth2.resourceserver.jwt.jwk-set-uri — required for signature validation.
-- A valid JWT signature and standard sub claim — sub is effectively required for JIT provisioning because it is the final identifier fallback.
+- spring.security.oauth2.resourceserver.jwt.jwk-set-uri required for signature validation.
+- A valid JWT signature and standard sub claim, sub is effectively required for JIT provisioning because it is the final identifier fallback.
 
 ```yaml
 app:
