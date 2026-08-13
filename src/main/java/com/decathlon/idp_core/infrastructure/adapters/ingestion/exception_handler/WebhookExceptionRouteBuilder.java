@@ -25,7 +25,7 @@ public class WebhookExceptionRouteBuilder {
     handlerHelper.registerHandler(routeBuilder, WebhookDisabledException.class,
         WebhookErrorCode.CONNECTOR_DISABLED);
     handlerHelper.registerHandler(routeBuilder, WebhookDecodingException.class,
-        WebhookErrorCode.INVALID_COMPRESSED_PAYLOAD, true);
+        WebhookErrorCode.INVALID_ENCODED_PAYLOAD, true);
     handlerHelper.registerHandler(routeBuilder, WebhookConfigurationMissingException.class,
         WebhookErrorCode.CONFIGURATION_MISSING);
     handlerHelper.registerHandler(routeBuilder, Exception.class, WebhookErrorCode.UNEXPECTED_ERROR);

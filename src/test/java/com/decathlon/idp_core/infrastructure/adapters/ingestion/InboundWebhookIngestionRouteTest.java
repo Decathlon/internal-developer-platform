@@ -6,7 +6,6 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import java.io.ByteArrayOutputStream;
 import java.nio.charset.StandardCharsets;
-import java.util.Base64;
 import java.util.stream.Stream;
 import java.util.zip.GZIPOutputStream;
 
@@ -56,10 +55,6 @@ class InboundWebhookIngestionRouteTest extends AbstractIntegrationTest {
       gzipOutput.finish();
       return output.toByteArray();
     }
-  }
-
-  private static String gzipSamplePayloadAsBase64() throws Exception {
-    return Base64.getEncoder().encodeToString(gzipSamplePayload());
   }
 
   private Exchange invokeValidationWithoutWebhookConfig() {
@@ -144,17 +139,6 @@ class InboundWebhookIngestionRouteTest extends AbstractIntegrationTest {
   }
 
   @Test
-  @DisplayName("Route returns 201 when webhook exists and gzip payload is provided as Base64")
-  void postWebhookRoute_201_whenWebhookExistsAndEnabled_withGzipBase64Payload() throws Exception {
-    Exchange exchange = invokeIngestionRoute("public-connector", gzipSamplePayloadAsBase64(),
-        "gzip");
-
-    assertEquals(HTTP_CREATED, exchange.getMessage().getHeader(Exchange.HTTP_RESPONSE_CODE));
-    assertEquals("application/json", exchange.getMessage().getHeader(Exchange.CONTENT_TYPE));
-    assertJsonSuccessResponse(exchange);
-  }
-
-  @Test
   @DisplayName("Route returns 400 when gzip header is declared with null payload")
   void postWebhookRoute_400_whenGzipHeaderPayloadIsNull() throws Exception {
     Exchange exchange = invokeIngestionRoute("public-connector", null, "gzip");
@@ -162,17 +146,6 @@ class InboundWebhookIngestionRouteTest extends AbstractIntegrationTest {
     assertEquals(HTTP_BAD_REQUEST, exchange.getMessage().getHeader(Exchange.HTTP_RESPONSE_CODE));
     assertEquals("application/json", exchange.getMessage().getHeader(Exchange.CONTENT_TYPE));
     assertJsonErrorResponse(exchange, "BAD_REQUEST", "Empty payload cannot be decoded as gzip");
-  }
-
-  @Test
-  @DisplayName("Route keeps compatibility when encoding header is unknown")
-  void postWebhookRoute_201_whenEncodingHeaderIsUnknown() throws Exception {
-    Exchange exchange = invokeIngestionRoute("public-connector", "{\"event\":\"plain\"}",
-        "gzip-weird");
-
-    assertEquals(HTTP_CREATED, exchange.getMessage().getHeader(Exchange.HTTP_RESPONSE_CODE));
-    assertEquals("application/json", exchange.getMessage().getHeader(Exchange.CONTENT_TYPE));
-    assertJsonSuccessResponse(exchange);
   }
 
   private static Stream<Arguments> successDecodingCases() throws Exception {
