@@ -17,6 +17,9 @@ public enum WebhookErrorCode {
   INVALID_ENCODED_PAYLOAD("invalid_encoded_payload", HttpStatus.BAD_REQUEST, LoggingLevel.WARN,
       "Invalid, unsupported, or oversized compressed payload"),
 
+  AUTHENTICATION_FAILED("webhook_authentication_failed", HttpStatus.UNAUTHORIZED,
+          LoggingLevel.WARN, "Webhook authentication failed"),
+
   CONFIGURATION_MISSING("webhook_configuration_missing", HttpStatus.INTERNAL_SERVER_ERROR,
       LoggingLevel.ERROR, "Webhook configuration unavailable"),
 
