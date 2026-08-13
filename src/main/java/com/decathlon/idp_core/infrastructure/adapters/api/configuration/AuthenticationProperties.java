@@ -53,7 +53,7 @@ import com.decathlon.idp_core.infrastructure.adapters.api.principal.PrincipalExt
 public record AuthenticationProperties(
     // Maps standard claim names to the names used by the configured identity
     // provider.
-    Map<String, String> claimMappings,
+    Map<String, String> userClaimMappings,
 
     // Controls strict or legacy detection of machine-to-machine tokens.
     ServiceAccountDetection serviceAccountDetection,

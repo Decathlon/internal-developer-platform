@@ -200,7 +200,8 @@ class PrincipalExtractorTest {
       claimMappings.put("gty", "gty");
 
       authProperties = new AuthenticationProperties(claimMappings, new ServiceAccountDetection(true,
-          "legacy", "token_type", "m2m", List.of("grant_type", "service_name")), List.of());
+          "legacy", "token_type", "m2m", List.of("grant_type", "service_name", "client_id")),
+          List.of());
       jwtStrategy = new JwtPrincipalExtractionStrategy(authProperties);
     }
 
@@ -535,7 +536,7 @@ class PrincipalExtractorTest {
     void shouldDisableServiceAccountDetectionWhenDisabled() {
       // Given: Service account detection disabled
       AuthenticationProperties disabledConfig = new AuthenticationProperties(
-          authProperties.claimMappings(),
+          authProperties.userClaimMappings(),
           new ServiceAccountDetection(false, "legacy", "token_type", "m2m",
               List.of("grant_type", "service_name")),
           authProperties.jitProvisioningExcludedPaths());
@@ -564,7 +565,7 @@ class PrincipalExtractorTest {
     void shouldUseStrictModeForServiceAccountDetection() {
       // Given: Strict mode configuration
       AuthenticationProperties strictConfig = new AuthenticationProperties(
-          authProperties.claimMappings(),
+          authProperties.userClaimMappings(),
           new ServiceAccountDetection(true, "strict", "token_type", "m2m",
               List.of("grant_type", "service_name")),
           authProperties.jitProvisioningExcludedPaths());
@@ -593,7 +594,7 @@ class PrincipalExtractorTest {
     void shouldNotDetectServiceAccountInStrictModeWithWrongValue() {
       // Given: Strict mode with wrong claim value
       AuthenticationProperties strictConfig = new AuthenticationProperties(
-          authProperties.claimMappings(),
+          authProperties.userClaimMappings(),
           new ServiceAccountDetection(true, "strict", "token_type", "m2m",
               List.of("grant_type", "service_name")),
           authProperties.jitProvisioningExcludedPaths());

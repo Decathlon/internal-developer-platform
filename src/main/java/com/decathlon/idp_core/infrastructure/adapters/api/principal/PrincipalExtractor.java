@@ -32,7 +32,7 @@ import lombok.RequiredArgsConstructor;
 /// - Custom IdPs may use entirely custom claim names
 ///
 /// **Solution:** The `AuthenticationProperties` configuration class allows mapping between
-/// IdP-specific claim names and this extractor's internal logic. Configure `app.security.authentication.claim-mappings`
+/// IdP-specific claim names and this extractor's internal logic. Configure `app.security.authentication.user-claim-mappings`
 /// in `application.yml` to match your IdP's token structure.
 ///
 /// **Service Account Detection:**

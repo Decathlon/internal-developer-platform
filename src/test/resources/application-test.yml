@@ -38,13 +38,13 @@ app:
         enabled: false
       mock:
         enabled: false
-      claim-mappings:
+      user-claim-mappings:
         sub: "sub"
         preferred_username: "preferred_username"
       service-account-detection:
         enabled: true
         mode: "legacy"
-        legacy-fallback-claims: "grant_type,service_name"
+        legacy-fallback-claims: "grant_type,service_name,client_id"
       # ✅ Un-indented: Now properly binds to app.security.authentication.jit-provisioning-excluded-paths
       jit-provisioning-excluded-paths: "/,/actuator/**,/swagger-ui/**,/swagger-ui.html,/v3/api-docs/**"
 

@@ -41,13 +41,13 @@ IDP-Core uses a **multi-chain architecture** where each authentication mechanism
 
 Chains are evaluated in strict order of `@Order` value:
 
-| Order | Chain                     | Purpose                                                                 |
-|-------|---------------------------|-------------------------------------------------------------------------|
-| 1     | `PublicFilterChainConfig` | Permits public paths without authentication (actuator, swagger, health) |
-| 2     | `JwtFilterChainConfig`    | OAuth2 resource server with JWT validation                              |
-| 3     | `ApiKeyFilterChainConfig` | Simple API key authentication for webhooks and service-to-service       |
-| 4     | `MockFilterChainConfig`   | Local development only - generates mock JWT tokens                      |
-| 5+    | Custom chains             | Your custom authentication mechanisms                                   |
+| Order | Chain                                   | Purpose                                                                 |
+|-------|-----------------------------------------|-------------------------------------------------------------------------|
+| 1     | `PublicFilterChainConfig`               | Permits public paths without authentication (actuator, swagger, health) |
+| 2     | `JwtFilterChainConfig`                  | OAuth2 resource server with JWT validation                              |
+| 3     | `ApiKeyFilterChainConfig`               | Simple API key authentication for webhooks and service-to-service       |
+| 4+    | Future / Other authentication mechanism | Your custom authentication mechanisms                                   |
+| last  | `MockFilterChainConfig`                 | Local development only - generates mock JWT tokens                      |
 
 When a request arrives, Spring Security evaluates chains in order. The first chain whose `securityMatcher` matches the
 request path handles that request. If no `securityMatcher` is specified, the chain protects all remaining unmatched
@@ -88,16 +88,20 @@ The JWT chain provides OAuth2 resource server authentication:
 Different Identity Providers (IdPs) use different claim names in their JWT tokens for the same semantic meaning. The
 claim mapping system allows you to configure these differences without code changes.
 
-### Claim Mapping Configuration
+### Optionnal Claim Mapping Configuration
 
-Configure claim mappings in `application.yml` under `app.security.authentication.claim-mappings`:
+Configure claim mappings in `application.yml` under `app.security.authentication.user-claim-mappings`:
+Notice that only this two information is mandatory when JWT authentication is enabled : 
+
+- spring.security.oauth2.resourceserver.jwt.jwk-set-uri — required for signature validation.
+- A valid JWT signature and standard sub claim — sub is effectively required for JIT provisioning because it is the final identifier fallback.
 
 ```yaml
 app:
   security:
     authentication:
-      claim-mappings:
-        sub: "sub"                      # Unique user identifier
+      user-claim-mappings:
+        sub: "sub"                      # Unique user identifier - Mandatory
         preferred_username: "preferred_username"  # Human-readable username
         name: "name"                    # Display name
         email: "email"                  # Email address
@@ -117,7 +121,7 @@ app:
 app:
   security:
     authentication:
-      claim-mappings:
+      user-claim-mappings:
         sub: "sub"
         preferred_username: "preferred_username"
         name: "name"
@@ -137,7 +141,7 @@ app:
 app:
   security:
     authentication:
-      claim-mappings:
+      user-claim-mappings:
         sub: "sub"
         preferred_username: "preferred_username"
         name: "name"
@@ -156,7 +160,7 @@ app:
 app:
   security:
     authentication:
-      claim-mappings:
+      user-claim-mappings:
         sub: "oid"                  # Object ID in Azure
         preferred_username: "unique_name"
         name: "name"
@@ -174,8 +178,8 @@ ensuring that regardless of IdP differences, your application always receives st
 
 ## Service Account Detection
 
-Service accounts are **machine-to-machine (M2M) credentials** used for service-to-service authentication (for example, API
-clients, automation tools). Identifying them correctly is important for:
+Service accounts are **machine-to-machine (M2M) credentials** used for service-to-service authentication (for example,
+API clients, automation tools). Identifying them correctly is important for:
 
 - Applying different authorization rules for services vs. humans
 - Audit logging and security monitoring
@@ -226,13 +230,18 @@ app:
         legacy-fallback-claims:
           - "grant_type"
           - "service_name"
+          - "client_id"
 ```
 
-A principal is classified as `SERVICE_ACCOUNT` if:
+In legacy mode, IDP-Core classifies a token as a `SERVICE_ACCOUNT` when **any** of
+the following conditions is true:
 
-- `grant_type=client_credentials` is present, OR
-- `service_name` claim exists, OR
-- `sub==client_id` (subject equals client ID)
+- The claim mapped to `grant_type` or `gty` has the value
+  `client_credentials`.
+- The claim mapped to `service_name` is present.
+- The claim mapped to `client_id` or `azp` has the same value as `sub`.
+
+If none of these conditions is met, the token is classified as a `HUMAN_USER`.
 
 **Benefits:**
 
@@ -246,8 +255,8 @@ A principal is classified as `SERVICE_ACCOUNT` if:
 - Will be deprecated in future versions
 
 > [!WARNING]
-> Migrate from legacy to strict mode for production deployments. Legacy mode is only recommended for existing systems
-that cannot immediately reconfigure their IdP.
+> Migrate from legacy to strict mode is really encouraged for the systems meeting the prerequisites. Legacy mode is only recommended for existing systems
+that cannot immediately reconfigure their Identity Provider configuration.
 
 ## Principal Extraction
 
@@ -308,8 +317,8 @@ it doesn't exist. This enables:
 
 ### Excluding Paths
 
-Not all authenticated requests should trigger provisioning (for example, public paths, health checks). Configure excluded paths
-in `application.yml`:
+Not all authenticated requests should trigger provisioning (for example, public paths, health checks). Configure
+excluded paths in `application.yml`:
 
 ```yaml
 app:
@@ -471,7 +480,7 @@ public class CustomAuthFilterChainConfig {
     /**
      * Security filter chain for custom authentication.
      *
-     * Order: 5 (after JWT at 2, API Key at 3, and Mock at 4)
+     * Order: 4 (after JWT at 2, API Key at 3, and Mock at the last position)
      *
      * Specifies:
      * 1. Which paths this chain protects (via securityMatcher)
@@ -480,7 +489,7 @@ public class CustomAuthFilterChainConfig {
      * 4. JIT provisioning filter for automatic principal creation
      */
     @Bean
-    @Order(5)
+    @Order(4)
     public SecurityFilterChain customAuthSecurityFilterChain(HttpSecurity http) throws Exception {
         http
                 // Optional: Specify which paths this chain handles
@@ -649,8 +658,8 @@ public class CustomAuthenticationToken extends AbstractAuthenticationToken {
 The `PrincipalExtractor` must recognize your custom authentication token and convert it to a `PrincipalInfo` domain
 object.
 
-You should create a new Spring `@Component` that implements `PrincipalExtractionStrategy`.
-Spring will automatically inject it into `PrincipalExtractor`.
+You should create a new Spring `@Component` that implements `PrincipalExtractionStrategy`. Spring will automatically
+inject it into `PrincipalExtractor`.
 
 ```java
 package com.decathlon.idp_core.infrastructure.adapters.api.principal;

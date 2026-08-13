@@ -113,40 +113,50 @@ public class JwtPrincipalExtractionStrategy implements PrincipalExtractionStrate
   /// @param sub the subject claim value
   /// @return true if any legacy condition indicates M2M
   private boolean detectServiceAccountLegacy(Map<String, Object> claims, String sub) {
-    Map<String, String> claimMappings = authProperties.claimMappings();
+    AuthenticationProperties.ServiceAccountDetection config = authProperties
+        .serviceAccountDetection();
 
-    // Check grant_type = client_credentials (most definitive in legacy mode)
-    String grantTypeClaim = claimMappings.get("grant_type");
-    String gtyClaim = claimMappings.get("gty");
+    List<String> fallbackClaims = config.legacyFallbackClaims();
 
-    String grantType = Optional.ofNullable(claims.get(grantTypeClaim))
-        .or(() -> Optional.ofNullable(gtyClaim).flatMap(ct -> Optional.ofNullable(claims.get(ct))))
-        .map(Object::toString).orElse(null);
+    if (fallbackClaims.contains("grant_type")) {
+      String grantTypeClaim = authProperties.userClaimMappings().get("grant_type");
+      String gtyClaim = authProperties.userClaimMappings().get("gty");
 
-    if ("client_credentials".equals(grantType)) {
-      return true;
+      String grantType = Optional.ofNullable(claims.get(grantTypeClaim))
+          .or(() -> Optional.ofNullable(gtyClaim)
+              .flatMap(claim -> Optional.ofNullable(claims.get(claim))))
+          .map(Object::toString).orElse(null);
+
+      if ("client_credentials".equals(grantType)) {
+        return true;
+      }
     }
 
-    // Check for explicit service_name claim (custom M2M indicator)
-    String serviceNameClaim = claimMappings.get("service_name");
-    if (serviceNameClaim != null && claims.containsKey(serviceNameClaim)) {
-      return true;
+    if (fallbackClaims.contains("service_name")) {
+      String serviceNameClaim = authProperties.userClaimMappings().get("service_name");
+      if (serviceNameClaim != null && claims.containsKey(serviceNameClaim)) {
+        return true;
+      }
     }
 
-    // Fallback: sub equals client_id (M2M flow where subject is the OAuth2 client)
-    String clientIdClaim = claimMappings.get(CLIENT_ID);
-    String azpClaim = claimMappings.get("azp");
+    if (fallbackClaims.contains("client_id")) {
+      String clientIdClaim = authProperties.userClaimMappings().get("client_id");
+      String azpClaim = authProperties.userClaimMappings().get("azp");
 
-    String clientId = Optional.ofNullable(clientIdClaim)
-        .flatMap(c -> Optional.ofNullable(claims.get(c)))
-        .or(() -> Optional.ofNullable(azpClaim).flatMap(c -> Optional.ofNullable(claims.get(c))))
-        .map(Object::toString).orElse(null);
+      String clientId = Optional.ofNullable(clientIdClaim)
+          .flatMap(claim -> Optional.ofNullable(claims.get(claim)))
+          .or(() -> Optional.ofNullable(azpClaim)
+              .flatMap(claim -> Optional.ofNullable(claims.get(claim))))
+          .map(Object::toString).orElse(null);
 
-    return clientId != null && sub.equals(clientId);
+      return clientId != null && clientId.equals(sub);
+    }
+
+    return false;
   }
 
   private PrincipalInfo extractHumanFromJwt(String sub, Map<String, Object> claims) {
-    Map<String, String> claimMappings = authProperties.claimMappings();
+    Map<String, String> claimMappings = authProperties.userClaimMappings();
 
     // Try to extract preferred username, fallback to sub
     String preferredUsernameClaim = claimMappings.get("preferred_username");
@@ -173,7 +183,7 @@ public class JwtPrincipalExtractionStrategy implements PrincipalExtractionStrate
   }
 
   private PrincipalInfo extractServiceAccountFromJwt(String sub, Map<String, Object> claims) {
-    Map<String, String> claimMappings = authProperties.claimMappings();
+    Map<String, String> claimMappings = authProperties.userClaimMappings();
 
     // Extract client_id or azp, fallback to sub
     String clientIdClaim = claimMappings.get(CLIENT_ID);
@@ -211,7 +221,7 @@ public class JwtPrincipalExtractionStrategy implements PrincipalExtractionStrate
 
   @SuppressWarnings("unchecked")
   private List<String> extractGroups(Map<String, Object> claims) {
-    Map<String, String> claimMappings = authProperties.claimMappings();
+    Map<String, String> claimMappings = authProperties.userClaimMappings();
     String groupsClaim = claimMappings.get("groups");
 
     if (groupsClaim == null) {

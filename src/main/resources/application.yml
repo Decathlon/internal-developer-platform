@@ -128,33 +128,32 @@ app:
 
       # JWT claim mappings for different Identity Providers (Auth0, Keycloak, Azure AD, etc.)
       # See docs/src/concepts/authentication.md - JWT Claim Mappings section
-      claim-mappings:
-        sub: ${APP_SECURITY_AUTHENTICATION_CLAIM_SUB:sub}
-        preferred_username: ${APP_SECURITY_AUTHENTICATION_CLAIM_PREFERRED_USERNAME:preferred_username}
-        name: ${APP_SECURITY_AUTHENTICATION_CLAIM_NAME:name}
-        email: ${APP_SECURITY_AUTHENTICATION_CLAIM_EMAIL:email}
-        groups: ${APP_SECURITY_AUTHENTICATION_CLAIM_GROUPS:groups}
-        client_id: ${APP_SECURITY_AUTHENTICATION_CLAIM_CLIENT_ID:client_id}
-        azp: ${APP_SECURITY_AUTHENTICATION_CLAIM_AZP:azp}
-        grant_type: ${APP_SECURITY_AUTHENTICATION_CLAIM_GRANT_TYPE:grant_type}
-        gty: ${APP_SECURITY_AUTHENTICATION_CLAIM_GTY:gty}
-        service_name: ${APP_SECURITY_AUTHENTICATION_CLAIM_SERVICE_NAME:service_name}
+      user-claim-mappings:
+        sub: sub
+        preferred_username: preferred_username
+        name: name
+        email: email
+        groups: groups
+        client_id: client_id
+        azp: azp
+        grant_type: grant_type
+        gty: gty
+        service_name: service_name
 
       # Service account detection - identify M2M vs. human user tokens
       # See docs/src/concepts/authentication.md - Service Account Detection section
       service-account-detection:
-        enabled: ${APP_SECURITY_AUTHENTICATION_SERVICE_ACCOUNT_DETECTION_ENABLED:true}
-        mode: ${APP_SECURITY_AUTHENTICATION_SERVICE_ACCOUNT_DETECTION_MODE:legacy}
-        definitive-claim-name: ${APP_SECURITY_AUTHENTICATION_SERVICE_ACCOUNT_DETECTION_DEFINITIVE_CLAIM_NAME:token_type}
-        definitive-claim-value: ${APP_SECURITY_AUTHENTICATION_SERVICE_ACCOUNT_DETECTION_DEFINITIVE_CLAIM_VALUE:m2m}
+        enabled: true
+        mode: legacy
+        definitive-claim-name: token_type
+        definitive-claim-value: m2m
         # Simplified list binding. Overriding via env var requires a comma-separated string:
-        # export APP_SECURITY_AUTHENTICATION_SERVICE_ACCOUNT_DETECTION_LEGACY_FALLBACK_CLAIMS="grant_type,service_name"
-        legacy-fallback-claims: ${APP_SECURITY_AUTHENTICATION_SERVICE_ACCOUNT_DETECTION_LEGACY_FALLBACK_CLAIMS:grant_type,service_name}
-
+        # export APP_SECURITY_AUTHENTICATION_SERVICE_ACCOUNT_DETECTION_LEGACY_FALLBACK_CLAIMS="grant_type,service_name,client_id"
+        legacy-fallback-claims: grant_type,service_name,client_id
         # JIT Provisioning excluded paths
         # Simplified list binding. Overriding via env var requires a comma-separated string:
         # export APP_SECURITY_AUTHENTICATION_JIT_PROVISIONING_EXCLUDED_PATHS="/,/actuator/**,/swagger-ui/**,/swagger-ui.html,/v3/api-docs/**"
-      jit-provisioning-excluded-paths: ${APP_SECURITY_AUTHENTICATION_JIT_PROVISIONING_EXCLUDED_PATHS:/,/actuator/**,/swagger-ui/**,/swagger-ui.html,/v3/api-docs/**}
+      jit-provisioning-excluded-paths: /,/actuator/**,/swagger-ui/**,/swagger-ui.html,/v3/api-docs/**
 
 logging:
   level:
