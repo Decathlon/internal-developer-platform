@@ -79,4 +79,7 @@ public interface EntityRepositoryPort {
 
   void deleteByTemplateIdentifierAndIdentifier(String templateIdentifier, String entityIdentifier);
 
+  List<Entity> findAllByTemplateIdentifierAndIdentifierIn(String templateIdentifier,
+      List<String> identifiers);
+
 }

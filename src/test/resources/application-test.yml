@@ -25,6 +25,29 @@ spring:
       resourceserver:
         jwt:
           jwk-set-uri: fakeJwkUri
+
+# Added App Security configuration
+app:
+  security:
+    roles:
+      baseline-role: "*"
+    authentication:
+      jwt:
+        enabled: true
+      api-key:
+        enabled: false
+      mock:
+        enabled: false
+      user-claim-mappings:
+        sub: "sub"
+        preferred_username: "preferred_username"
+      service-account-detection:
+        enabled: true
+        mode: "legacy"
+        legacy-fallback-claims: "grant_type,service_name,client_id"
+      # ✅ Un-indented: Now properly binds to app.security.authentication.jit-provisioning-excluded-paths
+      jit-provisioning-excluded-paths: "/,/actuator/**,/swagger-ui/**,/swagger-ui.html,/v3/api-docs/**"
+
 management:
   endpoint:
     health:

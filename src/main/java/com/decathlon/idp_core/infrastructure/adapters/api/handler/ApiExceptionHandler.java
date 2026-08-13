@@ -29,6 +29,7 @@ import com.decathlon.idp_core.domain.exception.entity.EntityValidationException;
 import com.decathlon.idp_core.domain.exception.entity_dynamic_mapping.*;
 import com.decathlon.idp_core.domain.exception.entity_template.*;
 import com.decathlon.idp_core.domain.exception.filter.InvalidFilterDslException;
+import com.decathlon.idp_core.domain.exception.principal.PrincipalNotFoundException;
 import com.decathlon.idp_core.domain.exception.search.InvalidSearchQueryException;
 import com.decathlon.idp_core.domain.exception.webhook.*;
 
@@ -399,6 +400,18 @@ public class ApiExceptionHandler {
     return ResponseEntity.status(NOT_FOUND).body(errorResponse);
   }
 
+  /// Handles principal not found exception when JIT provisioning fails.
+  ///
+  /// **HTTP mapping:** Maps PrincipalNotFoundException to HTTP 404 status
+  /// indicating the authenticated principal does not have a catalog entry.
+  @ExceptionHandler(PrincipalNotFoundException.class)
+  public ResponseEntity<ErrorResponse> handlePrincipalNotFoundException(
+      PrincipalNotFoundException ex) {
+    log.warn("Principal not found: {}", ex.getMessage());
+    ErrorResponse errorResponse = new ErrorResponse(NOT_FOUND.name(), ex.getMessage());
+    return ResponseEntity.status(NOT_FOUND).body(errorResponse);
+  }
+
   /// Handles Bean Validation constraint violations from domain model validation.
   ///
   /// **Error aggregation:** Combines multiple constraint violation messages into
@@ -590,20 +603,6 @@ public class ApiExceptionHandler {
       EntityDynamicMappingAlreadyExistsException ex) {
     log.warn("Entity dynamic mapping identifier conflict: {}", ex.getMessage());
     ErrorResponse errorResponse = new ErrorResponse(HttpStatus.CONFLICT.name(), ex.getMessage());
-    return ResponseEntity.status(HttpStatus.CONFLICT).body(errorResponse);
-  }
-
-  /// Handles low-level database integrity violations (for example, unique
-  /// constraint breaches) that were not caught earlier by domain validation.
-  ///
-  /// HTTP mapping: Maps DataIntegrityViolationException to HTTP 409 Conflict to
-  /// avoid leaking technical SQL details while signaling a conflicting state.
-  @ExceptionHandler(DataIntegrityViolationException.class)
-  public ResponseEntity<ErrorResponse> handleDataIntegrityViolationException(
-      DataIntegrityViolationException ex) {
-    log.warn("Data integrity violation: {}", ex.getMostSpecificCause().getMessage());
-    ErrorResponse errorResponse = new ErrorResponse(HttpStatus.CONFLICT.name(),
-        "The request conflicts with the current state of the resource");
     return ResponseEntity.status(HttpStatus.CONFLICT).body(errorResponse);
   }
 

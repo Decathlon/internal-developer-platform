@@ -49,24 +49,22 @@ spring:
     baseline-on-migrate: true
     # Verifies migration checksums on startup. Fails fast if a script was changed after running.
     validate-on-migrate: true
-
   security:
     oauth2:
       client:
         registration:
           idp-core:
-            # OAuth2 flow used to obtain tokens (machine-to-machine, no user login).
+            # OAuth2 client credentials flow for M2M token exchange
             authorization-grant-type: client_credentials
-            # OAuth2 client ID used when requesting tokens.
             client-id: ${CLIENT_CREDENTIAL_CLIENT_ID}
         provider:
           idp-core:
-            # Token endpoint the app uses to obtain access tokens.
+            # OAuth2 token endpoint (see docs/src/concepts/authentication.md)
             token-uri: ${OAUTH_TOKEN_URI}
       resourceserver:
         jwt:
-          # JWKS URI used to validate incoming JWT tokens from API callers.
-          # required for JWT signature validation (overridden by JwtConfiguration bean).
+          # JWKS endpoint for JWT signature validation
+          # See docs/src/concepts/authentication.md for detailed configuration
           jwk-set-uri: ${OAUTH_JWK_URI}
 
   jpa:
@@ -115,6 +113,49 @@ springdoc:
 app:
   # Base URL of this service, used to build self-referencing links.
   idp-core-prefix-url: ${IDP_CORE_PREFIX_URL}
+  security:
+    roles:
+      # Baseline role assigned to all authenticated principals during V1 phase.
+      baseline-role: ${APP_SECURITY_ROLES_BASELINE_ROLE:*}
+
+    # Authentication configuration - externalized for multi-IdP support
+    # See docs/src/concepts/authentication.md for comprehensive documentation
+    authentication:
+      jwt:
+        enabled: true
+      api-key:
+        enabled: false
+      mock:
+        enabled: false
+
+      # JWT claim mappings for different Identity Providers (Auth0, Keycloak, Azure AD, etc.)
+      # See docs/src/concepts/authentication.md - JWT Claim Mappings section
+      user-claim-mappings:
+        sub: sub
+        preferred_username: preferred_username
+        name: name
+        email: email
+        groups: groups
+        client_id: client_id
+        azp: azp
+        grant_type: grant_type
+        gty: gty
+        service_name: service_name
+
+      # Service account detection - identify M2M vs. human user tokens
+      # See docs/src/concepts/authentication.md - Service Account Detection section
+      service-account-detection:
+        enabled: true
+        mode: legacy
+        definitive-claim-name: token_type
+        definitive-claim-value: m2m
+        # Simplified list binding. Overriding via env var requires a comma-separated string:
+        # export APP_SECURITY_AUTHENTICATION_SERVICE_ACCOUNT_DETECTION_LEGACY_FALLBACK_CLAIMS="grant_type,service_name,client_id"
+        legacy-fallback-claims: grant_type,service_name,client_id
+        # JIT Provisioning excluded paths
+        # Simplified list binding. Overriding via env var requires a comma-separated string:
+        # export APP_SECURITY_AUTHENTICATION_JIT_PROVISIONING_EXCLUDED_PATHS="/,/actuator/**,/swagger-ui/**,/swagger-ui.html,/v3/api-docs/**"
+      jit-provisioning-excluded-paths: /,/actuator/**,/swagger-ui/**,/swagger-ui.html,/v3/api-docs/**
 
 logging:
   level:

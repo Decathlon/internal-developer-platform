@@ -1,4 +1,4 @@
-package com.decathlon.idp_core.infrastructure.adapters.api.auth.mock;
+package com.decathlon.idp_core.infrastructure.adapters.api.configuration.security.chains;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -17,6 +17,9 @@ import jakarta.servlet.ServletResponse;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.boot.autoconfigure.AutoConfigurations;
 import org.springframework.boot.test.context.runner.ApplicationContextRunner;
 import org.springframework.mock.web.MockHttpServletRequest;
@@ -27,20 +30,26 @@ import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationToken;
+import org.springframework.security.web.DefaultSecurityFilterChain;
 import org.springframework.security.web.SecurityFilterChain;
 
 import com.decathlon.idp_core.domain.exception.mock.MockSecurityConfigurationException;
+import com.decathlon.idp_core.infrastructure.adapters.api.auth.JitProvisioningFilter;
 
-/// Unit tests for MockSecurityConfiguration and MockJwtAuthenticationFilter.
+/// Unit tests for MockFilterChainConfig and MockJwtAuthenticationFilter.
 /// Covers mock security setup and JWT token generation for local development.
-@DisplayName("MockSecurityConfiguration Tests")
-class MockSecurityConfigurationTest {
+@DisplayName("MockFilterChainConfig Tests")
+@ExtendWith(MockitoExtension.class)
+class MockFilterChainConfigTest {
+
+  @Mock
+  DefaultSecurityFilterChain securityFilterChain;
 
   @Test
   void shouldInjectMockJwtAuthenticationAndClearAfterwards() throws ServletException, IOException {
 
     // Given
-    MockSecurityConfiguration.MockJwtAuthenticationFilter filter = new MockSecurityConfiguration.MockJwtAuthenticationFilter();
+    MockFilterChainConfig.MockJwtAuthenticationFilter filter = new MockFilterChainConfig.MockJwtAuthenticationFilter();
     MockHttpServletRequest request = new MockHttpServletRequest();
     MockHttpServletResponse response = new MockHttpServletResponse();
 
@@ -72,41 +81,50 @@ class MockSecurityConfigurationTest {
   }
 
   private final ApplicationContextRunner contextRunner = new ApplicationContextRunner()
-      .withConfiguration(AutoConfigurations.of(MockSecurityConfiguration.class));
+      .withConfiguration(AutoConfigurations.of(MockFilterChainConfig.class))
+      .withBean(JitProvisioningFilter.class, () -> mock(JitProvisioningFilter.class))
+      .withBean(HttpSecurity.class, this::httpSecurity);
+
+  private HttpSecurity httpSecurity() {
+    HttpSecurity http = mock(HttpSecurity.class, org.mockito.Answers.RETURNS_DEEP_STUBS);
+    when(http.build()).thenReturn(securityFilterChain);
+    return http;
+  }
 
   @Test
   void shouldLoadConfigurationWhenMockIsEnabled() {
-    contextRunner.withPropertyValues("app.security.mock-enabled=true").run(context -> {
-      assertThat(context).hasSingleBean(MockSecurityConfiguration.class)
-          .hasSingleBean(SecurityFilterChain.class);
-      assertThat(context.getBean("securityFilterChainMock")).isNotNull();
-    });
+    contextRunner.withPropertyValues("app.security.authentication.mock.enabled=true")
+        .run(context -> {
+          assertThat(context).hasSingleBean(MockFilterChainConfig.class)
+              .hasSingleBean(SecurityFilterChain.class);
+          assertThat(context.getBean("mockSecurityFilterChain")).isNotNull();
+        });
   }
 
   @Test
   void shouldNotLoadConfigurationWhenMockIsDisabled() {
-    contextRunner.withPropertyValues("app.security.mock-enabled=false")
-        .run(context -> assertThat(context).doesNotHaveBean(MockSecurityConfiguration.class)
-            .doesNotHaveBean("securityFilterChainMock"));
+    contextRunner.withPropertyValues("app.security.authentication.mock.enabled=false")
+        .run(context -> assertThat(context).doesNotHaveBean(MockFilterChainConfig.class)
+            .doesNotHaveBean("mockSecurityFilterChain"));
   }
 
   @Test
   void shouldNotLoadConfigurationWhenPropertyIsMissing() {
-    contextRunner
-        .run(context -> assertThat(context).doesNotHaveBean(MockSecurityConfiguration.class)
-            .doesNotHaveBean("securityFilterChainMock"));
+    contextRunner.run(context -> assertThat(context).doesNotHaveBean(MockFilterChainConfig.class)
+        .doesNotHaveBean("mockSecurityFilterChain"));
   }
 
   @Test
-  void shouldThrowMockSecurityConfigurationExceptionWhenHttpConfigFails() {
+  void shouldThrowMockFilterChainConfigExceptionWhenHttpConfigFails() {
     // Given
-    MockSecurityConfiguration configuration = new MockSecurityConfiguration();
+    JitProvisioningFilter jitProvisioningFilterMock = mock(JitProvisioningFilter.class);
+    MockFilterChainConfig configuration = new MockFilterChainConfig(jitProvisioningFilterMock);
     HttpSecurity httpSecurityMock = mock(HttpSecurity.class);
     RuntimeException simulatedError = new RuntimeException("Internal simulated Error");
     when(httpSecurityMock.sessionManagement(any())).thenThrow(simulatedError);
 
     // When & Then
-    assertThatThrownBy(() -> configuration.securityFilterChainMock(httpSecurityMock))
+    assertThatThrownBy(() -> configuration.mockSecurityFilterChain(httpSecurityMock))
         .isInstanceOf(MockSecurityConfigurationException.class)
         .hasMessage("Failed to configure mock security filter chain").hasCause(simulatedError);
   }
@@ -119,7 +137,7 @@ class MockSecurityConfigurationTest {
     @DisplayName("Should create mock JWT with correct subject")
     void shouldCreateMockJwtWithCorrectSubject() throws ServletException, IOException {
       // Given
-      MockSecurityConfiguration.MockJwtAuthenticationFilter filter = new MockSecurityConfiguration.MockJwtAuthenticationFilter();
+      MockFilterChainConfig.MockJwtAuthenticationFilter filter = new MockFilterChainConfig.MockJwtAuthenticationFilter();
       MockHttpServletRequest request = new MockHttpServletRequest();
       MockHttpServletResponse response = new MockHttpServletResponse();
 
@@ -143,7 +161,7 @@ class MockSecurityConfigurationTest {
     @DisplayName("Should create mock JWT with client_id claim")
     void shouldCreateMockJwtWithClientId() throws ServletException, IOException {
       // Given
-      MockSecurityConfiguration.MockJwtAuthenticationFilter filter = new MockSecurityConfiguration.MockJwtAuthenticationFilter();
+      MockFilterChainConfig.MockJwtAuthenticationFilter filter = new MockFilterChainConfig.MockJwtAuthenticationFilter();
       MockHttpServletRequest request = new MockHttpServletRequest();
       MockHttpServletResponse response = new MockHttpServletResponse();
 
@@ -167,7 +185,7 @@ class MockSecurityConfigurationTest {
     @DisplayName("Should create mock JWT with scope claim")
     void shouldCreateMockJwtWithScope() throws ServletException, IOException {
       // Given
-      MockSecurityConfiguration.MockJwtAuthenticationFilter filter = new MockSecurityConfiguration.MockJwtAuthenticationFilter();
+      MockFilterChainConfig.MockJwtAuthenticationFilter filter = new MockFilterChainConfig.MockJwtAuthenticationFilter();
       MockHttpServletRequest request = new MockHttpServletRequest();
       MockHttpServletResponse response = new MockHttpServletResponse();
 
@@ -191,7 +209,7 @@ class MockSecurityConfigurationTest {
     @DisplayName("Should create mock JWT with valid timestamps")
     void shouldCreateMockJwtWithValidTimestamps() throws ServletException, IOException {
       // Given
-      MockSecurityConfiguration.MockJwtAuthenticationFilter filter = new MockSecurityConfiguration.MockJwtAuthenticationFilter();
+      MockFilterChainConfig.MockJwtAuthenticationFilter filter = new MockFilterChainConfig.MockJwtAuthenticationFilter();
       MockHttpServletRequest request = new MockHttpServletRequest();
       MockHttpServletResponse response = new MockHttpServletResponse();
 
@@ -216,7 +234,7 @@ class MockSecurityConfigurationTest {
     @DisplayName("Should create mock JWT with 1-hour expiration")
     void shouldCreateMockJwtWith1HourExpiration() throws ServletException, IOException {
       // Given
-      MockSecurityConfiguration.MockJwtAuthenticationFilter filter = new MockSecurityConfiguration.MockJwtAuthenticationFilter();
+      MockFilterChainConfig.MockJwtAuthenticationFilter filter = new MockFilterChainConfig.MockJwtAuthenticationFilter();
       MockHttpServletRequest request = new MockHttpServletRequest();
       MockHttpServletResponse response = new MockHttpServletResponse();
 
@@ -239,7 +257,7 @@ class MockSecurityConfigurationTest {
     @DisplayName("Should create mock JWT with additional user claims")
     void shouldCreateMockJwtWithAdditionalUserClaims() throws ServletException, IOException {
       // Given
-      MockSecurityConfiguration.MockJwtAuthenticationFilter filter = new MockSecurityConfiguration.MockJwtAuthenticationFilter();
+      MockFilterChainConfig.MockJwtAuthenticationFilter filter = new MockFilterChainConfig.MockJwtAuthenticationFilter();
       MockHttpServletRequest request = new MockHttpServletRequest();
       MockHttpServletResponse response = new MockHttpServletResponse();
 
@@ -261,7 +279,7 @@ class MockSecurityConfigurationTest {
     @DisplayName("Should create mock JWT with correct header")
     void shouldCreateMockJwtWithCorrectHeader() throws ServletException, IOException {
       // Given
-      MockSecurityConfiguration.MockJwtAuthenticationFilter filter = new MockSecurityConfiguration.MockJwtAuthenticationFilter();
+      MockFilterChainConfig.MockJwtAuthenticationFilter filter = new MockFilterChainConfig.MockJwtAuthenticationFilter();
       MockHttpServletRequest request = new MockHttpServletRequest();
       MockHttpServletResponse response = new MockHttpServletResponse();
 
@@ -287,7 +305,7 @@ class MockSecurityConfigurationTest {
     @DisplayName("Should clear SecurityContext even if filter chain throws ServletException")
     void shouldClearSecurityContextOnServletException() {
       // Given
-      MockSecurityConfiguration.MockJwtAuthenticationFilter filter = new MockSecurityConfiguration.MockJwtAuthenticationFilter();
+      MockFilterChainConfig.MockJwtAuthenticationFilter filter = new MockFilterChainConfig.MockJwtAuthenticationFilter();
       MockHttpServletRequest request = new MockHttpServletRequest();
       MockHttpServletResponse response = new MockHttpServletResponse();
 
@@ -311,7 +329,7 @@ class MockSecurityConfigurationTest {
     @DisplayName("Should clear SecurityContext even if filter chain throws IOException")
     void shouldClearSecurityContextOnIOException() {
       // Given
-      MockSecurityConfiguration.MockJwtAuthenticationFilter filter = new MockSecurityConfiguration.MockJwtAuthenticationFilter();
+      MockFilterChainConfig.MockJwtAuthenticationFilter filter = new MockFilterChainConfig.MockJwtAuthenticationFilter();
       MockHttpServletRequest request = new MockHttpServletRequest();
       MockHttpServletResponse response = new MockHttpServletResponse();
 
@@ -339,7 +357,7 @@ class MockSecurityConfigurationTest {
     @DisplayName("Should include both ROLE_USER and ROLE_API_CLIENT authorities")
     void shouldIncludeBothRoles() throws ServletException, IOException {
       // Given
-      MockSecurityConfiguration.MockJwtAuthenticationFilter filter = new MockSecurityConfiguration.MockJwtAuthenticationFilter();
+      MockFilterChainConfig.MockJwtAuthenticationFilter filter = new MockFilterChainConfig.MockJwtAuthenticationFilter();
       MockHttpServletRequest request = new MockHttpServletRequest();
       MockHttpServletResponse response = new MockHttpServletResponse();
 
