@@ -16,6 +16,7 @@ public class ValidationMessages {
   public static final String TEMPLATE_NAME_MAX_SIZE = "Entity template name must not exceed 255 characters";
   public static final String TEMPLATE_NAME_FORMAT = "Entity template name must only use alphanumeric characters, spaces, hyphens or underscores";
   public static final String TEMPLATE_ALREADY_MAPPED = "Cannot delete template because it is currently mapped to '%s' entity dynamic mappings. Please remove the associated entity dynamic mappings before deleting the template.";
+  public static final String TEMPLATE_ALREADY_MAPPED_WEBHOOK = "Cannot delete template because it is currently mapped to '%s' webhook connectors. Please remove the associated webhook mappings before deleting the template.";
 
   // Property Definition validation messages
   public static final String PROPERTY_NAME_MANDATORY = "Property name is mandatory and cannot be blank";

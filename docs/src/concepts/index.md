@@ -55,6 +55,11 @@ graph TB
 
  Runtime-configurable connectors to push your data from external systems within your IDP. You can map any source in your data model in minutes.
 
+- 🌐 **[Webhooks](webhooks.md)**
+
+    ---
+
+    Runtime-configurable connectors that authenticate external events and map payloads to your data model.
 - 🔍 **[Filtering Entities](entity-filtering.md)**
 
     ---
