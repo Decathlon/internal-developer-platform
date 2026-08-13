@@ -625,10 +625,26 @@ class PrincipalExtractorTest {
   class OAuth2UserPrincipalExtractionStrategyTests {
 
     private OAuth2UserPrincipalExtractionStrategy oauth2Strategy;
+    private AuthenticationProperties authProperties;
 
     @BeforeEach
     void setUp() {
-      oauth2Strategy = new OAuth2UserPrincipalExtractionStrategy();
+
+      Map<String, String> claimMappings = new HashMap<>();
+      claimMappings.put("preferred_username", "preferred_username");
+      claimMappings.put("name", "name");
+      claimMappings.put("email", "email");
+      claimMappings.put("groups", "groups");
+      claimMappings.put("client_id", "client_id");
+      claimMappings.put("azp", "azp");
+      claimMappings.put("service_name", "service_name");
+      claimMappings.put("grant_type", "grant_type");
+      claimMappings.put("gty", "gty");
+
+      authProperties = new AuthenticationProperties(claimMappings, new ServiceAccountDetection(true,
+          "legacy", "token_type", "m2m", List.of("grant_type", "service_name", "client_id")),
+          List.of());
+      oauth2Strategy = new OAuth2UserPrincipalExtractionStrategy(authProperties);
     }
 
     @Test

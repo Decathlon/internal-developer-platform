@@ -1,5 +1,17 @@
 package com.decathlon.idp_core.infrastructure.adapters.api.principal.strategies;
 
+import static com.decathlon.idp_core.infrastructure.adapters.api.principal.strategies.PrincipalStrategiesConstants.CLIENT_CREDENTIALS;
+import static com.decathlon.idp_core.infrastructure.adapters.api.principal.strategies.PrincipalStrategiesConstants.CLIENT_ID;
+import static com.decathlon.idp_core.infrastructure.adapters.api.principal.strategies.PrincipalStrategiesConstants.EMAIL;
+import static com.decathlon.idp_core.infrastructure.adapters.api.principal.strategies.PrincipalStrategiesConstants.GRANT_TYPE;
+import static com.decathlon.idp_core.infrastructure.adapters.api.principal.strategies.PrincipalStrategiesConstants.GROUPS;
+import static com.decathlon.idp_core.infrastructure.adapters.api.principal.strategies.PrincipalStrategiesConstants.GTY;
+import static com.decathlon.idp_core.infrastructure.adapters.api.principal.strategies.PrincipalStrategiesConstants.NAME;
+import static com.decathlon.idp_core.infrastructure.adapters.api.principal.strategies.PrincipalStrategiesConstants.ORIGIN;
+import static com.decathlon.idp_core.infrastructure.adapters.api.principal.strategies.PrincipalStrategiesConstants.PREFERRED_USERNAME;
+import static com.decathlon.idp_core.infrastructure.adapters.api.principal.strategies.PrincipalStrategiesConstants.SERVICE_NAME;
+import static org.springframework.security.oauth2.core.oidc.IdTokenClaimNames.AZP;
+
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -17,7 +29,6 @@ import com.decathlon.idp_core.infrastructure.adapters.api.principal.PrincipalExt
 @Component
 public class JwtPrincipalExtractionStrategy implements PrincipalExtractionStrategy {
 
-  public static final String CLIENT_ID = "client_id";
   private final AuthenticationProperties authProperties;
 
   public JwtPrincipalExtractionStrategy(AuthenticationProperties authProperties) {
@@ -118,30 +129,30 @@ public class JwtPrincipalExtractionStrategy implements PrincipalExtractionStrate
 
     List<String> fallbackClaims = config.legacyFallbackClaims();
 
-    if (fallbackClaims.contains("grant_type")) {
-      String grantTypeClaim = authProperties.userClaimMappings().get("grant_type");
-      String gtyClaim = authProperties.userClaimMappings().get("gty");
+    if (fallbackClaims.contains(GRANT_TYPE)) {
+      String grantTypeClaim = authProperties.userClaimMappings().get(GRANT_TYPE);
+      String gtyClaim = authProperties.userClaimMappings().get(GTY);
 
       String grantType = Optional.ofNullable(claims.get(grantTypeClaim))
           .or(() -> Optional.ofNullable(gtyClaim)
               .flatMap(claim -> Optional.ofNullable(claims.get(claim))))
           .map(Object::toString).orElse(null);
 
-      if ("client_credentials".equals(grantType)) {
+      if (CLIENT_CREDENTIALS.equals(grantType)) {
         return true;
       }
     }
 
-    if (fallbackClaims.contains("service_name")) {
-      String serviceNameClaim = authProperties.userClaimMappings().get("service_name");
+    if (fallbackClaims.contains(SERVICE_NAME)) {
+      String serviceNameClaim = authProperties.userClaimMappings().get(SERVICE_NAME);
       if (serviceNameClaim != null && claims.containsKey(serviceNameClaim)) {
         return true;
       }
     }
 
-    if (fallbackClaims.contains("client_id")) {
-      String clientIdClaim = authProperties.userClaimMappings().get("client_id");
-      String azpClaim = authProperties.userClaimMappings().get("azp");
+    if (fallbackClaims.contains(CLIENT_ID)) {
+      String clientIdClaim = authProperties.userClaimMappings().get(CLIENT_ID);
+      String azpClaim = authProperties.userClaimMappings().get(AZP);
 
       String clientId = Optional.ofNullable(clientIdClaim)
           .flatMap(claim -> Optional.ofNullable(claims.get(claim)))
@@ -159,22 +170,22 @@ public class JwtPrincipalExtractionStrategy implements PrincipalExtractionStrate
     Map<String, String> claimMappings = authProperties.userClaimMappings();
 
     // Try to extract preferred username, fallback to sub
-    String preferredUsernameClaim = claimMappings.get("preferred_username");
+    String preferredUsernameClaim = claimMappings.get(PREFERRED_USERNAME);
     String identifier = Optional.ofNullable(preferredUsernameClaim)
         .flatMap(c -> Optional.ofNullable(claims.get(c))).map(Object::toString).orElse(sub);
 
     // Try to extract name, fallback to identifier
-    String nameClaim = claimMappings.get("name");
+    String nameClaim = claimMappings.get(NAME);
     String name = Optional.ofNullable(nameClaim).flatMap(c -> Optional.ofNullable(claims.get(c)))
         .map(Object::toString).orElse(identifier);
 
     Map<String, String> attributes = new HashMap<>();
 
     // Extract email if present
-    String emailClaim = claimMappings.get("email");
+    String emailClaim = claimMappings.get(EMAIL);
     if (emailClaim != null) {
       Optional.ofNullable(claims.get(emailClaim)).map(Object::toString)
-          .ifPresent(email -> attributes.put("email", email));
+          .ifPresent(email -> attributes.put(EMAIL, email));
     }
 
     List<String> groups = extractGroups(claims);
@@ -187,7 +198,7 @@ public class JwtPrincipalExtractionStrategy implements PrincipalExtractionStrate
 
     // Extract client_id or azp, fallback to sub
     String clientIdClaim = claimMappings.get(CLIENT_ID);
-    String azpClaim = claimMappings.get("azp");
+    String azpClaim = claimMappings.get(AZP);
 
     String clientId = Optional.ofNullable(clientIdClaim)
         .flatMap(c -> Optional.ofNullable(claims.get(c)))
@@ -195,8 +206,8 @@ public class JwtPrincipalExtractionStrategy implements PrincipalExtractionStrate
         .map(Object::toString).orElse(sub);
 
     // Try to extract service_name or name, fallback to clientId
-    String serviceNameClaim = claimMappings.get("service_name");
-    String nameClaim = claimMappings.get("name");
+    String serviceNameClaim = claimMappings.get(SERVICE_NAME);
+    String nameClaim = claimMappings.get(NAME);
 
     String serviceName = Optional.ofNullable(serviceNameClaim)
         .flatMap(c -> Optional.ofNullable(claims.get(c)))
@@ -207,10 +218,9 @@ public class JwtPrincipalExtractionStrategy implements PrincipalExtractionStrate
     attributes.put(CLIENT_ID, clientId);
 
     // Extract origin if present (non-standard, IdP-specific)
-    String originValue = Optional.ofNullable(claims.get("origin")).map(Object::toString)
-        .orElse(null);
+    String originValue = Optional.ofNullable(claims.get(ORIGIN)).map(Object::toString).orElse(null);
     if (originValue != null) {
-      attributes.put("origin", originValue);
+      attributes.put(ORIGIN, originValue);
     }
 
     List<String> groups = extractGroups(claims);
@@ -222,7 +232,7 @@ public class JwtPrincipalExtractionStrategy implements PrincipalExtractionStrate
   @SuppressWarnings("unchecked")
   private List<String> extractGroups(Map<String, Object> claims) {
     Map<String, String> claimMappings = authProperties.userClaimMappings();
-    String groupsClaim = claimMappings.get("groups");
+    String groupsClaim = claimMappings.get(GROUPS);
 
     if (groupsClaim == null) {
       return List.of();

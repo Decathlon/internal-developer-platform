@@ -35,6 +35,8 @@ spring:
           jwk-set-uri: http://localhost:8080/auth/.well-known/jwks.json
 app:
   full-refresh-at-startup: true
+  # The base URL of the IDP Core service. Used for OAuth2 token exchange and JWKS retrieval.
+  # or keep mock for local test without managing of authentication
   idp-core-prefix-url: http://localhost:8084
   security:
     authentication:
