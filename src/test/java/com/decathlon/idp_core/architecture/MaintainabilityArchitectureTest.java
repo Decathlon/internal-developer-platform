@@ -27,6 +27,7 @@ class MaintainabilityArchitectureTest {
 
   private static final String DOMAIN_PACKAGE = "..domain..";
   private static final String EXCEPTION_PACKAGE = "..domain.exception..";
+  private static final String INFRASTRUCTURE_EXCEPTION_PACKAGE = "..infrastructure.adapters..exception..";
 
   // ---------------------------------------------------------------------------------------
   // 1. Cyclic dependencies
@@ -91,11 +92,14 @@ class MaintainabilityArchitectureTest {
       .areAssignableTo(RuntimeException.class).should().haveSimpleNameEndingWith("Exception")
       .because("the *Exception suffix is the project convention for throwable types");
 
-  /// Every `*Exception` type must live in the domain exception package
+  /// Domain exceptions must live in the domain exception package.
+  /// Infrastructure adapters may define their own technical exceptions within
+  /// their adapter packages.
   @ArchTest
-  static final ArchRule EXCEPTIONS_LIVE_IN_DOMAIN_EXCEPTION_PACKAGE = classes().that()
-      .haveSimpleNameEndingWith("Exception").should().resideInAPackage(EXCEPTION_PACKAGE)
-      .because("domain exceptions are grouped under domain.exception");
+  static final ArchRule EXCEPTIONS_LIVE_IN_DOMAIN_OR_INFRASTRUCTURE_EXCEPTION_PACKAGE = classes()
+      .that().haveSimpleNameEndingWith("Exception").should()
+      .resideInAnyPackage(EXCEPTION_PACKAGE, INFRASTRUCTURE_EXCEPTION_PACKAGE)
+      .because("exceptions are either business (domain) or technical (infrastructure adapter)");
 
   // ---------------------------------------------------------------------------------------
   // 4. Naming & placement conventions

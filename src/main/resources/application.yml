@@ -113,6 +113,10 @@ springdoc:
     urls-primary-name: internal
 
 app:
+  ingestion:
+    webhook:
+      base-path: /webhooks
+      identifier-path: /{webhookIdentifier}
   # Base URL of this service, used to build self-referencing links.
   idp-core-prefix-url: ${IDP_CORE_PREFIX_URL}
 
@@ -126,6 +130,18 @@ logging:
     org.springframework.context.support.PostProcessorRegistrationDelegate: ERROR
 
 management:
+  tracing:
+    # Tracing is disabled by default and only enabled via environment variables (OTEL_TRACING_ENABLED).
+    enabled: false
+    sampling:
+      probability: 1.0  # 100% des traces
+
+  otlp:
+    tracing:
+      endpoint: ${OPEN_TELEMETRY_URL:""}
+      headers:
+        Authorization: ${OPEN_TELEMETRY_TOKEN:""}
+
   endpoints:
     web:
       exposure:
@@ -151,6 +167,14 @@ management:
           include:
             - readinessState
             - db
+      # Shows full health details only to authenticated users.
+      # Avoids leaking internal infrastructure info to unauthenticated callers.
+      show-details: when_authorized
+
+camel:
+  component:
+    platform-http:
+      engine: "servlet"
       # Never expose the health "details" map (e.g. database product name/version,
       # validation query, disk space paths). Only UP/DOWN status is shown.
       show-details: never

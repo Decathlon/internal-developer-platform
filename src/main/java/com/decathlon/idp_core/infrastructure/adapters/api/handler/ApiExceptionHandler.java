@@ -31,10 +31,8 @@ import com.decathlon.idp_core.domain.exception.entity_template.*;
 import com.decathlon.idp_core.domain.exception.filter.InvalidFilterDslException;
 import com.decathlon.idp_core.domain.exception.search.InvalidSearchQueryException;
 import com.decathlon.idp_core.domain.exception.webhook.*;
+import com.decathlon.idp_core.infrastructure.adapters.common.model.ErrorResponse;
 
-import lombok.AllArgsConstructor;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import tools.jackson.core.JacksonException;
 import tools.jackson.databind.exc.InvalidFormatException;
@@ -647,11 +645,4 @@ public class ApiExceptionHandler {
     return new ResponseEntity<>(new ErrorResponse(httpStatus.name(), errorMessage), httpStatus);
   }
 
-  @Getter
-  @AllArgsConstructor
-  @NoArgsConstructor(force = true)
-  public static class ErrorResponse {
-    private String error;
-    private String errorDescription;
-  }
 }
