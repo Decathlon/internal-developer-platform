@@ -11,7 +11,7 @@ import com.decathlon.idp_core.domain.exception.webhook.WebhookConfigurationMissi
 import com.decathlon.idp_core.domain.exception.webhook.WebhookDisabledException;
 import com.decathlon.idp_core.domain.model.inbound_connectors.webhook.WebhookConnector;
 import com.decathlon.idp_core.domain.service.webhook.WebhookConnectorService;
-import com.decathlon.idp_core.infrastructure.adapters.ingestion.exception.WebhookExceptionRouteBuilder;
+import com.decathlon.idp_core.infrastructure.adapters.ingestion.exception_handler.WebhookExceptionRouteBuilder;
 import com.decathlon.idp_core.infrastructure.adapters.ingestion.processor.decoder.DecodingProcessor;
 
 import lombok.RequiredArgsConstructor;
@@ -31,8 +31,8 @@ public class GenericInboundEventRouteBuilder extends RouteBuilder {
 
     from(DIRECT_PROCESS_EVENT).routeId(ROUTE_ID_WEBHOOK_PIPELINE)
         .setProperty(RAW_PAYLOAD_BODY_PROPERTY, body()).to(DIRECT_FETCH_CONFIGURATION)
-        .to(DIRECT_DECODE_PAYLOAD).to(DIRECT_VALIDATE_ENABLED)
-        .setHeader(Exchange.HTTP_RESPONSE_CODE, constant(HTTP_OK))
+        .to(DIRECT_VALIDATE_ENABLED).to(DIRECT_DECODE_PAYLOAD)
+        .setHeader(Exchange.HTTP_RESPONSE_CODE, constant(HTTP_CREATED))
         .setHeader(Exchange.CONTENT_TYPE, constant(APPLICATION_JSON))
         .setBody(constant(SUCCESS_BODY_CONFIGURATION_LOADED));
 
