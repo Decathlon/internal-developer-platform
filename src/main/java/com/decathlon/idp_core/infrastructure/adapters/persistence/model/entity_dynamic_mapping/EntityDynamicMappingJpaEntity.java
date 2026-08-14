@@ -7,6 +7,7 @@ import jakarta.persistence.*;
 import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.type.SqlTypes;
 
+import com.decathlon.idp_core.domain.model.entity_mapping.MappingAction;
 import com.decathlon.idp_core.infrastructure.adapters.persistence.model.entity_template.EntityTemplateJpaEntity;
 
 import lombok.AllArgsConstructor;
@@ -64,6 +65,9 @@ public class EntityDynamicMappingJpaEntity {
 
   @Column(nullable = false)
   private String filter;
+
+  @Column(nullable = false)
+  private MappingAction action;
 
   @Column(nullable = false)
   @ToString.Include

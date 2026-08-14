@@ -1,6 +1,8 @@
 package com.decathlon.idp_core.infrastructure.adapters.api.controller;
 
+import static org.hamcrest.Matchers.containsInAnyOrder;
 import static org.hamcrest.Matchers.containsString;
+import static org.hamcrest.Matchers.hasSize;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.springframework.http.MediaType.APPLICATION_JSON;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
@@ -55,6 +57,7 @@ class InboundWebhookManagementControllerTest extends AbstractIntegrationTest {
           "identifier": "%s",
           "entity_template_identifier": "microservice",
           "filter": ".action == \\"pushed\\"",
+                    "action": "UPDATE_ENTITY",
           "name":"test mapping name",
           "description":"descrption",
           "entity": {
@@ -738,6 +741,233 @@ class InboundWebhookManagementControllerTest extends AbstractIntegrationTest {
       assertEquals(webhookId, jpa.getWebhookId());
       assertEquals(entityMappingId, jpa.getEntityMappingId());
       assertEquals(jsltFilter, jpa.getJsltFilter());
+    }
+  }
+
+  @Nested
+  @DisplayName("Entity Dynamic Mapping actions - all types")
+  @Order(6)
+  class MappingActionsTests {
+
+    /// Test helper to create entity dynamic mapping with specific action
+    private void createEntityDynamicMappingWithAction(String mappingIdentifier, String action)
+        throws Exception {
+      var payload = """
+          {
+            "identifier": "%s",
+            "entity_template_identifier": "microservice",
+            "filter": ".action == \\"pushed\\"",
+            "action": "%s",
+            "name":"test mapping %s",
+            "description":"mapping with action %s",
+            "entity": {
+              "identifier": ".repository.full_name",
+              "name": ".repository.name",
+              "properties": {
+                "applicationName": ".repository.name",
+                "ownerEmail": ".sender.email",
+                "environment": "\\"DEV\\"",
+                "port": "8080",
+                "programmingLanguage": ".repository.language",
+                "version": ".ref"
+              },
+              "relations": [
+                {
+                "name": "api-link",
+                "target_entity_identifiers": [".repository.full_name"]
+                }
+              ]
+            }
+          }
+          """.formatted(mappingIdentifier, action, action, action);
+
+      mockMvc
+          .perform(MockMvcRequestBuilders.post(ENTITY_DYNAMIC_MAPPING_PATH)
+              .contentType(APPLICATION_JSON).accept(APPLICATION_JSON).with(csrf()).content(payload))
+          .andExpect(status().isCreated()).andExpect(jsonPath("$.action").value(action));
+    }
+
+    @Test
+    @WithMockUser
+    @DisplayName("Should create mapping with UPDATE_ENTITY action")
+    void create_mapping_with_update_entity_action() throws Exception {
+      createEntityDynamicMappingWithAction("mapping-upsert", "UPDATE_ENTITY");
+
+      mockMvc.perform(get(ENTITY_DYNAMIC_MAPPING_PATH + "/mapping-upsert").accept(APPLICATION_JSON))
+          .andExpect(status().isOk()).andExpect(jsonPath("$.action").value("UPDATE_ENTITY"));
+    }
+
+    @Test
+    @WithMockUser
+    @DisplayName("Should create mapping with UPDATE_PROPERTIES action")
+    void create_mapping_with_update_properties_action() throws Exception {
+      createEntityDynamicMappingWithAction("mapping-upsert-props", "UPDATE_PROPERTIES");
+
+      mockMvc
+          .perform(
+              get(ENTITY_DYNAMIC_MAPPING_PATH + "/mapping-upsert-props").accept(APPLICATION_JSON))
+          .andExpect(status().isOk()).andExpect(jsonPath("$.action").value("UPDATE_PROPERTIES"));
+    }
+
+    @Test
+    @WithMockUser
+    @DisplayName("Should create mapping with UPDATE_RELATIONS action")
+    void create_mapping_with_upsert_relations_action() throws Exception {
+      createEntityDynamicMappingWithAction("mapping-upsert-rels", "UPDATE_RELATIONS");
+
+      mockMvc
+          .perform(
+              get(ENTITY_DYNAMIC_MAPPING_PATH + "/mapping-upsert-rels").accept(APPLICATION_JSON))
+          .andExpect(status().isOk()).andExpect(jsonPath("$.action").value("UPDATE_RELATIONS"));
+    }
+
+    @Test
+    @WithMockUser
+    @DisplayName("Should create mapping with UPDATE_PROPERTIES action")
+    void create_mapping_with_patch_properties_action() throws Exception {
+      createEntityDynamicMappingWithAction("mapping-patch-props", "UPDATE_PROPERTIES");
+
+      mockMvc
+          .perform(
+              get(ENTITY_DYNAMIC_MAPPING_PATH + "/mapping-patch-props").accept(APPLICATION_JSON))
+          .andExpect(status().isOk()).andExpect(jsonPath("$.action").value("UPDATE_PROPERTIES"));
+    }
+
+    @Test
+    @WithMockUser
+    @DisplayName("Should create mapping with UPDATE_RELATIONS action")
+    void create_mapping_with_UPDATE_RELATIONS_action() throws Exception {
+      createEntityDynamicMappingWithAction("mapping-patch-rels", "UPDATE_RELATIONS");
+
+      mockMvc
+          .perform(
+              get(ENTITY_DYNAMIC_MAPPING_PATH + "/mapping-patch-rels").accept(APPLICATION_JSON))
+          .andExpect(status().isOk()).andExpect(jsonPath("$.action").value("UPDATE_RELATIONS"));
+    }
+
+    @Test
+    @WithMockUser
+    @DisplayName("Should create mapping with DELETE action")
+    void create_mapping_with_delete_action() throws Exception {
+      createEntityDynamicMappingWithAction("mapping-delete", "DELETE");
+
+      mockMvc.perform(get(ENTITY_DYNAMIC_MAPPING_PATH + "/mapping-delete").accept(APPLICATION_JSON))
+          .andExpect(status().isOk()).andExpect(jsonPath("$.action").value("DELETE"));
+    }
+
+    @Test
+    @WithMockUser
+    @DisplayName("Should associate webhook connector with UPDATE_PROPERTIES mapping")
+    void webhook_with_UPDATE_PROPERTIES_mapping() throws Exception {
+      createEntityDynamicMappingWithAction("webhook-upsert-props-mapping", "UPDATE_PROPERTIES");
+
+      var webhookPayload = """
+          {
+            "identifier": "webhook-upsert-props",
+            "name": "Webhook Upsert Props",
+            "description": "Webhook with UPDATE_PROPERTIES mapping",
+            "enabled": true,
+            "mapping_identifiers": ["webhook-upsert-props-mapping"],
+            "security": {
+              "type": "NONE",
+              "config": {}
+            }
+          }
+          """;
+
+      mockMvc
+          .perform(MockMvcRequestBuilders.post(WEBHOOK_PATH).contentType(APPLICATION_JSON)
+              .accept(APPLICATION_JSON).with(csrf()).content(webhookPayload))
+          .andExpect(status().isCreated())
+          .andExpect(jsonPath("$.identifier").value("webhook-upsert-props"))
+          .andExpect(jsonPath("$.mappings[0].action").value("UPDATE_PROPERTIES"));
+    }
+
+    @Test
+    @WithMockUser
+    @DisplayName("Should associate webhook connector with UPDATE_RELATIONS mapping")
+    void webhook_with_UPDATE_RELATIONS_mapping() throws Exception {
+      createEntityDynamicMappingWithAction("webhook-patch-rels-mapping", "UPDATE_RELATIONS");
+
+      var webhookPayload = """
+          {
+            "identifier": "webhook-patch-rels",
+            "name": "Webhook Patch Relations",
+            "description": "Webhook with UPDATE_RELATIONS mapping",
+            "enabled": true,
+            "mapping_identifiers": ["webhook-patch-rels-mapping"],
+            "security": {
+              "type": "NONE",
+              "config": {}
+            }
+          }
+          """;
+
+      mockMvc
+          .perform(MockMvcRequestBuilders.post(WEBHOOK_PATH).contentType(APPLICATION_JSON)
+              .accept(APPLICATION_JSON).with(csrf()).content(webhookPayload))
+          .andExpect(status().isCreated())
+          .andExpect(jsonPath("$.identifier").value("webhook-patch-rels"))
+          .andExpect(jsonPath("$.mappings[0].action").value("UPDATE_RELATIONS"));
+    }
+
+    @Test
+    @WithMockUser
+    @DisplayName("Should associate webhook connector with DELETE mapping")
+    void webhook_with_delete_mapping() throws Exception {
+      createEntityDynamicMappingWithAction("webhook-delete-mapping", "DELETE");
+
+      var webhookPayload = """
+          {
+            "identifier": "webhook-delete",
+            "name": "Webhook Delete",
+            "description": "Webhook with DELETE mapping",
+            "enabled": true,
+            "mapping_identifiers": ["webhook-delete-mapping"],
+            "security": {
+              "type": "NONE",
+              "config": {}
+            }
+          }
+          """;
+
+      mockMvc
+          .perform(MockMvcRequestBuilders.post(WEBHOOK_PATH).contentType(APPLICATION_JSON)
+              .accept(APPLICATION_JSON).with(csrf()).content(webhookPayload))
+          .andExpect(status().isCreated())
+          .andExpect(jsonPath("$.identifier").value("webhook-delete"))
+          .andExpect(jsonPath("$.mappings[0].action").value("DELETE"));
+    }
+
+    @Test
+    @WithMockUser
+    @DisplayName("Should handle multiple mappings with different actions in single webhook")
+    void webhook_with_multiple_different_actions() throws Exception {
+      createEntityDynamicMappingWithAction("multi-map-1", "UPDATE_ENTITY");
+      createEntityDynamicMappingWithAction("multi-map-2", "UPDATE_PROPERTIES");
+      createEntityDynamicMappingWithAction("multi-map-3", "DELETE");
+
+      var webhookPayload = """
+          {
+            "identifier": "webhook-multi-actions",
+            "name": "Webhook Multi Actions",
+            "description": "Webhook with multiple action mappings",
+            "enabled": true,
+            "mapping_identifiers": ["multi-map-1", "multi-map-2", "multi-map-3"],
+            "security": {
+              "type": "NONE",
+              "config": {}
+            }
+          }
+          """;
+
+      mockMvc
+          .perform(MockMvcRequestBuilders.post(WEBHOOK_PATH).contentType(APPLICATION_JSON)
+              .accept(APPLICATION_JSON).with(csrf()).content(webhookPayload))
+          .andExpect(status().isCreated())
+          .andExpect(jsonPath("$.identifier").value("webhook-multi-actions"))
+          .andExpect(jsonPath("$.mappings", hasSize(3))).andExpect(jsonPath("$.mappings[*].action",
+              containsInAnyOrder("UPDATE_ENTITY", "UPDATE_PROPERTIES", "DELETE")));
     }
   }
 

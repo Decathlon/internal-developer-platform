@@ -36,11 +36,16 @@ class EntityDynamicMappingControllerTest extends AbstractIntegrationTest {
 
   /// Builds a valid entity dynamic mapping creation payload.
   private String buildCreatePayload(String mappingIdentifier) {
+    return buildCreatePayload(mappingIdentifier, "UPDATE_ENTITY");
+  }
+
+  private String buildCreatePayload(String mappingIdentifier, String action) {
     return """
         {
           "identifier": "%s",
           "entity_template_identifier": "microservice",
           "filter": ".action == \\"pushed\\"",
+          "action": "%s",
           "name":"microservice name",
           "description":"description",
           "entity": {
@@ -61,7 +66,7 @@ class EntityDynamicMappingControllerTest extends AbstractIntegrationTest {
             }]
           }
         }
-        """.formatted(mappingIdentifier);
+        """.formatted(mappingIdentifier, action);
   }
 
   /// Builds a valid entity dynamic mapping update payload.
@@ -70,6 +75,7 @@ class EntityDynamicMappingControllerTest extends AbstractIntegrationTest {
         {
           "entity_template_identifier": "microservice",
           "filter": ".action == \\"released\\"",
+          "action": "UPDATE_ENTITY",
           "name":"microservice name updated",
           "description":"updated description",
           "entity": {
@@ -167,6 +173,18 @@ class EntityDynamicMappingControllerTest extends AbstractIntegrationTest {
 
     @Test
     @WithMockUser
+    @DisplayName("Should create mapping with the UPDATE_PROPERTIES action")
+    void postMapping_201_withNonDefaultAction() throws Exception {
+      mockMvc
+          .perform(MockMvcRequestBuilders.post(MAPPING_PATH).contentType(APPLICATION_JSON)
+              .accept(APPLICATION_JSON).with(csrf())
+              .content(buildCreatePayload("properties-action-mapping", "UPDATE_PROPERTIES")))
+          .andExpect(status().isCreated())
+          .andExpect(jsonPath("$.action").value("UPDATE_PROPERTIES"));
+    }
+
+    @Test
+    @WithMockUser
     @DisplayName("Should return 409 when identifier already exists")
     void postMapping_409_identifier_already_exists() throws Exception {
       mockMvc
@@ -185,6 +203,7 @@ class EntityDynamicMappingControllerTest extends AbstractIntegrationTest {
           {
             "entity_template_identifier": "microservice",
             "filter": ".action == \\"pushed\\"",
+            "action": "UPDATE_ENTITY",
             "entity": {
               "identifier": ".repository.full_name",
               "name": ".repository.name",
@@ -216,6 +235,7 @@ class EntityDynamicMappingControllerTest extends AbstractIntegrationTest {
           {
             "identifier": "test-mapping",
             "filter": ".action == \\"pushed\\"",
+            "action": "UPDATE_ENTITY",
             "name": "test mapping name",
             "description": "description",
             "entity": {
@@ -244,6 +264,7 @@ class EntityDynamicMappingControllerTest extends AbstractIntegrationTest {
             "identifier": "test-mapping",
             "entity_template_identifier": "non-existent-entityTemplateIdentifier",
             "filter": ".action == \\"pushed\\"",
+            "action": "UPDATE_ENTITY",
             "name":"test mapping",
             "description":"descrption",
             "entity": {
@@ -272,6 +293,7 @@ class EntityDynamicMappingControllerTest extends AbstractIntegrationTest {
             "identifier": "test-mapping",
             "entity_template_identifier": "microservice",
             "filter": ".action == \\"pushed\\"",
+            "action": "UPDATE_ENTITY",
             "name":"test mapping name",
             "description":"descrption",
             "entity": {
@@ -302,6 +324,7 @@ class EntityDynamicMappingControllerTest extends AbstractIntegrationTest {
             "identifier": "test-mapping-string-target",
             "entity_template_identifier": "microservice",
             "filter": ".action == \\"pushed\\"",
+            "action": "UPDATE_ENTITY",
             "name": "test mapping name",
             "description": "description",
             "entity": {
@@ -336,6 +359,7 @@ class EntityDynamicMappingControllerTest extends AbstractIntegrationTest {
             "identifier": "test-mapping-properties-null",
             "entity_template_identifier": "microservice",
             "filter": ".action == \\"pushed\\"",
+            "action": "UPDATE_ENTITY",
             "name":"test mapping name",
             "description":"description",
             "entity": {
@@ -364,6 +388,7 @@ class EntityDynamicMappingControllerTest extends AbstractIntegrationTest {
             "identifier": "test-mapping-relations-null",
             "entity_template_identifier": "microservice",
             "filter": ".action == \\"pushed\\"",
+            "action": "UPDATE_ENTITY",
             "name":"test mapping name",
             "description":"description",
             "entity": {
@@ -399,6 +424,7 @@ class EntityDynamicMappingControllerTest extends AbstractIntegrationTest {
           {
             "identifier": "support-mapping-missing-relations",
             "entity_template_identifier": "support",
+            "action": "UPDATE_ENTITY",
             "filter": ".action == \\"pushed\\"",
             "name":"support mapping",
             "description":"missing required relation test",
@@ -450,6 +476,7 @@ class EntityDynamicMappingControllerTest extends AbstractIntegrationTest {
             "identifier": "component-no-relations-mapping",
             "entity_template_identifier": "component-no-relations",
             "filter": ".action == \\"pushed\\"",
+            "action": "UPDATE_ENTITY",
             "name":"component mapping",
             "description":"unknown relation name test",
             "entity": {
@@ -513,8 +540,8 @@ class EntityDynamicMappingControllerTest extends AbstractIntegrationTest {
     @Test
     @WithMockUser
     @Sql(statements = {
-        "INSERT INTO entity_dynamic_mapping (id, identifier, template_id, filter, name, description, entity_identifier, entity_name, properties, relations) "
-            + "VALUES ('990e8400-e29b-41d4-a716-446655440001', 'null-json-mapping', '550e8400-e29b-41d4-a716-446655440071', '.action == \"pushed\"', "
+        "INSERT INTO entity_dynamic_mapping (id, identifier, template_id, filter,action,  name, description, entity_identifier, entity_name, properties, relations) "
+            + "VALUES ('990e8400-e29b-41d4-a716-446655440001', 'null-json-mapping', '550e8400-e29b-41d4-a716-446655440071', '.action == \"pushed\"',0, "
             + "'Null JSON mapping', 'For DTO null-branch coverage', '.repository.full_name', '.repository.name', 'null'::jsonb, 'null'::jsonb)"})
     @DisplayName("Should normalize null relations from persistence to empty array in API response")
     void getMapping_200_normalizes_null_json_relations() throws Exception {
@@ -774,6 +801,7 @@ class EntityDynamicMappingControllerTest extends AbstractIntegrationTest {
               "identifier": "apim-api-dry-run",
               "entity_template_identifier": "apim-api",
               "filter": ".event.type == \\"API_PUBLISHED\\" and .event.status == \\"SUCCESS\\"",
+              "action": "UPDATE_ENTITY",
               "name": "APIM API dry-run",
               "description": "Validation APIM API mapping",
               "entity": {
@@ -865,6 +893,7 @@ class EntityDynamicMappingControllerTest extends AbstractIntegrationTest {
               "identifier": "%s",
               "entity_template_identifier": "microservice",
               "filter": "%s",
+              "action": "UPDATE_ENTITY",
               "name": "dry-run mapping test",
               "description": "test description",
               "entity": {
@@ -904,6 +933,7 @@ class EntityDynamicMappingControllerTest extends AbstractIntegrationTest {
               "identifier": "skip-test",
               "entity_template_identifier": "microservice",
               "filter": ".action == \\"released\\"",
+              "action": "UPDATE_ENTITY",
               "name":"skip test mapping",
               "description":"test skip",
               "entity": {
@@ -942,6 +972,8 @@ class EntityDynamicMappingControllerTest extends AbstractIntegrationTest {
             "mapping": {
               "identifier": "test mapping",
               "entity_template_identifier": "github_repository-test",
+              "filter": ".identifier == \\"pushed\\"",
+              "action": "UPDATE_ENTITY",
               "name": "test mapping",
               "description": "test mapping description",
               "entity": {
@@ -1079,6 +1111,7 @@ class EntityDynamicMappingControllerTest extends AbstractIntegrationTest {
               "identifier": "dry-run-404-test",
               "entity_template_identifier": "non-existent-template",
               "filter": ".action == \\"pushed\\"",
+              "action": "UPDATE_ENTITY",
               "name":"test mapping",
               "description":"test",
               "entity": {
@@ -1205,6 +1238,7 @@ class EntityDynamicMappingControllerTest extends AbstractIntegrationTest {
               "identifier": "support-dry-run-missing-relations",
               "entity_template_identifier": "support",
               "filter": ".action == \\"pushed\\"",
+              "action": "UPDATE_ENTITY",
               "name": "support dry-run",
               "description": "missing relation",
               "entity": {
@@ -1320,6 +1354,7 @@ class EntityDynamicMappingControllerTest extends AbstractIntegrationTest {
               "identifier": "runtime-expression-error-test",
               "entity_template_identifier": "microservice",
               "filter": ".action == \\\"pushed\\\"",
+              "action": "UPDATE_ENTITY",
               "name": "runtime expression error test",
               "description": "test",
               "entity": {
@@ -1371,6 +1406,7 @@ class EntityDynamicMappingControllerTest extends AbstractIntegrationTest {
               "identifier": "invalid-jslt-test",
               "entity_template_identifier": "microservice",
               "filter": ".non_existent_field == \\"value\\"",
+              "action": "UPDATE_ENTITY",
               "name":"test mapping",
               "description":"test",
               "entity": {
@@ -1411,6 +1447,7 @@ class EntityDynamicMappingControllerTest extends AbstractIntegrationTest {
               "identifier": "github-commits-dry-run",
               "entity_template_identifier": "microservice",
               "filter": ".action == \\\"pushed\\\"",
+              "action": "UPDATE_ENTITY",
               "name": "GitHub multi-commit dry-run",
               "description": "Generation d'une liste d'entites a partir des commits",
               "entity": {
@@ -1460,6 +1497,7 @@ class EntityDynamicMappingControllerTest extends AbstractIntegrationTest {
             "identifier": "dry-run-raw-string-payload",
             "entity_template_identifier": "microservice",
             "filter": ".action == \\"pushed\\"",
+            "action": "UPDATE_ENTITY",
             "name":"dry-run raw string test",
             "description":"test with raw JSON string payload",
             "entity": {
@@ -1516,6 +1554,7 @@ class EntityDynamicMappingControllerTest extends AbstractIntegrationTest {
             "identifier": "dry-run-complex-object",
             "entity_template_identifier": "microservice",
             "filter": ".action == \\"pushed\\"",
+            "action": "UPDATE_ENTITY",
             "name":"dry-run complex object test",
             "description":"test with complex JSON object",
             "entity": {
@@ -1605,6 +1644,7 @@ class EntityDynamicMappingControllerTest extends AbstractIntegrationTest {
               "identifier": "component-dry-run-undefined-relation",
               "entity_template_identifier": "component-template-no-relations",
               "filter": ".action == \\"deployed\\"",
+              "action": "UPDATE_ENTITY",
               "name": "component mapping with undefined relation",
               "description": "test undefined relation in dry-run",
               "entity": {

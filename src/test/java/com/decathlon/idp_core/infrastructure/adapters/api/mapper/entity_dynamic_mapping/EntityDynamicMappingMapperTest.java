@@ -11,6 +11,7 @@ import org.junit.jupiter.api.Test;
 
 import com.decathlon.idp_core.domain.exception.entity_dynamic_mapping.EntityDynamicMappingConfigurationException;
 import com.decathlon.idp_core.domain.model.entity_mapping.EntityDynamicMapping;
+import com.decathlon.idp_core.domain.model.entity_mapping.MappingAction;
 import com.decathlon.idp_core.domain.model.entity_mapping.RelationMapping;
 import com.decathlon.idp_core.infrastructure.adapters.api.dto.out.entity_dynamic_mapping.EntityDynamicMappingDtoOut;
 import com.decathlon.idp_core.infrastructure.adapters.api.dto.out.entity_dynamic_mapping.RelationMappingDtoOut;
@@ -30,9 +31,9 @@ class EntityDynamicMappingMapperTest {
         new RelationMapping("dependency", List.of(".dependencies[*].identifier")));
 
     EntityDynamicMapping mapping = new EntityDynamicMapping(null, // id
-        "test-mapping", "microservice", ".action == \"pushed\"", "Test Mapping", "Test Description",
-        ".repository.full_name", ".repository.name", Map.of("applicationName", ".repository.name"),
-        relations);
+        "test-mapping", "microservice", ".action == \"pushed\"", MappingAction.UPDATE_ENTITY,
+        "Test Mapping", "Test Description", ".repository.full_name", ".repository.name",
+        Map.of("applicationName", ".repository.name"), relations);
 
     EntityDynamicMappingDtoOut dto = mapper.fromEntityMappingToDto(mapping);
 
@@ -48,12 +49,24 @@ class EntityDynamicMappingMapperTest {
   }
 
   @Test
+  @DisplayName("Should preserve the DELETE action when converting to DTO")
+  void fromEntityMappingToDto_preserves_delete_action() {
+    EntityDynamicMapping mapping = new EntityDynamicMapping(null, "delete-mapping", "microservice",
+        ".action == \"deleted\"", MappingAction.DELETE, "Delete Mapping", "description", ".id",
+        ".name", Map.of(), List.of());
+
+    EntityDynamicMappingDtoOut dto = mapper.fromEntityMappingToDto(mapping);
+
+    assertThat(dto.action()).isEqualTo(MappingAction.DELETE);
+  }
+
+  @Test
   @DisplayName("Should handle null relations list in entity mapping")
   void fromEntityMappingToDto_with_null_relations() {
     EntityDynamicMapping mapping = new EntityDynamicMapping(null, // id
-        "test-mapping", "microservice", ".action == \"pushed\"", "Test Mapping", "Test Description",
-        ".repository.full_name", ".repository.name", Map.of("applicationName", ".repository.name"),
-        null); // null relations
+        "test-mapping", "microservice", ".action == \"pushed\"", MappingAction.UPDATE_ENTITY,
+        "Test Mapping", "Test Description", ".repository.full_name", ".repository.name",
+        Map.of("applicationName", ".repository.name"), null); // null relations
 
     EntityDynamicMappingDtoOut dto = mapper.fromEntityMappingToDto(mapping);
 
@@ -66,9 +79,9 @@ class EntityDynamicMappingMapperTest {
   @DisplayName("Should handle empty relations list in entity mapping")
   void fromEntityMappingToDto_with_empty_relations() {
     EntityDynamicMapping mapping = new EntityDynamicMapping(null, // id
-        "test-mapping", "microservice", ".action == \"pushed\"", "Test Mapping", "Test Description",
-        ".repository.full_name", ".repository.name", Map.of("applicationName", ".repository.name"),
-        List.of()); // empty relations
+        "test-mapping", "microservice", ".action == \"pushed\"", MappingAction.UPDATE_ENTITY,
+        "Test Mapping", "Test Description", ".repository.full_name", ".repository.name",
+        Map.of("applicationName", ".repository.name"), List.of()); // empty relations
 
     EntityDynamicMappingDtoOut dto = mapper.fromEntityMappingToDto(mapping);
 
@@ -101,8 +114,8 @@ class EntityDynamicMappingMapperTest {
   @DisplayName("Should handle null properties in entity mapping")
   void fromEntityMappingToDto_with_null_properties() {
     EntityDynamicMapping mapping = new EntityDynamicMapping(null, "test-mapping", "microservice",
-        ".action == \"pushed\"", "Test Mapping", "Test Description", ".repository.full_name",
-        ".repository.name", null, // null properties
+        ".action == \"pushed\"", MappingAction.UPDATE_ENTITY, "Test Mapping", "Test Description",
+        ".repository.full_name", ".repository.name", null, // null properties
         List.of());
 
     EntityDynamicMappingDtoOut dto = mapper.fromEntityMappingToDto(mapping);
@@ -119,9 +132,9 @@ class EntityDynamicMappingMapperTest {
         .of(new RelationMapping("api-link", List.of(".repository.full_name")));
 
     EntityDynamicMapping mapping = new EntityDynamicMapping(null, // id
-        "test-mapping", "microservice", ".action == \"pushed\"", "Test Mapping", "Test Description",
-        ".repository.full_name", ".repository.name", Map.of("applicationName", ".repository.name"),
-        originalRelations);
+        "test-mapping", "microservice", ".action == \"pushed\"", MappingAction.UPDATE_ENTITY,
+        "Test Mapping", "Test Description", ".repository.full_name", ".repository.name",
+        Map.of("applicationName", ".repository.name"), originalRelations);
 
     EntityDynamicMappingDtoOut dto = mapper.fromEntityMappingToDto(mapping);
 

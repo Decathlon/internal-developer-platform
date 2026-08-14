@@ -1064,6 +1064,13 @@ components:
           type: string
         filter:
           type: string
+        action:
+          type: string
+          enum:
+            - UPDATE_ENTITY
+            - UPDATE_PROPERTIES
+            - UPDATE_RELATIONS
+            - DELETE
         name:
           type: string
         description:
@@ -1151,6 +1158,13 @@ components:
         filter:
           type: string
           minLength: 1
+        action:
+          type: string
+          enum:
+            - UPDATE_ENTITY
+            - UPDATE_PROPERTIES
+            - UPDATE_RELATIONS
+            - DELETE
         name:
           type: string
           minLength: 1
@@ -1159,6 +1173,7 @@ components:
         entity:
           $ref: '#/components/schemas/EntityMappingDtoIn'
       required:
+        - action
         - entity
         - entity_template_identifier
         - filter
@@ -1537,6 +1552,14 @@ components:
           minLength: 1
         filter:
           type: string
+          minLength: 1
+        action:
+          type: string
+          enum:
+            - UPDATE_ENTITY
+            - UPDATE_PROPERTIES
+            - UPDATE_RELATIONS
+            - DELETE
         name:
           type: string
           minLength: 1
@@ -1545,8 +1568,10 @@ components:
         entity:
           $ref: '#/components/schemas/EntityMappingDtoIn'
       required:
+        - action
         - entity
         - entity_template_identifier
+        - filter
         - identifier
         - name
     EntityDynamicMappingDryRunDtoIn:
