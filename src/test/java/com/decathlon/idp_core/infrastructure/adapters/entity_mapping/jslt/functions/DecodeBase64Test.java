@@ -19,7 +19,7 @@ import com.fasterxml.jackson.databind.node.IntNode;
 import com.fasterxml.jackson.databind.node.NullNode;
 import com.fasterxml.jackson.databind.node.TextNode;
 
-// Unit test for the DecodeBase64 JSLT custom function, 
+// Unit test for the DecodeBase64 JSLT custom function,
 // covering direct invocation and integration with the JsltEngine.
 @DisplayName("DecodeBase64")
 class DecodeBase64Test {
