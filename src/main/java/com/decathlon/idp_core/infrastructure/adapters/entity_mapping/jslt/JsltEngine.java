@@ -16,7 +16,8 @@ public class JsltEngine implements ExpressionEngine {
 
   private final Collection<Function> customFunctions;
 
-  // constructor for auto-wiring custom functions
+  // Creates a JSLT engine with the custom functions discovered by Spring.
+  /// @param customFunctions custom JSLT functions to register
   public JsltEngine(Collection<Function> customFunctions) {
     this.customFunctions = customFunctions;
   }

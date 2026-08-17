@@ -12,10 +12,10 @@ import com.fasterxml.jackson.databind.node.NullNode;
 import com.fasterxml.jackson.databind.node.TextNode;
 import com.schibsted.spt.data.jslt.Function;
 
-/// JSLT custom function that decodes a Base64-encoded string from a input
+/// JSLT custom function that decodes a Base64-encoded string from an input
 /// payload.
 ///
-/// **Usage in JSLT:** `DecodeBase64(<base64-encoded-string>)`
+/// **Usage in JSLT:** `base64-decode(<base64-encoded-string>)`
 ///
 /// Returns `null` if the input is absent, null, or blank.
 @Component
