@@ -65,7 +65,7 @@ class InboundWebhookIngestionRouteTest extends AbstractIntegrationTest {
   private void assertJsonSuccessResponse(Exchange exchange) throws Exception {
     JsonNode response = objectMapper.readTree(exchange.getMessage().getBody(String.class));
     assertEquals("SUCCESS", response.get("status").asText());
-    assertEquals("Webhook configuration loaded and enabled.", response.get("message").asText());
+    assertEquals("Webhook entity updated.", response.get("message").asText());
   }
 
   private void assertJsonErrorResponse(Exchange exchange, String expectedError,
