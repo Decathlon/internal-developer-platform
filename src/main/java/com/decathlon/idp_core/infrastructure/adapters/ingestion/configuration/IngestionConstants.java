@@ -47,6 +47,12 @@ public final class IngestionConstants {
   public static final String CONTENT_ENCODING_IDENTITY = "identity";
   public static final String CONTENT_ENCODING_HEADER = "Content-Encoding";
 
+  /**
+   * Default maximum decompressed payload size (10 MB) to protect against Zip Bomb
+   * attacks.
+   */
+  public static final long MAX_DECOMPRESSED_BYTES = 10L * 1024L * 1024L;
+
   public static final String UNKNOWN_VALUE = "unknown";
 
   private IngestionConstants() {

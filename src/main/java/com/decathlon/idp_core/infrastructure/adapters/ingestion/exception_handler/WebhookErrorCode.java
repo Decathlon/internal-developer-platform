@@ -14,14 +14,14 @@ public enum WebhookErrorCode {
   CONNECTOR_DISABLED("webhook_connector_disabled", HttpStatus.FORBIDDEN, LoggingLevel.WARN,
       "Webhook connector is disabled"),
 
-  INVALID_COMPRESSED_PAYLOAD("invalid_compressed_payload", HttpStatus.BAD_REQUEST,
-      LoggingLevel.WARN, "Invalid or corrupted compressed payload"),
-
   AUTHENTICATION_REQUIRED("webhook_authentication_required", HttpStatus.UNAUTHORIZED,
       LoggingLevel.WARN, "Webhook authentication required"),
 
   AUTHENTICATION_FORBIDDEN("webhook_authentication_forbidden", HttpStatus.FORBIDDEN,
       LoggingLevel.WARN, "Webhook authentication forbidden"),
+  
+  INVALID_ENCODED_PAYLOAD("invalid_encoded_payload", HttpStatus.BAD_REQUEST, LoggingLevel.WARN,
+      "Invalid, unsupported, or oversized compressed payload"),
 
   CONFIGURATION_MISSING("webhook_configuration_missing", HttpStatus.INTERNAL_SERVER_ERROR,
       LoggingLevel.ERROR, "Webhook configuration unavailable"),

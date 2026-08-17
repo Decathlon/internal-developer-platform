@@ -34,7 +34,6 @@ spring:
         jwt:
           jwk-set-uri: http://localhost:8080/auth/.well-known/jwks.json
 app:
-  GITHUB_WEBHOOK_PASSWORD: password
   # security:
   #   mock-enabled: true
   ingestion:
