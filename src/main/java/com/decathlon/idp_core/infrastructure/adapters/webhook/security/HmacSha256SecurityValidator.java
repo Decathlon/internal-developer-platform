@@ -6,6 +6,7 @@ import org.springframework.stereotype.Component;
 
 import com.decathlon.idp_core.domain.model.enums.WebhookSecurityType;
 import com.decathlon.idp_core.domain.port.WebhookSecurityStrategy;
+import com.decathlon.idp_core.infrastructure.adapters.ingestion.exception.WebhookAuthForbiddenException;
 
 import lombok.RequiredArgsConstructor;
 
@@ -35,7 +36,7 @@ public class HmacSha256SecurityValidator implements WebhookSecurityStrategy {
   }
 
   @Override
-  public boolean validateRequest(Map<String, Object> headers, byte[] rawPayload,
+  public void validateRequest(Map<String, Object> headers, byte[] rawPayload,
       Map<String, String> config) {
     String headerName = WebhookSecurityConfigurationUtils.required(config, "header_name",
         "headerName");
@@ -50,8 +51,10 @@ public class HmacSha256SecurityValidator implements WebhookSecurityStrategy {
     String computedSignature = prefix
         + hmacSignatureValidator.computeHexSha256(rawPayload, expectedSecret);
 
-    return WebhookSecurityConfigurationUtils.constantTimeEquals(computedSignature,
-        receivedSignature);
+    if (!WebhookSecurityConfigurationUtils.constantTimeEquals(computedSignature,
+        receivedSignature)) {
+      throw new WebhookAuthForbiddenException("HMAC signature was rejected");
+    }
   }
 
 }

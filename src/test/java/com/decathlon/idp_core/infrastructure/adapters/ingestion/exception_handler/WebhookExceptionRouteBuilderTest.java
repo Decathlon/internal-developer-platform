@@ -10,7 +10,8 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
-import com.decathlon.idp_core.domain.exception.webhook.WebhookAuthenticationException;
+import com.decathlon.idp_core.infrastructure.adapters.ingestion.exception.WebhookAuthForbiddenException;
+import com.decathlon.idp_core.infrastructure.adapters.ingestion.exception.WebhookAuthUnauthorizedException;
 
 @ExtendWith(MockitoExtension.class)
 @DisplayName("WebhookExceptionRouteBuilder unit tests")
@@ -26,12 +27,13 @@ class WebhookExceptionRouteBuilderTest {
   private WebhookExceptionRouteBuilder webhookExceptionRouteBuilder;
 
   @Test
-  @DisplayName("Registers dedicated mapping for WebhookAuthenticationException")
-  void configureExceptions_registersAuthenticationFailureMapping() {
+  @DisplayName("Registers dedicated mappings for webhook 401 and 403 security exceptions")
+  void configureExceptions_registersAuthenticationMappings() {
     webhookExceptionRouteBuilder.configureExceptions(routeBuilder);
 
-    verify(handlerHelper).registerHandler(routeBuilder, WebhookAuthenticationException.class,
-        WebhookErrorCode.AUTHENTICATION_FAILED);
+    verify(handlerHelper).registerHandler(routeBuilder, WebhookAuthUnauthorizedException.class,
+        WebhookErrorCode.AUTHENTICATION_REQUIRED);
+    verify(handlerHelper).registerHandler(routeBuilder, WebhookAuthForbiddenException.class,
+        WebhookErrorCode.AUTHENTICATION_FORBIDDEN);
   }
 }
-

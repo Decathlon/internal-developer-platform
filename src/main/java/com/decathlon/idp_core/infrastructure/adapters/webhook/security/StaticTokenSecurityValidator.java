@@ -6,6 +6,7 @@ import org.springframework.stereotype.Component;
 
 import com.decathlon.idp_core.domain.model.enums.WebhookSecurityType;
 import com.decathlon.idp_core.domain.port.WebhookSecurityStrategy;
+import com.decathlon.idp_core.infrastructure.adapters.ingestion.exception.WebhookAuthForbiddenException;
 
 /// Static Token security strategy for webhooks.
 ///
@@ -27,7 +28,7 @@ public class StaticTokenSecurityValidator implements WebhookSecurityStrategy {
   }
 
   @Override
-  public boolean validateRequest(Map<String, Object> headers, byte[] rawPayload,
+  public void validateRequest(Map<String, Object> headers, byte[] rawPayload,
       Map<String, String> config) {
     String headerName = WebhookSecurityConfigurationUtils.required(config, "header_name",
         "headerName");
@@ -36,7 +37,9 @@ public class StaticTokenSecurityValidator implements WebhookSecurityStrategy {
     String expectedToken = WebhookSecurityConfigurationUtils.resolveRuntimeSecret(alias);
 
     String actualToken = WebhookSecurityConfigurationUtils.requiredHeader(headers, headerName);
-    return WebhookSecurityConfigurationUtils.constantTimeEquals(expectedToken, actualToken);
+    if (!WebhookSecurityConfigurationUtils.constantTimeEquals(expectedToken, actualToken)) {
+      throw new WebhookAuthForbiddenException("Static token was rejected");
+    }
   }
 
 }

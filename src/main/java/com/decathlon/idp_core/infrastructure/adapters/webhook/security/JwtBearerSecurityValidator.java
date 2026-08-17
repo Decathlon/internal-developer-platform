@@ -7,6 +7,7 @@ import org.springframework.stereotype.Component;
 import com.decathlon.idp_core.domain.exception.webhook.WebhookSecurityConfigurationException;
 import com.decathlon.idp_core.domain.model.enums.WebhookSecurityType;
 import com.decathlon.idp_core.domain.port.WebhookSecurityStrategy;
+import com.decathlon.idp_core.infrastructure.adapters.ingestion.exception.WebhookAuthUnauthorizedException;
 
 import lombok.NoArgsConstructor;
 
@@ -41,7 +42,7 @@ public class JwtBearerSecurityValidator implements WebhookSecurityStrategy {
   }
 
   @Override
-  public boolean validateRequest(Map<String, Object> headers, byte[] rawPayload,
+  public void validateRequest(Map<String, Object> headers, byte[] rawPayload,
       Map<String, String> config) {
     String jwksUriValue = WebhookSecurityConfigurationUtils.required(config,
         KEY_JWKS_URI_SNAKE_CASE, KEY_JWKS_URI_CAMEL_CASE);
@@ -53,7 +54,10 @@ public class JwtBearerSecurityValidator implements WebhookSecurityStrategy {
 
     String authorization = WebhookSecurityConfigurationUtils.requiredHeader(headers,
         "Authorization");
-    return authorization.startsWith("Bearer ")
-        && !authorization.substring("Bearer ".length()).isBlank();
+    if (!authorization.startsWith("Bearer ")
+        || authorization.substring("Bearer ".length()).isBlank()) {
+      throw new WebhookAuthUnauthorizedException(
+          "Authorization header must use Bearer token format");
+    }
   }
 }

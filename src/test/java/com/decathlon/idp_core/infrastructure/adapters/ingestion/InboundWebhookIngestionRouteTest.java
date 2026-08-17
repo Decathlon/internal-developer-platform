@@ -204,13 +204,24 @@ class InboundWebhookIngestionRouteTest extends AbstractIntegrationTest {
   }
 
   @Test
-  @DisplayName("Route returns 401 when webhook authentication fails")
-  void postWebhookRoute_401_whenWebhookAuthenticationFails() throws Exception {
+  @DisplayName("Route returns 401 when webhook authentication is missing")
+  void postWebhookRoute_401_whenWebhookAuthenticationIsMissing() throws Exception {
     Exchange exchange = invokeIngestionRoute("token-connector");
 
     assertEquals(401, exchange.getMessage().getHeader(Exchange.HTTP_RESPONSE_CODE));
     assertEquals("application/json", exchange.getMessage().getHeader(Exchange.CONTENT_TYPE));
-    assertJsonErrorResponse(exchange, "UNAUTHORIZED", "Webhook authentication failed");
+    assertJsonErrorResponse(exchange, "UNAUTHORIZED", "Webhook authentication required");
+  }
+
+  @Test
+  @DisplayName("Route returns 403 when webhook authentication credentials are rejected")
+  void postWebhookRoute_403_whenWebhookAuthenticationFails() throws Exception {
+    Exchange exchange = invokeIngestionRoute("token-connector", "{\"event\":\"ping\"}", null,
+        Map.of("X-Auth-Token", "invalid-token"));
+
+    assertEquals(403, exchange.getMessage().getHeader(Exchange.HTTP_RESPONSE_CODE));
+    assertEquals("application/json", exchange.getMessage().getHeader(Exchange.CONTENT_TYPE));
+    assertJsonErrorResponse(exchange, "FORBIDDEN", "Webhook authentication forbidden");
   }
 
   @Test
