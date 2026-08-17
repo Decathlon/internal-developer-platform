@@ -37,7 +37,7 @@ public class SecurityProcessor {
     WebhookSecurityStrategy strategy = strategies.stream()
         .filter(candidate -> candidate.supports(security.type())).findFirst()
         .orElseThrow(() -> new WebhookSecurityException(
-            "No webhook security strategy registered for type: " + security.type()));
+            unauthorizedMessage(webhookConnector.identifier(), security.type())));
 
     try {
       strategy.validateRequest(headers, toByteArray(rawPayload), security.config());
@@ -45,9 +45,7 @@ public class SecurityProcessor {
       throw exception;
     } catch (WebhookAuthenticationException exception) {
       throw new WebhookAuthUnauthorizedException(
-          "Webhook authentication is missing or malformed for connector '%s' with strategy '%s'"
-              .formatted(webhookConnector.identifier(), security.type()),
-          exception);
+          unauthorizedMessage(webhookConnector.identifier(), security.type()), exception);
     }
 
     log.debug("Webhook security validation passed for connector '{}' with strategy '{}'.",
@@ -64,4 +62,10 @@ public class SecurityProcessor {
       default -> payload.toString().getBytes(StandardCharsets.UTF_8);
     };
   }
+
+  private String unauthorizedMessage(String connectorIdentifier, WebhookSecurityType securityType) {
+    return "Webhook authentication failed for connector '%s' with strategy '%s'"
+        .formatted(connectorIdentifier, securityType);
+  }
+
 }

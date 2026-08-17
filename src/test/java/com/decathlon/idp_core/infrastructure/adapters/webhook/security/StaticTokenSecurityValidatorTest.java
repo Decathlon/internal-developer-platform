@@ -11,6 +11,7 @@ import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 
 import com.decathlon.idp_core.domain.model.enums.WebhookSecurityType;
+import com.decathlon.idp_core.infrastructure.adapters.ingestion.exception.WebhookAuthForbiddenException;
 
 @DisplayName("StaticTokenSecurityValidator Tests")
 class StaticTokenSecurityValidatorTest {
@@ -52,6 +53,42 @@ class StaticTokenSecurityValidatorTest {
       assertThatThrownBy(() -> validator.validateConfiguration(config)).isInstanceOf(
           com.decathlon.idp_core.domain.exception.webhook.WebhookSecurityConfigurationException.class)
           .hasMessageContaining("secret_alias");
+    }
+  }
+
+  @Test
+  @DisplayName("Should fail when header case does not match configured header_name")
+  void shouldFailWhenHeaderCaseDoesNotMatch() {
+    String tokenEnv = "STATIC_TOKEN_TEST";
+    System.setProperty(tokenEnv, "expected-token");
+
+    try {
+      Map<String, String> config = Map.of("header_name", "X-Auth-Token", "secret_alias", tokenEnv);
+      Map<String, Object> headers = Map.of("x-auth-token", "expected-token");
+
+      assertThatThrownBy(() -> validator.validateRequest(headers, new byte[0], config))
+          .isInstanceOf(
+              com.decathlon.idp_core.domain.exception.webhook.WebhookAuthenticationException.class)
+          .hasMessageContaining("X-Auth-Token");
+    } finally {
+      System.clearProperty(tokenEnv);
+    }
+  }
+
+  @Test
+  @DisplayName("Should reject invalid static token with 403 exception")
+  void shouldRejectInvalidStaticToken() {
+    String tokenEnv = "STATIC_TOKEN_TEST_2";
+    System.setProperty(tokenEnv, "expected-token");
+
+    try {
+      Map<String, String> config = Map.of("header_name", "X-Auth-Token", "secret_alias", tokenEnv);
+      Map<String, Object> headers = Map.of("X-Auth-Token", "invalid-token");
+
+      assertThatThrownBy(() -> validator.validateRequest(headers, new byte[0], config))
+          .isInstanceOf(WebhookAuthForbiddenException.class);
+    } finally {
+      System.clearProperty(tokenEnv);
     }
   }
 }

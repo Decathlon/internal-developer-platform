@@ -7,6 +7,7 @@ import org.springframework.stereotype.Component;
 import com.decathlon.idp_core.domain.model.enums.WebhookSecurityType;
 import com.decathlon.idp_core.domain.port.WebhookSecurityStrategy;
 import com.decathlon.idp_core.infrastructure.adapters.ingestion.exception.WebhookAuthForbiddenException;
+import com.decathlon.idp_core.infrastructure.adapters.ingestion.exception.WebhookAuthUnauthorizedException;
 
 import lombok.RequiredArgsConstructor;
 
@@ -30,8 +31,7 @@ public class HmacSha256SecurityValidator implements WebhookSecurityStrategy {
   @Override
   public void validateConfiguration(Map<String, String> config) {
     WebhookSecurityConfigurationUtils.required(config, "header_name", "headerName");
-    String alias = WebhookSecurityConfigurationUtils.required(config, "secret_alias",
-        "secretAlias");
+    String alias = WebhookSecurityConfigurationUtils.required(config, "secret_alias", "secretAlias");
     WebhookSecurityConfigurationUtils.validateSecretAliasFormat(alias);
   }
 
@@ -40,14 +40,16 @@ public class HmacSha256SecurityValidator implements WebhookSecurityStrategy {
       Map<String, String> config) {
     String headerName = WebhookSecurityConfigurationUtils.required(config, "header_name",
         "headerName");
-    String alias = WebhookSecurityConfigurationUtils.required(config, "secret_alias",
-        "secretAlias");
     String prefix = WebhookSecurityConfigurationUtils.optional(config, "prefix",
         DEFAULT_HMAC_PREFIX);
 
-    String expectedSecret = WebhookSecurityConfigurationUtils.resolveRuntimeSecret(alias);
+    String expectedSecret = WebhookSecurityConfigurationUtils.resolveRequiredRuntimeValue(config, "secret_alias", "secretAlias");
     String receivedSignature = WebhookSecurityConfigurationUtils.requiredHeader(headers,
         headerName);
+    if (!receivedSignature.startsWith(prefix)) {
+      throw new WebhookAuthUnauthorizedException("HMAC signature format is invalid");
+    }
+
     String computedSignature = prefix
         + hmacSignatureValidator.computeHexSha256(rawPayload, expectedSecret);
 

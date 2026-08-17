@@ -1,23 +1,44 @@
 package com.decathlon.idp_core.infrastructure.adapters.webhook.security;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.Mockito.when;
 
+import java.time.Instant;
 import java.util.Map;
 
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.security.oauth2.jwt.Jwt;
+import org.springframework.security.oauth2.jwt.JwtDecoder;
+import org.springframework.security.oauth2.jwt.JwtException;
 
 import com.decathlon.idp_core.domain.model.enums.WebhookSecurityType;
+import com.decathlon.idp_core.infrastructure.adapters.ingestion.exception.WebhookAuthForbiddenException;
+import com.decathlon.idp_core.infrastructure.adapters.ingestion.exception.WebhookAuthUnauthorizedException;
 
 @DisplayName("JwtBearerSecurityValidator Tests")
 @ExtendWith(MockitoExtension.class)
 class JwtBearerSecurityValidatorTest {
 
-  private final JwtBearerSecurityValidator validator = new JwtBearerSecurityValidator();
+  @Mock
+  private WebhookJwtDecoderProvider jwtDecoderProvider;
+
+  @Mock
+  private JwtDecoder jwtDecoder;
+
+  private JwtBearerSecurityValidator validator;
+
+  @BeforeEach
+  void setUp() {
+    validator = new JwtBearerSecurityValidator(jwtDecoderProvider);
+  }
 
   @Test
   @DisplayName("Should support JWT_BEARER only")
@@ -40,6 +61,121 @@ class JwtBearerSecurityValidatorTest {
       assertThatThrownBy(() -> validator.validateConfiguration(config)).isInstanceOf(
           com.decathlon.idp_core.domain.exception.webhook.WebhookSecurityConfigurationException.class)
           .hasMessageContaining("jwks_uri");
+    }
+
+    @Test
+    @DisplayName("Should use default claim when client_id_field is missing")
+    void shouldUseDefaultClaimWhenClientIdFieldMissing() {
+      Map<String, String> config = Map.of("jwks_uri", "https://issuer/.well-known/jwks.json",
+          "client_id_values", "expected@example.com");
+
+      assertThatCode(() -> validator.validateConfiguration(config)).doesNotThrowAnyException();
+    }
+
+    @Test
+    @DisplayName("Should throw when client_id_values is missing from config")
+    void shouldThrowWhenClientIdValuesMissing() {
+      Map<String, String> config = Map.of("jwks_uri", "https://issuer/.well-known/jwks.json",
+          "client_id_field", "email");
+
+      assertThatThrownBy(() -> validator.validateConfiguration(config)).isInstanceOf(
+          com.decathlon.idp_core.domain.exception.webhook.WebhookSecurityConfigurationException.class)
+          .hasMessageContaining("client_id_values");
+    }
+
+    @Test
+    @DisplayName("Should throw when client_id_values is an env reference")
+    void shouldThrowWhenClientIdValuesIsEnvironmentReference() {
+      Map<String, String> config = Map.of("jwks_uri", "https://issuer/.well-known/jwks.json",
+          "client_id_field", "email", "client_id_values", "env:JWT_ALLOWED_CLIENTS");
+
+      assertThatThrownBy(() -> validator.validateConfiguration(config)).isInstanceOf(
+          com.decathlon.idp_core.domain.exception.webhook.WebhookSecurityConfigurationException.class)
+          .hasMessageContaining("runtime environment references are not supported");
+    }
+
+    @Test
+    @DisplayName("Should throw when client_id_field is neither azp nor email")
+    void shouldThrowWhenClientIdFieldIsUnsupported() {
+      Map<String, String> config = Map.of("jwks_uri", "https://issuer/.well-known/jwks.json",
+          "client_id_field", "sub", "client_id_values", "expected@example.com");
+
+      assertThatThrownBy(() -> validator.validateConfiguration(config)).isInstanceOf(
+          com.decathlon.idp_core.domain.exception.webhook.WebhookSecurityConfigurationException.class)
+          .hasMessageContaining("azp").hasMessageContaining("email");
+    }
+  }
+
+  @Nested
+  @DisplayName("validateRequest — client identifier matching")
+  class ValidateRequestClientIdentifier {
+
+    @BeforeEach
+    void setUpRuntimeValidation() {
+      when(jwtDecoderProvider.get("https://issuer/.well-known/jwks.json")).thenReturn(jwtDecoder);
+    }
+
+    @Test
+    @DisplayName("Should accept Bearer token when configured claim value matches")
+    void shouldAcceptValidClientIdentifierFromJwt() {
+      Map<String, String> config = Map.of("jwks_uri", "https://issuer/.well-known/jwks.json",
+          "client_id_field", "email", "client_id_values",
+          "ps-fb25-product-events-produ@cpe-idp-stg-337o.iam.gserviceaccount.com");
+      String token = "signed-token";
+      Map<String, Object> headers = Map.of("Authorization", "Bearer " + token);
+      Jwt jwt = jwtWithClaim("email",
+          "ps-fb25-product-events-produ@cpe-idp-stg-337o.iam.gserviceaccount.com");
+      when(jwtDecoder.decode(token)).thenReturn(jwt);
+
+      assertThatCode(() -> validator.validateRequest(headers, new byte[0], config))
+          .doesNotThrowAnyException();
+    }
+
+    @Test
+    @DisplayName("Should reject Bearer token when claim value does not match")
+    void shouldRejectWhenClientIdentifierDoesNotMatch() {
+      Map<String, String> config = Map.of("jwks_uri", "https://issuer/.well-known/jwks.json",
+          "client_id_field", "email", "client_id_values",
+          "ps-fb25-product-events-produ@cpe-idp-stg-337o.iam.gserviceaccount.com");
+      String token = "signed-token";
+      Map<String, Object> headers = Map.of("Authorization", "Bearer " + token);
+      Jwt jwt = jwtWithClaim("email", "another-service@project.iam.gserviceaccount.com");
+      when(jwtDecoder.decode(token)).thenReturn(jwt);
+
+      assertThatThrownBy(() -> validator.validateRequest(headers, new byte[0], config))
+          .isInstanceOf(WebhookAuthForbiddenException.class);
+    }
+
+    @Test
+    @DisplayName("Should reject malformed Bearer token")
+    void shouldRejectMalformedToken() {
+      Map<String, String> config = Map.of("jwks_uri", "https://issuer/.well-known/jwks.json",
+          "client_id_field", "email", "client_id_values", "expected@example.com");
+      String token = "bad-token";
+      Map<String, Object> headers = Map.of("Authorization", "Bearer " + token);
+      when(jwtDecoder.decode(token)).thenThrow(new JwtException("invalid signature"));
+
+      assertThatThrownBy(() -> validator.validateRequest(headers, new byte[0], config))
+          .isInstanceOf(WebhookAuthUnauthorizedException.class);
+    }
+
+    @Test
+    @DisplayName("Should validate using azp when client_id_field is not configured")
+    void shouldUseAzpClaimByDefault() {
+      Map<String, String> config = Map.of("jwks_uri", "https://issuer/.well-known/jwks.json",
+          "client_id_values", "client-allowed");
+      String token = "signed-token";
+      Map<String, Object> headers = Map.of("Authorization", "Bearer " + token);
+      Jwt jwt = jwtWithClaim("azp", "client-allowed");
+      when(jwtDecoder.decode(token)).thenReturn(jwt);
+
+      assertThatCode(() -> validator.validateRequest(headers, new byte[0], config))
+          .doesNotThrowAnyException();
+    }
+
+    private Jwt jwtWithClaim(String claimName, String claimValue) {
+      return Jwt.withTokenValue("signed-token").header("alg", "RS256").claim(claimName, claimValue)
+          .issuedAt(Instant.now()).expiresAt(Instant.now().plusSeconds(300)).build();
     }
   }
 }

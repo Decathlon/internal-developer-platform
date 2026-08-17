@@ -9,8 +9,11 @@ import org.apache.camel.LoggingLevel;
 import org.apache.camel.builder.RouteBuilder;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Component;
+import org.springframework.util.StringUtils;
 
 import com.decathlon.idp_core.infrastructure.adapters.common.model.ErrorResponse;
+import com.decathlon.idp_core.infrastructure.adapters.ingestion.exception.WebhookAuthForbiddenException;
+import com.decathlon.idp_core.infrastructure.adapters.ingestion.exception.WebhookAuthUnauthorizedException;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
@@ -31,19 +34,29 @@ public class WebhookExceptionHandlerHelper {
       Class<T> exceptionType, WebhookErrorCode error) {
 
     routeBuilder.onException(exceptionType).handled(true)
-        .process(
-            exchange -> setJsonErrorResponse(exchange, error.httpStatus(), error.description()))
+        .process(exchange -> setJsonErrorResponse(exchange, error.code(), error.httpStatus(),
+            resolveErrorDescription(exchange, error.description())))
         .process(exchange -> logHandledException(exchange, error.logLevel(), error.code(),
             error.httpStatus().value()));
   }
 
-  private void setJsonErrorResponse(Exchange exchange, HttpStatus httpStatus,
+  private void setJsonErrorResponse(Exchange exchange, String errorCode, HttpStatus httpStatus,
       String errorDescription) throws JsonProcessingException {
-    ErrorResponse errorResponse = new ErrorResponse(httpStatus.name(), errorDescription);
+    ErrorResponse errorResponse = new ErrorResponse(errorCode, errorDescription);
 
     exchange.getMessage().setHeader(Exchange.HTTP_RESPONSE_CODE, httpStatus.value());
     exchange.getMessage().setHeader(Exchange.CONTENT_TYPE, APPLICATION_JSON);
     exchange.getMessage().setBody(objectMapper.writeValueAsString(errorResponse));
+  }
+
+  private String resolveErrorDescription(Exchange exchange, String fallbackDescription) {
+    Throwable throwable = exchange.getProperty(Exchange.EXCEPTION_CAUGHT, Throwable.class);
+    if ((throwable instanceof WebhookAuthUnauthorizedException
+        || throwable instanceof WebhookAuthForbiddenException)
+        && StringUtils.hasText(throwable.getMessage())) {
+      return throwable.getMessage();
+    }
+    return fallbackDescription;
   }
 
   private void logHandledException(Exchange exchange, LoggingLevel level, String errorCode,

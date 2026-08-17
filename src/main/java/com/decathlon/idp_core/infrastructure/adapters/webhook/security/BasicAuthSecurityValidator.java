@@ -23,6 +23,8 @@ import lombok.extern.slf4j.Slf4j;
 @Slf4j
 public class BasicAuthSecurityValidator implements WebhookSecurityStrategy {
 
+  private static final String USERNAME_KEY = "username";
+
   @Override
   public boolean supports(WebhookSecurityType securityType) {
     return WebhookSecurityType.BASIC_AUTH == securityType;
@@ -40,10 +42,10 @@ public class BasicAuthSecurityValidator implements WebhookSecurityStrategy {
   public void validateRequest(Map<String, Object> headers, byte[] rawPayload,
       Map<String, String> config) {
     // Resolve configuration and secrets (may throw WebhookAuthenticationException)
-    String expectedUsername = WebhookSecurityConfigurationUtils.required(config, "username");
-    String alias = WebhookSecurityConfigurationUtils.required(config, "secret_alias",
-        "secretAlias");
-    String expectedPassword = WebhookSecurityConfigurationUtils.resolveRuntimeSecret(alias);
+    String expectedUsername = WebhookSecurityConfigurationUtils.resolveRequiredRuntimeValue(config,
+        USERNAME_KEY);
+    String expectedPassword = WebhookSecurityConfigurationUtils.resolveRequiredRuntimeValue(config,
+        "secret_alias", "secretAlias");
 
     // Extract Authorization header (may throw WebhookAuthenticationException)
     String authorization = WebhookSecurityConfigurationUtils.requiredHeader(headers,

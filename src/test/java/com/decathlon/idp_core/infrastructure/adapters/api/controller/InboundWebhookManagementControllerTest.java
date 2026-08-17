@@ -966,7 +966,11 @@ class InboundWebhookManagementControllerTest extends AbstractIntegrationTest {
     @DisplayName("JWT_BEARER — Should create with valid jwks_uri")
     void security_jwt_bearer_valid_201() throws Exception {
       var config = """
-          { "jwks_uri": "https://auth.example.com/.well-known/jwks.json" }
+          {
+            "jwks_uri": "https://auth.example.com/.well-known/jwks.json",
+            "client_id_field": "email",
+            "client_id_values": "ps-fb25-product-events-produ@cpe-idp-stg-337o.iam.gserviceaccount.com"
+          }
           """;
       mockMvc
           .perform(MockMvcRequestBuilders.post(WEBHOOK_PATH).contentType(APPLICATION_JSON)
@@ -981,7 +985,11 @@ class InboundWebhookManagementControllerTest extends AbstractIntegrationTest {
     @DisplayName("JWT_BEARER — Should create with jwks_uri as environment reference")
     void security_jwt_bearer_env_reference_201() throws Exception {
       var config = """
-          { "jwks_uri": "${JWKS_URI}" }
+          {
+            "jwks_uri": "${JWKS_URI}",
+            "client_id_field": "email",
+            "client_id_values": "ps-fb25-product-events-produ@cpe-idp-stg-337o.iam.gserviceaccount.com"
+          }
           """;
       mockMvc
           .perform(MockMvcRequestBuilders.post(WEBHOOK_PATH).contentType(APPLICATION_JSON)

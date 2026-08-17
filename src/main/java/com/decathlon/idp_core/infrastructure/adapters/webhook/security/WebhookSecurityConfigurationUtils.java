@@ -64,8 +64,7 @@ public final class WebhookSecurityConfigurationUtils {
     String normalizedAlias = normalizeEnvironmentAlias(value);
     if (!ENV_ALIAS.matcher(normalizedAlias).matches()) {
       throw new WebhookSecurityConfigurationException(
-          "Invalid '%s'. Use UPPER_SNAKE_CASE or an environment reference (${MY_VAR} or env:MY_VAR)"
-              .formatted(fieldName));
+          "Invalid '%s'. Use UPPER_SNAKE_CASE".formatted(fieldName));
     }
   }
 
@@ -111,7 +110,7 @@ public final class WebhookSecurityConfigurationUtils {
     return resolved;
   }
 
-  /// Reads an inbound HTTP header value in a case-insensitive way.
+  /// Reads an inbound HTTP header value in a case-sensitive way.
   ///
   /// @param headers inbound headers
   /// @param headerName target header name
@@ -124,11 +123,20 @@ public final class WebhookSecurityConfigurationUtils {
     }
 
     return headers.entrySet().stream()
-        .filter(entry -> entry.getKey() != null && entry.getKey().equalsIgnoreCase(headerName))
+        .filter(entry -> entry.getKey() != null && entry.getKey().equals(headerName))
         .map(Map.Entry::getValue).filter(Objects::nonNull).map(Object::toString)
         .filter(StringUtils::hasText).findFirst()
         .orElseThrow(() -> new WebhookAuthenticationException(
             "Missing required header '%s' for webhook authentication".formatted(headerName)));
+  }
+
+  /// Resolves a required runtime value from configuration.
+  ///
+  /// This helper combines required key lookup (snake/camel + _env/Env aliases)
+  /// and runtime environment resolution in one call.
+  public static String resolveRequiredRuntimeValue(Map<String, String> config, String... keys) {
+    String aliasOrReference = required(config, keys);
+    return resolveRuntimeSecret(aliasOrReference);
   }
 
   /// Constant-time string comparison to reduce timing attack signal.

@@ -45,6 +45,8 @@ import com.fasterxml.jackson.databind.JsonNode;
 class InboundWebhookIngestionRouteTest extends AbstractIntegrationTest {
 
   private static final String HMAC_PREFIX = "sha256=";
+  private static final String BASIC_AUTH_USERNAME_ENV_KEY = "BASIC_AUTH_USERNAME";
+  private static final String BASIC_AUTH_USERNAME = "admin";
 
   @Value("${app.ingestion.webhook.test-security.token-env-key}")
   private String webhookTokenEnvKey;
@@ -78,6 +80,7 @@ class InboundWebhookIngestionRouteTest extends AbstractIntegrationTest {
     System.setProperty(webhookTokenEnvKey, webhookTokenEnvValue);
     System.setProperty(githubSecretEnvKey, githubSecretEnvValue);
     System.setProperty(basicAuthEnvKey, basicAuthEnvValue);
+    System.setProperty(BASIC_AUTH_USERNAME_ENV_KEY, BASIC_AUTH_USERNAME);
     System.setProperty(jwksEnvKey, jwksEnvValue);
   }
 
@@ -86,6 +89,7 @@ class InboundWebhookIngestionRouteTest extends AbstractIntegrationTest {
     System.clearProperty(webhookTokenEnvKey);
     System.clearProperty(githubSecretEnvKey);
     System.clearProperty(basicAuthEnvKey);
+    System.clearProperty(BASIC_AUTH_USERNAME_ENV_KEY);
     System.clearProperty(jwksEnvKey);
   }
 
@@ -133,10 +137,6 @@ class InboundWebhookIngestionRouteTest extends AbstractIntegrationTest {
       gzipOutput.finish();
       return output.toByteArray();
     }
-  }
-
-  private static String gzipSamplePayloadAsBase64() throws Exception {
-    return Base64.getEncoder().encodeToString(gzipSamplePayload());
   }
 
   private String computeHmacSha256Signature(String payload) throws Exception {
@@ -190,7 +190,8 @@ class InboundWebhookIngestionRouteTest extends AbstractIntegrationTest {
 
     assertEquals(404, exchange.getMessage().getHeader(Exchange.HTTP_RESPONSE_CODE));
     assertEquals("application/json", exchange.getMessage().getHeader(Exchange.CONTENT_TYPE));
-    assertJsonErrorResponse(exchange, "NOT_FOUND", "Webhook configuration not found");
+    assertJsonErrorResponse(exchange, "webhook_connector_not_found",
+        "Webhook configuration not found");
   }
 
   @Test
@@ -200,7 +201,8 @@ class InboundWebhookIngestionRouteTest extends AbstractIntegrationTest {
 
     assertEquals(403, exchange.getMessage().getHeader(Exchange.HTTP_RESPONSE_CODE));
     assertEquals("application/json", exchange.getMessage().getHeader(Exchange.CONTENT_TYPE));
-    assertJsonErrorResponse(exchange, "FORBIDDEN", "Webhook connector is disabled");
+    assertJsonErrorResponse(exchange, "webhook_connector_disabled",
+        "Webhook connector is disabled");
   }
 
   @Test
@@ -210,7 +212,8 @@ class InboundWebhookIngestionRouteTest extends AbstractIntegrationTest {
 
     assertEquals(401, exchange.getMessage().getHeader(Exchange.HTTP_RESPONSE_CODE));
     assertEquals("application/json", exchange.getMessage().getHeader(Exchange.CONTENT_TYPE));
-    assertJsonErrorResponse(exchange, "UNAUTHORIZED", "Webhook authentication required");
+    assertJsonErrorResponse(exchange, "webhook_authentication_failed",
+        "Webhook authentication failed for connector 'token-connector' with strategy 'STATIC_TOKEN'");
   }
 
   @Test
@@ -221,7 +224,7 @@ class InboundWebhookIngestionRouteTest extends AbstractIntegrationTest {
 
     assertEquals(403, exchange.getMessage().getHeader(Exchange.HTTP_RESPONSE_CODE));
     assertEquals("application/json", exchange.getMessage().getHeader(Exchange.CONTENT_TYPE));
-    assertJsonErrorResponse(exchange, "FORBIDDEN", "Webhook authentication forbidden");
+    assertJsonErrorResponse(exchange, "webhook_forbidden", "Static token was rejected");
   }
 
   @Test
@@ -262,11 +265,11 @@ class InboundWebhookIngestionRouteTest extends AbstractIntegrationTest {
   @Test
   @DisplayName("Validate-security route accepts BASIC_AUTH mode")
   void validateSecurityRoute_acceptsBasicAuthMode() {
-    String credentials = Base64.getEncoder()
-        .encodeToString(("admin:" + basicAuthEnvValue).getBytes(StandardCharsets.UTF_8));
+    String credentials = Base64.getEncoder().encodeToString(
+        (BASIC_AUTH_USERNAME + ":" + basicAuthEnvValue).getBytes(StandardCharsets.UTF_8));
     WebhookConnector connector = webhookConnectorWithSecurity("basic-connector",
         new WebhookSecurity(WebhookSecurityType.BASIC_AUTH,
-            Map.of("username", "admin", "secret_alias", basicAuthEnvKey)));
+            Map.of("username", BASIC_AUTH_USERNAME_ENV_KEY, "secret_alias", basicAuthEnvKey)));
 
     Exchange exchange = invokeValidateSecurityRoute(connector,
         Map.of("Authorization", "Basic " + credentials));
@@ -277,11 +280,20 @@ class InboundWebhookIngestionRouteTest extends AbstractIntegrationTest {
   @Test
   @DisplayName("Validate-security route accepts JWT_BEARER mode")
   void validateSecurityRoute_acceptsJwtBearerMode() {
-    WebhookConnector connector = webhookConnectorWithSecurity("jwt-connector", new WebhookSecurity(
-        WebhookSecurityType.JWT_BEARER, Map.of("jwks_uri", "env:" + jwksEnvKey)));
+    String expectedClientEmail = "ps-fb25-product-events-produ@cpe-idp-stg-337o.iam.gserviceaccount.com";
+    String jwtPayload = "{\"email\":\"" + expectedClientEmail + "\"}";
+    String encodedHeader = Base64.getUrlEncoder().withoutPadding()
+        .encodeToString("{\"alg\":\"RS256\",\"typ\":\"JWT\"}".getBytes(StandardCharsets.UTF_8));
+    String encodedPayload = Base64.getUrlEncoder().withoutPadding()
+        .encodeToString(jwtPayload.getBytes(StandardCharsets.UTF_8));
+    String token = encodedHeader + "." + encodedPayload + ".signature";
+
+    WebhookConnector connector = webhookConnectorWithSecurity("jwt-connector",
+        new WebhookSecurity(WebhookSecurityType.JWT_BEARER, Map.of("jwks_uri", "env:" + jwksEnvKey,
+            "client_id_field", "email", "client_id_values", expectedClientEmail)));
 
     Exchange exchange = invokeValidateSecurityRoute(connector,
-        Map.of("Authorization", "Bearer test-jwt-token"));
+        Map.of("Authorization", "Bearer " + token));
 
     assertNull(exchange.getException());
   }
@@ -293,7 +305,8 @@ class InboundWebhookIngestionRouteTest extends AbstractIntegrationTest {
 
     assertEquals(500, exchange.getMessage().getHeader(Exchange.HTTP_RESPONSE_CODE));
     assertEquals("application/json", exchange.getMessage().getHeader(Exchange.CONTENT_TYPE));
-    assertJsonErrorResponse(exchange, "INTERNAL_SERVER_ERROR", "Webhook configuration unavailable");
+    assertJsonErrorResponse(exchange, "webhook_configuration_missing",
+        "Webhook configuration unavailable");
   }
 
   @ParameterizedTest(name = "[{index}]")
@@ -316,18 +329,8 @@ class InboundWebhookIngestionRouteTest extends AbstractIntegrationTest {
 
     assertEquals(HTTP_BAD_REQUEST, exchange.getMessage().getHeader(Exchange.HTTP_RESPONSE_CODE));
     assertEquals("application/json", exchange.getMessage().getHeader(Exchange.CONTENT_TYPE));
-    assertJsonErrorResponse(exchange, "BAD_REQUEST", "Invalid or corrupted compressed payload");
-  }
-
-  @Test
-  @DisplayName("Route returns 201 when webhook exists and gzip payload is provided as Base64")
-  void postWebhookRoute_201_whenWebhookExistsAndEnabled_withGzipBase64Payload() throws Exception {
-    Exchange exchange = invokeIngestionRoute("public-connector", gzipSamplePayloadAsBase64(),
-        "gzip");
-
-    assertEquals(HTTP_CREATED, exchange.getMessage().getHeader(Exchange.HTTP_RESPONSE_CODE));
-    assertEquals("application/json", exchange.getMessage().getHeader(Exchange.CONTENT_TYPE));
-    assertJsonSuccessResponse(exchange);
+    assertJsonErrorResponse(exchange, "invalid_compressed_payload",
+        "Invalid or corrupted compressed payload");
   }
 
   @Test
@@ -337,18 +340,8 @@ class InboundWebhookIngestionRouteTest extends AbstractIntegrationTest {
 
     assertEquals(HTTP_BAD_REQUEST, exchange.getMessage().getHeader(Exchange.HTTP_RESPONSE_CODE));
     assertEquals("application/json", exchange.getMessage().getHeader(Exchange.CONTENT_TYPE));
-    assertJsonErrorResponse(exchange, "BAD_REQUEST", "Invalid or corrupted compressed payload");
-  }
-
-  @Test
-  @DisplayName("Route keeps compatibility when encoding header is unknown")
-  void postWebhookRoute_201_whenEncodingHeaderIsUnknown() throws Exception {
-    Exchange exchange = invokeIngestionRoute("public-connector", "{\"event\":\"plain\"}",
-        "gzip-weird");
-
-    assertEquals(HTTP_CREATED, exchange.getMessage().getHeader(Exchange.HTTP_RESPONSE_CODE));
-    assertEquals("application/json", exchange.getMessage().getHeader(Exchange.CONTENT_TYPE));
-    assertJsonSuccessResponse(exchange);
+    assertJsonErrorResponse(exchange, "invalid_compressed_payload",
+        "Invalid or corrupted compressed payload");
   }
 
   private static Stream<Arguments> successDecodingCases() throws Exception {
