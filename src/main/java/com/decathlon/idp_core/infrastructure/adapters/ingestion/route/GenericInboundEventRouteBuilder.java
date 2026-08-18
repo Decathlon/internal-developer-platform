@@ -32,11 +32,8 @@ public class GenericInboundEventRouteBuilder extends RouteBuilder {
     webhookExceptionRouteBuilder.configureExceptions(this);
 
     from(DIRECT_PROCESS_EVENT).routeId(ROUTE_ID_WEBHOOK_PIPELINE)
-        .setProperty(RAW_PAYLOAD_BODY_PROPERTY, body())
-        .to(DIRECT_FETCH_CONFIGURATION)
-        .to(DIRECT_VALIDATE_ENABLED)
-        .to(DIRECT_DECODE_PAYLOAD)
-        .to(DIRECT_INGEST_PAYLOAD)
+        .setProperty(RAW_PAYLOAD_BODY_PROPERTY, body()).to(DIRECT_FETCH_CONFIGURATION)
+        .to(DIRECT_VALIDATE_ENABLED).to(DIRECT_DECODE_PAYLOAD).to(DIRECT_INGEST_PAYLOAD)
         .removeHeaders("*") // Clear all accumulated incoming and internal headers
         .setHeader(Exchange.HTTP_RESPONSE_CODE, constant(HTTP_CREATED))
         .setHeader(Exchange.CONTENT_TYPE, constant(APPLICATION_JSON))
