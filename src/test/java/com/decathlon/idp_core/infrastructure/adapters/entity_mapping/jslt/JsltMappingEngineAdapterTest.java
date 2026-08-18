@@ -2,6 +2,7 @@ package com.decathlon.idp_core.infrastructure.adapters.entity_mapping.jslt;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
@@ -24,7 +25,7 @@ class JsltMappingEngineAdapterTest {
 
   @BeforeEach
   void setUp() {
-    var jsltEngine = new JsltEngine();
+    var jsltEngine = new JsltEngine(Collections.emptyList());
     adapter = new JsltMappingEngineAdapter(jsltEngine, new ObjectMapper(),
         new JsltExpressionEvaluator(jsltEngine));
   }
