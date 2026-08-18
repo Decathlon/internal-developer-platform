@@ -11,6 +11,7 @@ import org.springframework.data.domain.Pageable;
 import com.decathlon.idp_core.domain.model.entity.Entity;
 import com.decathlon.idp_core.domain.model.entity.EntityCompositeKey;
 import com.decathlon.idp_core.domain.model.entity.EntityFilter;
+import com.decathlon.idp_core.domain.model.entity.EntityIdentity;
 import com.decathlon.idp_core.domain.model.entity.EntitySummary;
 import com.decathlon.idp_core.domain.model.search.PaginatedResult;
 import com.decathlon.idp_core.domain.model.search.PaginationCriteria;
@@ -39,6 +40,21 @@ public interface EntityRepositoryPort {
   Optional<Entity> findById(UUID id);
 
   Optional<Entity> findByTemplateIdentifierAndIdentifier(String templateIdentifier,
+      String identifier);
+
+  /// Resolves only the identifying fields (id, templateIdentifier, identifier,
+  /// name) of an entity, without hydrating its properties or relations.
+  ///
+  /// **Performance:** Use this instead of
+  /// [#findByTemplateIdentifierAndIdentifier] when the caller only needs to
+  /// resolve the entity's identity — e.g. before dispatching a separate batch
+  /// graph query — to avoid the cost of lazily loading and mapping the full
+  /// property/relation collections (perf #131).
+  ///
+  /// @param templateIdentifier business template identifier
+  /// @param identifier business identifier within the template
+  /// @return the matching entity's identity, or empty if none found
+  Optional<EntityIdentity> findIdentityByTemplateIdentifierAndIdentifier(String templateIdentifier,
       String identifier);
 
   Optional<Entity> findByTemplateIdentifierAndName(String templateIdentifier, String entityName);

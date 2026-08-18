@@ -11,6 +11,9 @@ import java.util.stream.Collectors;
 import jakarta.transaction.Transactional;
 import jakarta.validation.Valid;
 
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
+import org.springframework.cache.annotation.Caching;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -45,6 +48,19 @@ import lombok.RequiredArgsConstructor;
 @RequiredArgsConstructor
 public class EntityTemplateService {
 
+  /// Name of the cache backing {@link #getEntityTemplateByIdentifier(String)}.
+  ///
+  /// **Business purpose:** `EntityTemplate` lookups happen on nearly every
+  /// entity read/write request (property type resolution, relation target
+  /// template resolution — see `EntityDtoOutMapper`, `EntityService`,
+  /// `EntityGraphService`) but template definitions change infrequently
+  /// (admin-driven CRUD). Caching removes a redundant DB round trip from
+  /// every entity operation (perf #131). The cache backend (Caffeine, TTL,
+  /// size bound) is configured in the Infrastructure layer
+  /// (`CacheConfiguration`); this constant is the single source of truth for
+  /// the cache name so eviction and population always target the same cache.
+  public static final String ENTITY_TEMPLATES_CACHE = "entityTemplates";
+
   private final EntityTemplateRepositoryPort entityTemplateRepositoryPort;
   private final EntityTemplateValidationService entityTemplateValidationService;
   private final EntityRepositoryPort entityRepositoryPort;
@@ -70,9 +86,18 @@ public class EntityTemplateService {
   /// Case-sensitive matching ensures precise template resolution for entity
   /// operations.
   ///
+  /// **Performance:** Cached by identifier (see [#ENTITY_TEMPLATES_CACHE]) —
+  /// this method is called on nearly every entity read/write path, and
+  /// template definitions rarely change, so caching removes a redundant DB
+  /// round trip per call (perf #131). Mutating operations
+  /// ([#createEntityTemplate], [#updateEntityTemplate],
+  /// [#deleteEntityTemplate]) evict the corresponding entry to keep the cache
+  /// consistent with persisted state.
+  ///
   /// @param identifier unique business identifier of the template
   /// @return the matching [EntityTemplate]
   /// @throws EntityTemplateNotFoundException when template doesn't exist
+  @Cacheable(cacheNames = ENTITY_TEMPLATES_CACHE, key = "#identifier")
   public EntityTemplate getEntityTemplateByIdentifier(String identifier) {
     return entityTemplateRepositoryPort.findByIdentifier(identifier)
         .orElseThrow(() -> new EntityTemplateNotFoundException("identifier", identifier));
@@ -98,6 +123,7 @@ public class EntityTemplateService {
   /// @throws EntityTemplateAlreadyExistsException when identifier already exists
   /// @throws EntityTemplateNameAlreadyExistsException when name already exists
   @Transactional
+  @CacheEvict(cacheNames = ENTITY_TEMPLATES_CACHE, key = "#entityTemplate.identifier()")
   public EntityTemplate createEntityTemplate(@Valid EntityTemplate entityTemplate) {
     entityTemplateValidationService.validateForCreation(entityTemplate);
     return entityTemplateRepositoryPort.save(entityTemplate);
@@ -137,6 +163,8 @@ public class EntityTemplateService {
   /// @throws EntityTemplateAlreadyExistsException when renaming would cause a
   /// duplicate
   @Transactional
+  @Caching(evict = {@CacheEvict(cacheNames = ENTITY_TEMPLATES_CACHE, key = "#identifier"),
+      @CacheEvict(cacheNames = ENTITY_TEMPLATES_CACHE, key = "#entityTemplate.identifier()")})
   public EntityTemplate updateEntityTemplate(String identifier,
       @Valid EntityTemplate entityTemplate) {
     EntityTemplate existingTemplate = getEntityTemplateByIdentifier(identifier);
@@ -167,6 +195,7 @@ public class EntityTemplateService {
   /// @param identifier unique business identifier of template to delete
   /// @throws EntityTemplateNotFoundException when template doesn't exist
   @Transactional
+  @CacheEvict(cacheNames = ENTITY_TEMPLATES_CACHE, key = "#identifier")
   public void deleteEntityTemplate(String identifier) {
     entityTemplateValidationService.validateForDeletion(identifier);
     entityTemplateRepositoryPort.deleteByIdentifier(identifier);

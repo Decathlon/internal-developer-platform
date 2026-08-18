@@ -18,6 +18,7 @@ import org.springframework.stereotype.Component;
 import com.decathlon.idp_core.domain.model.entity.Entity;
 import com.decathlon.idp_core.domain.model.entity.EntityCompositeKey;
 import com.decathlon.idp_core.domain.model.entity.EntityFilter;
+import com.decathlon.idp_core.domain.model.entity.EntityIdentity;
 import com.decathlon.idp_core.domain.model.entity.EntitySummary;
 import com.decathlon.idp_core.domain.model.search.PaginatedResult;
 import com.decathlon.idp_core.domain.model.search.PaginationCriteria;
@@ -63,6 +64,13 @@ public class PostgresEntityAdapter implements EntityRepositoryPort {
       String identifier) {
     return jpaEntityRepository.findByTemplateIdentifierAndIdentifier(templateIdentifier, identifier)
         .map(mapper::toDomain);
+  }
+
+  @Override
+  public Optional<EntityIdentity> findIdentityByTemplateIdentifierAndIdentifier(
+      String templateIdentifier, String identifier) {
+    return jpaEntityRepository.findIdentityByTemplateIdentifierAndIdentifier(templateIdentifier,
+        identifier);
   }
 
   @Override
