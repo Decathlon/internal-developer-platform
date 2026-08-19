@@ -25,11 +25,11 @@ public class JwtBearerSecurityValidator implements WebhookSecurityStrategy {
   private static final String KEY_CLIENT_ID_FIELD_CAMEL_CASE = "clientIdField";
   private static final String KEY_CLIENT_ID_VALUES_SNAKE_CASE = "client_id_values";
   private static final String KEY_CLIENT_ID_VALUES_CAMEL_CASE = "clientIdValues";
+  private static final String KEY_EXPECTED_AUDIENCE_SNAKE_CASE = "expected_audience";
 
   private static final String BEARER_PREFIX = "Bearer ";
   private static final String CLIENT_CLAIM_AZP = "azp";
   private static final String CLIENT_CLAIM_EMAIL = "email";
-  private static final String DEFAULT_CLIENT_ID_FIELD = CLIENT_CLAIM_AZP;
 
   private final WebhookJwtDecoderProvider jwtDecoderProvider;
 
@@ -50,7 +50,7 @@ public class JwtBearerSecurityValidator implements WebhookSecurityStrategy {
       throw new WebhookSecurityConfigurationException("Invalid jwks_uri for JWT_BEARER security");
     }
 
-    String clientIdField = resolveOptionalClientIdField(config);
+    String clientIdField = resolveRequiredClientIdField(config);
     if (WebhookSecurityConfigurationUtils.isEnvironmentReference(clientIdField)) {
       throw new WebhookSecurityConfigurationException(
           "Invalid client_id_field for JWT_BEARER security: runtime environment references are not supported");
@@ -72,6 +72,19 @@ public class JwtBearerSecurityValidator implements WebhookSecurityStrategy {
           "Invalid client_id_values for JWT_BEARER security: runtime environment references are not supported");
     }
 
+    String optionalExpectedAudience = resolveOptionalExpectedAudience(config);
+    if (optionalExpectedAudience != null) {
+      if (optionalExpectedAudience.isBlank()) {
+        throw new WebhookSecurityConfigurationException(
+            "Invalid expected_audience for JWT_BEARER security");
+      }
+      if (WebhookSecurityConfigurationUtils.isEnvironmentReference(optionalExpectedAudience)) {
+        throw new WebhookSecurityConfigurationException(
+            "Invalid expected_audience for JWT_BEARER security: runtime environment references are not supported");
+      }
+      parseAllowedAudienceValues(optionalExpectedAudience);
+    }
+
     parseAllowedClientIdValues(clientIdValues);
   }
 
@@ -85,9 +98,10 @@ public class JwtBearerSecurityValidator implements WebhookSecurityStrategy {
       jwksUriValue = WebhookSecurityConfigurationUtils.resolveRuntimeSecret(jwksUriValue);
     }
 
-    String clientIdField = resolveOptionalClientIdField(config);
+    String clientIdField = resolveRequiredClientIdField(config);
     String clientIdValues = WebhookSecurityConfigurationUtils.required(config,
         KEY_CLIENT_ID_VALUES_SNAKE_CASE, KEY_CLIENT_ID_VALUES_CAMEL_CASE);
+    String optionalExpectedAudience = resolveOptionalExpectedAudience(config);
 
     String authorization = WebhookSecurityConfigurationUtils.requiredHeader(headers,
         "Authorization");
@@ -110,20 +124,26 @@ public class JwtBearerSecurityValidator implements WebhookSecurityStrategy {
       throw new WebhookAuthForbiddenException(
           "JWT client or service account identifier was rejected");
     }
+
+    if (StringUtils.hasText(optionalExpectedAudience)) {
+      validateAudienceClaim(jwt, optionalExpectedAudience);
+    }
   }
 
-  private String resolveOptionalClientIdField(Map<String, String> config) {
-    String snakeCaseValue = config.get(KEY_CLIENT_ID_FIELD_SNAKE_CASE);
-    if (snakeCaseValue != null && !snakeCaseValue.isBlank()) {
-      return snakeCaseValue;
+  private String resolveRequiredClientIdField(Map<String, String> config) {
+    try {
+      return WebhookSecurityConfigurationUtils.required(config, KEY_CLIENT_ID_FIELD_SNAKE_CASE,
+          KEY_CLIENT_ID_FIELD_CAMEL_CASE);
+    } catch (WebhookSecurityConfigurationException _) {
+      throw new WebhookSecurityConfigurationException(
+          "Missing required JWT_BEARER config key. Expected one of: client_id_field, clientIdField. "
+              + "Allowed values: 'azp' (Client ID) or 'email' (Service Account). "
+              + "Example: \"client_id_field\": \"email\"");
     }
+  }
 
-    String camelCaseValue = config.get(KEY_CLIENT_ID_FIELD_CAMEL_CASE);
-    if (camelCaseValue != null && !camelCaseValue.isBlank()) {
-      return camelCaseValue;
-    }
-
-    return DEFAULT_CLIENT_ID_FIELD;
+  private String resolveOptionalExpectedAudience(Map<String, String> config) {
+    return config.get(KEY_EXPECTED_AUDIENCE_SNAKE_CASE);
   }
 
   private Jwt decodeAndValidateJwt(String token, String jwksUri) {
@@ -143,5 +163,31 @@ public class JwtBearerSecurityValidator implements WebhookSecurityStrategy {
           "Invalid client_id_values for JWT_BEARER security");
     }
     return values;
+  }
+
+  private Set<String> parseAllowedAudienceValues(String audienceValues) {
+    Set<String> values = Stream.of(audienceValues.split(",")).map(String::trim)
+        .filter(value -> !value.isBlank()).collect(Collectors.toUnmodifiableSet());
+
+    if (values.isEmpty()) {
+      throw new WebhookSecurityConfigurationException(
+          "Invalid expected_audience for JWT_BEARER security");
+    }
+    return values;
+  }
+
+  private void validateAudienceClaim(Jwt jwt, String configuredAudienceValues) {
+    Set<String> allowedAudiences = parseAllowedAudienceValues(configuredAudienceValues);
+    var jwtAudiences = jwt.getAudience();
+    if (jwtAudiences == null || jwtAudiences.isEmpty()) {
+      throw new WebhookAuthForbiddenException("JWT missing required claim: aud");
+    }
+
+    Set<String> tokenAudiences = jwtAudiences.stream().collect(Collectors.toUnmodifiableSet());
+
+    boolean matched = tokenAudiences.stream().anyMatch(allowedAudiences::contains);
+    if (!matched) {
+      throw new WebhookAuthForbiddenException("JWT audience was rejected");
+    }
   }
 }

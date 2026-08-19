@@ -110,7 +110,11 @@ public final class WebhookSecurityConfigurationUtils {
     return resolved;
   }
 
-  /// Reads an inbound HTTP header value in a case-sensitive way.
+  /// Reads an inbound HTTP header value in a case-insensitive way.
+  ///
+  /// HTTP/1.1 headers are case-insensitive (RFC 7230). Gateways and proxies may
+  /// normalize header names to lowercase before forwarding, so case-insensitive
+  /// matching is required for reliable interoperability.
   ///
   /// @param headers inbound headers
   /// @param headerName target header name
@@ -123,7 +127,7 @@ public final class WebhookSecurityConfigurationUtils {
     }
 
     return headers.entrySet().stream()
-        .filter(entry -> entry.getKey() != null && entry.getKey().equals(headerName))
+        .filter(entry -> entry.getKey() != null && entry.getKey().equalsIgnoreCase(headerName))
         .map(Map.Entry::getValue).filter(Objects::nonNull).map(Object::toString)
         .filter(StringUtils::hasText).findFirst()
         .orElseThrow(() -> new WebhookAuthenticationException(

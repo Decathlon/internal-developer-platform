@@ -57,25 +57,6 @@ class StaticTokenSecurityValidatorTest {
   }
 
   @Test
-  @DisplayName("Should fail when header case does not match configured header_name")
-  void shouldFailWhenHeaderCaseDoesNotMatch() {
-    String tokenEnv = "STATIC_TOKEN_TEST";
-    System.setProperty(tokenEnv, "expected-token");
-
-    try {
-      Map<String, String> config = Map.of("header_name", "X-Auth-Token", "secret_alias", tokenEnv);
-      Map<String, Object> headers = Map.of("x-auth-token", "expected-token");
-
-      assertThatThrownBy(() -> validator.validateRequest(headers, new byte[0], config))
-          .isInstanceOf(
-              com.decathlon.idp_core.domain.exception.webhook.WebhookAuthenticationException.class)
-          .hasMessageContaining("X-Auth-Token");
-    } finally {
-      System.clearProperty(tokenEnv);
-    }
-  }
-
-  @Test
   @DisplayName("Should reject invalid static token with 403 exception")
   void shouldRejectInvalidStaticToken() {
     String tokenEnv = "STATIC_TOKEN_TEST_2";
