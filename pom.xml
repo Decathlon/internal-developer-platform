@@ -130,6 +130,18 @@
       <artifactId>spring-boot-starter-data-jpa</artifactId>
     </dependency>
 
+    <!-- Caching abstraction (Caffeine backend) for read-mostly domain lookups
+         such as EntityTemplate resolution, avoiding a DB round trip on every
+         entity read/write path (perf #131) -->
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-starter-cache</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>com.github.ben-manes.caffeine</groupId>
+      <artifactId>caffeine</artifactId>
+    </dependency>
+
     <!-- Spring Boot DevTools for hot reloading -->
     <dependency>
       <groupId>org.springframework.boot</groupId>

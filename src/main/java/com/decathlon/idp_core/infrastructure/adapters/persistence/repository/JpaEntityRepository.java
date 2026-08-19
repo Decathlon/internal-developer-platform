@@ -14,6 +14,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import com.decathlon.idp_core.domain.model.entity.EntityIdentity;
 import com.decathlon.idp_core.domain.model.entity.EntitySummary;
 import com.decathlon.idp_core.infrastructure.adapters.persistence.model.entity.EntityJpaEntity;
 
@@ -65,6 +66,21 @@ public interface JpaEntityRepository
 
   Optional<EntityJpaEntity> findByTemplateIdentifierAndIdentifier(String templateIdentifier,
       String identifier);
+
+  /// Resolves only the identifying scalar fields of an entity (id,
+  /// templateIdentifier, identifier, name) via a constructor expression,
+  /// without touching the lazy `properties`/`relations` collections.
+  ///
+  /// **Performance:** Avoids the extra batched lazy-load queries that
+  /// `findByTemplateIdentifierAndIdentifier` triggers as soon as the mapper
+  /// touches `getProperties()`/`getRelations()` on the returned entity —
+  /// useful for callers that only need to resolve identity before a separate
+  /// batch graph query (perf #131).
+  @Query("SELECT new com.decathlon.idp_core.domain.model.entity.EntityIdentity(e.id, e.templateIdentifier, e.identifier, e.name) "
+      + "FROM EntityJpaEntity e WHERE e.templateIdentifier = :templateIdentifier AND e.identifier = :identifier")
+  Optional<EntityIdentity> findIdentityByTemplateIdentifierAndIdentifier(
+      @Param("templateIdentifier") String templateIdentifier,
+      @Param("identifier") String identifier);
 
   Optional<EntityJpaEntity> findByTemplateIdentifierAndName(String templateIdentifier, String name);
 

@@ -15,6 +15,7 @@ import com.decathlon.idp_core.domain.exception.entity.EntityNotFoundException;
 import com.decathlon.idp_core.domain.exception.entity_template.EntityTemplateNotFoundException;
 import com.decathlon.idp_core.domain.model.entity.Entity;
 import com.decathlon.idp_core.domain.model.entity.EntityFilter;
+import com.decathlon.idp_core.domain.model.entity.EntityIdentity;
 import com.decathlon.idp_core.domain.model.entity_graph.EntityGraphNode;
 import com.decathlon.idp_core.domain.model.entity_graph.EntityGraphTraversalMode;
 import com.decathlon.idp_core.domain.port.EntityGraphRepositoryPort;
@@ -104,9 +105,12 @@ public class EntityGraphService {
 
     entityTemplateValidationService.validateTemplateExists(templateIdentifier);
 
-    // 1. Resolve root entity
-    Entity rootEntity = entityRepositoryPort
-        .findByTemplateIdentifierAndIdentifier(templateIdentifier, entityIdentifier)
+    // 1. Resolve root entity identity only — properties/relations are not
+    // needed here since the graph data comes from the batch findEntityGraph
+    // call below; fetching the full Entity would force Hibernate to
+    // lazy-load both collections for no benefit (perf #131).
+    EntityIdentity rootEntity = entityRepositoryPort
+        .findIdentityByTemplateIdentifierAndIdentifier(templateIdentifier, entityIdentifier)
         .orElseThrow(() -> new EntityNotFoundException(templateIdentifier, entityIdentifier));
 
     // 2. Load the graph footprint via optimized DB calls
