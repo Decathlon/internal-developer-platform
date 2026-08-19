@@ -137,14 +137,11 @@ public class JsltMappingEngineAdapter implements MappingEnginePort {
       }
     }
 
-    if (allTargetIdentifiers.isEmpty()) {
-      return null;
-    }
-
     return new Relation(null, relationMapping.name(), null, allTargetIdentifiers);
   }
 
   /// Extracts relation target identifiers from a scalar or array result node.
+  /// If target identifiers null or empty we return an empty list.
   private List<String> extractTargetEntityIdentifiers(JsonNode valueNode) {
     if (valueNode == null || valueNode.isNull() || valueNode.isMissingNode()) {
       return List.of();

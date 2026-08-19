@@ -37,6 +37,7 @@ public class IngestionProcessor {
   public void ingest(String payload, WebhookConnector webhookConnectorConfiguration) {
     log.info("Starting ingestion for webhook connector: {}",
         webhookConnectorConfiguration.identifier());
+    log.info("Input payload : {}", payload);
     webhookConnectorConfiguration.mappings().forEach(mapping -> applyMapping(payload, mapping));
     log.info("Completed ingestion for webhook connector: {}",
         webhookConnectorConfiguration.identifier());
@@ -53,7 +54,7 @@ public class IngestionProcessor {
 
     if (entity == null) {
       log.debug("Mapping filter excluded payload for template: {}",
-              mapping.entityTemplateIdentifier());
+          mapping.entityTemplateIdentifier());
       return;
     }
 
@@ -68,13 +69,14 @@ public class IngestionProcessor {
     }
 
     log.info("Successfully processed action {} for entity: {} under template: {}",
-            mapping.action(), entity.identifier(), entity.templateIdentifier());
+        mapping.action(), entity.identifier(), entity.templateIdentifier());
   }
 
   /// Handles the Update action for an entity.
   ///
-  /// If the entity exists, it is patched with the new data.
-  /// If the entity does not exist, it is created.
+  /// If the entity exists, it is patched with the new data. If the entity does
+  /// not
+  /// exist, it is created.
   ///
   /// @param entity the entity to Update
   /// @param exists whether the entity already exists
@@ -88,8 +90,9 @@ public class IngestionProcessor {
 
   /// Handles the Update properties action for an entity.
   ///
-  /// If the entity exists, only its properties are patched.
-  /// If the entity does not exist, it is created with only its properties.
+  /// If the entity exists, only its properties are patched. If the entity does
+  /// not
+  /// exist, it is created with only its properties.
   ///
   /// @param entity the entity to Update properties for
   /// @param exists whether the entity already exists
@@ -108,8 +111,8 @@ public class IngestionProcessor {
 
   /// Handles the Update relations action for an entity.
   ///
-  /// If the entity exists, only its relations are patched.
-  /// If the entity does not exist, it is created with only its relations.
+  /// If the entity exists, only its relations are patched. If the entity does not
+  /// exist, it is created with only its relations.
   ///
   /// @param entity the entity to Update relations for
   /// @param exists whether the entity already exists
