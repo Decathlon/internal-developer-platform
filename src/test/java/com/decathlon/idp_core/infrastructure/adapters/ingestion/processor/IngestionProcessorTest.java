@@ -369,7 +369,7 @@ class IngestionProcessorTest {
     @DisplayName("Should delete entity successfully")
     void delete_succeeds() {
       String payload = "{\"action\": \"pushed\"}";
-      EntityDynamicMapping mapping = createTestMapping(MappingAction.DELETE);
+      EntityDynamicMapping mapping = createTestMapping(MappingAction.DELETE_ENTITY);
       WebhookConnector connector = createWebhookConnector("test-connector", List.of(mapping));
       Entity entity = createTestEntity("test-template", "test-id");
 
@@ -386,7 +386,7 @@ class IngestionProcessorTest {
     @DisplayName("Should delete entity regardless of existence check")
     void delete_ignores_existence() {
       String payload = "{\"action\": \"pushed\"}";
-      EntityDynamicMapping mapping = createTestMapping(MappingAction.DELETE);
+      EntityDynamicMapping mapping = createTestMapping(MappingAction.DELETE_ENTITY);
       WebhookConnector connector = createWebhookConnector("test-connector", List.of(mapping));
       Entity entity = createTestEntity("test-template", "test-id");
 

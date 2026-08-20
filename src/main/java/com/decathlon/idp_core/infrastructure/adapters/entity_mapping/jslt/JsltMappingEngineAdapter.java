@@ -57,9 +57,9 @@ public class JsltMappingEngineAdapter implements MappingEnginePort {
     }
 
     JsonNode filterResult = jsltEngine.evaluate(mapping.filter(), rootPayload);
+    log.debug("Filter expression returned: {}, for mapping: {}, action: {}, filter: {}",
+        filterResult, mapping.identifier(), mapping.action(), mapping.filter());
     if (filterResult.isNull() || (filterResult.isBoolean() && !filterResult.asBoolean())) {
-      log.debug("Filter expression returned false/null, skipping item for template: {}",
-          mapping.entityTemplateIdentifier());
       return null;
     }
     return extractEntity(rootPayload, rootPayload, mapping);

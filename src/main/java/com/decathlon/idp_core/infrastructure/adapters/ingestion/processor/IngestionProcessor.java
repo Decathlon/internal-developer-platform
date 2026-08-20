@@ -50,6 +50,7 @@ public class IngestionProcessor {
   /// @param payload the raw JSON payload from the webhook
   /// @param mapping the mapping definition to apply
   private void applyMapping(String payload, EntityDynamicMapping mapping) {
+    log.debug("Applying mapping for template: {} with action: {}", mapping.identifier(), mapping.action());
     Entity entity = mappingEngine.mapToEntity(payload, mapping);
 
     if (entity == null) {
@@ -64,7 +65,7 @@ public class IngestionProcessor {
       case UPDATE_ENTITY -> handleUpdate(entity, exists);
       case UPDATE_PROPERTIES -> handleUpdateProperties(entity, exists);
       case UPDATE_RELATIONS -> handleUpdateRelations(entity, exists);
-      case DELETE -> handleDelete(entity);
+      case DELETE_ENTITY -> handleDelete(entity);
       case null, default -> log.warn("Unsupported or null mapping action: {}", mapping.action());
     }
 
@@ -82,8 +83,12 @@ public class IngestionProcessor {
   /// @param exists whether the entity already exists
   private void handleUpdate(Entity entity, boolean exists) {
     if (exists) {
+      log.debug("Patching entity {} for template: {}", entity.identifier(),
+          entity.templateIdentifier());
       entityService.patchEntity(entity.templateIdentifier(), entity.identifier(), entity);
     } else {
+      log.debug("Creating entity {} for template: {}", entity.identifier(),
+          entity.templateIdentifier());
       entityService.createEntity(entity);
     }
   }

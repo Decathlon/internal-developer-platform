@@ -206,7 +206,8 @@ class EntityDynamicMappingAdaptorTest {
     @Test
     @DisplayName("Should preserve the DELETE action when saving a mapping")
     void shouldPreserveDeleteAction() {
-      EntityDynamicMapping domain = buildDomainMapping("delete-mapping", MappingAction.DELETE);
+      EntityDynamicMapping domain = buildDomainMapping("delete-mapping",
+          MappingAction.DELETE_ENTITY);
       EntityDynamicMappingJpaEntity jpa = buildJpaEntity("delete-mapping");
       EntityDynamicMappingJpaEntity savedJpa = buildJpaEntity("delete-mapping");
       UUID templateId = UUID.randomUUID();
@@ -219,7 +220,7 @@ class EntityDynamicMappingAdaptorTest {
 
       EntityDynamicMapping result = adaptor.save(domain);
 
-      assertThat(result.action()).isEqualTo(MappingAction.DELETE);
+      assertThat(result.action()).isEqualTo(MappingAction.DELETE_ENTITY);
     }
   }
 

@@ -58,14 +58,14 @@ class InboundWebhookMapperTest {
     var request = new InboundWebhookUpdateDtoIn("GitHub DORA", "Delete deployments", true,
         List.of("deployment-mapping"), new InboundWebhookSecurityContractDtoIn("NONE", Map.of()));
     var mapping = new EntityDynamicMapping(UUID.randomUUID(), "deployment-mapping", "deployment",
-        ".eventType == \"DELETED\"", MappingAction.DELETE, "deployment mapping",
+        ".eventType == \"DELETED\"", MappingAction.DELETE_ENTITY, "deployment mapping",
         "deployment mapping description", ".id", ".name", Map.of(), List.of());
 
     WebhookConnector domain = mapper.toDomainForUpdate("identifier_from_path", request,
         List.of(mapping));
 
     assertThat(domain.mappings()).singleElement().extracting(EntityDynamicMapping::action)
-        .isEqualTo(MappingAction.DELETE);
+        .isEqualTo(MappingAction.DELETE_ENTITY);
   }
 
   @Test

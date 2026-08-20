@@ -849,10 +849,10 @@ class InboundWebhookManagementControllerTest extends AbstractIntegrationTest {
     @WithMockUser
     @DisplayName("Should create mapping with DELETE action")
     void create_mapping_with_delete_action() throws Exception {
-      createEntityDynamicMappingWithAction("mapping-delete", "DELETE");
+      createEntityDynamicMappingWithAction("mapping-delete", "DELETE_ENTITY");
 
       mockMvc.perform(get(ENTITY_DYNAMIC_MAPPING_PATH + "/mapping-delete").accept(APPLICATION_JSON))
-          .andExpect(status().isOk()).andExpect(jsonPath("$.action").value("DELETE"));
+          .andExpect(status().isOk()).andExpect(jsonPath("$.action").value("DELETE_ENTITY"));
     }
 
     @Test
@@ -915,7 +915,7 @@ class InboundWebhookManagementControllerTest extends AbstractIntegrationTest {
     @WithMockUser
     @DisplayName("Should associate webhook connector with DELETE mapping")
     void webhook_with_delete_mapping() throws Exception {
-      createEntityDynamicMappingWithAction("webhook-delete-mapping", "DELETE");
+      createEntityDynamicMappingWithAction("webhook-delete-mapping", "DELETE_ENTITY");
 
       var webhookPayload = """
           {
@@ -936,7 +936,7 @@ class InboundWebhookManagementControllerTest extends AbstractIntegrationTest {
               .accept(APPLICATION_JSON).with(csrf()).content(webhookPayload))
           .andExpect(status().isCreated())
           .andExpect(jsonPath("$.identifier").value("webhook-delete"))
-          .andExpect(jsonPath("$.mappings[0].action").value("DELETE"));
+          .andExpect(jsonPath("$.mappings[0].action").value("DELETE_ENTITY"));
     }
 
     @Test
@@ -945,7 +945,7 @@ class InboundWebhookManagementControllerTest extends AbstractIntegrationTest {
     void webhook_with_multiple_different_actions() throws Exception {
       createEntityDynamicMappingWithAction("multi-map-1", "UPDATE_ENTITY");
       createEntityDynamicMappingWithAction("multi-map-2", "UPDATE_PROPERTIES");
-      createEntityDynamicMappingWithAction("multi-map-3", "DELETE");
+      createEntityDynamicMappingWithAction("multi-map-3", "DELETE_ENTITY");
 
       var webhookPayload = """
           {
@@ -967,7 +967,7 @@ class InboundWebhookManagementControllerTest extends AbstractIntegrationTest {
           .andExpect(status().isCreated())
           .andExpect(jsonPath("$.identifier").value("webhook-multi-actions"))
           .andExpect(jsonPath("$.mappings", hasSize(3))).andExpect(jsonPath("$.mappings[*].action",
-              containsInAnyOrder("UPDATE_ENTITY", "UPDATE_PROPERTIES", "DELETE")));
+              containsInAnyOrder("UPDATE_ENTITY", "UPDATE_PROPERTIES", "DELETE_ENTITY")));
     }
   }
 

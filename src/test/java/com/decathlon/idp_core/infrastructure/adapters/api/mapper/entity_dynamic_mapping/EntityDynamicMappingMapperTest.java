@@ -52,12 +52,12 @@ class EntityDynamicMappingMapperTest {
   @DisplayName("Should preserve the DELETE action when converting to DTO")
   void fromEntityMappingToDto_preserves_delete_action() {
     EntityDynamicMapping mapping = new EntityDynamicMapping(null, "delete-mapping", "microservice",
-        ".action == \"deleted\"", MappingAction.DELETE, "Delete Mapping", "description", ".id",
-        ".name", Map.of(), List.of());
+        ".action == \"deleted\"", MappingAction.DELETE_ENTITY, "Delete Mapping", "description",
+        ".id", ".name", Map.of(), List.of());
 
     EntityDynamicMappingDtoOut dto = mapper.fromEntityMappingToDto(mapping);
 
-    assertThat(dto.action()).isEqualTo(MappingAction.DELETE);
+    assertThat(dto.action()).isEqualTo(MappingAction.DELETE_ENTITY);
   }
 
   @Test
