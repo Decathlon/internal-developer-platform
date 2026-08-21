@@ -1,0 +1,840 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>IDP-Core API - Internal Developer Platform</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            background: white;
+        }
+
+        /* Navigation */
+        nav {
+            background: rgb(235, 230, 230);
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            padding: 1rem 2rem;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        nav .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        nav .logo {
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: #1f77b4;
+        }
+
+        nav ul {
+            list-style: none;
+            display: flex;
+            gap: 2rem;
+        }
+
+        nav a {
+            text-decoration: none;
+            color: #666;
+            transition: color 0.3s;
+        }
+
+        nav a:hover {
+            color: #1f77b4;
+        }
+
+        /* Hero Section */
+        .hero {
+            background: linear-gradient(135deg, #1f77b4 0%, #2c5aa0 100%);
+            color: white;
+            padding: 6rem 2rem;
+            text-align: center;
+        }
+
+        .hero .container {
+            max-width: 1000px;
+            margin: 0 auto;
+        }
+
+        .hero h1 {
+            font-size: 3.5rem;
+            margin-bottom: 1rem;
+            font-weight: 700;
+        }
+
+        .hero p {
+            font-size: 1.3rem;
+            margin-bottom: 2rem;
+            opacity: 0.95;
+            line-height: 1.8;
+        }
+
+        .hero .cta-buttons {
+            display: flex;
+            gap: 1rem;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+
+        .cta-button {
+            padding: 0.75rem 2rem;
+            font-size: 1rem;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            text-decoration: none;
+            transition: all 0.3s;
+            font-weight: 600;
+        }
+
+        .cta-primary {
+            background: white;
+            color: #1f77b4;
+        }
+
+        .cta-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 16px rgba(0,0,0,0.2);
+        }
+
+        .cta-secondary {
+            border: 2px solid white;
+            color: white;
+            background: transparent;
+        }
+
+        .cta-secondary:hover {
+            background: rgba(255,255,255,0.1);
+            transform: translateY(-2px);
+        }
+
+        /* Features Section */
+        .features {
+            padding: 4rem 2rem;
+            background: white;
+        }
+
+        .features .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .features h2 {
+            text-align: center;
+            font-size: 2.5rem;
+            margin-bottom: 3rem;
+            color: #333;
+        }
+
+        .features-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 2rem;
+            margin-bottom: 4rem;
+        }
+
+        .feature-card {
+            background: #f9f9f9;
+            border-radius: 8px;
+            padding: 2rem;
+            border-left: 4px solid #1f77b4;
+            transition: all 0.3s;
+            cursor: pointer;
+        }
+
+        .feature-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 12px 24px rgba(0,0,0,0.1);
+        }
+
+        .feature-card .icon {
+            font-size: 2.5rem;
+            margin-bottom: 1rem;
+        }
+
+        .feature-card h3 {
+            color: #1f77b4;
+            margin-bottom: 0.5rem;
+            font-size: 1.3rem;
+        }
+
+        .feature-card p {
+            color: #666;
+            line-height: 1.7;
+            margin-bottom: 1rem;
+        }
+
+        .feature-card a {
+            color: #1f77b4;
+            text-decoration: none;
+            font-weight: 600;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .feature-card a:hover {
+            text-decoration: underline;
+        }
+
+        /* Capabilities Section */
+        .capabilities {
+            padding: 4rem 2rem;
+            background: #f5f7fa;
+        }
+
+        .capabilities .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .capabilities h2 {
+            text-align: center;
+            font-size: 2.5rem;
+            margin-bottom: 3rem;
+            color: #333;
+        }
+
+        .capability-item {
+            display: flex;
+            gap: 2rem;
+            margin-bottom: 3rem;
+            align-items: flex-start;
+        }
+
+        .capability-item:nth-child(even) {
+            flex-direction: row-reverse;
+        }
+
+        .capability-item .content {
+            flex: 1;
+        }
+
+        .capability-item .visual {
+            flex: 1;
+            background: white;
+            border-radius: 8px;
+            padding: 2rem;
+            text-align: center;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+        }
+
+        .capability-item h3 {
+            color: #1f77b4;
+            font-size: 1.8rem;
+            margin-bottom: 1rem;
+        }
+
+        .capability-item p {
+            color: #666;
+            line-height: 1.8;
+            margin-bottom: 1rem;
+        }
+
+        .capability-item ul {
+            list-style: none;
+            padding-left: 0;
+        }
+
+        .capability-item li {
+            color: #666;
+            margin-bottom: 0.75rem;
+            padding-left: 1.5rem;
+            position: relative;
+        }
+
+        .capability-item li:before {
+            content: "✓";
+            position: absolute;
+            left: 0;
+            color: #27ae60;
+            font-weight: bold;
+        }
+
+        .code-block {
+            background: #2c3e50;
+            color: #ecf0f1;
+            padding: 1.5rem;
+            border-radius: 4px;
+            overflow-x: auto;
+            font-family: 'Monaco', 'Courier New', monospace;
+            font-size: 0.9rem;
+        }
+
+        /* Use Cases Section */
+        .use-cases {
+            padding: 4rem 2rem;
+            background: white;
+        }
+
+        .use-cases .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .use-cases h2 {
+            text-align: center;
+            font-size: 2.5rem;
+            margin-bottom: 3rem;
+            color: #333;
+        }
+
+        .use-cases-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 2rem;
+        }
+
+        .use-case-card {
+            background: linear-gradient(135deg, #f5f7fa 0%, #e8ecf1 100%);
+            padding: 2rem;
+            border-radius: 8px;
+            text-align: center;
+            transition: all 0.3s;
+        }
+
+        .use-case-card:hover {
+            box-shadow: 0 8px 20px rgba(0,0,0,0.1);
+            transform: translateY(-4px);
+        }
+
+        .use-case-card .emoji {
+            font-size: 3rem;
+            margin-bottom: 1rem;
+        }
+
+        .use-case-card h3 {
+            color: #1f77b4;
+            margin-bottom: 0.75rem;
+        }
+
+        .use-case-card p {
+            color: #666;
+            font-size: 0.95rem;
+        }
+
+        /* Stats Section */
+        .stats {
+            background: linear-gradient(135deg, #1f77b4 0%, #2c5aa0 100%);
+            color: white;
+            padding: 3rem 2rem;
+        }
+
+        .stats .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 2rem;
+            text-align: center;
+        }
+
+        .stat {
+            padding: 1rem;
+        }
+
+        .stat-number {
+            font-size: 2.5rem;
+            font-weight: bold;
+            margin-bottom: 0.5rem;
+        }
+
+        .stat-label {
+            opacity: 0.9;
+            font-size: 1rem;
+        }
+
+        /* Getting Started Section */
+        .getting-started {
+            padding: 4rem 2rem;
+            background: #f5f7fa;
+        }
+
+        .getting-started .container {
+            max-width: 1000px;
+            margin: 0 auto;
+        }
+
+        .getting-started h2 {
+            text-align: center;
+            font-size: 2.5rem;
+            margin-bottom: 3rem;
+            color: #333;
+        }
+
+        .steps-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 2rem;
+            margin-bottom: 2rem;
+        }
+
+        .step {
+            background: white;
+            padding: 2rem;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+            text-align: center;
+        }
+
+        .step-number {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 50px;
+            height: 50px;
+            background: #1f77b4;
+            color: white;
+            border-radius: 50%;
+            font-size: 1.5rem;
+            font-weight: bold;
+            margin-bottom: 1rem;
+        }
+
+        .step h3 {
+            color: #1f77b4;
+            margin-bottom: 0.75rem;
+        }
+
+        .step p {
+            color: #666;
+            font-size: 0.95rem;
+        }
+
+        /* CTA Section */
+        .cta-section {
+            background: linear-gradient(135deg, #1f77b4 0%, #2c5aa0 100%);
+            color: white;
+            padding: 4rem 2rem;
+            text-align: center;
+        }
+
+        .cta-section .container {
+            max-width: 800px;
+            margin: 0 auto;
+        }
+
+        .cta-section h2 {
+            font-size: 2.2rem;
+            margin-bottom: 1rem;
+        }
+
+        .cta-section p {
+            font-size: 1.1rem;
+            margin-bottom: 2rem;
+            opacity: 0.95;
+        }
+
+        /* Footer */
+        footer {
+            background: #2c3e50;
+            color: white;
+            padding: 2rem;
+            text-align: center;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .hero h1 {
+                font-size: 2.2rem;
+            }
+
+            .hero p {
+                font-size: 1rem;
+            }
+
+            .cta-buttons {
+                flex-direction: column;
+            }
+
+            .capability-item,
+            .capability-item:nth-child(even) {
+                flex-direction: column;
+            }
+
+            .features h2,
+            .capabilities h2,
+            .use-cases h2,
+            .getting-started h2,
+            .cta-section h2 {
+                font-size: 1.8rem;
+            }
+
+            nav ul {
+                gap: 1rem;
+                font-size: 0.9rem;
+            }
+        }
+
+        /* Animations */
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .features-grid .feature-card,
+        .use-cases-grid .use-case-card,
+        .steps-grid .step {
+            animation: fadeIn 0.6s ease-out forwards;
+        }
+
+        .feature-card:nth-child(1) { animation-delay: 0.1s; }
+        .feature-card:nth-child(2) { animation-delay: 0.2s; }
+        .feature-card:nth-child(3) { animation-delay: 0.3s; }
+        .feature-card:nth-child(4) { animation-delay: 0.4s; }
+        .feature-card:nth-child(5) { animation-delay: 0.5s; }
+    </style>
+</head>
+<body>
+    <!-- Navigation -->
+    <nav>
+        <div class="container">
+            <div class="logo">IDP-Core</div>
+            <ul>
+                <li><a href="#features">Features</a></li>
+                <li><a href="#capabilities">Capabilities</a></li>
+                <li><a href="#getting-started">Getting Started</a></li>
+                <li><a href="https://github.com/decathlon/internal-developer-platform">GitHub</a></li>
+            </ul>
+        </div>
+    </nav>
+
+    <!-- Hero Section -->
+    <section class="hero">
+        <div class="container">
+            <h1>Internal Developer Platform</h1>
+            <p>Build your software catalog, manage entity relationships, and automate data ingestion—all through a modern, REST API.</p>
+            <div class="cta-buttons">
+                <a href="../getting-started/quickstart.md" class="cta-button cta-primary">Get Started</a>
+                <a href="../api/overview.md" class="cta-button cta-secondary">View API Docs</a>
+            </div>
+        </div>
+    </section>
+
+    <!-- Features Section -->
+    <section class="features" id="features">
+        <div class="container">
+            <h2>Core Features</h2>
+            <div class="features-grid">
+                <!-- Entity Templates -->
+                <div class="feature-card">
+                    <div class="icon">📋</div>
+                    <h3>Entity Templates</h3>
+                    <p>Define flexible, reusable schemas for services, databases, teams, and any entity type. Templates enforce consistency across your infrastructure while remaining adaptable to your unique needs.</p>
+                    <a href="https://github.com/Decathlon/internal-developer-platform">Learn more →</a>
+                </div>
+
+                <!-- Entity Creation & Management -->
+                <div class="feature-card">
+                    <div class="icon">⚙️</div>
+                    <h3>Entity Management</h3>
+                    <p>Create, update, and manage entities with rich properties and relationships. Track changes with built-in audit trails, and maintain integrity through validation rules.</p>
+                    <a href="https://github.com/Decathlon/internal-developer-platform">Learn more →</a>
+                </div>
+
+                <!-- Relationship Graph -->
+                <div class="feature-card">
+                    <div class="icon">🔗</div>
+                    <h3>Relationship Graph</h3>
+                    <p>Visualize entity relationships and dependencies as interactive graphs. Understand system architecture, assess impact, and explore how components interact across your infrastructure.</p>
+                    <a href="https://github.com/Decathlon/internal-developer-platform">Learn more →</a>
+                </div>
+
+                <!-- Data Ingestion -->
+                <div class="feature-card">
+                    <div class="icon">📥</div>
+                    <h3>Webhook Ingestion</h3>
+                    <p>Connect external systems via webhooks. Transform incoming data with JSLT expressions, filter by conditions, and automatically populate your entity catalog without code changes.</p>
+                    <a href="https://github.com/Decathlon/internal-developer-platform">Learn more →</a>
+                </div>
+
+                <!-- Scorecards -->
+                <div class="feature-card">
+                    <div class="icon">🏆</div>
+                    <h3>Scorecards</h3>
+                    <p>Scorecards are independent entities configured based on entity template properties. Define DORA metrics and custom scoring rules that compute dynamically from entity data with JSLT expressions—no code deployment needed.</p>
+                    <a href="https://github.com/Decathlon/internal-developer-platform">Learn more →</a>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Capabilities Section -->
+    <section class="capabilities" id="capabilities">
+        <div class="container">
+            <h2>What You Can Build</h2>
+
+            <!-- Entity Templates Capability -->
+            <div class="capability-item">
+                <div class="content">
+                    <h3>Flexible Entity Schemas</h3>
+                    <p>Define entity templates that match your organizational structure. Whether you're tracking services, databases, teams, APIs, or custom resources, templates provide the blueprint.</p>
+                    <ul>
+                        <li>Define custom properties and validation rules</li>
+                        <li>Enforce relationships between entity types</li>
+                        <li>Support complex hierarchies and dependencies</li>
+                        <li>Version templates for backward compatibility</li>
+                    </ul>
+                </div>
+                <div class="visual">
+                    <div style="font-size: 3rem; margin-bottom: 1rem;">📊</div>
+                    <p><strong>Template Types</strong></p>
+                    <p style="font-size: 0.9rem; color: #888;">Services • Databases • Teams • APIs • Infrastructure</p>
+                </div>
+            </div>
+
+            <!-- Entity Creation Capability -->
+            <div class="capability-item">
+                <div class="content">
+                    <h3>Runtime Entity Creation</h3>
+                    <p>Populate your software catalog dynamically. Create and update entities in real-time via REST API, without hardcoded data or manual processes.</p>
+                    <ul>
+                        <li>RESTful CRUD operations for all entities</li>
+                        <li>Bulk operations for efficient data loading</li>
+                        <li>Automatic audit trail for compliance</li>
+                        <li>Relationships and dependency tracking</li>
+                    </ul>
+                </div>
+                <div class="visual">
+                    <div class="code-block">POST /api/v1/entities/service
+</div>
+                </div>
+            </div>
+
+            <!-- Graph Visualization Capability -->
+            <div class="capability-item">
+                <div class="content">
+                    <h3>Interactive Relationship Graphs</h3>
+                    <p>Visualize your infrastructure as an interactive graph. Control traversal depth, filter by relationship types, and integrate with React Flow, D3.js, or other visualization libraries.</p>
+                    <ul>
+                        <li>Bidirectional and directional traversal</li>
+                        <li>Configurable depth and filtering</li>
+                        <li>Include entity properties in visualization</li>
+                        <li>Perfect for React Flow and D3.js integration</li>
+                    </ul>
+                </div>
+                <div class="visual">
+                    <div style="font-size: 2.5rem; margin-bottom: 1rem;">🕸️</div>
+                    <p><strong>Graph Endpoints</strong></p>
+                    <p style="font-size: 0.9rem; color: #888;">Explore dependencies • Track impact • Build dashboards</p>
+                </div>
+            </div>
+
+            <!-- Data Ingestion Capability -->
+            <div class="capability-item">
+                <div class="content">
+                    <h3>Webhook-Driven Data Integration</h3>
+                    <p>Connect GitHub, Sonar, PagerDuty, and any webhook-enabled system. Transform data with JSLT expressions and automatically sync your catalog.</p>
+                    <ul>
+                        <li>JSLT-based payload transformation</li>
+                        <li>Conditional filtering and routing</li>
+                        <li>Multiple action types (create, update, delete)</li>
+                        <li>Gzip decompression and encoding support</li>
+                    </ul>
+                </div>
+                <div class="visual">
+                    <div class="code-block">POST /api/v1/entity_dynamic_mappings
+{
+  "filter": ".action == \"pushed\"",
+  "entity_template": "repository",
+  "entity": {
+    "identifier": ".name",
+    "name": ".full_name"
+  }
+}</div>
+                </div>
+            </div>
+
+            <!-- Scorecards Capability -->
+            <div class="capability-item">
+                <div class="content">
+                    <h3>Scorecards as Independent Entities</h3>
+                    <p>Scorecards are independent entities configured based on entity template properties. Each rule references a property from the template—like deployment frequency, lead time, or test coverage—and a JSLT expression computes its score at runtime with no code deployment required.</p>
+                    <ul>
+                        <li>Scorecards are separate entities tied to entity templates</li>
+                        <li>Rules target specific entity template properties</li>
+                        <li>JSLT expressions for flexible score calculations</li>
+                        <li>Out-of-the-box DORA metrics support</li>
+                        <li>Aggregate scores per team, service, or domain</li>
+                        <li>Configurable thresholds and weight per rule</li>
+                    </ul>
+                </div>
+                <div class="visual">
+                    <div class="code-block">POST /api/v1/scorecards
+{
+  "identifier": "dora",
+  "name": "DORA Metrics",
+  "entity_template": "service",
+  "rules": [
+    {
+      "identifier": "deploy_freq",
+      "title": "Deployment Frequency",
+      "property": "deployments_last_30d",
+      "expression": ".deployments_last_30d >= 10",
+      "weight": 25
+    }
+  ]
+}</div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Use Cases Section -->
+    <section class="use-cases" id="use-cases">
+        <div class="container">
+            <h2>Use Cases</h2>
+            <div class="use-cases-grid">
+                <div class="use-case-card">
+                    <div class="emoji">🏗️</div>
+                    <h3>Architecture Discovery</h3>
+                    <p>Automatically discover and map your microservices, databases, and infrastructure components. Stay current without manual documentation.</p>
+                </div>
+                <div class="use-case-card">
+                    <div class="emoji">🔍</div>
+                    <h3>Impact Analysis</h3>
+                    <p>Understand dependencies before changes. Query the relationship graph to see all services affected by a database migration or API change.</p>
+                </div>
+                <div class="use-case-card">
+                    <div class="emoji">📈</div>
+                    <h3>System Health Monitoring</h3>
+                    <p>Overlay health metrics onto the graph. Quickly identify troubled components and cascade impacts across your infrastructure.</p>
+                </div>
+                <div class="use-case-card">
+                    <div class="emoji">🔐</div>
+                    <h3>Compliance & Auditing</h3>
+                    <p>Track entity changes and relationships for regulatory requirements. Full audit trail with who, when, and what changed.</p>
+                </div>
+                <div class="use-case-card">
+                    <div class="emoji">🤝</div>
+                    <h3>Team Onboarding</h3>
+                    <p>Generate interactive architecture diagrams. Help new team members understand system topology and ownership quickly.</p>
+                </div>
+                <div class="use-case-card">
+                    <div class="emoji">🔄</div>
+                    <h3>Automation & Self-Service</h3>
+                    <p>Use the API to build custom workflows. Enable teams to provision services, update metadata, and manage relationships self-serve.</p>
+                </div>
+                <div class="use-case-card">
+                    <div class="emoji">🏆</div>
+                    <h3>Engineering Excellence Tracking</h3>
+                    <p>Measure DORA metrics, test coverage, and code quality across all your services using scorecard rules driven by entity properties—no custom tooling needed.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Stats Section -->
+    <section class="stats">
+        <div class="container">
+            <div class="stat">
+                <div class="stat-number">REST API</div>
+                <div class="stat-label">Fully RESTful design</div>
+            </div>
+            <div class="stat">
+                <div class="stat-number">JSLT</div>
+                <div class="stat-label">Powerful data transformation</div>
+            </div>
+            <div class="stat">
+                <div class="stat-number">Real-time</div>
+                <div class="stat-label">Instant webhook ingestion</div>
+            </div>
+            <div class="stat">
+                <div class="stat-number">Audit Trail</div>
+                <div class="stat-label">Complete change tracking</div>
+            </div>
+            <div class="stat">
+                <div class="stat-number">Scorecards</div>
+                <div class="stat-label">DORA &amp; custom metrics</div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Getting Started Section -->
+    <section class="getting-started" id="getting-started">
+        <div class="container">
+            <h2>Get Started in 5 Steps</h2>
+            <div class="steps-grid">
+                <div class="step">
+                    <div class="step-number">1</div>
+                    <h3>Define Templates</h3>
+                    <p>Create entity templates that represent your infrastructure. Define properties—including the metrics your scorecards will later read.</p>
+                </div>
+                <div class="step">
+                    <div class="step-number">2</div>
+                    <h3>Create Entities</h3>
+                    <p>Populate your catalog via REST API. Create services, add metadata, and establish relationships between entities.</p>
+                </div>
+                <div class="step">
+                    <div class="step-number">3</div>
+                    <h3>Connect Webhooks</h3>
+                    <p>Configure webhook connectors to pull data from GitHub, Sonar, PagerDuty, or any webhook-enabled system.</p>
+                </div>
+                <div class="step">
+                    <div class="step-number">4</div>
+                    <h3>Visualize &amp; Explore</h3>
+                    <p>Query the relationship graph and build interactive visualizations. Understand your infrastructure topology and dependencies.</p>
+                </div>
+                <div class="step">
+                    <div class="step-number">5</div>
+                    <h3>Configure Scorecards</h3>
+                    <p>Define scorecard rules on your entity templates. Write JSLT expressions to compute scores from entity properties and track DORA metrics across all your services.</p>
+                </div>
+            </div>
+            <div style="text-align: center; margin-top: 2rem;">
+                <a href="https://github.com/Decathlon/internal-developer-platform" class="cta-button cta-primary" style="display: inline-block;">Start Building →</a>
+            </div>
+        </div>
+    </section>
+
+    <!-- CTA Section -->
+    <section class="cta-section">
+        <div class="container">
+            <h2>Ready to Build Your Software Catalog?</h2>
+            <p>IDP-Core provides everything you need to create a modern, scalable internal developer platform.</p>
+            <div class="cta-buttons">
+                <a href="../getting-started/quickstart.md" class="cta-button cta-primary">Get Started</a>
+                <a href="https://github.com/decathlon/internal-developer-platform" class="cta-button cta-secondary">View on GitHub</a>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer>
+        <div class="container">
+            <p>&copy; 2025 Decathlon. Internal Developer Platform. All rights reserved.</p>
+            <p style="margin-top: 1rem; opacity: 0.8;">
+                <a href="https://github.com/decathlon/internal-developer-platform" style="color: white; text-decoration: none;">GitHub</a> •
+                <a href="#" style="color: white; text-decoration: none;">Documentation</a> •
+                <a href="https://www.decathlon.com" style="color: white; text-decoration: none;">Decathlon</a>
+            </p>
+        </div>
+    </footer>
+</body>
+</html>

@@ -1,6 +1,11 @@
 package com.decathlon.idp_core.domain.model.entity_mapping;
 
-import static com.decathlon.idp_core.domain.constant.ValidationMessages.*;
+import static com.decathlon.idp_core.domain.constant.ValidationMessages.ENTITY_DYNAMIC_MAPPING_ENTITY_IDENTIFIER_MANDATORY;
+import static com.decathlon.idp_core.domain.constant.ValidationMessages.ENTITY_DYNAMIC_MAPPING_ENTITY_NAME_MANDATORY;
+import static com.decathlon.idp_core.domain.constant.ValidationMessages.ENTITY_DYNAMIC_MAPPING_FILTER_MANDATORY;
+import static com.decathlon.idp_core.domain.constant.ValidationMessages.ENTITY_DYNAMIC_MAPPING_IDENTIFIER_MANDATORY;
+import static com.decathlon.idp_core.domain.constant.ValidationMessages.ENTITY_DYNAMIC_MAPPING_NAME_MANDATORY;
+import static com.decathlon.idp_core.domain.constant.ValidationMessages.ENTITY_DYNAMIC_MAPPING_TEMPLATE_IDENTIFIER_MANDATORY;
 
 import java.util.List;
 import java.util.Map;
@@ -16,8 +21,8 @@ import com.decathlon.idp_core.domain.exception.entity_dynamic_mapping.EntityDyna
 /// Note: The technical ID is managed purely at the infrastructure layer
 /// (persisted in entity_dynamic_mapping table) and is NOT part of the domain model.
 public record EntityDynamicMapping(UUID id, String identifier, String entityTemplateIdentifier,
-    String filter, String name, String description, String entityIdentifier, String entityName,
-    Map<String, String> properties, List<RelationMapping> relations) {
+    String filter, MappingAction action, String name, String description, String entityIdentifier,
+    String entityName, Map<String, String> properties, List<RelationMapping> relations) {
 
   public EntityDynamicMapping {
     if (isBlank(identifier)) {

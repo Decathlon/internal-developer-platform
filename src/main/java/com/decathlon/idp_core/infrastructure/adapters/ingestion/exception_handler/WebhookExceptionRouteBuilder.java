@@ -3,6 +3,8 @@ package com.decathlon.idp_core.infrastructure.adapters.ingestion.exception_handl
 import org.apache.camel.builder.RouteBuilder;
 import org.springframework.stereotype.Component;
 
+import com.decathlon.idp_core.domain.exception.entity.EntityNotFoundException;
+import com.decathlon.idp_core.domain.exception.entity.EntityValidationException;
 import com.decathlon.idp_core.domain.exception.webhook.WebhookConfigurationMissingException;
 import com.decathlon.idp_core.domain.exception.webhook.WebhookConnectorNotFoundException;
 import com.decathlon.idp_core.domain.exception.webhook.WebhookDisabledException;
@@ -28,6 +30,10 @@ public class WebhookExceptionRouteBuilder {
         WebhookErrorCode.INVALID_ENCODED_PAYLOAD, true);
     handlerHelper.registerHandler(routeBuilder, WebhookConfigurationMissingException.class,
         WebhookErrorCode.CONFIGURATION_MISSING);
+    handlerHelper.registerHandler(routeBuilder, EntityValidationException.class,
+        WebhookErrorCode.ENTITY_INGESTION_ERROR, true);
+    handlerHelper.registerHandler(routeBuilder, EntityNotFoundException.class,
+        WebhookErrorCode.ENTITY_INGESTION_ERROR, true);
     handlerHelper.registerHandler(routeBuilder, Exception.class, WebhookErrorCode.UNEXPECTED_ERROR);
   }
 }

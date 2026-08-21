@@ -20,6 +20,7 @@ public final class IngestionConstants {
   public static final String DIRECT_PROCESS_EVENT = "direct:process-event";
   public static final String DIRECT_FETCH_CONFIGURATION = "direct:fetch-configuration";
   public static final String DIRECT_DECODE_PAYLOAD = "direct:decode-payload";
+  public static final String DIRECT_INGEST_PAYLOAD = "direct:ingest-payload";
   public static final String DIRECT_VALIDATE_ENABLED = "direct:validate-enabled";
 
   public static final String ROUTE_ID_GENERIC_WEBHOOK_ENTRYPOINT = "generic-webhook-entrypoint";
@@ -27,13 +28,12 @@ public final class IngestionConstants {
   public static final String ROUTE_ID_FETCH_WEBHOOK_CONFIG = "fetch-webhook-config";
   public static final String ROUTE_ID_DECODE_PAYLOAD = "decode-payload";
   public static final String ROUTE_ID_VALIDATE_WEBHOOK_ENABLED = "validate-webhook-enabled";
+  public static final String ROUTE_ID_INGEST_PAYLOAD = "ingest-payload";
 
-  public static final int HTTP_OK = 200;
   public static final int HTTP_BAD_REQUEST = 400;
   public static final int HTTP_CREATED = 201;
   public static final int HTTP_NO_CONTENT = 204;
-  public static final String SUCCESS_BODY_CONFIGURATION_LOADED = "{\"status\": \"SUCCESS\", \"message\": \"Webhook configuration loaded and enabled.\"}";
-
+  public static final String SUCCESS_WEBHOOK_EVENT_PROCESSED = "{\"status\": \"SUCCESS\", \"message\": \"Entity Webhook event processed successfully.\"}";
   public static final String CONTENT_ENCODING_GZIP = "gzip";
   public static final String CONTENT_ENCODING_IDENTITY = "identity";
   public static final String CONTENT_ENCODING_HEADER = "Content-Encoding";

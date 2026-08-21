@@ -3,7 +3,9 @@ title: Webhooks
 description: Understand webhook connectors, security strategies, and dynamic mappings in IDP-Core
 ---
 
-Webhooks let external systems push JSON events to the Internal Developer Platform through a generic HTTP endpoint. You configure a webhook connector at runtime, choose a security strategy, and define mappings that translate incoming payloads into entity data with JSLT expressions.
+Webhooks let external systems push JSON events to the Internal Developer Platform through a generic HTTP endpoint. You
+configure a webhook connector at runtime, choose a security strategy, and define mappings that translate incoming
+payloads into entity data with JSLT expressions.
 
 ## Overview
 
@@ -16,11 +18,11 @@ A webhook connector combines three concerns:
 ```mermaid
 flowchart LR
     S[External system] --> E[POST /webhooks/{configurationId}]
-    E --> H[InboundWebhookHandler]
-    H --> D[Security dispatcher]
-    D --> C[WebhookConnector]
-    C --> M[Dynamic mappings]
-    M --> T[Entity Template]
+E --> H[InboundWebhookHandler]
+H --> D[Security dispatcher]
+D --> C[WebhookConnector]
+C --> M[Dynamic mappings]
+M --> T[Entity Template]
 ```
 
 ## Webhook Connector
@@ -28,7 +30,7 @@ flowchart LR
 A webhook connector is the runtime configuration stored by IDP-Core for one inbound integration.
 
 | Field                 | Type    | Description                                            |
-| --------------------- | ------- | ------------------------------------------------------ |
+|-----------------------|---------|--------------------------------------------------------|
 | `identifier`          | String  | Stable key used in the webhook URL and management APIs |
 | `name`                | String  | Human-readable name                                    |
 | `description`         | String  | Optional explanation of the connector purpose          |
@@ -58,16 +60,18 @@ A webhook connector is the runtime configuration stored by IDP-Core for one inbo
 
 ## Dynamic Mappings
 
-Each connector contains at least one dynamic mapping. A mapping targets one Entity Template and describes how to derive entity fields from the incoming JSON payload with a JSLT filter and entity projections.
+Each connector contains at least one dynamic mapping[cite: 12]. A mapping targets one Entity Template and describes how
+to derive entity fields from the incoming JSON payload with a JSLT filter and entity projections[cite: 12].
 
-| Field         | Type   | Description                                                                 |
-| ------------- | ------ | --------------------------------------------------------------------------- |
-| `template`    | String | Identifier of the target Entity Template                                    |
-| `identifier`  | String | Stable and unique key for this specific mapping                             |
-| `name`        | String | Human-readable name of the mapping                                          |
-| `description` | String | Optional explanation of the mapping purpose                                 |
-| `filter`      | String | JSLT boolean expression to evaluate if the payload should be processed      |
-| `entity`      | Object | JSLT projections defining how to map the payload to the entity's attributes |
+| Field         | Type   | Description                                                                                                                    |
+|---------------|--------|--------------------------------------------------------------------------------------------------------------------------------|
+| `template`    | String | Identifier of the target Entity Template[cite: 12]                                                                             |
+| `identifier`  | String | Stable and unique key for this specific mapping[cite: 12]                                                                      |
+| `name`        | String | Human-readable name of the mapping[cite: 12]                                                                                   |
+| `description` | String | Optional explanation of the mapping purpose[cite: 12]                                                                          |
+| `action`      | String | **Required.** The mutation logic applied to the entity (`UPDATE_ENTITY`, `UPDATE_PROPERTIES`, `UPDATE_RELATIONS`, or `DELETE`) |
+| `filter`      | String | JSLT boolean expression to evaluate if the payload should be processed[cite: 12]                                               |
+| `entity`      | Object | JSLT projections defining how to map the payload to the entity's attributes[cite: 12]                                          |
 
 ### Dynamic Mapping Example
 
@@ -77,6 +81,7 @@ Each connector contains at least one dynamic mapping. A mapping targets one Enti
   "identifier": "mapping-github",
   "name": "mapping github",
   "description": "mapping github description",
+  "action": "UPDATE_ENTITY",
   "filter": ".repository != null",
   "entity": {
     "identifier": "replace(.repository.name, \" \", \"-\")",
@@ -108,10 +113,11 @@ This validation keeps the connector configuration aligned with the current data 
 
 ## Security Strategies
 
-Each connector declares one security type. IDP-Core validates the configuration at creation time and validates requests again at runtime.
+Each connector declares one security type. IDP-Core validates the configuration at creation time and validates requests
+again at runtime.
 
 | Type           | Required configuration keys             | Runtime behavior                                                                       |
-| -------------- | --------------------------------------- | -------------------------------------------------------------------------------------- |
+|----------------|-----------------------------------------|----------------------------------------------------------------------------------------|
 | `HMAC_SHA256`  | `header_name`, `secret_alias`, `prefix` | Computes the SHA-256 HMAC of the raw body and compares it with the request header      |
 | `STATIC_TOKEN` | `header_name`, `secret_alias`           | Compares a header value with a secret loaded from the environment                      |
 | `BASIC_AUTH`   | `username`, `secret_alias`              | Compares the `Authorization: Basic ...` header with the configured username and secret |
@@ -121,7 +127,8 @@ Each connector declares one security type. IDP-Core validates the configuration 
 > [!IMPORTANT]
 > Security configuration keys accept `snake_case` and `camelCase` variants for the supported fields.
 > [!WARNING]
-> `secret_alias` must reference an environment variable alias in `UPPER_SNAKE_CASE`. It does not store the raw secret value in the connector configuration.
+> `secret_alias` must reference an environment variable alias in `UPPER_SNAKE_CASE`. It does not store the raw secret
+value in the connector configuration.
 
 ### Example Security Configurations
 
@@ -197,15 +204,16 @@ The request flow is:
 
 You manage webhook connectors through the inbound webhook management API, which exposes standard CRUD methods.
 
-| HTTP Method | Endpoint                                  | Purpose          |
-| ----------- | ----------------------------------------- | ---------------- |
-| `POST`      | `/api/v1/inbound_webhooks`                | Create connector |
-| `GET`       | `/api/v1/inbound_webhooks`                | List connectors  |
-| `GET`       | `/api/v1/inbound_webhooks/{identifier}`   | Get connector    |
-| `PUT`       | `/api/v1/inbound_webhooks/{identifier}`   | Update connector |
-| `DELETE`    | `/api/v1/inbound_webhooks/{identifier}`   | Delete connector |
+| HTTP Method | Endpoint                                | Purpose          |
+|-------------|-----------------------------------------|------------------|
+| `POST`      | `/api/v1/inbound_webhooks`              | Create connector |
+| `GET`       | `/api/v1/inbound_webhooks`              | List connectors  |
+| `GET`       | `/api/v1/inbound_webhooks/{identifier}` | Get connector    |
+| `PUT`       | `/api/v1/inbound_webhooks/{identifier}` | Update connector |
+| `DELETE`    | `/api/v1/inbound_webhooks/{identifier}` | Delete connector |
 
-This separation keeps configuration management under versioned API routes while the event ingestion endpoint stays simple for external systems.
+This separation keeps configuration management under versioned API routes while the event ingestion endpoint stays
+simple for external systems.
 
 ## When to Use Webhooks
 

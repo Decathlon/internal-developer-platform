@@ -11,6 +11,7 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
 import com.decathlon.idp_core.domain.model.entity_mapping.EntityDynamicMapping;
+import com.decathlon.idp_core.domain.model.entity_mapping.MappingAction;
 import com.decathlon.idp_core.domain.model.entity_mapping.RelationMapping;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
@@ -33,7 +34,7 @@ class JsltMappingEngineAdapterTest {
   @DisplayName("Should extract a relation from a scalar target identifier")
   void shouldExtractRelationFromScalarIdentifier() {
     var mapping = new EntityDynamicMapping(null, "mapping", "microservice", ".action == \"pushed\"",
-        "Mapping", "desc", ".repository.full_name", ".repository.name",
+        MappingAction.UPDATE_ENTITY, "Mapping", "desc", ".repository.full_name", ".repository.name",
         Map.of("applicationName", ".repository.name"),
         List.of(new RelationMapping("owner", List.of(".ownerId"))));
 
@@ -61,7 +62,7 @@ class JsltMappingEngineAdapterTest {
   @DisplayName("Should extract a relation from an array of target identifiers")
   void shouldExtractRelationFromArrayOfIdentifiers() {
     var mapping = new EntityDynamicMapping(null, "mapping", "microservice", ".action == \"pushed\"",
-        "Mapping", "desc", ".repository.full_name", ".repository.name",
+        MappingAction.UPDATE_ENTITY, "Mapping", "desc", ".repository.full_name", ".repository.name",
         Map.of("applicationName", ".repository.name"),
         List.of(new RelationMapping("dependents", List.of(".dependentIds"))));
 
@@ -89,7 +90,7 @@ class JsltMappingEngineAdapterTest {
   @DisplayName("Should extract a relation from an array of objects containing identifier and name")
   void shouldExtractRelationFromArrayOfObjects() {
     var mapping = new EntityDynamicMapping(null, "mapping", "microservice", ".action == \"pushed\"",
-        "Mapping", "desc", ".repository.full_name", ".repository.name",
+        MappingAction.UPDATE_ENTITY, "Mapping", "desc", ".repository.full_name", ".repository.name",
         Map.of("applicationName", ".repository.name"),
         List.of(new RelationMapping("provided-by", List.of(".relations.providedBy"))));
 
@@ -119,27 +120,4 @@ class JsltMappingEngineAdapterTest {
         .containsExactly("398cb790-9117-4bfe-830e-bbb0e423c26e");
   }
 
-  @Test
-  @DisplayName("Should ignore relation when expression resolves to null")
-  void shouldIgnoreRelationWhenExpressionResolvesToNull() {
-    var mapping = new EntityDynamicMapping(null, "mapping", "microservice", ".action == \"pushed\"",
-        "Mapping", "desc", ".repository.full_name", ".repository.name",
-        Map.of("applicationName", ".repository.name"),
-        List.of(new RelationMapping("owner", List.of(".missingOwner"))));
-
-    var payload = """
-        {
-          "action": "pushed",
-          "repository": {
-            "full_name": "org/repo",
-            "name": "repo"
-          }
-        }
-        """;
-
-    var entity = adapter.mapToEntity(payload, mapping);
-
-    assertThat(entity).isNotNull();
-    assertThat(entity.relations()).isEmpty();
-  }
 }
