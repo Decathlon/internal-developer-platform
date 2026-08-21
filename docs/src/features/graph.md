@@ -39,20 +39,20 @@ GET /api/v1/entities/{templateIdentifier}/{entityIdentifier}/graph?depth={depth}
 
 ### Path Parameters
 
-| Parameter            | Type   | Required | Description                                     |
-| -------------------- | ------ | -------- | ----------------------------------------------- |
-| `templateIdentifier` | string | ✅       | The entity template identifier (e.g. "service") |
-| `entityIdentifier`   | string | ✅       | The unique entity identifier                    |
+| Parameter            | Type   | Required | Description                                             |
+| -------------------- | ------ | -------- | ------------------------------------------------------- |
+| `templateIdentifier` | string | ✅       | The entity template identifier (for example, "service") |
+| `entityIdentifier`   | string | ✅       | The unique entity identifier                            |
 
 ### Query Parameters
 
-| Parameter        | Type    | Required | Default          | Description                                                                                                                           |
-| ---------------- | ------- | -------- | ---------------- | ------------------------------------------------------------------------------------------------------------------------------------- |
-| `depth`          | integer |          | `1`              | Maximum traversal depth for relationship resolution. Range: 1-6. Controls how many hops away from the entity to include in the graph. |
-| `include_data`   | boolean |          | `false`          | When true, each graph node includes a data object containing the entity's property values.                                            |
-| `traversal_mode` | string  |          | `DIRECT_LINEAGE` | Specifies how relationships are traversed: `DIRECT_LINEAGE`, `BIDIRECTIONAL`, or `OUTBOUND_ONLY`.                                     |
-| `relations`      | string  |          | All              | Comma-separated list of relation names to include (e.g., `depends_on,uses`). Omit to traverse all relations.                          |
-| `properties`     | string  |          | All              | Comma-separated list of property names to include in node data (e.g., `language,owner_team`). Requires `include_data=true`.           |
+| Parameter        | Type    | Required | Default          | Description                                                                                                                                  |
+| ---------------- | ------- | -------- | ---------------- | ---------------------------------------------------------------------------------------------------------------------------------------------|
+| `depth`          | integer |          | `1`              | Maximum traversal depth for relationship resolution. Range: 1-6. Controls how many hops away from the entity to include in the graph.        |
+| `include_data`   | boolean |          | `false`          | When true, each graph node includes a data object containing the entity's property values.                                                   |
+| `traversal_mode` | string  |          | `DIRECT_LINEAGE` | Specifies how relationships are traversed: `DIRECT_LINEAGE`, `BIDIRECTIONAL`, or `OUTBOUND_ONLY`.                                            |
+| `relations`      | string  |          | All              | Comma-separated list of relation names to include (for example, `depends_on,uses`). Omit to traverse all relations.                          |
+| `properties`     | string  |          | All              | Comma-separated list of property names to include in node data (for example, `language,owner_team`). Requires `include_data=true`.           |
 
 ### Examples
 
@@ -172,37 +172,37 @@ GET /api/v1/entities/service/auth-service/graph?depth=4&traversal_mode=BIDIRECTI
 
 Each node in the graph represents an entity with the following structure:
 
-| Field      | Type   | Description                                              |
-| ---------- | ------ | -------------------------------------------------------- |
-| `id`       | string | Unique identifier for the node (entity identifier)       |
-| `label`    | string | Human-readable name for display                          |
-| `template` | string | Entity template type (e.g., "service", "database")       |
-| `data`     | object | Complete entity data including properties and metadata   |
+| Field      | Type   | Description                                                     |
+| ---------- | ------ | --------------------------------------------------------------- |
+| `id`       | string | Unique identifier for the node (entity identifier)              |
+| `label`    | string | Human-readable name for display                                 |
+| `template` | string | Entity template type (for example, "service", "database")       |
+| `data`     | object | Complete entity data including properties and metadata          |
 
 ### Edge Structure
 
 Each edge in the graph represents a relationship between two entities:
 
-| Field      | Type    | Description                                              |
-| ---------- | ------- | -------------------------------------------------------- |
-| `id`       | string  | Unique identifier for the edge                           |
-| `source`   | string  | Source node identifier                                   |
-| `target`   | string  | Target node identifier                                   |
-| `label`    | string  | Relationship name/type (e.g., "depends_on", "calls")     |
-| `animated` | boolean | Whether the edge should be animated in visualization     |
+| Field      | Type    | Description                                                     |
+| ---------- | ------- | --------------------------------------------------------------- |
+| `id`       | string  | Unique identifier for the edge                                  |
+| `source`   | string  | Source node identifier                                          |
+| `target`   | string  | Target node identifier                                          |
+| `label`    | string  | Relationship name/type (for example, "depends_on", "calls")     |
+| `animated` | boolean | Whether the edge should be animated in visualization            |
 
 ## Visualization with React Flow
 
-[React Flow](https://reactflow.dev/) is a popular library for building interactive node-based UIs. The graph endpoint response format is perfectly suited for React Flow visualization.
+[React Flow](https://reactflow.dev/) is a popular library for building interactive node-based user interfaces. The graph endpoint response format is perfectly suited for React Flow visualization.
 
 ### Basic Setup
 
 ```tsx
 import React, { useEffect, useState } from 'react';
-import ReactFlow, { 
-  Background, 
+import ReactFlow, {
+  Background,
   Controls,
-  MiniMap 
+  MiniMap
 } from 'reactflow';
 import 'reactflow/dist/style.css';
 
@@ -307,8 +307,8 @@ const handleEdgeClick = (event, edge) => {
   showRelationshipDetails(edge);
 };
 
-<ReactFlow 
-  nodes={data.nodes} 
+<ReactFlow
+  nodes={data.nodes}
   edges={data.edges}
   onNodeClick={handleNodeClick}
   onEdgeClick={handleEdgeClick}
@@ -483,7 +483,7 @@ When making changes to an entity, visualize all downstream and upstream dependen
 
 ### Compliance & Documentation
 
-Generate interactive architecture diagrams for documentation, audits, and team onboarding.
+Generate interactive architecture diagrams for documentation, audits, and team alignment.
 
 ### System Health Monitoring
 

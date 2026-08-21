@@ -72,7 +72,7 @@ to it. Each mapping defines how the incoming JSON payload is transformed into an
 | `GET`    | `/api/v1/entity_dynamic_mappings/{identifier}` | Read one entity dynamic mapping              |
 | `PUT`    | `/api/v1/entity_dynamic_mappings/{identifier}` | Update one entity dynamic mapping            |
 | `DELETE` | `/api/v1/entity_dynamic_mappings/{identifier}` | Delete one entity dynamic mapping            |
-| `POST`   | `/api/v1/entity_dynamic_mappings/dry-run`.     | Test a mapping with sample payload           |
+| `POST`   | `/api/v1/entity_dynamic_mappings/dry-run`      | Test a mapping with sample payload           |
 
 ### Step 1 — Create an Entity Dynamic Mapping
 
@@ -154,7 +154,7 @@ selecting, and transforming JSON data without code.
 - **Payload Context**: All JSLT expressions work on the entire JSON payload sent to the webhook
 - **Lazy Evaluation**: JSLT uses lazy evaluation, so expressions only compute what is needed
 - **Null Safety**: Operations gracefully handle missing fields by returning `null` or `empty`
-- **Composability**: Expressions can be chained using the pipe operator (`|`) to build complex transformations
+- **Composition**: Expressions can be chained using the pipe operator (`|`) to build complex transformations
 
 ##### Common JSLT Operations
 
@@ -315,7 +315,6 @@ The `filter` field determines whether a mapping applies to a payload:
 > Use the **dry-run endpoint** (POST `/api/v1/entity_dynamic_mappings/dry-run`) to test
 > your JSLT expressions before deploying them to production. This helps catch syntax
 > errors and unexpected transformations early.
->
 > [!NOTE]
 > For comprehensive JSLT documentation, refer to the
 > [official JSLT GitHub repository](https://github.com/schibsted/jslt). The platform
@@ -443,7 +442,7 @@ sequenceDiagram
     Config-->>Route: WebhookConnector config
     Route->>Validate: Check connector enabled
     Validate-->>Route: ✅ Enabled
-    Route->>Decode: Decode payload (gzip / identity)
+    Route->>Decode: Decode payload (GZIP / identity)
     Decode-->>Route: Decoded JSON string
     Route->>Ingest: Apply all mappings
     loop For each EntityDynamicMapping
@@ -460,7 +459,7 @@ Each step in the pipeline is isolated in its own Camel sub-route:
 | ---- | -------- | -------------- |
 | **A** | `fetch-webhook-config` | Load `WebhookConnector` from the database by identifier |
 | **A.1** | `validate-webhook-enabled` | Throw `WebhookDisabledException` if `enabled: false` |
-| **B** | `decode-payload` | Decompress gzip payloads; strips `Content-Encoding` header |
+| **B** | `decode-payload` | Decompress GZIP payloads; strips `Content-Encoding` header |
 | **C** | `ingest-payload` | Apply each `EntityDynamicMapping` and persist entities |
 
 > [!NOTE]
