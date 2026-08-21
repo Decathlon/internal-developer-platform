@@ -30,7 +30,8 @@ import lombok.extern.slf4j.Slf4j;
 /// - Parse raw JSON payloads.
 /// - Apply mapping filter and projection targetIdentifiersExpressions.
 /// - Build domain Entity instances from evaluated values.
-/// - Delegate expression resolution and payload traversal to JsltExpressionEvaluator.
+/// - Delegate expression resolution and payload traversal
+///   to JsltExpressionEvaluator.
 @Slf4j
 @Component
 @RequiredArgsConstructor
@@ -48,25 +49,27 @@ public class JsltMappingEngineAdapter implements MappingEnginePort {
     return mapRootPayloadToEntity(rootPayload, mapping);
   }
 
-  /// Applies the filter and maps one payload item to an Entity.
-  /// Returns null when the filter evaluates to false/null (skipped item).
-  /// A missing/blank filter is treated as always-true (process all items).
+  /// Applies the filter and maps one payload item to an Entity. Returns null when
+  /// the filter evaluates to false/null (skipped item). A missing/blank filter is
+  /// treated as always-true (process all items).
   private Entity mapRootPayloadToEntity(JsonNode rootPayload, EntityDynamicMapping mapping) {
     if (!StringUtils.hasText(mapping.filter())) {
       return extractEntity(rootPayload, rootPayload, mapping);
     }
 
     JsonNode filterResult = jsltEngine.evaluate(mapping.filter(), rootPayload);
+
     log.debug("Filter expression returned: {}, for mapping: {}, action: {}, filter: {}",
         filterResult, mapping.identifier(), mapping.action(), mapping.filter());
+
     if (filterResult.isNull() || (filterResult.isBoolean() && !filterResult.asBoolean())) {
       return null;
     }
     return extractEntity(rootPayload, rootPayload, mapping);
   }
 
-  /// Extracts one domain Entity from a payload node using mapping
-  /// targetIdentifiersExpressions.
+  /// Extracts one domain Entity from a payload node using
+  /// mapping targetIdentifiersExpressions.
   private Entity extractEntity(JsonNode currentNode, JsonNode rootPayload,
       EntityDynamicMapping mapping) {
     String identifier = requireStringValue(
@@ -86,8 +89,8 @@ public class JsltMappingEngineAdapter implements MappingEnginePort {
         relations);
   }
 
-  /// Extracts all mapped relations for one entity node.
-  /// Null or missing values are excluded from the output list.
+  /// Extracts all mapped relations for one entity node. Null or missing values
+  /// are excluded from the output list.
   private List<Relation> extractEntityRelations(JsonNode currentNode, JsonNode rootPayload,
       List<RelationMapping> relationMappings) {
     if (relationMappings == null || relationMappings.isEmpty()) {
@@ -97,8 +100,8 @@ public class JsltMappingEngineAdapter implements MappingEnginePort {
         .flatMap(Stream::ofNullable).toList();
   }
 
-  /// Extracts all mapped properties for one entity node.
-  /// Null/missing values are excluded from the output list.
+  /// Extracts all mapped properties for one entity node. Null/missing values are
+  /// excluded from the output list.
   private List<Property> extractEntityProperties(JsonNode currentNode, JsonNode rootPayload,
       Map<String, String> propertyExpressions) {
     if (propertyExpressions == null || propertyExpressions.isEmpty()) {
@@ -109,8 +112,8 @@ public class JsltMappingEngineAdapter implements MappingEnginePort {
         .toList();
   }
 
-  /// Extracts one Property from a property expression entry.
-  /// Returns null when the expression evaluates to null/missing.
+  /// Extracts one Property from a property expression entry. Returns null when
+  /// the expression evaluates to null/missing.
   private Property extractProperty(Map.Entry<String, String> entry, JsonNode currentNode,
       JsonNode rootPayload) {
     JsonNode valueNode = jsltEvaluator.resolveExpression(entry.getValue(), currentNode,
@@ -122,8 +125,8 @@ public class JsltMappingEngineAdapter implements MappingEnginePort {
     return null;
   }
 
-  /// Extracts one Relation from a relation mapping entry.
-  /// Evaluates each expression in the list and combines all target identifiers.
+  /// Extracts one Relation from a relation mapping entry. Evaluates each
+  /// expression in the list and combines all target identifiers.
   private Relation extractRelation(RelationMapping relationMapping, JsonNode currentNode,
       JsonNode rootPayload) {
     List<String> allTargetIdentifiers = new ArrayList<>();
@@ -140,8 +143,8 @@ public class JsltMappingEngineAdapter implements MappingEnginePort {
     return new Relation(null, relationMapping.name(), null, allTargetIdentifiers);
   }
 
-  /// Extracts relation target identifiers from a scalar or array result node.
-  /// If target identifiers null or empty we return an empty list.
+  /// Extracts relation target identifiers from a scalar or array result node. If
+  /// target identifiers null or empty we return an empty list.
   private List<String> extractTargetEntityIdentifiers(JsonNode valueNode) {
     if (valueNode == null || valueNode.isNull() || valueNode.isMissingNode()) {
       return List.of();
@@ -200,8 +203,8 @@ public class JsltMappingEngineAdapter implements MappingEnginePort {
   }
 
   /// Extracts mapped properties from a payload using property
-  /// targetIdentifiersExpressions.
-  /// Reuses extractEntityProperties and excludes null/missing values.
+  /// targetIdentifiersExpressions. Reuses extractEntityProperties and excludes
+  /// null/missing values.
   @Override
   public Map<String, Object> extractProperties(String rawPayload,
       Map<String, String> propertyExpressions) {

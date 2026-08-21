@@ -38,7 +38,7 @@ public class GenericInboundEventRouteBuilder extends RouteBuilder {
         .removeHeaders("*") // Clear all accumulated incoming and internal headers
         .setHeader(Exchange.HTTP_RESPONSE_CODE, constant(HTTP_CREATED))
         .setHeader(Exchange.CONTENT_TYPE, constant(APPLICATION_JSON))
-        .setBody(constant(SUCCESS_BODY_ENTITY_UPDATED));
+        .setBody(constant(SUCCESS_WEBHOOK_EVENT_PROCESSED));
 
     // --- Step A: Fetch Configuration ---
     from(DIRECT_FETCH_CONFIGURATION).routeId(ROUTE_ID_FETCH_WEBHOOK_CONFIG)

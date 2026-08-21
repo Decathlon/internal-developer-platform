@@ -30,12 +30,10 @@ public final class IngestionConstants {
   public static final String ROUTE_ID_VALIDATE_WEBHOOK_ENABLED = "validate-webhook-enabled";
   public static final String ROUTE_ID_INGEST_PAYLOAD = "ingest-payload";
 
-  public static final int HTTP_OK = 200;
   public static final int HTTP_BAD_REQUEST = 400;
   public static final int HTTP_CREATED = 201;
   public static final int HTTP_NO_CONTENT = 204;
-  public static final String SUCCESS_BODY_CONFIGURATION_LOADED = "{\"status\": \"SUCCESS\", \"message\": \"Webhook entity updated.\"}";
-  public static final String SUCCESS_BODY_ENTITY_UPDATED = "{\"status\": \"SUCCESS\", \"message\": \"Webhook entity updated.\"}";
+  public static final String SUCCESS_WEBHOOK_EVENT_PROCESSED = "{\"status\": \"SUCCESS\", \"message\": \"Entity Webhook event processed successfully.\"}";
   public static final String CONTENT_ENCODING_GZIP = "gzip";
   public static final String CONTENT_ENCODING_IDENTITY = "identity";
   public static final String CONTENT_ENCODING_HEADER = "Content-Encoding";
