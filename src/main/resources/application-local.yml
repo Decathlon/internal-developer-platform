@@ -20,30 +20,33 @@ spring:
     hibernate:
       ddl-auto: none # Disable JPA schema auto-generation, use Flyway instead
   security:
-    type: oauth2
     oauth2:
       client:
         registration:
-          idp-core:
-            client-id: local-client-id
-            client-secret: local-client-secret
-        provider:
-          idp-core:
-            token-uri: http://localhost:8080/auth/token
-      resourceserver:
-        jwt:
-          jwk-set-uri: http://localhost:8080/auth/.well-known/jwks.json
+          github:
+            client-id: ${GITHUB_CLIENT_ID}
+            client-secret: ${GITHUB_CLIENT_SECRET}
+            scope:
+              - read:user
+              - user:email
 app:
   full-refresh-at-startup: true
-  # The base URL of the IDP Core service. Used for OAuth2 token exchange and JWKS retrieval.
-  # or keep mock for local test without managing of authentication
+  # The base URL of the IDP Core service. GitHub must allow the callback
+  # ${app.idp-core-prefix-url}/login/oauth2/code/github in the OAuth app settings.
   idp-core-prefix-url: http://localhost:8084
   security:
     authentication:
       jwt:
         enabled: false
-      mock:
+      oauth2-login:
         enabled: true
+      mock:
+        enabled: false
+      user-claim-mappings:
+        sub: id
+        preferred_username: login
+        name: name
+        email: email
 logging:
   level:
     # Application log level, defaults to INFO. Override per environment via LOG_LEVEL env var.

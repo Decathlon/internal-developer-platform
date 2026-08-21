@@ -99,6 +99,11 @@
     </dependency>
 
     <dependency>
+      <groupId>org.springframework.security</groupId>
+      <artifactId>spring-security-oauth2-client</artifactId>
+    </dependency>
+
+    <dependency>
       <groupId>org.projectlombok</groupId>
       <artifactId>lombok</artifactId>
       <version>${lombok.version}</version>
@@ -454,6 +459,7 @@
             <rule>name:equal:MIT-0</rule>
             <rule>name:equal:Apache-2.0</rule>
             <rule>name:equal:Apache License 2.0</rule>
+            <rule>name:equal:Apache License, version 2.0</rule>
             <rule>name:equal:The Apache License, Version 2.0</rule>
             <rule>name:equal:The Apache Software License, Version 2.0</rule>
             <rule>name:equal:Apache License Version 2.0</rule>

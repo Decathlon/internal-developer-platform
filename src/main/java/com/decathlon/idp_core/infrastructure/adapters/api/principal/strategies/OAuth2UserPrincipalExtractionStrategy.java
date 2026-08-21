@@ -3,6 +3,7 @@ package com.decathlon.idp_core.infrastructure.adapters.api.principal.strategies;
 import static com.decathlon.idp_core.infrastructure.adapters.api.principal.strategies.PrincipalStrategiesConstants.EMAIL;
 import static com.decathlon.idp_core.infrastructure.adapters.api.principal.strategies.PrincipalStrategiesConstants.GROUPS;
 import static com.decathlon.idp_core.infrastructure.adapters.api.principal.strategies.PrincipalStrategiesConstants.NAME;
+import static com.decathlon.idp_core.infrastructure.adapters.api.principal.strategies.PrincipalStrategiesConstants.PREFERRED_USERNAME;
 import static com.decathlon.idp_core.infrastructure.adapters.api.principal.strategies.PrincipalStrategiesConstants.SUB;
 
 import java.util.HashMap;
@@ -63,21 +64,26 @@ public class OAuth2UserPrincipalExtractionStrategy implements PrincipalExtractio
 
     // Standard OAuth2 user extraction using dynamic claims
     String subClaim = claimMappings.getOrDefault(SUB, SUB);
-    String sub = Optional.ofNullable(oauth2User.getAttribute(subClaim)).map(Object::toString)
+    String sub = Optional.ofNullable(oauth2User.getAttribute(subClaim)).map(String::valueOf)
         .orElse(oauth2User.getName());
 
+    String preferredUsernameClaim = claimMappings.getOrDefault(PREFERRED_USERNAME,
+        PREFERRED_USERNAME);
+    String identifier = Optional.ofNullable(oauth2User.getAttribute(preferredUsernameClaim))
+        .map(String::valueOf).filter(value -> !value.isBlank()).orElse(sub);
+
     String nameClaim = claimMappings.getOrDefault(NAME, NAME);
-    String name = Optional.ofNullable(oauth2User.getAttribute(nameClaim)).map(Object::toString)
-        .orElse(sub);
+    String name = Optional.ofNullable(oauth2User.getAttribute(nameClaim)).map(String::valueOf)
+        .filter(value -> !value.isBlank()).orElse(identifier);
 
     Map<String, String> attributes = new HashMap<>();
     String emailClaim = claimMappings.getOrDefault(EMAIL, EMAIL);
-    Optional.ofNullable(oauth2User.getAttribute(emailClaim)).map(Object::toString)
+    Optional.ofNullable(oauth2User.getAttribute(emailClaim)).map(String::valueOf)
         .ifPresent(email -> attributes.put(EMAIL, email));
 
     List<String> groups = extractGroupsFromAttributes(oauth2User.getAttributes(), claimMappings);
 
-    return new PrincipalInfo(sub, PrincipalKind.HUMAN, name, attributes, groups);
+    return new PrincipalInfo(identifier, PrincipalKind.HUMAN, name, attributes, groups);
   }
 
   /// Extracts principal information from an OpenID Connect (OIDC) user.
@@ -103,7 +109,6 @@ public class OAuth2UserPrincipalExtractionStrategy implements PrincipalExtractio
     return new PrincipalInfo(identifier, PrincipalKind.HUMAN, name, attributes, groups);
   }
 
-  @SuppressWarnings("unchecked")
   private List<String> extractGroupsFromAttributes(Map<String, Object> attributes,
       Map<String, String> claimMappings) {
     String groupsClaim = claimMappings.getOrDefault(GROUPS, GROUPS);

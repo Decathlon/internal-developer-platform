@@ -383,6 +383,69 @@ curl -H "Authorization: Bearer mock?sub=test-user&email=test@example.com" \
 > Mock authentication must never be enabled in production. It bypasses all JWT validation and should only be used in
 `local` or `test` Spring profiles.
 
+## GitHub Authentication for Local Development
+
+If you want to exercise the real user authentication path locally, use GitHub as the OAuth2 provider instead of the
+mock filter. This setup exercises the same JIT provisioning flow as production-style authenticated requests:
+
+1. Spring Security completes the OAuth2 login with GitHub.
+2. `OAuth2LoginFilterChainConfig` stores the authenticated `OAuth2User` in the security context.
+3. `JitProvisioningFilter` extracts a `PrincipalInfo` through `PrincipalExtractor`.
+4. `PrincipalProvisioningService` creates or refreshes the `principal` entity on the first authenticated request.
+
+### Local Profile Configuration
+
+The `local` profile now expects a GitHub OAuth App and enables browser-based OAuth2 login.
+
+```yaml title="src/main/resources/application-local.yml"
+spring:
+  security:
+    oauth2:
+      client:
+        registration:
+          github:
+            client-id: ${GITHUB_CLIENT_ID}
+            client-secret: ${GITHUB_CLIENT_SECRET}
+            scope:
+              - read:user
+              - user:email
+
+app:
+  idp-core-prefix-url: http://localhost:8084
+  security:
+    authentication:
+      jwt:
+        enabled: false
+      oauth2-login:
+        enabled: true
+      mock:
+        enabled: false
+      user-claim-mappings:
+        sub: id
+        preferred_username: login
+        name: name
+        email: email
+```
+
+### GitHub OAuth App Setup
+
+Create a GitHub OAuth App and configure:
+
+- Homepage URL: `http://localhost:8084`
+- Authorization callback URL: `http://localhost:8084/login/oauth2/code/github`
+
+Export the client credentials before you start the app:
+
+```bash
+export SPRING_PROFILE=local
+export GITHUB_CLIENT_ID=your-github-client-id
+export GITHUB_CLIENT_SECRET=your-github-client-secret
+./mvnw spring-boot:run
+```
+
+Then open `http://localhost:8084/oauth2/authorization/github` in your browser. After the callback succeeds, the next
+authenticated request to `/api/v1/**` provisions the GitHub user in the catalog automatically.
+
 ---
 
 ## Adding a Custom Authentication Method
