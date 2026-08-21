@@ -32,18 +32,17 @@ public class BasicAuthSecurityValidator implements WebhookSecurityStrategy {
 
   @Override
   public void validateConfiguration(Map<String, String> config) {
-    WebhookSecurityConfigurationUtils.required(config, "username");
+    WebhookSecurityConfigurationUtils.required(config, USERNAME_KEY);
     String alias = WebhookSecurityConfigurationUtils.required(config, "secret_alias",
         "secretAlias");
     WebhookSecurityConfigurationUtils.validateSecretAliasFormat(alias);
+    WebhookSecurityConfigurationUtils.validateSecretAliasExists(alias);
   }
 
   @Override
   public void validateRequest(Map<String, Object> headers, byte[] rawPayload,
       Map<String, String> config) {
-    // Resolve configuration and secrets (may throw WebhookAuthenticationException)
-    String expectedUsername = WebhookSecurityConfigurationUtils.resolveRequiredRuntimeValue(config,
-        USERNAME_KEY);
+    String expectedUsername = WebhookSecurityConfigurationUtils.required(config, USERNAME_KEY);
     String expectedPassword = WebhookSecurityConfigurationUtils.resolveRequiredRuntimeValue(config,
         "secret_alias", "secretAlias");
 

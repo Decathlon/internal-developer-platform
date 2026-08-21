@@ -168,7 +168,9 @@ Each connector declares one security type. IDP-Core validates the configuration 
 {
   "type": "JWT_BEARER",
   "config": {
-    "jwks_uri": "https://issuer.example.com/.well-known/jwks.json"
+    "jwks_uri": "https://issuer.example.com/.well-known/jwks.json",
+    "client_id_field": "email",
+    "client_id_values": "ps-fb25-product-events-produ@cpe-idp-stg-337o.iam.gserviceaccount.com"
   }
 }
 ```

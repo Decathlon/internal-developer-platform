@@ -47,6 +47,25 @@ class InboundWebhookManagementControllerTest extends AbstractIntegrationTest {
   private static final String ENTITY_DYNAMIC_MAPPING_PATH = "/api/v1/entity_dynamic_mappings";
   private static final String JSON_PATH = "integration_test/json/webhook/v1/";
 
+  // Secret alias env vars referenced across all tests — must exist for
+  // validateSecretAliasExists to pass at creation time
+  private static final String[] TEST_SECRET_ALIAS_KEYS = {"MY_WEBHOOK_SECRET", "MY_TOKEN",
+      "TOKEN_SECRET", "BASIC_PASS", "BASIC_SECRET", "MY_SECRET"};
+
+  @BeforeEach
+  void setUpSecretAliasEnvVars() {
+    for (String key : TEST_SECRET_ALIAS_KEYS) {
+      System.setProperty(key, "test-value-for-" + key);
+    }
+  }
+
+  @AfterEach
+  void clearSecretAliasEnvVars() {
+    for (String key : TEST_SECRET_ALIAS_KEYS) {
+      System.clearProperty(key);
+    }
+  }
+
   /// Creates an entity dynamic mapping via API required for webhook connector
   /// creation.
   private void createEntityDynamicMapping(String mappingIdentifier) throws Exception {
@@ -400,17 +419,20 @@ class InboundWebhookManagementControllerTest extends AbstractIntegrationTest {
 
     @Test
     @WithMockUser
-    @DisplayName("Should return 400 when name is blank")
-    void postWebhook_400_title_blank() throws Exception {
+    @DisplayName("Should return 400 when secret_alias references an env variable that does not exist")
+    void postWebhook_400_secret_alias_env_var_not_set() throws Exception {
       var payload = """
           {
-            "identifier": "blank-name-webhook",
-            "name": "   ",
-            "enabled": true,
+            "identifier": "webhook-missing-env",
+            "name": "Webhook Missing Env",
+            "enabled": false,
             "mapping_identifiers": [],
             "security": {
-              "type": "NONE",
-              "config": {}
+              "type": "STATIC_TOKEN",
+              "config": {
+                "header_name": "X-Token",
+                "secret_alias": "THIS_ENV_VAR_DOES_NOT_EXIST_AT_ALL"
+              }
             }
           }
           """;
@@ -418,7 +440,9 @@ class InboundWebhookManagementControllerTest extends AbstractIntegrationTest {
       mockMvc
           .perform(MockMvcRequestBuilders.post(WEBHOOK_PATH).contentType(APPLICATION_JSON)
               .accept(APPLICATION_JSON).with(csrf()).content(payload))
-          .andExpect(status().isBadRequest()).andExpect(jsonPath("$.error").value("BAD_REQUEST"));
+          .andExpect(status().isBadRequest()).andExpect(jsonPath("$.error").value("BAD_REQUEST"))
+          .andExpect(jsonPath("$.error_description")
+              .value(containsString("THIS_ENV_VAR_DOES_NOT_EXIST_AT_ALL")));
     }
 
     @Test

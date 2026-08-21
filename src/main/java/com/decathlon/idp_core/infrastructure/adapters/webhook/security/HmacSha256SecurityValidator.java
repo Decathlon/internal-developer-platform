@@ -34,6 +34,9 @@ public class HmacSha256SecurityValidator implements WebhookSecurityStrategy {
     String alias = WebhookSecurityConfigurationUtils.required(config, "secret_alias",
         "secretAlias");
     WebhookSecurityConfigurationUtils.validateSecretAliasFormat(alias);
+    // Verify the environment variable exists at creation time to fail-fast before
+    // runtime
+    WebhookSecurityConfigurationUtils.validateSecretAliasExists(alias);
   }
 
   @Override

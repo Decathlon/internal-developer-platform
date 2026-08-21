@@ -65,6 +65,26 @@ class JwtBearerSecurityValidatorTest {
     }
 
     @Test
+    @DisplayName("Should throw when jwks_uri uses HTTP instead of HTTPS")
+    void shouldThrowWhenJwksUriIsNotHttps() {
+      Map<String, String> config = Map.of("jwks_uri", "http://issuer/.well-known/jwks.json",
+          "client_id_field", "email", "client_id_values", "expected@example.com");
+
+      assertThatThrownBy(() -> validator.validateConfiguration(config)).isInstanceOf(
+          com.decathlon.idp_core.domain.exception.webhook.WebhookSecurityConfigurationException.class)
+          .hasMessageContaining("HTTPS");
+    }
+
+    @Test
+    @DisplayName("Should skip HTTPS validation when jwks_uri is an environment reference")
+    void shouldSkipSsrfValidationForEnvReference() {
+      Map<String, String> config = Map.of("jwks_uri", "${JWKS_URI}", "client_id_field", "email",
+          "client_id_values", "expected@example.com");
+
+      assertThatCode(() -> validator.validateConfiguration(config)).doesNotThrowAnyException();
+    }
+
+    @Test
     @DisplayName("Should throw when client_id_field is missing from config")
     void shouldThrowWhenClientIdFieldMissing() {
       Map<String, String> config = Map.of("jwks_uri", "https://issuer/.well-known/jwks.json",

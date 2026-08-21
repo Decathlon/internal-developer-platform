@@ -1,5 +1,6 @@
 package com.decathlon.idp_core.infrastructure.adapters.webhook.security;
 
+import java.net.URI;
 import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -48,6 +49,10 @@ public class JwtBearerSecurityValidator implements WebhookSecurityStrategy {
         KEY_JWKS_URI_SNAKE_CASE, KEY_JWKS_URI_CAMEL_CASE);
     if (jwksUriValue.isBlank()) {
       throw new WebhookSecurityConfigurationException("Invalid jwks_uri for JWT_BEARER security");
+    }
+
+    if (!WebhookSecurityConfigurationUtils.isEnvironmentReference(jwksUriValue)) {
+      validateJwksUri(jwksUriValue);
     }
 
     String clientIdField = resolveRequiredClientIdField(config);
@@ -127,6 +132,31 @@ public class JwtBearerSecurityValidator implements WebhookSecurityStrategy {
 
     if (StringUtils.hasText(optionalExpectedAudience)) {
       validateAudienceClaim(jwt, optionalExpectedAudience);
+    }
+  }
+
+  /// Validates the jwks_uri to prevent SSRF attacks.
+  ///
+  /// Enforces HTTPS-only to ensure the JWKS endpoint is reachable over an
+  /// encrypted
+  /// and authenticated channel, blocking plaintext HTTP and non-URL values.
+  private void validateJwksUri(String jwksUri) {
+    URI uri;
+    try {
+      uri = URI.create(jwksUri.trim());
+    } catch (IllegalArgumentException _) {
+      throw new WebhookSecurityConfigurationException(
+          "Invalid jwks_uri for JWT_BEARER security: URI is malformed");
+    }
+
+    if (!"https".equalsIgnoreCase(uri.getScheme())) {
+      throw new WebhookSecurityConfigurationException(
+          "Invalid jwks_uri for JWT_BEARER security: only HTTPS URIs are allowed");
+    }
+
+    if (!StringUtils.hasText(uri.getHost())) {
+      throw new WebhookSecurityConfigurationException(
+          "Invalid jwks_uri for JWT_BEARER security: host is missing");
     }
   }
 

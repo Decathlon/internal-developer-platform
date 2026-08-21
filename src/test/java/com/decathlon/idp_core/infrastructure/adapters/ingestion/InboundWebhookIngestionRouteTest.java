@@ -252,6 +252,18 @@ class InboundWebhookIngestionRouteTest extends AbstractIntegrationTest {
   }
 
   @Test
+  @DisplayName("Route returns 401 when HMAC signature prefix format is invalid")
+  void postWebhookRoute_401_whenHmacSignaturePrefixIsInvalid() throws Exception {
+    Exchange exchange = invokeIngestionRoute("github-dora-connector", "{\"action\":\"pushed\"}",
+        null, Map.of("X-Hub-Signature-256", "sha1=abc123"));
+
+    assertEquals(401, exchange.getMessage().getHeader(Exchange.HTTP_RESPONSE_CODE));
+    assertEquals("application/json", exchange.getMessage().getHeader(Exchange.CONTENT_TYPE));
+    assertJsonErrorResponse(exchange, "webhook_authentication_failed",
+        "HMAC signature format is invalid");
+  }
+
+  @Test
   @DisplayName("Validate-security route accepts NONE mode")
   void validateSecurityRoute_acceptsNoneMode() {
     WebhookConnector connector = webhookConnectorWithSecurity("none-connector",
@@ -275,6 +287,56 @@ class InboundWebhookIngestionRouteTest extends AbstractIntegrationTest {
         Map.of("Authorization", "Basic " + credentials));
 
     assertNull(exchange.getException());
+  }
+
+  @Test
+  @DisplayName("Validate-security route returns 401 when Basic auth scheme is invalid")
+  void validateSecurityRoute_401_whenBasicSchemeIsInvalid() throws Exception {
+    WebhookConnector connector = webhookConnectorWithSecurity("basic-connector",
+        new WebhookSecurity(WebhookSecurityType.BASIC_AUTH,
+            Map.of("username", BASIC_AUTH_USERNAME_ENV_KEY, "secret_alias", basicAuthEnvKey)));
+
+    Exchange exchange = invokeValidateSecurityRoute(connector,
+        Map.of("Authorization", "Bearer not-basic"));
+
+    assertEquals(401, exchange.getMessage().getHeader(Exchange.HTTP_RESPONSE_CODE));
+    assertEquals("application/json", exchange.getMessage().getHeader(Exchange.CONTENT_TYPE));
+    assertJsonErrorResponse(exchange, "webhook_authentication_failed",
+        "Authorization header must use Basic authentication scheme");
+  }
+
+  @Test
+  @DisplayName("Validate-security route returns 403 when Basic username is rejected")
+  void validateSecurityRoute_403_whenBasicUsernameIsRejected() throws Exception {
+    String credentials = Base64.getEncoder()
+        .encodeToString(("wrong-user:" + basicAuthEnvValue).getBytes(StandardCharsets.UTF_8));
+    WebhookConnector connector = webhookConnectorWithSecurity("basic-connector",
+        new WebhookSecurity(WebhookSecurityType.BASIC_AUTH,
+            Map.of("username", BASIC_AUTH_USERNAME_ENV_KEY, "secret_alias", basicAuthEnvKey)));
+
+    Exchange exchange = invokeValidateSecurityRoute(connector,
+        Map.of("Authorization", "Basic " + credentials));
+
+    assertEquals(403, exchange.getMessage().getHeader(Exchange.HTTP_RESPONSE_CODE));
+    assertEquals("application/json", exchange.getMessage().getHeader(Exchange.CONTENT_TYPE));
+    assertJsonErrorResponse(exchange, "webhook_forbidden", "Basic credentials were rejected");
+  }
+
+  @Test
+  @DisplayName("Validate-security route returns 403 when Basic password is rejected")
+  void validateSecurityRoute_403_whenBasicPasswordIsRejected() throws Exception {
+    String credentials = Base64.getEncoder()
+        .encodeToString((BASIC_AUTH_USERNAME + ":wrong-password").getBytes(StandardCharsets.UTF_8));
+    WebhookConnector connector = webhookConnectorWithSecurity("basic-connector",
+        new WebhookSecurity(WebhookSecurityType.BASIC_AUTH,
+            Map.of("username", BASIC_AUTH_USERNAME_ENV_KEY, "secret_alias", basicAuthEnvKey)));
+
+    Exchange exchange = invokeValidateSecurityRoute(connector,
+        Map.of("Authorization", "Basic " + credentials));
+
+    assertEquals(403, exchange.getMessage().getHeader(Exchange.HTTP_RESPONSE_CODE));
+    assertEquals("application/json", exchange.getMessage().getHeader(Exchange.CONTENT_TYPE));
+    assertJsonErrorResponse(exchange, "webhook_forbidden", "Basic credentials were rejected");
   }
 
   @Test
