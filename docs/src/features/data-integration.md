@@ -114,7 +114,7 @@ entity. It includes a JSLT filter, a JSLT template, and the action to apply.
 | `name`                       | ✅       | Human-readable name                                                              |
 | `description`                |          | Purpose of the mapping                                                           |
 | `entity_template_identifier` | ✅       | Target Entity Template identifier                                                |
-| `filter`                     | ✅       | JSLT expression. Payload is skipped if it returns false                         |
+| `filter`                     | ✅       | JSLT expression. Payload is skipped if it returns false                          |
 | `action`                     | ✅       | One of `UPDATE_ENTITY`, `UPDATE_PROPERTIES`, `UPDATE_RELATIONS`, `DELETE_ENTITY` |
 | `entity`                     | ✅       | Entity mapping configuration (see below)                                         |
 
