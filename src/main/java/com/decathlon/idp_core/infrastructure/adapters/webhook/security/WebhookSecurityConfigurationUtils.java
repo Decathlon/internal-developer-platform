@@ -54,6 +54,33 @@ public final class WebhookSecurityConfigurationUtils {
     validateEnvironmentReferenceFormat(alias, "secret_alias");
   }
 
+  /// Validates that the environment variable referenced by the alias actually
+  /// exists
+  /// at connector creation time. Rejects the configuration if the variable is
+  /// absent
+  /// or blank, preventing silent failures at runtime.
+  ///
+  /// @param alias the secret alias (plain `MY_VAR`, `env:MY_VAR`, or `${MY_VAR}`)
+  /// @throws WebhookSecurityConfigurationException if the environment variable is
+  /// missing or blank
+  public static void validateSecretAliasExists(String alias) {
+    String envKey = normalizeEnvironmentAlias(alias);
+    if (!StringUtils.hasText(envKey)) {
+      throw new WebhookSecurityConfigurationException("Secret alias is missing or blank");
+    }
+
+    String resolved = System.getenv(envKey);
+    if (!StringUtils.hasText(resolved)) {
+      resolved = System.getProperty(envKey);
+    }
+    if (!StringUtils.hasText(resolved)) {
+      throw new WebhookSecurityConfigurationException(
+          ("Environment variable '%s' referenced by secret_alias is not set. "
+              + "Ensure the variable is defined before creating this connector.")
+                  .formatted(envKey));
+    }
+  }
+
   /// Validates that an environment reference follows the UPPER_SNAKE_CASE
   /// convention.
   ///
