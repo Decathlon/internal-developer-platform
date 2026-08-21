@@ -176,7 +176,7 @@ Each node in the graph represents an entity with the following structure:
 | ---------- | ------ | --------------------------------------------------------------- |
 | `id`       | string | Unique identifier for the node (entity identifier)              |
 | `label`    | string | Human-readable name for display                                 |
-| `template` | string | Entity template type (for example, "service", "database")       |
+| `template` | string | Entity template type (for example, "service," "database")       |
 | `data`     | object | Complete entity data including properties and metadata          |
 
 ### Edge Structure
@@ -188,7 +188,7 @@ Each edge in the graph represents a relationship between two entities:
 | `id`       | string  | Unique identifier for the edge                                  |
 | `source`   | string  | Source node identifier                                          |
 | `target`   | string  | Target node identifier                                          |
-| `label`    | string  | Relationship name/type (for example, "depends_on", "calls")     |
+| `label`    | string  | Relationship name/type (for example, "depends_on," "calls")     |
 | `animated` | boolean | Whether the edge should be animated in visualization            |
 
 ## Visualization with React Flow

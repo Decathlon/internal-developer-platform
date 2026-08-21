@@ -74,7 +74,7 @@ to it. Each mapping defines how the incoming JSON payload is transformed into an
 | `DELETE` | `/api/v1/entity_dynamic_mappings/{identifier}` | Delete one entity dynamic mapping            |
 | `POST`   | `/api/v1/entity_dynamic_mappings/dry-run`      | Test a mapping with sample payload           |
 
-### Step 1 — Create an Entity Dynamic Mapping
+### Step 1: Create an Entity Dynamic Mapping
 
 An **Entity Dynamic Mapping** defines how a raw JSON payload is transformed into an
 entity. It includes a JSLT filter, a JSLT template, and the action to apply.
@@ -114,7 +114,7 @@ entity. It includes a JSLT filter, a JSLT template, and the action to apply.
 | `name`                       | ✅       | Human-readable name                                                              |
 | `description`                |          | Purpose of the mapping                                                           |
 | `entity_template_identifier` | ✅       | Target Entity Template identifier                                                |
-| `filter`                     | ✅       | JSLT expression — payload is skipped if it returns false                         |
+| `filter`                     | ✅       | JSLT expression. Payload is skipped if it returns false                         |
 | `action`                     | ✅       | One of `UPDATE_ENTITY`, `UPDATE_PROPERTIES`, `UPDATE_RELATIONS`, `DELETE_ENTITY` |
 | `entity`                     | ✅       | Entity mapping configuration (see below)                                         |
 
@@ -315,12 +315,12 @@ The `filter` field determines whether a mapping applies to a payload:
 > Use the **dry-run endpoint** (POST `/api/v1/entity_dynamic_mappings/dry-run`) to test
 > your JSLT expressions before deploying them to production. This helps catch syntax
 > errors and unexpected transformations early.
-> [!NOTE]
+> [!TIP]
 > For comprehensive JSLT documentation, refer to the
 > [official JSLT GitHub repository](https://github.com/schibsted/jslt). The platform
 > supports JSLT version 0.1.x built-in functions and custom extensions.
 
-### Step 2 — Create a Webhook Connector
+### Step 2: Create a Webhook Connector
 
 A **Webhook Connector** receives the HTTP POST request and references one or more
 entity dynamic mappings. Each mapping is applied independently to the same payload.
@@ -462,8 +462,8 @@ Each step in the pipeline is isolated in its own Camel sub-route:
 | **B** | `decode-payload` | Decompress GZIP payloads; strips `Content-Encoding` header |
 | **C** | `ingest-payload` | Apply each `EntityDynamicMapping` and persist entities |
 
-> [!NOTE]
-> If a mapping's `filter` expression returns `false`, the payload is silently
+> [!TIP]
+> If a `filter` expression returns `false`, the payload is silently
 > skipped for that mapping. Other mappings on the same connector continue to run.
 
 ---
