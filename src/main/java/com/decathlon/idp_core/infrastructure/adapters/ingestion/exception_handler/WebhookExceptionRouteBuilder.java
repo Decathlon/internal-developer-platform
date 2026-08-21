@@ -6,7 +6,10 @@ import org.springframework.stereotype.Component;
 import com.decathlon.idp_core.domain.exception.webhook.WebhookConfigurationMissingException;
 import com.decathlon.idp_core.domain.exception.webhook.WebhookConnectorNotFoundException;
 import com.decathlon.idp_core.domain.exception.webhook.WebhookDisabledException;
+import com.decathlon.idp_core.infrastructure.adapters.ingestion.exception.WebhookAuthForbiddenException;
+import com.decathlon.idp_core.infrastructure.adapters.ingestion.exception.WebhookAuthUnauthorizedException;
 import com.decathlon.idp_core.infrastructure.adapters.ingestion.exception.WebhookDecodingException;
+import com.decathlon.idp_core.infrastructure.adapters.ingestion.exception.WebhookSecurityException;
 
 import lombok.RequiredArgsConstructor;
 
@@ -24,10 +27,16 @@ public class WebhookExceptionRouteBuilder {
         WebhookErrorCode.CONNECTOR_NOT_FOUND);
     handlerHelper.registerHandler(routeBuilder, WebhookDisabledException.class,
         WebhookErrorCode.CONNECTOR_DISABLED);
-    handlerHelper.registerHandler(routeBuilder, WebhookDecodingException.class,
-        WebhookErrorCode.INVALID_ENCODED_PAYLOAD, true);
     handlerHelper.registerHandler(routeBuilder, WebhookConfigurationMissingException.class,
         WebhookErrorCode.CONFIGURATION_MISSING);
+    handlerHelper.registerHandler(routeBuilder, WebhookDecodingException.class,
+        WebhookErrorCode.INVALID_COMPRESSED_PAYLOAD);
+    handlerHelper.registerHandler(routeBuilder, WebhookAuthUnauthorizedException.class,
+        WebhookErrorCode.AUTHENTICATION_REQUIRED);
+    handlerHelper.registerHandler(routeBuilder, WebhookAuthForbiddenException.class,
+        WebhookErrorCode.AUTHENTICATION_FORBIDDEN);
+    handlerHelper.registerHandler(routeBuilder, WebhookSecurityException.class,
+        WebhookErrorCode.AUTHENTICATION_REQUIRED);
     handlerHelper.registerHandler(routeBuilder, Exception.class, WebhookErrorCode.UNEXPECTED_ERROR);
   }
 }

@@ -1,13 +1,18 @@
 package com.decathlon.idp_core.infrastructure.adapters.webhook.security;
 
+import java.nio.charset.StandardCharsets;
+import java.util.Base64;
 import java.util.Map;
 
 import org.springframework.stereotype.Component;
 
 import com.decathlon.idp_core.domain.model.enums.WebhookSecurityType;
 import com.decathlon.idp_core.domain.port.WebhookSecurityStrategy;
+import com.decathlon.idp_core.infrastructure.adapters.ingestion.exception.WebhookAuthForbiddenException;
+import com.decathlon.idp_core.infrastructure.adapters.ingestion.exception.WebhookAuthUnauthorizedException;
 
 import lombok.NoArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 
 /// Basic Authentication security strategy for webhooks.
 ///
@@ -15,7 +20,10 @@ import lombok.NoArgsConstructor;
 /// and runtime (request authentication).
 @Component
 @NoArgsConstructor
+@Slf4j
 public class BasicAuthSecurityValidator implements WebhookSecurityStrategy {
+
+  private static final String USERNAME_KEY = "username";
 
   @Override
   public boolean supports(WebhookSecurityType securityType) {
@@ -24,9 +32,68 @@ public class BasicAuthSecurityValidator implements WebhookSecurityStrategy {
 
   @Override
   public void validateConfiguration(Map<String, String> config) {
-    WebhookSecurityConfigurationUtils.required(config, "username");
+    WebhookSecurityConfigurationUtils.required(config, USERNAME_KEY);
     String alias = WebhookSecurityConfigurationUtils.required(config, "secret_alias",
         "secretAlias");
     WebhookSecurityConfigurationUtils.validateSecretAliasFormat(alias);
+    WebhookSecurityConfigurationUtils.validateSecretAliasExists(alias);
+  }
+
+  @Override
+  public void validateRequest(Map<String, Object> headers, byte[] rawPayload,
+      Map<String, String> config) {
+    // Resolve configuration and secrets (may throw WebhookAuthenticationException)
+    String expectedUsername = WebhookSecurityConfigurationUtils.resolveRequiredRuntimeValue(config,
+        USERNAME_KEY);
+    String expectedPassword = WebhookSecurityConfigurationUtils.resolveRequiredRuntimeValue(config,
+        "secret_alias", "secretAlias");
+
+    // Extract Authorization header (may throw WebhookAuthenticationException)
+    String authorization = WebhookSecurityConfigurationUtils.requiredHeader(headers,
+        "Authorization");
+
+    if (!authorization.startsWith("Basic ")) {
+      log.debug("Basic Auth validation failed: Authorization header does not start with 'Basic '");
+      throw new WebhookAuthUnauthorizedException(
+          "Authorization header must use Basic authentication scheme");
+    }
+
+    String encodedCredentials = authorization.substring("Basic ".length()).trim();
+    String decodedCredentials;
+    try {
+      decodedCredentials = new String(Base64.getDecoder().decode(encodedCredentials),
+          StandardCharsets.UTF_8);
+    } catch (IllegalArgumentException exception) {
+      log.debug("Basic Auth validation failed: Invalid Base64 encoding in Authorization header");
+      throw new WebhookAuthUnauthorizedException(
+          "Authorization header contains invalid Basic credentials", exception);
+    }
+
+    int separatorIndex = decodedCredentials.indexOf(':');
+    if (separatorIndex <= 0) {
+      log.debug("Basic Auth validation failed: No ':' separator found in decoded credentials");
+      throw new WebhookAuthUnauthorizedException(
+          "Authorization header contains invalid Basic credentials format");
+    }
+
+    String actualUsername = decodedCredentials.substring(0, separatorIndex);
+    String actualPassword = decodedCredentials.substring(separatorIndex + 1);
+
+    boolean usernameMatches = WebhookSecurityConfigurationUtils.constantTimeEquals(expectedUsername,
+        actualUsername);
+    boolean passwordMatches = WebhookSecurityConfigurationUtils.constantTimeEquals(expectedPassword,
+        actualPassword);
+
+    if (!usernameMatches) {
+      log.debug("Basic Auth validation failed: username mismatch");
+      throw new WebhookAuthForbiddenException("Basic credentials were rejected");
+    }
+
+    if (!passwordMatches) {
+      log.debug("Basic Auth validation failed: password mismatch");
+      throw new WebhookAuthForbiddenException("Basic credentials were rejected");
+    }
+
+    log.debug("Basic Auth validation successful for username '{}'", expectedUsername);
   }
 }

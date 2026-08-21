@@ -1,15 +1,19 @@
 package com.decathlon.idp_core.infrastructure.adapters.ingestion.exception_handler;
 
-import static com.decathlon.idp_core.infrastructure.adapters.ingestion.configuration.IngestionConstants.*;
+import static com.decathlon.idp_core.infrastructure.adapters.ingestion.configuration.IngestionConstants.APPLICATION_JSON;
+import static com.decathlon.idp_core.infrastructure.adapters.ingestion.configuration.IngestionConstants.CONNECTOR_IDENTIFIER_PROPERTY;
+import static com.decathlon.idp_core.infrastructure.adapters.ingestion.configuration.IngestionConstants.UNKNOWN_VALUE;
 
 import org.apache.camel.Exchange;
 import org.apache.camel.LoggingLevel;
-import org.apache.camel.Message;
 import org.apache.camel.builder.RouteBuilder;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Component;
+import org.springframework.util.StringUtils;
 
 import com.decathlon.idp_core.infrastructure.adapters.common.model.ErrorResponse;
+import com.decathlon.idp_core.infrastructure.adapters.ingestion.exception.WebhookAuthForbiddenException;
+import com.decathlon.idp_core.infrastructure.adapters.ingestion.exception.WebhookAuthUnauthorizedException;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
@@ -28,42 +32,31 @@ public class WebhookExceptionHandlerHelper {
   /// log.
   public <T extends Throwable> void registerHandler(RouteBuilder routeBuilder,
       Class<T> exceptionType, WebhookErrorCode error) {
-    registerHandler(routeBuilder, exceptionType, error, false);
-  }
-
-  /// Binds an exception type and optionally exposes the exception message in the
-  /// HTTP response when the exception message is controlled and safe for clients.
-  public <T extends Throwable> void registerHandler(RouteBuilder routeBuilder,
-      Class<T> exceptionType, WebhookErrorCode error, boolean exposeExceptionMessage) {
 
     routeBuilder.onException(exceptionType).handled(true)
-        .process(exchange -> setJsonErrorResponse(exchange, error, exposeExceptionMessage))
+        .process(exchange -> setJsonErrorResponse(exchange, error.code(), error.httpStatus(),
+            resolveErrorDescription(exchange, error.description())))
         .process(exchange -> logHandledException(exchange, error.logLevel(), error.code(),
             error.httpStatus().value()));
   }
 
-  private void setJsonErrorResponse(Exchange exchange, WebhookErrorCode error,
-      boolean exposeExceptionMessage) throws JsonProcessingException {
-    HttpStatus httpStatus = error.httpStatus();
-    String errorDescription = resolveErrorDescription(exchange, error, exposeExceptionMessage);
-    ErrorResponse errorResponse = new ErrorResponse(httpStatus.name(), errorDescription);
-    Message message = exchange.getMessage();
-    message.setHeader(Exchange.HTTP_RESPONSE_CODE, httpStatus.value());
-    message.setHeader(Exchange.CONTENT_TYPE, APPLICATION_JSON);
-    message.setBody(objectMapper.writeValueAsString(errorResponse));
+  private void setJsonErrorResponse(Exchange exchange, String errorCode, HttpStatus httpStatus,
+      String errorDescription) throws JsonProcessingException {
+    ErrorResponse errorResponse = new ErrorResponse(errorCode, errorDescription);
+
+    exchange.getMessage().setHeader(Exchange.HTTP_RESPONSE_CODE, httpStatus.value());
+    exchange.getMessage().setHeader(Exchange.CONTENT_TYPE, APPLICATION_JSON);
+    exchange.getMessage().setBody(objectMapper.writeValueAsString(errorResponse));
   }
 
-  private String resolveErrorDescription(Exchange exchange, WebhookErrorCode error,
-      boolean exposeExceptionMessage) {
-    if (!exposeExceptionMessage) {
-      return error.description();
-    }
-
+  private String resolveErrorDescription(Exchange exchange, String fallbackDescription) {
     Throwable throwable = exchange.getProperty(Exchange.EXCEPTION_CAUGHT, Throwable.class);
-    if (throwable == null || throwable.getMessage() == null || throwable.getMessage().isBlank()) {
-      return error.description();
+    if ((throwable instanceof WebhookAuthUnauthorizedException
+        || throwable instanceof WebhookAuthForbiddenException)
+        && StringUtils.hasText(throwable.getMessage())) {
+      return throwable.getMessage();
     }
-    return throwable.getMessage();
+    return fallbackDescription;
   }
 
   private void logHandledException(Exchange exchange, LoggingLevel level, String errorCode,

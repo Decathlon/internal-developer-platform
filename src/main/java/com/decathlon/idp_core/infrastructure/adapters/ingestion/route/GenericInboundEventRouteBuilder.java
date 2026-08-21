@@ -12,6 +12,7 @@ import com.decathlon.idp_core.domain.exception.webhook.WebhookDisabledException;
 import com.decathlon.idp_core.domain.model.inbound_connectors.webhook.WebhookConnector;
 import com.decathlon.idp_core.domain.service.webhook.WebhookConnectorService;
 import com.decathlon.idp_core.infrastructure.adapters.ingestion.exception_handler.WebhookExceptionRouteBuilder;
+import com.decathlon.idp_core.infrastructure.adapters.ingestion.processor.SecurityProcessor;
 import com.decathlon.idp_core.infrastructure.adapters.ingestion.processor.decoder.DecodingProcessor;
 
 import lombok.RequiredArgsConstructor;
@@ -23,15 +24,15 @@ public class GenericInboundEventRouteBuilder extends RouteBuilder {
 
   private final WebhookConnectorService webhookConnectorService;
   private final DecodingProcessor decodingProcessor;
+  private final SecurityProcessor securityProcessor;
   private final WebhookExceptionRouteBuilder webhookExceptionRouteBuilder;
-
   @Override
   public void configure() throws Exception {
     webhookExceptionRouteBuilder.configureExceptions(this);
 
     from(DIRECT_PROCESS_EVENT).routeId(ROUTE_ID_WEBHOOK_PIPELINE)
         .setProperty(RAW_PAYLOAD_BODY_PROPERTY, body()).to(DIRECT_FETCH_CONFIGURATION)
-        .to(DIRECT_VALIDATE_ENABLED).to(DIRECT_DECODE_PAYLOAD)
+        .to(DIRECT_VALIDATE_ENABLED).to(DIRECT_VALIDATE_SECURITY).to(DIRECT_DECODE_PAYLOAD)
         .setHeader(Exchange.HTTP_RESPONSE_CODE, constant(HTTP_CREATED))
         .setHeader(Exchange.CONTENT_TYPE, constant(APPLICATION_JSON))
         .setBody(constant(SUCCESS_BODY_CONFIGURATION_LOADED));
@@ -63,6 +64,22 @@ public class GenericInboundEventRouteBuilder extends RouteBuilder {
           if (!config.enabled()) {
             throw new WebhookDisabledException(config.identifier());
           }
+        });
+
+    // --- Step A.2: Validate Webhook Security ---
+    from(DIRECT_VALIDATE_SECURITY).routeId(ROUTE_ID_VALIDATE_WEBHOOK_SECURITY)
+        .log(LoggingLevel.DEBUG,
+            "Validating webhook security for ID: ${exchangeProperty.connectorIdentifier}")
+        .process(exchange -> {
+          WebhookConnector config = exchange.getProperty(WEBHOOK_CONFIG_PROPERTY,
+              WebhookConnector.class);
+          if (config == null) {
+            String connectorIdentifier = exchange.getProperty(CONNECTOR_IDENTIFIER_PROPERTY,
+                String.class);
+            throw new WebhookConfigurationMissingException(connectorIdentifier);
+          }
+          Object rawPayload = exchange.getProperty(RAW_PAYLOAD_BODY_PROPERTY);
+          securityProcessor.validate(exchange.getIn().getHeaders(), rawPayload, config);
         });
 
     // --- Step B: Decode Payload ---
