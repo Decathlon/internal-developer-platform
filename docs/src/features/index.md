@@ -23,7 +23,7 @@ The Internal Developer Platform provides a comprehensive set of features to buil
 
     Visualize entity relationships and dependencies as interactive graphs.
 
-    **Status:** 🕐 Done    
+    **Status:** 🕐 Done
 
 - 📈 **[Scorecards](scorecards.md)**
 

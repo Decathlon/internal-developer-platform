@@ -37,12 +37,24 @@ A mapping targets one Entity Template and describes how to derive entity fields 
 
 ### Mapping Actions
 
+The `action` field determines how the resolved entity payload modifies the entity in IDP-Core:
+
 | Action              | Behaviour                                                                   |
 | ------------------  | ----------------------------------------------------------------------------|
 | `UPDATE_ENTITY`     | Creates the entity if absent, otherwise patches all fields                  |
 | `UPDATE_PROPERTIES` | Creates the entity if absent, otherwise patches name and properties only    |
 | `UPDATE_RELATIONS`  | Creates the entity if absent, otherwise patches relations only              |
 | `DELETE_ENTITY`     | Deletes the entity if it exists                                             |
+
+#### UPDATE_RELATIONS: Relation Normalization
+
+For the `UPDATE_RELATIONS` action, the resolved `target_entity_identifiers` array is treated as the **source of truth** for the final relation state. This means:
+
+- If the resolved array is **empty** or is null, the existing links are **removed**.
+- If the previous state had **less identifiers than the newly resolved array**, the new ones are **linked**.
+- If the previous state had **more identifiers than the newly resolved array**, the missing ones are **unlinked**.
+
+This ensures predictable, idempotent behavior: each webhook event resets the relation to exactly match the resolved identifiers, with no implicit preservation of prior state.
 
 ### Filtering Payloads with `filter`
 
