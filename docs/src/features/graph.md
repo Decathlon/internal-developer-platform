@@ -79,7 +79,7 @@ GET /api/v1/entities/service/auth-service/graph?include_data=true&properties=lan
 GET /api/v1/entities/service/auth-service/graph?depth=4&traversal_mode=BIDIRECTIONAL&relations=depends_on,calls&include_data=true&properties=language,region
 ```
 
-### Traversal Modes**
+### Traversal Modes
 
 | Mode             | Behaviour                                                                                |
 | ---------------- | ---------------------------------------------------------------------------------------- |
@@ -494,5 +494,5 @@ Overlay health metrics onto graph nodes to quickly identify troubled components.
 ## Next Steps
 
 - **[Data Integration](data-integration.md)** - Connect external systems and populate the graph with data
-- **[Entity Templates](../getting-started/entity-templates.md)** - Define the types of entities in your graph
-- **[Audit Trail](../features/audit.md)** - Track changes to entities and relationships
+- **[Entity Templates](../concepts/entity-templates.md)** - Define the types of entities in your graph
+- **[Audit Trail](../concepts/audit.md)** - Track changes to entities and relationships

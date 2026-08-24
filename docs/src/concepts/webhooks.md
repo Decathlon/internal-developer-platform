@@ -60,12 +60,12 @@ A webhook connector is the runtime configuration stored by IDP-Core for one inbo
 
 ## Dynamic Mappings
 
-Each connector contains at least one dynamic mapping[cite: 12]. A mapping targets one Entity Template and describes how
-to derive entity fields from the incoming JSON payload with a JSLT filter and entity projections[cite: 12].
+Each connector contains at least one dynamic mapping. A mapping targets one Entity Template and describes how
+to derive entity fields from the incoming JSON payload with a JSLT filter and entity projections.
 
 | Field         | Type   | Description                                                                                                                    |
 |---------------|--------|--------------------------------------------------------------------------------------------------------------------------------|
-| `template`    | String | Identifier of the target Entity Template[cite: 12]                                                                             |
+| `entity_template_identifier` | String | Identifier of the target Entity Template |
 | `identifier`  | String | Stable and unique key for this specific mapping[cite: 12]                                                                      |
 | `name`        | String | Human-readable name of the mapping[cite: 12]                                                                                   |
 | `description` | String | Optional explanation of the mapping purpose[cite: 12]                                                                          |

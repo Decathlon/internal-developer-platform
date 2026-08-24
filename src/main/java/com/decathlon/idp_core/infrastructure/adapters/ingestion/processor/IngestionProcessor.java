@@ -59,12 +59,13 @@ public class IngestionProcessor {
       return;
     }
 
-    boolean exists = entityService.entityExists(entity.templateIdentifier(), entity.identifier());
-
     switch (mapping.action()) {
-      case UPDATE_ENTITY -> handleUpdate(entity, exists);
-      case UPDATE_PROPERTIES -> handleUpdateProperties(entity, exists);
-      case UPDATE_RELATIONS -> handleUpdateRelations(entity, exists);
+      case UPDATE_ENTITY -> handleUpdate(entity,
+          entityService.entityExists(entity.templateIdentifier(), entity.identifier()));
+      case UPDATE_PROPERTIES -> handleUpdateProperties(entity,
+          entityService.entityExists(entity.templateIdentifier(), entity.identifier()));
+      case UPDATE_RELATIONS -> handleUpdateRelations(entity,
+          entityService.entityExists(entity.templateIdentifier(), entity.identifier()));
       case DELETE_ENTITY -> handleDelete(entity);
       case null, default -> log.warn("Unsupported or null mapping action: {}", mapping.action());
     }
