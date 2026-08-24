@@ -57,23 +57,6 @@ Webhooks allow external systems to push data to IDP-Core via HTTP POST requests.
 You configure a webhook connector and attach one or more **Entity Dynamic Mappings**
 to it. Each mapping defines how the incoming JSON payload is transformed into an entity.
 
-### API Reference
-
-| Method   | Endpoint                                       | Purpose                                      |
-| -------- | ---------------------------------------------- | -------------------------------------------- |
-| `POST`   | `/webhooks/{identifier}`                       | Receive an inbound event for the connector   |
-| `POST`   | `/api/v1/inbound_webhooks`                     | Create a webhook connector configuration     |
-| `GET`    | `/api/v1/inbound_webhooks`                     | List webhook connector configurations        |
-| `GET`    | `/api/v1/inbound_webhooks/{identifier}`        | Read one webhook connector configuration     |
-| `PUT`    | `/api/v1/inbound_webhooks/{identifier}`        | Update one webhook connector configuration   |
-| `DELETE` | `/api/v1/inbound_webhooks/{identifier}`        | Delete one webhook connector configuration   |
-| `POST`   | `/api/v1/entity_dynamic_mappings`              | Create an entity dynamic mapping             |
-| `GET`    | `/api/v1/entity_dynamic_mappings`              | List entity dynamic mappings (paginated)     |
-| `GET`    | `/api/v1/entity_dynamic_mappings/{identifier}` | Read one entity dynamic mapping              |
-| `PUT`    | `/api/v1/entity_dynamic_mappings/{identifier}` | Update one entity dynamic mapping            |
-| `DELETE` | `/api/v1/entity_dynamic_mappings/{identifier}` | Delete one entity dynamic mapping            |
-| `POST`   | `/api/v1/entity_dynamic_mappings/dry-run`      | Test a mapping with sample payload           |
-
 ### Step 1: Create an Entity Dynamic Mapping
 
 An **Entity Dynamic Mapping** defines how a raw JSON payload is transformed into an
@@ -88,237 +71,25 @@ entity. It includes a JSLT filter, a JSLT template, and the action to apply.
   "filter": ".visibility == \"private\"",
   "action": "UPDATE_ENTITY",
   "entity": {
-    "identifier": ".key | tostring | gsub(\"\\\\s\";\"_\")",
+    "identifier": "replace(string(.key), \"\\\\s\", \"_\")",
     "name": ".name",
     "properties": {
-      "project_name": ".name | tostring",
+      "project_name": "string(.name)",
       "last_analysis_date": ".lastAnalysisDate",
-      "issues_number": ".measures[] | select(.metric == \"new_violations\") | .period.value",
-      "loc": ".measures[] | select(.metric == \"ncloc\") | .value"
+      "issues_number": "[for (.measures) .period.value if (.metric == \"new_violations\")] | .[0]",
+      "loc": "[for (.measures) .value if (.metric == \"ncloc\")] | .[0]"
     },
     "relations": [
       {
         "name": "github_repository",
-        "target_entity_identifiers": [".components[0].name"]
+        "target_entity_identifiers": [
+          ".components[0].name"
+        ]
       }
     ]
   }
 }
 ```
-
-#### Entity Dynamic Mapping Fields
-
-| Field                        | Required | Description                                                                      |
-| ---------------------------- | -------- | -------------------------------------------------------------------------------- |
-| `identifier`                 | ✅       | Unique key for this mapping                                                      |
-| `name`                       | ✅       | Human-readable name                                                              |
-| `description`                |          | Purpose of the mapping                                                           |
-| `entity_template_identifier` | ✅       | Target Entity Template identifier                                                |
-| `filter`                     | ✅       | JSLT expression. Payload is skipped if it returns false                          |
-| `action`                     | ✅       | One of `UPDATE_ENTITY`, `UPDATE_PROPERTIES`, `UPDATE_RELATIONS`, `DELETE_ENTITY` |
-| `entity`                     | ✅       | Entity mapping configuration (see below)                                         |
-
-#### Entity Mapping Configuration
-
-| Field        | Required | Description                                              |
-| ------------ | -------- | -------------------------------------------------------- |
-| `identifier` | ✅       | JSLT expression to generate the entity identifier        |
-| `name`       | ✅       | JSLT expression for the entity name                      |
-| `properties` |          | Map of property names to JSLT expressions                |
-| `relations`  |          | Array of relation definitions (see below)                |
-
-#### Relation Definition
-
-| Field                       | Required | Description                                              |
-| --------------------------- | -------- | -------------------------------------------------------- |
-| `name`                      | ✅       | Relation name from the Entity Template                   |
-| `target_entity_identifiers` | ✅       | Array of JSLT expressions to extract target identifiers  |
-
-#### Mapping Actions
-
-| Action              | Behaviour                                                          |
-| ------------------  | ------------------------------------------------------------------ |
-| `UPDATE_ENTITY`     | Creates the entity if absent, otherwise patches all fields         |
-| `UPDATE_PROPERTIES` | Creates the entity if absent, otherwise patches properties only    |
-| `UPDATE_RELATIONS`  | Creates the entity if absent, otherwise patches relations only     |
-| `DELETE_ENTITY`     | Deletes the entity if it exists                                    |
-
-#### JSLT Expressions
-
-Entity Dynamic Mappings use **JSLT (JSON Streaming Language)** to transform incoming
-JSON payloads. JSLT is a powerful DSL for JSON manipulation designed for filtering,
-selecting, and transforming JSON data without code.
-
-##### Core Concepts
-
-- **Payload Context**: All JSLT expressions work on the entire JSON payload sent to the webhook
-- **Lazy Evaluation**: JSLT uses lazy evaluation, so expressions only compute what is needed
-- **Null Safety**: Operations gracefully handle missing fields by returning `null` or `empty`
-- **Composition**: Expressions can be chained using the pipe operator (`|`) to build complex transformations
-
-##### Common JSLT Operations
-
-| Operation                | Example                                               | Description                                  |
-| ------------------------ | ----------------------------------------------------- | -------------------------------------------- |
-| **Field access**         | `.key`                                                | Access top-level or nested fields            |
-| **Nested access**        | `.repository.owner.login`                             | Navigate deeply nested objects               |
-| **Array indexing**       | `.components[0].name`                                 | Access array element by index                |
-| **Array iteration**      | `.measures[]`                                         | Iterate over all array elements              |
-| **Array slicing**        | `.items[1:3]`                                         | Extract a slice of an array                  |
-| **Array filtering**      | `.measures[].metric`                                  | Extract specific field from all array items  |
-| **Pipe operator**        | `.key \| tostring \| gsub("\\s"; "_")`                | Chain transformations left-to-right          |
-| **Conditional**          | `if .visibility == "private" then .key else empty end`| Branch logic based on conditions             |
-| **Default value**        | `.language // "Unknown"`                              | Provide fallback if value is null/missing    |
-| **String concatenation** | `"Project: " + .name`                                 | Combine strings                              |
-| **Filtering arrays**     | `.measures[] \| select(.metric == "ncloc")`           | Filter array elements by condition           |
-| **Mapping arrays**       | `.tags[] \| {tag: ., priority: .}`                    | Transform each array element                 |
-
-##### Built-in JSLT Functions
-
-JSLT provides many built-in functions for string, array, and numeric operations:
-
-###### String Functions
-
-| Function         | Usage                            | Description                        |
-| -------------    | ---------------------------------| -----------------------------------|
-| `tostring`       | `.count \| tostring`             | Convert value to string            |
-| `tonumber`       | `"42" \| tonumber`               | Convert value to number            |
-| `gsub`           | `.name \| gsub("\\s"; "_")`      | Global string substitution (regex) |
-| `split`          | `.tags \| split(",")`            | Split string into array            |
-| `join`           | `.words[] \| join("-")`          | Join array into string             |
-| `startswith`     | `.url \| startswith("http")`     | Check if string starts with prefix |
-| `endswith`       | `.domain \| endswith(".com")`    | Check if string ends with suffix   |
-| `length`         | `.name \| length`                | Get string or array length         |
-| `ltrimstr`       | `.path \| ltrimstr("/api")`      | Remove prefix from string          |
-| `rtrimstr`       | `.path \| rtrimstr("/")`         | Remove suffix from string          |
-| `ascii_downcase` | `.status \| ascii_downcase`      | Convert string to lowercase        |
-| `ascii_upcase`   | `.status \| ascii_upcase`        | Convert string to uppercase        |
-| `test`           | `.email \| test("@.*\\.com")`    | Test if string matches regex       |
-
-###### Array Functions
-
-| Function    | Usage                                 | Description                     |
-| ----------- | ----------------------------------    | ------------------------------- |
-| `map`       | `.items[] \| map(.id)`                | Transform array elements        |
-| `select`    | `.items[] \| select(.active == true)` | Filter array elements           |
-| `sort`      | `.names[] \| sort`                    | Sort array elements             |
-| `reverse`   | `.items[] \| reverse`                 | Reverse array order             |
-| `group_by`  | `.items[] \| group_by(.category)`     | Group array by field            |
-| `unique`    | `.tags[] \| unique`                   | Remove duplicate elements       |
-| `flatten`   | `.nested[] \| flatten`                | Flatten nested arrays           |
-| `min`       | `.scores[] \| min`                    | Find minimum value              |
-| `max`       | `.scores[] \| max`                    | Find maximum value              |
-| `add`       | `.numbers[] \| add`                   | Sum array elements              |
-
-###### Type Functions
-
-| Function | Usage                                             | Description                                                              |
-| -------- | ------------------------------------------------- | ------------------------------------------------------------------------ |
-| `type`   | `.value \| type`                                  | Get type of value (string, number, object, array, boolean, null)         |
-| `has`    | `.repository \| has("url")`                       | Check if object has key                                                  |
-| `in`     | `"active" \| in(.filters)`                        | Check if value is in object/array                                        |
-| `empty`  | `if .status == "skip" then empty else . end`      | Return no results (filter out)                                           |
-
-##### Custom JSLT Functions
-
-IDP-Core can provide and expose custom JSLT functions for common webhook transformations:
-
-| Function        | Usage                           | Description                                   | Example                                                   |
-| --------------- | ------------------------------- | --------------------------------------------- | --------------------------------------------------------- |
-| `base64-decode` | `base64-decode(.payload_data)`  | Decode Base64-encoded strings in the payload  | `base64-decode("SGVsbG8gV29ybGQ=")` → `"Hello World"`     |
-
-##### JSLT Expression Examples
-
-###### Basic Field Extraction
-
-```jslt
-# Extract simple field
-.repository.name
-
-# Extract with type conversion
-.project_id | tostring
-
-# Extract with fallback
-.language // "Unknown"
-```
-
-###### Array Operations
-
-```jslt
-# Extract all metric values
-.measures[] | .value
-
-# Extract specific metric value
-.measures[] | select(.metric == "ncloc") | .value
-
-# Transform array elements
-.components[] | {name: .name, version: (.version | tostring)}
-
-# Count matching items
-.measures[] | select(.metric == "new_violations") | length
-```
-
-###### String Manipulation
-
-```jslt
-# Normalize identifier (remove spaces, replace special chars)
-.project_key | gsub("\\s"; "_") | gsub("/"; "_")
-
-# Extract domain from URL
-.repository_url | split("/")[2]
-
-# Conditional string generation
-if .is_private == true then "PRIVATE_" + .name else .name end
-```
-
-###### Complex Filtering and Transformation
-
-```jslt
-# Extract and transform multiple fields
-{
-  identifier: (.key | tostring | gsub("\\s"; "_")),
-  name: .name,
-  language: (.language // "Unknown"),
-  metrics: {
-    violations: (.measures[] | select(.metric == "new_violations") | .value),
-    loc: (.measures[] | select(.metric == "ncloc") | .value)
-  }
-}
-
-# Decode Base64 payload if present
-if .payload_data then
-  base64-decode(.payload_data) | fromjson
-else
-  .
-end
-```
-
-**Filtering Payloads with `filter`**
-
-The `filter` field determines whether a mapping applies to a payload:
-
-```jslt
-# Apply mapping only to private projects
-.visibility == "private"
-
-# Apply mapping only if webhook action is create/edit
-(.action == "created" or .action == "edited")
-
-# Apply mapping only if critical metrics exist
-(.measures[] | select(.metric == "new_violations") | .value) > 0
-
-# Complex: apply only if specific conditions are met
-(.visibility == "private" and .status == "active" and (.language // "java") == "java")
-```
-
-> [!TIP]
-> Use the **dry-run endpoint** (POST `/api/v1/entity_dynamic_mappings/dry-run`) to test
-> your JSLT expressions before deploying them to production. This helps catch syntax
-> errors and unexpected transformations early.
-> [!TIP]
-> For comprehensive JSLT documentation, refer to the
-> [official JSLT GitHub repository](https://github.com/schibsted/jslt). The platform
-> supports JSLT version 0.1.x built-in functions and custom extensions.
 
 ### Step 2: Create a Webhook Connector
 
@@ -344,17 +115,6 @@ entity dynamic mappings. Each mapping is applied independently to the same paylo
   }
 }
 ```
-
-#### Webhook Connector Fields
-
-| Field                 | Required | Description                                                       |
-| --------------------- | -------- | ----------------------------------------------------------------- |
-| `identifier`          | ✅       | Unique key for this webhook                                       |
-| `name`                | ✅       | Human-readable name                                               |
-| `description`         |          | Purpose of the webhook                                            |
-| `enabled`             | ✅       | Toggle ingestion on/off without deleting the connector            |
-| `mapping_identifiers` | ✅       | Array of entity dynamic mapping identifiers to apply              |
-| `security`            |          | Authentication configuration using a `type` + `config` contract   |
 
 ### Testing Mappings with Dry-Run
 
@@ -517,14 +277,6 @@ spring:
       properties:
         idp.kafka.mapping: users_kafka
 ```
-
----
-
-## JSLT Mapping Reference
-
-The Internal Developer Platform uses [JSLT](https://github.com/schibsted/jslt) for data transformation. It accesses the entire JSON payload sent to the webhook or consumed from Kafka/Pub-Sub. Refer to the JSLT documentation for detailed usage.
-
----
 
 ## Example: GitHub Webhook
 

@@ -1,9 +1,9 @@
 package com.decathlon.idp_core.infrastructure.adapters.ingestion.processor;
 
+import static com.decathlon.idp_core.domain.constant.ValidationMessages.ENTITY_DYNAMIC_MAPPING_ACTION_MANDATORY;
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.argThat;
@@ -24,6 +24,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.slf4j.LoggerFactory;
 
+import com.decathlon.idp_core.domain.exception.entity_dynamic_mapping.EntityDynamicMappingConfigurationException;
 import com.decathlon.idp_core.domain.model.entity.Entity;
 import com.decathlon.idp_core.domain.model.entity.Property;
 import com.decathlon.idp_core.domain.model.entity.Relation;
@@ -445,45 +446,17 @@ class IngestionProcessorTest {
   @DisplayName("Unsupported action")
   class UnsupportedActionTest {
 
-    private ListAppender<ILoggingEvent> listAppender;
-
-    @BeforeEach
-    void setUpLogAppender() {
-      Logger ingestionProcessorLogger = (Logger) LoggerFactory.getLogger(IngestionProcessor.class);
-      listAppender = new ListAppender<>();
-      listAppender.start();
-      ingestionProcessorLogger.addAppender(listAppender);
-    }
-
     @Test
-    @DisplayName("Should log warning for null action")
+    @DisplayName("Should throw exception when action is null")
     void unsupported_null_action() {
-      String payload = "{\"action\": \"pushed\"}";
-      EntityDynamicMapping mapping = new EntityDynamicMapping(UUID.randomUUID(),
-          "test-mapping-null", "test-template", ".action == \"pushed\"", null, "Test Mapping",
-          "Test mapping description", ".repository.full_name", ".repository.name",
-          Map.of("prop1", ".value1"), List.of());
-      WebhookConnector connector = createWebhookConnector("test-connector", List.of(mapping));
-      Entity entity = createTestEntity("test-template", "test-id");
+      UUID id = UUID.randomUUID();
+      Map<String, String> props = Map.of("prop1", ".value1");
+      var exception = assertThrows(EntityDynamicMappingConfigurationException.class,
+          () -> new EntityDynamicMapping(id, "test-mapping-null", "test-template",
+              ".action == \"pushed\"", null, "Test Mapping", "Test mapping description",
+              ".repository.full_name", ".repository.name", props, List.of()));
 
-      when(mappingEngine.mapToEntity(payload, mapping)).thenReturn(entity);
-
-      ingestionProcessor.ingest(payload, connector);
-
-      // Verify warning log was generated for unsupported null action
-      var warnLogs = listAppender.list.stream()
-          .filter(event -> event.getLevel().toString().equals("WARN"))
-          .filter(
-              event -> event.getFormattedMessage().contains("Unsupported or null mapping action"))
-          .toList();
-
-      assertFalse(warnLogs.isEmpty(), "Warning log for unsupported action should be present");
-      assertTrue(warnLogs.get(0).getFormattedMessage().contains("null"),
-          "Warning log should mention null action");
-
-      verify(entityService, never()).createEntity(any());
-      verify(entityService, never()).patchEntity(any(), any(), any());
-      verify(entityService, never()).deleteEntity(any(), any());
+      assertEquals(ENTITY_DYNAMIC_MAPPING_ACTION_MANDATORY, exception.getMessage());
     }
   }
 

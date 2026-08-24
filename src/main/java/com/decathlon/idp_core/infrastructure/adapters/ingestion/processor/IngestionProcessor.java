@@ -37,7 +37,6 @@ public class IngestionProcessor {
   public void ingest(String payload, WebhookConnector webhookConnectorConfiguration) {
     log.info("Starting ingestion for webhook connector: {}",
         webhookConnectorConfiguration.identifier());
-    log.info("Input payload : {}", payload);
     webhookConnectorConfiguration.mappings().forEach(mapping -> applyMapping(payload, mapping));
     log.info("Completed ingestion for webhook connector: {}",
         webhookConnectorConfiguration.identifier());

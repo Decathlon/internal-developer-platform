@@ -1,5 +1,6 @@
 package com.decathlon.idp_core.domain.model.entity_mapping;
 
+import static com.decathlon.idp_core.domain.constant.ValidationMessages.ENTITY_DYNAMIC_MAPPING_ACTION_MANDATORY;
 import static com.decathlon.idp_core.domain.constant.ValidationMessages.ENTITY_DYNAMIC_MAPPING_ENTITY_IDENTIFIER_MANDATORY;
 import static com.decathlon.idp_core.domain.constant.ValidationMessages.ENTITY_DYNAMIC_MAPPING_ENTITY_NAME_MANDATORY;
 import static com.decathlon.idp_core.domain.constant.ValidationMessages.ENTITY_DYNAMIC_MAPPING_FILTER_MANDATORY;
@@ -39,6 +40,10 @@ public record EntityDynamicMapping(UUID id, String identifier, String entityTemp
 
     if (isBlank(filter)) {
       throw new EntityDynamicMappingConfigurationException(ENTITY_DYNAMIC_MAPPING_FILTER_MANDATORY);
+    }
+
+    if (action == null) {
+      throw new EntityDynamicMappingConfigurationException(ENTITY_DYNAMIC_MAPPING_ACTION_MANDATORY);
     }
 
     if (isBlank(entityIdentifier)) {

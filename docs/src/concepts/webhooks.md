@@ -13,7 +13,7 @@ A webhook connector combines three concerns:
 
 - **Connector metadata** - Identifier, name, description, and enabled flag
 - **Security** - How IDP-Core authenticates incoming requests
-- **Mappings** - How the payload maps to an Entity Template
+- **[Entity Dynamic Mappings](entity-dynamic-mapping.md)** - How the payload maps to an Entity Template
 
 ```mermaid
 flowchart LR
@@ -46,7 +46,7 @@ A webhook connector is the runtime configuration stored by IDP-Core for one inbo
   "name": "GitHub repositories",
   "description": "Receives repository events from GitHub",
   "enabled": true,
-  "mapping_identifiers": [],
+  "mapping_identifiers": ["github-repo-update-mapping", "github-repo-delete-mapping"],
   "security": {
     "type": "HMAC_SHA256",
     "config": {
@@ -54,45 +54,6 @@ A webhook connector is the runtime configuration stored by IDP-Core for one inbo
       "secret_alias": "GITHUB_WEBHOOK_SECRET",
       "prefix": "sha256="
     }
-  }
-}
-```
-
-## Dynamic Mappings
-
-Each connector contains at least one dynamic mapping. A mapping targets one Entity Template and describes how
-to derive entity fields from the incoming JSON payload with a JSLT filter and entity projections.
-
-| Field         | Type   | Description                                                                                                                    |
-|---------------|--------|--------------------------------------------------------------------------------------------------------------------------------|
-| `entity_template_identifier` | String | Identifier of the target Entity Template |
-| `identifier`  | String | Stable and unique key for this specific mapping[cite: 12]                                                                      |
-| `name`        | String | Human-readable name of the mapping[cite: 12]                                                                                   |
-| `description` | String | Optional explanation of the mapping purpose[cite: 12]                                                                          |
-| `action`      | String | **Required.** The mutation logic applied to the entity (`UPDATE_ENTITY`, `UPDATE_PROPERTIES`, `UPDATE_RELATIONS`, or `DELETE`) |
-| `filter`      | String | JSLT boolean expression to evaluate if the payload should be processed[cite: 12]                                               |
-| `entity`      | Object | JSLT projections defining how to map the payload to the entity's attributes[cite: 12]                                          |
-
-### Dynamic Mapping Example
-
-```json
-{
-  "template": "github_repository",
-  "identifier": "mapping-github",
-  "name": "mapping github",
-  "description": "mapping github description",
-  "action": "UPDATE_ENTITY",
-  "filter": ".repository != null",
-  "entity": {
-    "identifier": "replace(.repository.name, \" \", \"-\")",
-    "name": ".repository.name",
-    "properties": {
-      "name": ".repository.name",
-      "url": ".repository.html_url",
-      "stars": "\"\" + .repository.stargazers_count",
-      "is_public": "if (.repository.private) \"false\" else \"true\""
-    },
-    "relations": {}
   }
 }
 ```
@@ -200,7 +161,7 @@ The request flow is:
 > [!IMPORTANT]
 > The connector model, security validation, management APIs, and mapping validation are implemented now.
 
-## Management API Methods
+## API Reference
 
 You manage webhook connectors through the inbound webhook management API, which exposes standard CRUD methods.
 

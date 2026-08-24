@@ -3,8 +3,10 @@ package com.decathlon.idp_core.infrastructure.adapters.ingestion.exception_handl
 import org.apache.camel.builder.RouteBuilder;
 import org.springframework.stereotype.Component;
 
+import com.decathlon.idp_core.domain.exception.entity.EntityDeletionBlockedException;
 import com.decathlon.idp_core.domain.exception.entity.EntityNotFoundException;
 import com.decathlon.idp_core.domain.exception.entity.EntityValidationException;
+import com.decathlon.idp_core.domain.exception.entity_dynamic_mapping.EntityDynamicMappingConfigurationException;
 import com.decathlon.idp_core.domain.exception.webhook.WebhookConfigurationMissingException;
 import com.decathlon.idp_core.domain.exception.webhook.WebhookConnectorNotFoundException;
 import com.decathlon.idp_core.domain.exception.webhook.WebhookDisabledException;
@@ -19,8 +21,8 @@ public class WebhookExceptionRouteBuilder {
 
   private final WebhookExceptionHandlerHelper handlerHelper;
 
-  /// Registers webhook exception mappings with consistent HTTP and logging
-  /// behavior.
+  /// Registers webhook exception mappings with consistent HTTP and
+  /// logging behavior.
   public void configureExceptions(RouteBuilder routeBuilder) {
     handlerHelper.registerHandler(routeBuilder, WebhookConnectorNotFoundException.class,
         WebhookErrorCode.CONNECTOR_NOT_FOUND);
@@ -34,6 +36,11 @@ public class WebhookExceptionRouteBuilder {
         WebhookErrorCode.ENTITY_INGESTION_ERROR, true);
     handlerHelper.registerHandler(routeBuilder, EntityNotFoundException.class,
         WebhookErrorCode.ENTITY_INGESTION_ERROR, true);
+    handlerHelper.registerHandler(routeBuilder, EntityDynamicMappingConfigurationException.class,
+        WebhookErrorCode.ENTITY_INGESTION_ERROR, true);
+    handlerHelper.registerHandler(routeBuilder, EntityDeletionBlockedException.class,
+        WebhookErrorCode.ENTITY_INGESTION_ERROR, true);
     handlerHelper.registerHandler(routeBuilder, Exception.class, WebhookErrorCode.UNEXPECTED_ERROR);
+
   }
 }
