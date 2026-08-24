@@ -541,7 +541,7 @@ class EntityDynamicMappingControllerTest extends AbstractIntegrationTest {
     @WithMockUser
     @Sql(statements = {
         "INSERT INTO entity_dynamic_mapping (id, identifier, template_id, filter,action,  name, description, entity_identifier, entity_name, properties, relations) "
-            + "VALUES ('990e8400-e29b-41d4-a716-446655440001', 'null-json-mapping', '550e8400-e29b-41d4-a716-446655440071', '.action == \"pushed\"',0, "
+            + "VALUES ('990e8400-e29b-41d4-a716-446655440001', 'null-json-mapping', '550e8400-e29b-41d4-a716-446655440071', '.action == \"pushed\"','UPDATE_ENTITY', "
             + "'Null JSON mapping', 'For DTO null-branch coverage', '.repository.full_name', '.repository.name', 'null'::jsonb, 'null'::jsonb)"})
     @DisplayName("Should normalize null relations from persistence to empty array in API response")
     void getMapping_200_normalizes_null_json_relations() throws Exception {
