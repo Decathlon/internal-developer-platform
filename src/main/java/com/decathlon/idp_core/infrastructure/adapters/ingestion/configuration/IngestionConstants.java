@@ -33,7 +33,7 @@ public final class IngestionConstants {
   public static final int HTTP_BAD_REQUEST = 400;
   public static final int HTTP_CREATED = 201;
   public static final int HTTP_NO_CONTENT = 204;
-  public static final String SUCCESS_WEBHOOK_EVENT_PROCESSED = "{\"status\": \"SUCCESS\", \"message\": \"Entity Webhook event processed successfully.\"}";
+  public static final String SUCCESS_WEBHOOK_EVENT_PROCESSED = "{\"status\": \"SUCCESS\", \"message\": \"Inbound Webhook event processed successfully.\"}";
   public static final String CONTENT_ENCODING_GZIP = "gzip";
   public static final String CONTENT_ENCODING_IDENTITY = "identity";
   public static final String CONTENT_ENCODING_HEADER = "Content-Encoding";
