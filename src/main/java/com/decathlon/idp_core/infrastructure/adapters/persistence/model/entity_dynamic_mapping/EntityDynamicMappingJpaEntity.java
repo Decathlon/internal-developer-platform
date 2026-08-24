@@ -66,6 +66,7 @@ public class EntityDynamicMappingJpaEntity {
   @Column(nullable = false)
   private String filter;
 
+  @Enumerated(EnumType.STRING)
   @Column(nullable = false)
   private MappingAction action;
 
