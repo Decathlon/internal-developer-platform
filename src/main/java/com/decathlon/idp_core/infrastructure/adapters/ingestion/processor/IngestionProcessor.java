@@ -4,6 +4,7 @@ import java.util.List;
 
 import org.springframework.stereotype.Component;
 
+import com.decathlon.idp_core.domain.exception.entity.EntityNotFoundException;
 import com.decathlon.idp_core.domain.model.entity.Entity;
 import com.decathlon.idp_core.domain.model.entity_mapping.EntityDynamicMapping;
 import com.decathlon.idp_core.domain.model.inbound_connectors.webhook.WebhookConnector;
@@ -59,12 +60,9 @@ public class IngestionProcessor {
     }
 
     switch (mapping.action()) {
-      case UPDATE_ENTITY -> handleUpdate(entity,
-          entityService.entityExists(entity.templateIdentifier(), entity.identifier()));
-      case UPDATE_PROPERTIES -> handleUpdateProperties(entity,
-          entityService.entityExists(entity.templateIdentifier(), entity.identifier()));
-      case UPDATE_RELATIONS -> handleUpdateRelations(entity,
-          entityService.entityExists(entity.templateIdentifier(), entity.identifier()));
+      case UPDATE_ENTITY -> handleUpdate(entity);
+      case UPDATE_PROPERTIES -> handleUpdateProperties(entity);
+      case UPDATE_RELATIONS -> handleUpdateRelations(entity);
       case DELETE_ENTITY -> handleDelete(entity);
       case null, default -> log.warn("Unsupported or null mapping action: {}", mapping.action());
     }
@@ -80,9 +78,8 @@ public class IngestionProcessor {
   /// exist, it is created.
   ///
   /// @param entity the entity to Update
-  /// @param exists whether the entity already exists
-  private void handleUpdate(Entity entity, boolean exists) {
-    if (exists) {
+  private void handleUpdate(Entity entity) {
+    if (entityService.entityExists(entity.templateIdentifier(), entity.identifier())) {
       log.debug("Patching entity {} for template: {}", entity.identifier(),
           entity.templateIdentifier());
       entityService.patchEntity(entity.templateIdentifier(), entity.identifier(), entity);
@@ -100,13 +97,11 @@ public class IngestionProcessor {
   /// exist, it is created with only its properties.
   ///
   /// @param entity the entity to Update properties for
-  /// @param exists whether the entity already exists
-  private void handleUpdateProperties(Entity entity, boolean exists) {
-    // Strip relations before invoking entity service
+  private void handleUpdateProperties(Entity entity) {
     Entity propertiesOnlyEntity = new Entity(entity.id(), entity.templateIdentifier(),
         entity.name(), entity.identifier(), entity.properties(), List.of());
 
-    if (exists) {
+    if (entityService.entityExists(entity.templateIdentifier(), entity.identifier())) {
       entityService.patchEntity(entity.templateIdentifier(), entity.identifier(),
           propertiesOnlyEntity);
     } else {
@@ -114,24 +109,24 @@ public class IngestionProcessor {
     }
   }
 
-  /// Handles the Update relations action for an entity.
-  ///
-  /// If the entity exists, only its relations are patched. If the entity does not
-  /// exist, it is created with only its relations.
+  /// Handles the Update relations action for an entity. If the entity exists,
+  /// only its relations are patched. The entity must exists in order to patch the
+  /// relations
   ///
   /// @param entity the entity to Update relations for
-  /// @param exists whether the entity already exists
-  private void handleUpdateRelations(Entity entity, boolean exists) {
+  /// @throws EntityNotFoundException
+  private void handleUpdateRelations(Entity entity) {
+
+    if (!entityService.entityExists(entity.templateIdentifier(), entity.identifier())) {
+      throw new EntityNotFoundException(entity.templateIdentifier(), entity.identifier());
+    }
     // Strip properties before invoking entity service
-    Entity relationsOnlyEntity = new Entity(entity.id(), entity.templateIdentifier(), entity.name(),
+    Entity relationsOnlyEntity = new Entity(null, entity.templateIdentifier(), null,
         entity.identifier(), List.of(), entity.relations());
 
-    if (exists) {
-      entityService.patchEntity(entity.templateIdentifier(), entity.identifier(),
-          relationsOnlyEntity);
-    } else {
-      entityService.createEntity(relationsOnlyEntity);
-    }
+    entityService.patchEntity(entity.templateIdentifier(), entity.identifier(),
+        relationsOnlyEntity);
+
   }
 
   /// Handles the delete action for an entity.

@@ -24,6 +24,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.slf4j.LoggerFactory;
 
+import com.decathlon.idp_core.domain.exception.entity.EntityNotFoundException;
 import com.decathlon.idp_core.domain.exception.entity_dynamic_mapping.EntityDynamicMappingConfigurationException;
 import com.decathlon.idp_core.domain.model.entity.Entity;
 import com.decathlon.idp_core.domain.model.entity.Property;
@@ -241,8 +242,8 @@ class IngestionProcessorTest {
   class UpsertRelationsActionTest {
 
     @Test
-    @DisplayName("Should create entity with relations only when it does not exist")
-    void upsert_relations_create_when_not_exists() {
+    @DisplayName("Should throw exception when entity does not exist")
+    void upsert_relations_throws_when_not_exists() {
       String payload = "{\"action\": \"pushed\"}";
       EntityDynamicMapping mapping = createTestMapping(MappingAction.UPDATE_RELATIONS);
       WebhookConnector connector = createWebhookConnector("test-connector", List.of(mapping));
@@ -251,11 +252,11 @@ class IngestionProcessorTest {
       when(mappingEngine.mapToEntity(payload, mapping)).thenReturn(entity);
       when(entityService.entityExists("test-template", "test-id")).thenReturn(false);
 
-      ingestionProcessor.ingest(payload, connector);
+      assertThrows(EntityNotFoundException.class,
+          () -> ingestionProcessor.ingest(payload, connector));
 
-      verify(entityService)
-          .createEntity(argThat(createdEntity -> createdEntity.properties().isEmpty()
-              && createdEntity.relations().size() == 1));
+      verify(entityService, never()).createEntity(any());
+      verify(entityService, never()).patchEntity(any(), any(), any());
     }
 
     @Test
@@ -324,9 +325,8 @@ class IngestionProcessorTest {
   class PatchRelationsActionTest {
 
     @Test
-    @DisplayName("Should create entity when it does not exist")
-    void patch_relations_create_entity_when_not_exists() {
-      List<ILoggingEvent> logsList = listAppender.list;
+    @DisplayName("Should throw exception when entity does not exist")
+    void patch_relations_throws_when_not_exists() {
       String payload = "{\"action\": \"pushed\"}";
       EntityDynamicMapping mapping = createTestMapping(MappingAction.UPDATE_RELATIONS);
       WebhookConnector connector = createWebhookConnector("test-connector", List.of(mapping));
@@ -335,10 +335,8 @@ class IngestionProcessorTest {
       when(mappingEngine.mapToEntity(payload, mapping)).thenReturn(entity);
       when(entityService.entityExists("test-template", "test-id")).thenReturn(false);
 
-      ingestionProcessor.ingest(payload, connector);
-
-      assertThat(logsList).extracting(ILoggingEvent::getFormattedMessage).anyMatch(
-          message -> message.contains("Completed ingestion for webhook connector: test-connector"));
+      assertThrows(EntityNotFoundException.class,
+          () -> ingestionProcessor.ingest(payload, connector));
 
       verify(entityService, never()).patchEntity(any(), any(), any());
     }
@@ -485,8 +483,8 @@ class IngestionProcessorTest {
     }
 
     @Test
-    @DisplayName("stripProperties should remove properties and keep relations")
-    void strip_properties_removes_properties_only() {
+    @DisplayName("stripProperties should throw when entity does not exist")
+    void strip_properties_throws_when_not_exists() {
       String payload = "{\"action\": \"pushed\"}";
       EntityDynamicMapping mapping = createTestMapping(MappingAction.UPDATE_RELATIONS);
       WebhookConnector connector = createWebhookConnector("test-connector", List.of(mapping));
@@ -495,13 +493,10 @@ class IngestionProcessorTest {
       when(mappingEngine.mapToEntity(payload, mapping)).thenReturn(entity);
       when(entityService.entityExists("test-template", "test-id")).thenReturn(false);
 
-      ingestionProcessor.ingest(payload, connector);
+      assertThrows(EntityNotFoundException.class,
+          () -> ingestionProcessor.ingest(payload, connector));
 
-      verify(entityService)
-          .createEntity(argThat(strippedEntity -> strippedEntity.properties().isEmpty()
-              && strippedEntity.relations().size() == 1
-              && strippedEntity.identifier().equals(entity.identifier())
-              && strippedEntity.templateIdentifier().equals(entity.templateIdentifier())));
+      verify(entityService, never()).createEntity(any());
     }
   }
 
