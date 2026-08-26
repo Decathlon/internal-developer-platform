@@ -1053,7 +1053,8 @@ class EntityTemplateControllerTest extends AbstractIntegrationTest {
     @WithMockUser()
     @DisplayName("Should return 400 when template is a relation target")
     void deleteTemplate_400_is_relation_target() throws Exception {
-      // Use "microservice" which is referenced as a target in other templates (from test data)
+      // Use "microservice" which is referenced as a target in other templates (from
+      // test data)
       String templateId = "microservice";
 
       mockMvc

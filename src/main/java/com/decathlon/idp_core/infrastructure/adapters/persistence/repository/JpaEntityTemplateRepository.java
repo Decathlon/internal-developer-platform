@@ -11,7 +11,6 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.history.RevisionRepository;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
-import org.springframework.transaction.annotation.Transactional;
 
 import com.decathlon.idp_core.infrastructure.adapters.persistence.model.entity_template.EntityTemplateJpaEntity;
 
@@ -39,13 +38,15 @@ public interface JpaEntityTemplateRepository
 
   boolean existsByName(String name);
 
-  @Transactional
   void deleteByIdentifier(String identifier);
 
-  /// Counts templates (excluding the one identified by `identifier` itself) that have
-  /// at least one relation definition whose `targetTemplateIdentifier` equals `identifier`.
+  /// Counts templates (excluding the one identified by `identifier` itself) that
+  /// have
+  /// at least one relation definition whose `targetTemplateIdentifier` equals
+  /// `identifier`.
   ///
-  /// Used to enforce the template relation-target integrity business rule before deletion.
+  /// Used to enforce the template relation-target integrity business rule before
+  /// deletion.
   @Query("""
       SELECT COUNT(et)
       FROM EntityTemplateJpaEntity et

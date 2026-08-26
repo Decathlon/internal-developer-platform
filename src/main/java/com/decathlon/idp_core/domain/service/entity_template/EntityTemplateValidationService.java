@@ -141,7 +141,8 @@ public class EntityTemplateValidationService {
   ///
   /// @param identifier the identifier of the template to delete
   /// @throws EntityTemplateNotFoundException when `identifier` is null
-  /// @throws EntityTemplateNotFoundException when no template matches `identifier`
+  /// @throws EntityTemplateNotFoundException when no template matches
+  /// `identifier`
   /// @throws EntityTemplateIsRelationTargetException when another template
   /// declares a relation whose `targetTemplateIdentifier` equals `identifier`
   public void validateForDeletion(String identifier) {
