@@ -165,15 +165,15 @@ public class EntityTemplateService {
   /// the template deletion happen within the same transaction so any failure
   /// rolls back the entire operation.
   ///
-  /// @param identifier unique business identifier of template to delete
+  /// @param templateIdentifier unique business identifier of template to delete
   /// @throws EntityTemplateNotFoundException when template doesn't exist
   /// @throws EntityTemplateIsRelationTargetException when another template
   /// references this template as a relation target
   @Transactional
-  public void deleteEntityTemplate(String identifier) {
-    entityTemplateValidationService.validateForDeletion(identifier);
-    entityRepositoryPort.deleteAllByTemplateIdentifier(identifier);
-    entityTemplateRepositoryPort.deleteByIdentifier(identifier);
+  public void deleteEntityTemplate(String templateIdentifier) {
+    entityTemplateValidationService.validateForDeletion(templateIdentifier);
+    entityRepositoryPort.deleteAllByTemplateIdentifier(templateIdentifier);
+    entityTemplateRepositoryPort.deleteByIdentifier(templateIdentifier);
   }
 
   private List<PropertyDefinition> mergePropertyDefinitions(List<PropertyDefinition> existing,

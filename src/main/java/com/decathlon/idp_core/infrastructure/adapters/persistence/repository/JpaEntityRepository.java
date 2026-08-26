@@ -294,6 +294,17 @@ public interface JpaEntityRepository
   /// Spring Data loads each entity and removes it via `em.remove()`, which
   /// triggers JPA cascade (`CascadeType.ALL`, `orphanRemoval = true`) so
   /// entity-owned properties and relations are also removed.
-  void deleteAllByTemplateIdentifier(String templateIdentifier);
+  /// Finds all entities belonging to the given template, for cascade deletion.
+  ///
+  /// **Purpose:** Used exclusively by `deleteAllByTemplateIdentifier` cleanup to
+  /// load managed entities before removal. Loading managed instances (rather than
+  /// issuing a bulk `DELETE` statement) ensures JPA cascade (`CascadeType.ALL`),
+  /// `orphanRemoval`, and Hibernate Envers auditing all fire correctly, since
+  /// these mechanisms hook into the entity lifecycle and are bypassed by bulk
+  /// JPQL/SQL deletes.
+  ///
+  /// @param templateIdentifier the template identifier to filter entities
+  /// @return list of entities belonging to the template
+  List<EntityJpaEntity> findAllByTemplateIdentifier(String templateIdentifier);
 
 }

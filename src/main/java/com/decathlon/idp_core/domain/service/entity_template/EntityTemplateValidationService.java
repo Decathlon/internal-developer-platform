@@ -27,12 +27,15 @@ import com.decathlon.idp_core.domain.port.EntityTemplateRepositoryPort;
 
 import lombok.RequiredArgsConstructor;
 
-/// Domain service to centralize all functional validation rules for [EntityTemplate] operations.
+/// Domain service to centralize all functional validation rules for
+/// [EntityTemplate] operations.
 ///
 /// **Key responsibilities:**
 /// - Identifier and name uniqueness enforcement for create and update operations
-/// - Property-rule compatibility validation (type vs. rule constraints) delegated to [PropertyDefinitionValidationService]
-/// - Relation definitions validation (name uniqueness and referential integrity) delegated to [RelationDefinitionValidationService]
+/// - Property-rule compatibility validation (type vs. rule constraints)
+///   delegated to [PropertyDefinitionValidationService]
+/// - Relation definitions validation (name uniqueness and referential integrity)
+///   delegated to [RelationDefinitionValidationService]
 /// - Template existence verification before deletion
 @Service
 @RequiredArgsConstructor
@@ -59,10 +62,10 @@ public class EntityTemplateValidationService {
   /// @throws EntityTemplateNameAlreadyExistsException when name is already taken
   /// @throws PropertyDefinitionRulesConflictException when rules violate business
   /// invariants
-  /// @throws PropertyNameAlreadyExistsException if duplicate property names are
-  /// found
-  /// @throws RelationNameAlreadyExistsException if duplicate relation names are
-  /// found
+  /// @throws PropertyNameAlreadyExistsException if duplicate property names
+  /// are found
+  /// @throws RelationNameAlreadyExistsException if duplicate relation names
+  /// are found
   /// @throws RelationCannotTargetItselfException when a relation targets the
   /// template itself
   public void validateForCreation(EntityTemplate entityTemplate) {
@@ -100,13 +103,14 @@ public class EntityTemplateValidationService {
   /// @throws EntityTemplateAlreadyExistsException when the new identifier is
   /// already taken
   /// @throws EntityTemplateNameAlreadyExistsException when the new name is
-  /// already taken
+  /// already
+  /// taken
   /// @throws PropertyDefinitionRulesConflictException when rules violate business
   /// invariants
-  /// @throws PropertyNameAlreadyExistsException if duplicate property names are
-  /// found
-  /// @throws RelationNameAlreadyExistsException if duplicate relation names are
-  /// found
+  /// @throws PropertyNameAlreadyExistsException if duplicate property names
+  /// are found
+  /// @throws RelationNameAlreadyExistsException if duplicate relation names
+  /// are found
   /// @throws RelationTargetTemplateChangeException when a relation target
   /// template is changed
   /// @throws RelationCannotTargetItselfException when a relation targets the
@@ -141,12 +145,13 @@ public class EntityTemplateValidationService {
   ///
   /// @param identifier the identifier of the template to delete
   /// @throws EntityTemplateNotFoundException when no template matches
-  /// `identifier`
-  /// (including null)
-/// @throws EntityTemplateIsRelationTargetException when another template
-/// declares a relation targeting `identifier`
-/// @throws EntityTemplateUsedByDynamicMappingException when a dynamic mapping
-/// references this template
+  /// `identifier` (including
+  /// null)
+  /// @throws EntityTemplateIsRelationTargetException when another template
+  /// declares a relation
+  /// targeting `identifier`
+  /// @throws EntityTemplateUsedByDynamicMappingException when a dynamic mapping
+  /// references this template
   public void validateForDeletion(String identifier) {
     validateTemplateExists(identifier); // Covers null + non-existent
     if (entityTemplateRepositoryPort.existsRelationTargetingTemplate(identifier)) {
@@ -159,14 +164,11 @@ public class EntityTemplateValidationService {
   /// dynamic mapping.
   ///
   /// Design Note: This check relies directly on the `EntityDynamicMappingPort`
-  /// rather than
-  /// injecting `DynamicMappingService`. This is a deliberate architectural choice
-  /// to prevent
-  /// a circular dependency between our domain services (TemplateValidation ->
-  /// DynamicMapping -> TemplateValidation).
-  /// It allows the template domain to enforce its own referential integrity
-  /// before deletion
-  /// while remaining loosely coupled.
+  /// rather than injecting `DynamicMappingService`. This is a deliberate
+  /// architectural choice to prevent a circular dependency between our domain
+  /// services (TemplateValidation -> DynamicMapping -> TemplateValidation). It
+  /// allows the template domain to enforce its own referential integrity before
+  /// deletion while remaining loosely coupled.
   ///
   /// **Precondition:** Template existence must be validated before calling this
   /// method (via [#validateTemplateExists]).
@@ -183,21 +185,34 @@ public class EntityTemplateValidationService {
 
   /// Checks that the entity template exists.
   ///
+  /// Validates that the provided identifier is not null or blank, and that a
+  /// template with the given identifier exists in the repository. This method
+  /// short-circuits on null/blank to prevent passing invalid values to the
+  /// repository layer, ensuring all framework-level exceptions are converted
+  /// to domain exceptions.
+  ///
   /// @param identifier the identifier to check for existence
-  /// @throws EntityTemplateNotFoundException when no template matches
-  /// `identifier`
+  /// @throws EntityTemplateNotFoundException when `identifier` is null, blank,
+  /// or no template matches `identifier`
   public void validateTemplateExists(String identifier) {
-    if (!entityTemplateRepositoryPort.existsByIdentifier(identifier)) {
+    if (identifier == null || identifier.isBlank()
+        || !entityTemplateRepositoryPort.existsByIdentifier(identifier)) {
       throw new EntityTemplateNotFoundException("identifier", identifier);
     }
   }
 
   /// Checks that no other template already uses the given identifier.
   ///
+  /// For uniqueness checks during creation/update. Null or blank identifiers
+  /// are skipped — they are caught by domain model validation (`@NotBlank`).
+  ///
   /// @param identifier the identifier to check for uniqueness
   /// @throws EntityTemplateAlreadyExistsException when identifier is already
   /// taken
   public void validateIdentifierUniqueness(String identifier) {
+    if (identifier == null || identifier.isBlank()) {
+      return; // Null/blank identifiers are caught by domain model validation
+    }
     if (entityTemplateRepositoryPort.existsByIdentifier(identifier)) {
       throw new EntityTemplateAlreadyExistsException(identifier);
     }
@@ -205,9 +220,15 @@ public class EntityTemplateValidationService {
 
   /// Checks that no other template already uses the given name.
   ///
+  /// For uniqueness checks during creation/update. Null or blank names
+  /// are skipped — they are caught by domain model validation (`@NotBlank`).
+  ///
   /// @param name the name to check for uniqueness
   /// @throws EntityTemplateNameAlreadyExistsException when name is already taken
   public void validateNameUniqueness(String name) {
+    if (name == null || name.isBlank()) {
+      return; // Null/blank names are caught by domain model validation
+    }
     if (entityTemplateRepositoryPort.existsByName(name)) {
       throw new EntityTemplateNameAlreadyExistsException(name);
     }
@@ -217,14 +238,14 @@ public class EntityTemplateValidationService {
   /// referential integrity.
   ///
   /// **Contract:** Enforces properties business rules
-  /// - Property rules integrity: all rules referenced by properties must
-  /// be valid and coherent based on the property's type
+  /// - Property rules integrity: all rules referenced by properties must be valid
+  /// and coherent based on the property's type
   ///
   /// **Precondition:** propertiesDefinitions must not be null
   ///
   /// @param entityTemplate the template containing properties to validate
-  /// @throws PropertyDefinitionRulesConflictException when rules violate business
-  /// logic
+  /// @throws PropertyDefinitionRulesConflictException when rules violate
+  /// business logic
   private void validateTemplateProperties(EntityTemplate entityTemplate) {
     for (PropertyDefinition property : entityTemplate.propertiesDefinitions()) {
       propertyDefinitionValidationService.validatePropertyDefinitionRules(property);
@@ -244,8 +265,7 @@ public class EntityTemplateValidationService {
   /// @param entityTemplate the template containing relations to validate
   /// @throws TargetTemplateNotFoundException if any referenced target template
   /// @throws RelationCannotTargetItselfException if a relation targets the
-  /// template itself
-  /// doesn't exist
+  /// template itself doesn't exist
   private void validateTemplateRelations(EntityTemplate entityTemplate) {
     relationDefinitionValidationService.validateRelationNoSelfReference(entityTemplate.identifier(),
         entityTemplate.relationsDefinitions());
