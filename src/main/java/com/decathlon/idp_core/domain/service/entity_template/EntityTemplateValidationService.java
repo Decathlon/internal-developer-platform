@@ -135,21 +135,20 @@ public class EntityTemplateValidationService {
     }
   }
 
-  /// Validates that a template identifier is non-null, refers to an existing
-  /// template, and is not referenced as a target in another template's relation
-  /// definition.
+  /// Validates that a template identifier refers to an existing template not
+  /// referenced as a target by another template and not used in entity dynamic
+  /// mappings.
   ///
   /// @param identifier the identifier of the template to delete
-  /// @throws EntityTemplateNotFoundException when `identifier` is null
   /// @throws EntityTemplateNotFoundException when no template matches
   /// `identifier`
+  /// (including null)
   /// @throws EntityTemplateIsRelationTargetException when another template
-  /// declares a relation whose `targetTemplateIdentifier` equals `identifier`
+  /// declares a relation targeting `identifier`
+  /// @throws EntityTemplateReferencedByMappingException when a dynamic mapping
+  /// references this template
   public void validateForDeletion(String identifier) {
-    if (identifier == null) {
-      throw new EntityTemplateNotFoundException("identifier", "null");
-    }
-    validateTemplateExists(identifier);
+    validateTemplateExists(identifier); // Covers null + non-existent
     if (entityTemplateRepositoryPort.existsRelationTargetingTemplate(identifier)) {
       throw new EntityTemplateIsRelationTargetException(identifier);
     }

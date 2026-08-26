@@ -1,9 +1,11 @@
 package com.decathlon.idp_core.domain.service.entity_template;
 
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -21,6 +23,8 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import com.decathlon.idp_core.domain.exception.entity_template.EntityTemplateIsRelationTargetException;
+import com.decathlon.idp_core.domain.exception.entity_template.EntityTemplateNotFoundException;
 import com.decathlon.idp_core.domain.model.entity_template.EntityTemplate;
 import com.decathlon.idp_core.domain.model.entity_template.PropertyDefinition;
 import com.decathlon.idp_core.domain.model.entity_template.RelationDefinition;
@@ -282,6 +286,32 @@ class EntityTemplateServiceTest {
 
       // Verify template deletion was called
       verify(entityTemplateRepositoryPort).deleteByIdentifier(TEMPLATE_IDENTIFIER);
+    }
+
+    @Test
+    @DisplayName("Should NOT delete entities or template when validation fails (template not found)")
+    void shouldNotDeleteWhenTemplateNotFound() {
+      doThrow(new EntityTemplateNotFoundException("identifier", TEMPLATE_IDENTIFIER))
+          .when(entityTemplateValidationService).validateForDeletion(TEMPLATE_IDENTIFIER);
+
+      assertThrows(EntityTemplateNotFoundException.class,
+          () -> entityTemplateService.deleteEntityTemplate(TEMPLATE_IDENTIFIER));
+
+      verify(entityRepositoryPort, never()).deleteAllByTemplateIdentifier(any());
+      verify(entityTemplateRepositoryPort, never()).deleteByIdentifier(any());
+    }
+
+    @Test
+    @DisplayName("Should NOT delete entities or template when template is referenced by another template")
+    void shouldNotDeleteWhenTemplateIsRelationTarget() {
+      doThrow(new EntityTemplateIsRelationTargetException(TEMPLATE_IDENTIFIER))
+          .when(entityTemplateValidationService).validateForDeletion(TEMPLATE_IDENTIFIER);
+
+      assertThrows(EntityTemplateIsRelationTargetException.class,
+          () -> entityTemplateService.deleteEntityTemplate(TEMPLATE_IDENTIFIER));
+
+      verify(entityRepositoryPort, never()).deleteAllByTemplateIdentifier(any());
+      verify(entityTemplateRepositoryPort, never()).deleteByIdentifier(any());
     }
   }
 }
