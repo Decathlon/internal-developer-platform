@@ -15,7 +15,15 @@ The Internal Developer Platform provides a comprehensive set of features to buil
 
     Connect to any data source through Webhooks, Kafka, or Pub/Sub. Map incoming data to entities using JSLT expressions.
 
-    **Status:** 🕐 Planned
+    **Status:** 🕐 Doing
+
+- 🕸️ **[Graph](graph.md)**
+
+    ---
+
+    Visualize entity relationships and dependencies as interactive graphs.
+
+    **Status:** 🕐 Done
 
 - 📈 **[Scorecards](scorecards.md)**
 

@@ -53,11 +53,12 @@ VALUES ('770e8400-e29b-41d4-a716-446655440003',
         }'::jsonb);
 
 -- Dynamic Mapping for GitHub Connector
-INSERT INTO entity_dynamic_mapping (id, identifier, template_id, filter, name, description, entity_identifier, entity_name, properties, relations)
+INSERT INTO entity_dynamic_mapping (id, identifier, template_id, filter, action, name, description, entity_identifier, entity_name, properties, relations)
 VALUES ('880e8400-e29b-41d4-a716-446655440001',
         'microservice-mapping',
         '550e8400-e29b-41d4-a716-446655440071',
         '.action == "pushed"',
+        'UPDATE_ENTITY',
         'Microservice Mapping',
         'Mapping for microservice entities based on GitHub push events',
         '.repository.full_name',

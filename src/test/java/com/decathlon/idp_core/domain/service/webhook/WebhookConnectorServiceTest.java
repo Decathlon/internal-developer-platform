@@ -28,6 +28,7 @@ import org.springframework.data.domain.Pageable;
 import com.decathlon.idp_core.domain.exception.entity_dynamic_mapping.EntityDynamicMappingNotFoundException;
 import com.decathlon.idp_core.domain.exception.webhook.WebhookConnectorNotFoundException;
 import com.decathlon.idp_core.domain.model.entity_mapping.EntityDynamicMapping;
+import com.decathlon.idp_core.domain.model.entity_mapping.MappingAction;
 import com.decathlon.idp_core.domain.model.enums.WebhookSecurityType;
 import com.decathlon.idp_core.domain.model.inbound_connectors.webhook.WebhookConnector;
 import com.decathlon.idp_core.domain.model.inbound_connectors.webhook.WebhookSecurity;
@@ -140,8 +141,8 @@ class WebhookConnectorServiceTest {
     @DisplayName("Should keep enabled as true when mappings are present")
     void shouldKeepEnabledWhenMappingsPresent() {
       EntityDynamicMapping mapping = new EntityDynamicMapping(UUID.randomUUID(),
-          "deployment-mapping", "deployment", "true", "deployment name", "deployment description",
-          ".id", ".name", Map.of(), List.of());
+          "deployment-mapping", "deployment", "true", MappingAction.UPDATE_ENTITY,
+          "deployment name", "deployment description", ".id", ".name", Map.of(), List.of());
       WebhookConnector toCreate = buildWebhookConnectorWithMappings(null, "github-dora",
           "GitHub DORA", "desc", true, List.of(mapping));
       when(webhookConnectorRepositoryPort.save(any())).thenAnswer(inv -> inv.getArgument(0));
@@ -289,8 +290,8 @@ class WebhookConnectorServiceTest {
     @DisplayName("Should keep enabled value when update has mappings")
     void shouldKeepEnabledWhenUpdateHasMappings() {
       EntityDynamicMapping mapping = new EntityDynamicMapping(UUID.randomUUID(),
-          "deployment-mapping", "deployment", "true", "deployment name", "deployment description",
-          ".id", ".name", Map.of(), List.of());
+          "deployment-mapping", "deployment", "true", MappingAction.UPDATE_ENTITY,
+          "deployment name", "deployment description", ".id", ".name", Map.of(), List.of());
       WebhookConnector existing = buildWebhookConnector(EXISTING_ID, IDENTIFIER, "Old name",
           "Old desc", false);
       WebhookConnector incoming = buildWebhookConnectorWithMappings(null, IDENTIFIER, "New name",
@@ -415,6 +416,21 @@ class WebhookConnectorServiceTest {
     }
 
     @Test
+    @DisplayName("Should resolve mappings with the UPDATE_PROPERTIES action")
+    void shouldResolveMappingWithNonDefaultAction() {
+      EntityDynamicMapping mapping = buildMapping("properties-mapping",
+          MappingAction.UPDATE_PROPERTIES);
+      when(entityDynamicMappingPort.findByIdentifier("properties-mapping"))
+          .thenReturn(Optional.of(mapping));
+
+      List<EntityDynamicMapping> result = service
+          .resolveAndValidateMappings(List.of("properties-mapping"));
+
+      assertThat(result).singleElement().extracting(EntityDynamicMapping::action)
+          .isEqualTo(MappingAction.UPDATE_PROPERTIES);
+    }
+
+    @Test
     @DisplayName("Should throw EntityDynamicMappingNotFoundException when a mapping is missing")
     void shouldThrowWhenMappingMissing() {
       when(entityDynamicMappingPort.findByIdentifier("missing-mapping"))
@@ -428,7 +444,11 @@ class WebhookConnectorServiceTest {
     }
 
     private EntityDynamicMapping buildMapping(String identifier) {
-      return new EntityDynamicMapping(UUID.randomUUID(), identifier, "deployment", "true",
+      return buildMapping(identifier, MappingAction.UPDATE_ENTITY);
+    }
+
+    private EntityDynamicMapping buildMapping(String identifier, MappingAction action) {
+      return new EntityDynamicMapping(UUID.randomUUID(), identifier, "deployment", "true", action,
           "deployment name", "deployment description", ".id", ".name", Map.of(), List.of());
     }
   }

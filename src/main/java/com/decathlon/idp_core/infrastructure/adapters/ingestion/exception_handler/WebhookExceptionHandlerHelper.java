@@ -16,7 +16,12 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
-/// Helper component providing reusable exception mapping and structured logging for Camel routes.
+/// Helper component providing reusable exception mapping and structured logging
+/// for Camel routes.
+///
+/// Supports binding single or multiple exception types to standardized HTTP
+/// error responses with structured logging. Exception messages can optionally be
+/// exposed to clients when safe.
 @Component
 @RequiredArgsConstructor
 @Slf4j
@@ -24,8 +29,8 @@ public class WebhookExceptionHandlerHelper {
 
   private final ObjectMapper objectMapper;
 
-  /// Binds an exception type to a standardized HTTP error response and structured
-  /// log.
+  /// Binds an exception type to a standardized HTTP error response and
+  /// structured log.
   public <T extends Throwable> void registerHandler(RouteBuilder routeBuilder,
       Class<T> exceptionType, WebhookErrorCode error) {
     registerHandler(routeBuilder, exceptionType, error, false);
@@ -36,10 +41,34 @@ public class WebhookExceptionHandlerHelper {
   public <T extends Throwable> void registerHandler(RouteBuilder routeBuilder,
       Class<T> exceptionType, WebhookErrorCode error, boolean exposeExceptionMessage) {
 
-    routeBuilder.onException(exceptionType).handled(true)
+    routeBuilder.onException(exceptionType).handled(true).removeHeaders("*")
         .process(exchange -> setJsonErrorResponse(exchange, error, exposeExceptionMessage))
         .process(exchange -> logHandledException(exchange, error.logLevel(), error.code(),
             error.httpStatus().value()));
+  }
+
+  /// Binds multiple exception types to a standardized HTTP error response and
+  /// structured log. All provided exception classes are registered with the same
+  /// error code, not exposing the exception message.
+  @SuppressWarnings("unchecked")
+  public void registerHandlers(RouteBuilder routeBuilder, WebhookErrorCode error,
+      Class<? extends Throwable>... exceptionTypes) {
+    registerHandlers(routeBuilder, error, false, exceptionTypes);
+  }
+
+  /// Binds multiple exception types and optionally exposes exception messages in
+  /// HTTP responses.
+  ///
+  /// Useful for grouping semantically related exceptions that should be handled
+  /// identically. For example: register all JSLT validation errors with
+  /// ENTITY_INGESTION_ERROR code.
+  @SuppressWarnings("unchecked")
+  public void registerHandlers(RouteBuilder routeBuilder, WebhookErrorCode error,
+      boolean exposeExceptionMessage, Class<? extends Throwable>... exceptionTypes) {
+
+    for (var exceptionType : exceptionTypes) {
+      registerHandler(routeBuilder, exceptionType, error, exposeExceptionMessage);
+    }
   }
 
   private void setJsonErrorResponse(Exchange exchange, WebhookErrorCode error,
