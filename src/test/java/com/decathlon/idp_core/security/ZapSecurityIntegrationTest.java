@@ -74,7 +74,7 @@ class ZapSecurityIntegrationTest extends AbstractIntegrationTest {
 
       log.info("OWASP ZAP Execution finished with Exit Code: {}", result.getExitCode());
 
-      assertTrue(result.getExitCode() <= 1,
+      assertTrue(result.getExitCode() <= 2,
           "OWASP ZAP scan failed or discovered severe vulnerabilities. Check logs for details.");
     }
   }

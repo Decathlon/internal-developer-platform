@@ -24,7 +24,7 @@ jobs:
 
       - name: Lint GitHub Actions Workflows
         if: github.event_name == 'pull_request'
-        uses: reviewdog/action-actionlint@50842263c20a7c46bd0065b9e624d3c569db061e  # v1.73.0
+        uses: reviewdog/action-actionlint@dbe5299849118fd6f099ba563d263d770955a64a  # v1.73.2
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           reporter: github-pr-review
@@ -101,7 +101,7 @@ jobs:
             -B
 
       - name: Upload code coverage to GitHub
-        uses: actions/upload-code-coverage@1c15be36fc3733ba839b1dd643bd9556e4426dc1  # v1
+        uses: actions/upload-code-coverage@d8e329117199404bba6fc81efe8093dc7c015e34  # v1.4.2
         with:
           file: target/cobertura.xml
           language: Java
@@ -251,6 +251,9 @@ jobs:
     runs-on: ubuntu-latest
     needs: check-openapi-static-swagger-update
     if: github.event_name == 'pull_request'
+    permissions:
+      contents: read
+      pull-requests: write
     steps:
       - name: Checkout repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
@@ -358,6 +361,86 @@ jobs:
               exit 1
             fi
           fi
+
+  check-flyway-migration-order:
+    name: Flyway Migration Order Check
+    runs-on: ubuntu-latest
+    needs: lint
+    if: github.event_name == 'pull_request'
+    permissions:
+      pull-requests: write
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+        with:
+          fetch-depth: 0
+
+      - name: Fetch base branch
+        run: git fetch --no-tags origin "${{ github.event.pull_request.base.ref }}"
+
+      - name: Check Flyway migration order
+        id: flyway_check
+        continue-on-error: true
+        env:
+          MIGRATION_DIR: src/main/resources/db/migration
+          BASE_REF: origin/${{ github.event.pull_request.base.ref }}
+          REPORT_FILE: flyway-migration-order-report.md
+        run: |
+          set +e  # Prevents the script from stopping at the first failure
+          chmod +x .github/scripts/check_flyway_migration_order.sh
+          .github/scripts/check_flyway_migration_order.sh
+          EXIT_CODE=$?
+          printf -- "Exit code: %d\n" "$EXIT_CODE"
+          if [ $EXIT_CODE -ne 0 ]; then
+            echo "order_broken=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "order_broken=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Prepare Migration Order Comment
+        if: steps.flyway_check.outputs.order_broken == 'true'
+        id: flyway_message
+        run: |
+          REPORT_FILE="flyway-migration-order-report.md"
+          {
+            echo "message<<EOF_MSG"
+            echo "### BREAKING FLYWAY MIGRATION DETECTED"
+            echo ""
+            echo "The Flyway migrations of this pull request break the version order of the \`${{ github.event.pull_request.base.ref }}\` branch."
+            echo "A migration inserted below an already merged version is never applied on environments that are already up to date."
+            echo ""
+            echo "**Migration Report:**"
+            echo "<details><summary>View the report</summary>"
+            echo ""
+            echo '```markdown'
+            cat "$REPORT_FILE"
+            echo '```'
+            echo "</details>"
+            echo ""
+            echo "---"
+            echo "**Action required:** Renumber the new migrations above the highest version already merged, and never modify or delete a merged migration."
+            echo "EOF_MSG"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Comment PR on Migration Order Break
+        if: steps.flyway_check.outputs.order_broken == 'true'
+        uses: marocchino/sticky-pull-request-comment@5770ad5eb8f42dd2c4f34da00c94c5381e49af88  # v3.0.5
+        with:
+          header: flyway-migration-order
+          message: ${{ steps.flyway_message.outputs.message }}
+
+      - name: Remove Migration Order Comment (If fixed)
+        if: steps.flyway_check.outputs.order_broken == 'false'
+        uses: marocchino/sticky-pull-request-comment@5770ad5eb8f42dd2c4f34da00c94c5381e49af88  # v3.0.5
+        with:
+          header: flyway-migration-order
+          delete: true
+
+      - name: Fail Job if Migration Order Broken
+        if: steps.flyway_check.outputs.order_broken == 'true'
+        run: |
+          printf -- "::error:: Flyway migration order is broken against the base branch. See the report in the pull request comment.\n"
+          exit 1
 
   docker_build_test:
     name: Docker Image Build Test

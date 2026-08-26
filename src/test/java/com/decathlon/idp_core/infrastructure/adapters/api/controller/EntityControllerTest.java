@@ -1,6 +1,8 @@
 package com.decathlon.idp_core.infrastructure.adapters.api.controller;
 
+import static org.hamcrest.Matchers.containsInAnyOrder;
 import static org.hamcrest.Matchers.hasItem;
+import static org.hamcrest.Matchers.hasSize;
 import static org.springframework.http.MediaType.APPLICATION_JSON;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
@@ -37,6 +39,7 @@ public class EntityControllerTest extends AbstractIntegrationTest {
   private static final String ENTITIES_BY_IDENTIFIER_PATH = "/api/v1/entities/{template-identifier}/{identifier}";
   private static final String ENTITIES_BY_TEMPLATE_IDENTIFIER_PATH = "/api/v1/entities/{template-identifier}";
   private static final String ENTITY_JSON_FILES_TEST_PATH = "integration_test/json/entity/v1/";
+
   @Autowired
   private MockMvc mockMvc;
 
@@ -55,8 +58,8 @@ public class EntityControllerTest extends AbstractIntegrationTest {
               .param("size", "15").accept(APPLICATION_JSON))
           .andExpect(status().isOk()).andExpect(content().contentType(APPLICATION_JSON))
           .andExpect(jsonPath("$.content").isArray())
-          .andExpect(jsonPath("$.content.length()").value(5))
-          .andExpect(jsonPath("$.page.total_elements").value(5))
+          .andExpect(jsonPath("$.content.length()").value(6))
+          .andExpect(jsonPath("$.page.total_elements").value(6))
           .andExpect(jsonPath("$.page.total_pages").value(1))
           .andExpect(jsonPath("$.page.size").value(15))
           .andExpect(jsonPath("$.page.number").value(0))
@@ -114,8 +117,8 @@ public class EntityControllerTest extends AbstractIntegrationTest {
               .accept(APPLICATION_JSON))
           .andExpect(status().isOk()).andExpect(content().contentType(APPLICATION_JSON))
           .andExpect(jsonPath("$.content").isArray())
-          .andExpect(jsonPath("$.content.length()").value(5))
-          .andExpect(jsonPath("$.page.total_elements").value(5))
+          .andExpect(jsonPath("$.content.length()").value(6))
+          .andExpect(jsonPath("$.page.total_elements").value(6))
           .andExpect(jsonPath("$.page.total_pages").value(1))
           .andExpect(jsonPath("$.page.size").value(20))
           .andExpect(jsonPath("$.page.number").value(0))
@@ -266,8 +269,8 @@ public class EntityControllerTest extends AbstractIntegrationTest {
       mockMvc
           .perform(get(ENTITIES_BY_TEMPLATE_IDENTIFIER_PATH, TEMPLATE_IDENTIFIER).param("q", q)
               .accept(APPLICATION_JSON))
-          .andExpect(status().isOk()).andExpect(jsonPath("$.content.length()").value(5))
-          .andExpect(jsonPath("$.page.total_elements").value(5));
+          .andExpect(status().isOk()).andExpect(jsonPath("$.content.length()").value(6))
+          .andExpect(jsonPath("$.page.total_elements").value(6));
     }
 
     @Test
@@ -379,6 +382,88 @@ public class EntityControllerTest extends AbstractIntegrationTest {
           get(ENTITIES_BY_IDENTIFIER_PATH, "non-existent-template", "non-existent-identifier")
               .accept(APPLICATION_JSON))
           .andExpect(status().isNotFound());
+    }
+
+    @Test
+    @DisplayName("Should return only depth-1 relations when relations_depth=1")
+    @WithMockUser
+    void getEntity_relationsDepth_1() throws Exception {
+      mockMvc
+          .perform(get(ENTITIES_BY_IDENTIFIER_PATH, TEMPLATE_IDENTIFIER, "graph-svc-a")
+              .param("relations_depth", "1").accept(APPLICATION_JSON))
+          .andExpect(status().isOk()).andExpect(jsonPath("$.identifier").value("graph-svc-a"))
+          .andExpect(jsonPath("$.relations.uses", hasSize(1)))
+          .andExpect(jsonPath("$.relations.uses[0].identifier").value("graph-svc-b"))
+          .andExpect(jsonPath("$.relations.monitors", hasSize(1)))
+          .andExpect(jsonPath("$.relations.monitors[0].identifier").value("graph-svc-b"));
+    }
+
+    @Test
+    @DisplayName("Should return flattened depth-2 relations (a -> b -> c) when relations_depth=2")
+    @WithMockUser
+    void getEntity_relationsDepth_2() throws Exception {
+      mockMvc
+          .perform(get(ENTITIES_BY_IDENTIFIER_PATH, TEMPLATE_IDENTIFIER, "graph-svc-a")
+              .param("relations_depth", "2").accept(APPLICATION_JSON))
+          .andExpect(status().isOk()).andExpect(jsonPath("$.identifier").value("graph-svc-a"))
+          .andExpect(jsonPath("$.relations.uses", hasSize(2)))
+          .andExpect(jsonPath("$.relations.uses[*].identifier",
+              containsInAnyOrder("graph-svc-b", "graph-svc-c")))
+          .andExpect(jsonPath("$.relations.monitors", hasSize(1)))
+          .andExpect(jsonPath("$.relations.monitors[0].identifier").value("graph-svc-b"));
+    }
+
+    @Test
+    @DisplayName("Should return flattened depth-3 relations (a -> b -> c -> d) when relations_depth=3")
+    @WithMockUser
+    void getEntity_relationsDepth_3() throws Exception {
+      mockMvc
+          .perform(get(ENTITIES_BY_IDENTIFIER_PATH, TEMPLATE_IDENTIFIER, "graph-svc-a")
+              .param("relations_depth", "3").accept(APPLICATION_JSON))
+          .andExpect(status().isOk()).andExpect(jsonPath("$.identifier").value("graph-svc-a"))
+          .andExpect(jsonPath("$.relations.uses", hasSize(3)))
+          .andExpect(jsonPath("$.relations.uses[*].identifier",
+              containsInAnyOrder("graph-svc-b", "graph-svc-c", "graph-svc-d")));
+    }
+
+    @Test
+    @DisplayName("Should filter out unlisted relations when relations_to_display is provided at depth 2")
+    @WithMockUser
+    void getEntity_relationsToDisplay_filterSingleRelation() throws Exception {
+      mockMvc
+          .perform(get(ENTITIES_BY_IDENTIFIER_PATH, TEMPLATE_IDENTIFIER, "graph-svc-a")
+              .param("relations_depth", "2").param("relations_to_display", "uses")
+              .accept(APPLICATION_JSON))
+          .andExpect(status().isOk()).andExpect(jsonPath("$.identifier").value("graph-svc-a"))
+          .andExpect(jsonPath("$.relations.uses", hasSize(2)))
+          .andExpect(jsonPath("$.relations.uses[*].identifier",
+              containsInAnyOrder("graph-svc-b", "graph-svc-c")))
+          .andExpect(jsonPath("$.relations.monitors").doesNotExist());
+    }
+
+    @Test
+    @DisplayName("Should return empty relations map when relations_to_display matches no relations")
+    @WithMockUser
+    void getEntity_relationsToDisplay_nonExistentRelation() throws Exception {
+      mockMvc
+          .perform(get(ENTITIES_BY_IDENTIFIER_PATH, TEMPLATE_IDENTIFIER, "graph-svc-a")
+              .param("relations_depth", "2").param("relations_to_display", "non-existent-relation")
+              .accept(APPLICATION_JSON))
+          .andExpect(status().isOk()).andExpect(jsonPath("$.identifier").value("graph-svc-a"))
+          .andExpect(jsonPath("$.relations").isEmpty());
+    }
+
+    @Test
+    @DisplayName("Should return both specified relations when multiple relations_to_display are supplied")
+    @WithMockUser
+    void getEntity_relationsToDisplay_multipleRelations() throws Exception {
+      mockMvc
+          .perform(get(ENTITIES_BY_IDENTIFIER_PATH, TEMPLATE_IDENTIFIER, "graph-svc-a")
+              .param("relations_depth", "2").param("relations_to_display", "uses", "monitors")
+              .accept(APPLICATION_JSON))
+          .andExpect(status().isOk()).andExpect(jsonPath("$.identifier").value("graph-svc-a"))
+          .andExpect(jsonPath("$.relations.uses", hasSize(2)))
+          .andExpect(jsonPath("$.relations.monitors", hasSize(1)));
     }
   }
 

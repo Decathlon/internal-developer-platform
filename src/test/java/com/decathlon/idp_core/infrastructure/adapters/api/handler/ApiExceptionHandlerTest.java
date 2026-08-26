@@ -35,7 +35,7 @@ import com.decathlon.idp_core.domain.exception.entity_template.EntityTemplateNot
 import com.decathlon.idp_core.domain.exception.entity_template.PropertyNameNotFoundEntityTemplatePropertiesException;
 import com.decathlon.idp_core.domain.exception.entity_template.RelationNameNotFoundEntityTemplateRelationsException;
 import com.decathlon.idp_core.domain.exception.webhook.WebhookSecurityConfigurationException;
-import com.decathlon.idp_core.infrastructure.adapters.api.handler.ApiExceptionHandler.ErrorResponse;
+import com.decathlon.idp_core.infrastructure.adapters.common.model.ErrorResponse;
 
 /// Comprehensive unit tests for [ApiExceptionHandler].
 ///
@@ -215,10 +215,10 @@ class ApiExceptionHandlerTest {
 
         // Then
         assertNotNull(response);
-        assertEquals(HttpStatus.BAD_REQUEST, response.getStatusCode());
+        assertEquals(HttpStatus.UNPROCESSABLE_CONTENT, response.getStatusCode());
         ErrorResponse body = response.getBody();
         assertNotNull(body);
-        assertEquals(HttpStatus.BAD_REQUEST.name(), body.getError());
+        assertEquals(HttpStatus.UNPROCESSABLE_CONTENT.name(), body.getError());
         assertEquals(details, body.getErrorDescription());
       }
 
@@ -233,10 +233,10 @@ class ApiExceptionHandlerTest {
             .handleEntityDynamicMappingHasNoPropertiesException(exception);
 
         assertNotNull(response);
-        assertEquals(HttpStatus.BAD_REQUEST, response.getStatusCode());
+        assertEquals(HttpStatus.UNPROCESSABLE_CONTENT, response.getStatusCode());
         ErrorResponse body = response.getBody();
         assertNotNull(body);
-        assertEquals(HttpStatus.BAD_REQUEST.name(), body.getError());
+        assertEquals(HttpStatus.UNPROCESSABLE_CONTENT.name(), body.getError());
         assertEquals(details, body.getErrorDescription());
       }
 

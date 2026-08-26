@@ -1,6 +1,7 @@
 package com.decathlon.idp_core.infrastructure.adapters.persistence;
 
 import java.util.List;
+import java.util.UUID;
 
 import org.springframework.stereotype.Component;
 
@@ -17,9 +18,13 @@ public class PostgresRelationAdapter implements RelationRepositoryPort {
   private final JpaRelationRepository jpaRelationRepository;
 
   @Override
-  public List<RelationAsTargetSummary> findRelationsSummariesByTargetEntityIdentifiers(
-      List<String> targetEntityIdentifiers) {
-    return jpaRelationRepository
-        .findRelationsSummariesByTargetEntityIdentifiers(targetEntityIdentifiers);
+  public List<RelationAsTargetSummary> findRelationsSummariesByTargetEntityUuids(
+      List<UUID> targetEntityUuids) {
+
+    if (targetEntityUuids == null || targetEntityUuids.isEmpty()) {
+      return List.of();
+    }
+
+    return jpaRelationRepository.findRelationsSummariesByTargetEntityUuids(targetEntityUuids);
   }
 }
