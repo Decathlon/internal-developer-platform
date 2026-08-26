@@ -278,14 +278,12 @@ class EntityTemplateServiceTest {
     void shouldCascadeDeleteEntitiesBeforeTemplate() {
       entityTemplateService.deleteEntityTemplate(TEMPLATE_IDENTIFIER);
 
-      // Verify validation was called
-      verify(entityTemplateValidationService).validateForDeletion(TEMPLATE_IDENTIFIER);
-
-      // Verify entity cascade-delete was called first
-      verify(entityRepositoryPort).deleteAllByTemplateIdentifier(TEMPLATE_IDENTIFIER);
-
-      // Verify template deletion was called
-      verify(entityTemplateRepositoryPort).deleteByIdentifier(TEMPLATE_IDENTIFIER);
+      // Verify call order: validate -> purge entities -> delete template
+      var inOrder = org.mockito.Mockito.inOrder(entityTemplateValidationService, entityRepositoryPort,
+          entityTemplateRepositoryPort);
+      inOrder.verify(entityTemplateValidationService).validateForDeletion(TEMPLATE_IDENTIFIER);
+      inOrder.verify(entityRepositoryPort).deleteAllByTemplateIdentifier(TEMPLATE_IDENTIFIER);
+      inOrder.verify(entityTemplateRepositoryPort).deleteByIdentifier(TEMPLATE_IDENTIFIER);
     }
 
     @Test

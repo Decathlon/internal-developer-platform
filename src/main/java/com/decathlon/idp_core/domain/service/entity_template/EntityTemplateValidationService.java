@@ -143,10 +143,10 @@ public class EntityTemplateValidationService {
   /// @throws EntityTemplateNotFoundException when no template matches
   /// `identifier`
   /// (including null)
-  /// @throws EntityTemplateIsRelationTargetException when another template
-  /// declares a relation targeting `identifier`
-  /// @throws EntityTemplateReferencedByMappingException when a dynamic mapping
-  /// references this template
+/// @throws EntityTemplateIsRelationTargetException when another template
+/// declares a relation targeting `identifier`
+/// @throws EntityTemplateUsedByDynamicMappingException when a dynamic mapping
+/// references this template
   public void validateForDeletion(String identifier) {
     validateTemplateExists(identifier); // Covers null + non-existent
     if (entityTemplateRepositoryPort.existsRelationTargetingTemplate(identifier)) {

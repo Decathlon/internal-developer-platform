@@ -12,9 +12,10 @@ import static com.decathlon.idp_core.domain.constant.ValidationMessages.TEMPLATE
 ///
 /// **Why this exception exists:**
 /// - Prevents orphaned relation definitions in other templates
-/// - Provides a clear, domain-specific error for API feedback
-/// - Mapped to HTTP 400 Bad Request by [ApiExceptionHandler]
+/// - Provides a clear, domain-specific error for callers
 public class EntityTemplateIsRelationTargetException extends RuntimeException {
+
+  private final String identifier;
 
   /// Constructs a new exception for the template identifier that cannot be
   /// deleted.
@@ -22,5 +23,10 @@ public class EntityTemplateIsRelationTargetException extends RuntimeException {
   /// @param identifier the identifier of the template blocked from deletion
   public EntityTemplateIsRelationTargetException(String identifier) {
     super(String.format(TEMPLATE_IS_RELATION_TARGET, identifier));
+    this.identifier = identifier;
+  }
+
+  public String getIdentifier() {
+    return identifier;
   }
 }
