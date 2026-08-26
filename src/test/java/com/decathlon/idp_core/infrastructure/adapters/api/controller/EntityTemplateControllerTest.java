@@ -1012,13 +1012,13 @@ class EntityTemplateControllerTest extends AbstractIntegrationTest {
     /// @throws Exception if the MockMvc request fails
     @Test
     @WithMockUser()
-    @DisplayName("Should delete template and return 200")
-    void deleteTemplate_200() throws Exception {
+    @DisplayName("Should delete template and return 204")
+    void deleteTemplate_204() throws Exception {
       // Use an existing template ID from test data
       String templateId = "monitoring-service";
 
       mockMvc.perform(MockMvcRequestBuilders.delete(ENTITY_TEMPLATE_PATH + "/" + templateId)
-          .accept(APPLICATION_JSON).with(csrf())).andExpect(status().isOk());
+          .accept(APPLICATION_JSON).with(csrf())).andExpect(status().isNoContent());
 
       assertNotNull(templateId, "Test executed successfully");
     }
