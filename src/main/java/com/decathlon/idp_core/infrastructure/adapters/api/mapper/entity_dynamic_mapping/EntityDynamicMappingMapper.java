@@ -30,8 +30,10 @@ public class EntityDynamicMappingMapper {
         mapping.identifier(), // identifier
         fields.entityTemplateIdentifier(), // entityTemplateIdentifier
         defaultFilter(fields.filter()), // filter
+        fields.action(), // action (provided by caller)
         fields.name(), // name
-        fields.description(), fields.entity().identifier(), // entityIdentifier
+        fields.description(), // description
+        fields.entity().identifier(), // entityIdentifier
         fields.entity().name(), // entityName
         safeMap(fields.entity().properties()), // properties
         toRelationMappings(fields.entity().relations())); // relations
@@ -39,7 +41,7 @@ public class EntityDynamicMappingMapper {
 
   public EntityDynamicMappingDtoOut fromEntityMappingToDto(EntityDynamicMapping mapping) {
     return new EntityDynamicMappingDtoOut(mapping.identifier(), mapping.entityTemplateIdentifier(),
-        mapping.filter(), mapping.name(), mapping.description(),
+        mapping.filter(), mapping.action(), mapping.name(), mapping.description(),
         new EntityDynamicMappingDtoOut.InboundWebhookEntityMappingDtoOut(mapping.entityIdentifier(),
             mapping.entityName(), copyNullableProperties(mapping.properties()),
             toRelationMappingDtoOut(mapping.relations())));
@@ -63,8 +65,10 @@ public class EntityDynamicMappingMapper {
         identifier, // identifier from path
         fields.entityTemplateIdentifier(), // entityTemplateIdentifier
         fields.filter(), // filter
-        fields.name(), // titre
-        fields.description(), fields.entity().identifier(), // entityIdentifier
+        fields.action(), // action (provided by caller)
+        fields.name(), // name
+        fields.description(), // description
+        fields.entity().identifier(), // entityIdentifier
         fields.entity().name(), // entityName
         safeMap(fields.entity().properties()), // properties
         toRelationMappings(fields.entity().relations())); // relations
@@ -94,6 +98,7 @@ public class EntityDynamicMappingMapper {
   /// Converts domain RelationMapping records to output DTOs.
   /// Handles null safety for relations, relation names, and
   /// targetIdentifiersExpressions.
+  /// Handles null safety for relations, relation names, and expressions.
   private List<RelationMappingDtoOut> toRelationMappingDtoOut(List<RelationMapping> relations) {
     if (relations == null || relations.isEmpty()) {
       return List.of();

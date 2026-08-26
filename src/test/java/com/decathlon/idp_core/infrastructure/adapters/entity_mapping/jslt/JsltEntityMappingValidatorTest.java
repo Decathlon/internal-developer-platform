@@ -16,6 +16,7 @@ import org.junit.jupiter.api.Test;
 
 import com.decathlon.idp_core.domain.exception.entity_dynamic_mapping.EntityDynamicMappingJsltErrorException;
 import com.decathlon.idp_core.domain.model.entity_mapping.EntityDynamicMapping;
+import com.decathlon.idp_core.domain.model.entity_mapping.MappingAction;
 import com.decathlon.idp_core.domain.model.entity_mapping.RelationMapping;
 
 @DisplayName("JsltEntityMappingValidator")
@@ -43,6 +44,15 @@ class JsltEntityMappingValidatorTest {
       var mapping = buildMapping(".action == \"pushed\"", ".repository.full_name",
           ".repository.name", Map.of("applicationName", ".repository.name"),
           List.of(new RelationMapping("owner", List.of(".sender.login"))));
+
+      assertThatCode(() -> validator.validate(mapping)).doesNotThrowAnyException();
+    }
+
+    @Test
+    @DisplayName("Should validate a mapping with the UPDATE_RELATIONS action")
+    void shouldPassWithNonDefaultMappingAction() {
+      var mapping = buildMapping(MappingAction.UPDATE_RELATIONS, ".action", ".repository.full_name",
+          ".repository.name", Map.of(), List.of());
 
       assertThatCode(() -> validator.validate(mapping)).doesNotThrowAnyException();
     }
@@ -166,7 +176,14 @@ class JsltEntityMappingValidatorTest {
 
   private EntityDynamicMapping buildMapping(String filter, String entityIdentifier,
       String entityTitle, Map<String, String> properties, List<RelationMapping> relations) {
-    return new EntityDynamicMapping(UUID.randomUUID(), "my-mapping", "microservice", filter,
+    return buildMapping(MappingAction.UPDATE_ENTITY, filter, entityIdentifier, entityTitle,
+        properties, relations);
+  }
+
+  private EntityDynamicMapping buildMapping(MappingAction action, String filter,
+      String entityIdentifier, String entityTitle, Map<String, String> properties,
+      List<RelationMapping> relations) {
+    return new EntityDynamicMapping(UUID.randomUUID(), "my-mapping", "microservice", filter, action,
         "My Mapping", "description", entityIdentifier, entityTitle, properties, relations);
   }
 

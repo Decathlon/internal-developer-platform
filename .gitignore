@@ -71,3 +71,6 @@ replay_pid*
 # Vale.sh
 .vale/styles/Google
 .vale/styles/proselint
+
+# Graphify
+graphify-out/

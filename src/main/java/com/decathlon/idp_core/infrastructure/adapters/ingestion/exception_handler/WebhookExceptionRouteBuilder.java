@@ -3,6 +3,13 @@ package com.decathlon.idp_core.infrastructure.adapters.ingestion.exception_handl
 import org.apache.camel.builder.RouteBuilder;
 import org.springframework.stereotype.Component;
 
+import com.decathlon.idp_core.domain.exception.entity.EntityAlreadyExistsException;
+import com.decathlon.idp_core.domain.exception.entity.EntityDeletionBlockedException;
+import com.decathlon.idp_core.domain.exception.entity.EntityNotFoundException;
+import com.decathlon.idp_core.domain.exception.entity.EntityValidationException;
+import com.decathlon.idp_core.domain.exception.entity_dynamic_mapping.EntityDynamicMappingConfigurationException;
+import com.decathlon.idp_core.domain.exception.entity_dynamic_mapping.EntityDynamicMappingJsltErrorException;
+import com.decathlon.idp_core.domain.exception.entity_dynamic_mapping.ExpressionEvaluationFailedException;
 import com.decathlon.idp_core.domain.exception.webhook.WebhookConfigurationMissingException;
 import com.decathlon.idp_core.domain.exception.webhook.WebhookConnectorNotFoundException;
 import com.decathlon.idp_core.domain.exception.webhook.WebhookDisabledException;
@@ -17,8 +24,9 @@ public class WebhookExceptionRouteBuilder {
 
   private final WebhookExceptionHandlerHelper handlerHelper;
 
-  /// Registers webhook exception mappings with consistent HTTP and logging
-  /// behavior.
+  /// Registers webhook exception mappings with consistent HTTP and
+  /// logging behavior.
+  @SuppressWarnings("unchecked")
   public void configureExceptions(RouteBuilder routeBuilder) {
     handlerHelper.registerHandler(routeBuilder, WebhookConnectorNotFoundException.class,
         WebhookErrorCode.CONNECTOR_NOT_FOUND);
@@ -28,6 +36,22 @@ public class WebhookExceptionRouteBuilder {
         WebhookErrorCode.INVALID_ENCODED_PAYLOAD, true);
     handlerHelper.registerHandler(routeBuilder, WebhookConfigurationMissingException.class,
         WebhookErrorCode.CONFIGURATION_MISSING);
+
+    handlerHelper.registerHandlers(routeBuilder, WebhookErrorCode.ENTITY_INGESTION_ERROR, true, // expose
+                                                                                                // exception
+                                                                                                // message
+                                                                                                // —
+                                                                                                // messages
+                                                                                                // are
+                                                                                                // safe,
+                                                                                                // domain-controlled
+                                                                                                // strings
+        EntityDynamicMappingJsltErrorException.class, ExpressionEvaluationFailedException.class,
+        EntityDynamicMappingConfigurationException.class, EntityValidationException.class,
+        EntityNotFoundException.class, EntityAlreadyExistsException.class,
+        EntityDeletionBlockedException.class);
+
     handlerHelper.registerHandler(routeBuilder, Exception.class, WebhookErrorCode.UNEXPECTED_ERROR);
+
   }
 }
