@@ -1,3 +1,4 @@
+---
 openapi: 3.1.0
 info:
   title: Idp core API
@@ -281,7 +282,7 @@ paths:
         schema:
           type: string
       responses:
-        '200':
+        '204':
           description: Template deleted successfully
         '400':
           description: 'Cannot delete template: it is a target for other relations'
@@ -1106,6 +1107,13 @@ components:
           type: string
         filter:
           type: string
+        action:
+          type: string
+          enum:
+          - UPDATE_ENTITY
+          - UPDATE_PROPERTIES
+          - UPDATE_RELATIONS
+          - DELETE_ENTITY
         name:
           type: string
         description:
@@ -1193,6 +1201,13 @@ components:
         filter:
           type: string
           minLength: 1
+        action:
+          type: string
+          enum:
+          - UPDATE_ENTITY
+          - UPDATE_PROPERTIES
+          - UPDATE_RELATIONS
+          - DELETE_ENTITY
         name:
           type: string
           minLength: 1
@@ -1201,6 +1216,7 @@ components:
         entity:
           "$ref": "#/components/schemas/EntityMappingDtoIn"
       required:
+      - action
       - entity
       - entity_template_identifier
       - filter
@@ -1579,6 +1595,14 @@ components:
           minLength: 1
         filter:
           type: string
+          minLength: 1
+        action:
+          type: string
+          enum:
+          - UPDATE_ENTITY
+          - UPDATE_PROPERTIES
+          - UPDATE_RELATIONS
+          - DELETE_ENTITY
         name:
           type: string
           minLength: 1
@@ -1587,8 +1611,10 @@ components:
         entity:
           "$ref": "#/components/schemas/EntityMappingDtoIn"
       required:
+      - action
       - entity
       - entity_template_identifier
+      - filter
       - identifier
       - name
     EntityDynamicMappingDryRunDtoIn:
