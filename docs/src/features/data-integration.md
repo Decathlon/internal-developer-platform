@@ -1,7 +1,7 @@
 ---
 title: Data Integration
 description: Connect to any data source through Webhooks, Kafka, or Pub/Sub with runtime-configurable mappings
-status: 🕐 Planned
+status: 🕐 Doing
 ---
 
 > [!IMPORTANT]
