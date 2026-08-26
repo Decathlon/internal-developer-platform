@@ -1,4 +1,3 @@
----
 openapi: 3.1.0
 info:
   title: Idp core API
@@ -282,8 +281,14 @@ paths:
         schema:
           type: string
       responses:
-        '204':
+        '200':
           description: Template deleted successfully
+        '400':
+          description: 'Cannot delete template: it is a target for other relations'
+          content:
+            "*/*":
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
         '404':
           description: Template not found with the provided identifier
           content:
@@ -1101,13 +1106,6 @@ components:
           type: string
         filter:
           type: string
-        action:
-          type: string
-          enum:
-          - UPDATE_ENTITY
-          - UPDATE_PROPERTIES
-          - UPDATE_RELATIONS
-          - DELETE_ENTITY
         name:
           type: string
         description:
@@ -1195,13 +1193,6 @@ components:
         filter:
           type: string
           minLength: 1
-        action:
-          type: string
-          enum:
-          - UPDATE_ENTITY
-          - UPDATE_PROPERTIES
-          - UPDATE_RELATIONS
-          - DELETE_ENTITY
         name:
           type: string
           minLength: 1
@@ -1210,7 +1201,6 @@ components:
         entity:
           "$ref": "#/components/schemas/EntityMappingDtoIn"
       required:
-      - action
       - entity
       - entity_template_identifier
       - filter
@@ -1589,14 +1579,6 @@ components:
           minLength: 1
         filter:
           type: string
-          minLength: 1
-        action:
-          type: string
-          enum:
-          - UPDATE_ENTITY
-          - UPDATE_PROPERTIES
-          - UPDATE_RELATIONS
-          - DELETE_ENTITY
         name:
           type: string
           minLength: 1
@@ -1605,10 +1587,8 @@ components:
         entity:
           "$ref": "#/components/schemas/EntityMappingDtoIn"
       required:
-      - action
       - entity
       - entity_template_identifier
-      - filter
       - identifier
       - name
     EntityDynamicMappingDryRunDtoIn:
@@ -1833,13 +1813,13 @@ components:
           format: int32
         last:
           type: boolean
-        numberOfElements:
-          type: integer
-          format: int32
         sort:
           "$ref": "#/components/schemas/SortObject"
         first:
           type: boolean
+        numberOfElements:
+          type: integer
+          format: int32
         size:
           type: integer
           format: int32
@@ -1851,8 +1831,6 @@ components:
     PageableObject:
       type: object
       properties:
-        unpaged:
-          type: boolean
         paged:
           type: boolean
         pageNumber:
@@ -1863,15 +1841,17 @@ components:
           format: int32
         sort:
           "$ref": "#/components/schemas/SortObject"
+        unpaged:
+          type: boolean
         offset:
           type: integer
           format: int64
     SortObject:
       type: object
       properties:
-        unsorted:
-          type: boolean
         sorted:
+          type: boolean
+        unsorted:
           type: boolean
         empty:
           type: boolean
@@ -1893,13 +1873,13 @@ components:
           format: int32
         last:
           type: boolean
-        numberOfElements:
-          type: integer
-          format: int32
         sort:
           "$ref": "#/components/schemas/SortObject"
         first:
           type: boolean
+        numberOfElements:
+          type: integer
+          format: int32
         size:
           type: integer
           format: int32
@@ -1926,13 +1906,13 @@ components:
           format: int32
         last:
           type: boolean
-        numberOfElements:
-          type: integer
-          format: int32
         sort:
           "$ref": "#/components/schemas/SortObject"
         first:
           type: boolean
+        numberOfElements:
+          type: integer
+          format: int32
         size:
           type: integer
           format: int32
@@ -1959,13 +1939,13 @@ components:
           format: int32
         last:
           type: boolean
-        numberOfElements:
-          type: integer
-          format: int32
         sort:
           "$ref": "#/components/schemas/SortObject"
         first:
           type: boolean
+        numberOfElements:
+          type: integer
+          format: int32
         size:
           type: integer
           format: int32
