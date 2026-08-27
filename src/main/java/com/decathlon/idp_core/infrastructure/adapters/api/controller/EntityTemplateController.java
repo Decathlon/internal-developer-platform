@@ -168,12 +168,15 @@ public class EntityTemplateController {
 
   /// Deletes entity template by business identifier with safety checks.
   ///
-  /// **API contract:** Permanently removes template with HTTP 204 response.
-  /// Operation is idempotent - returns success even for non-existent templates.
-  /// **Warning:** Irreversible operation requiring referential integrity
-  /// validation.
+  /// **API contract:** Validates existence and referential integrity before
+  /// permanently removing the template and cascade-purging all its entities.
+  /// Returns HTTP 200 on success. Returns HTTP 400 when another template still
+  /// references this template as a relation target. Returns HTTP 404 when the
+  /// template does not exist.
   @Operation(summary = ENDPOINT_DELETE_TEMPLATE_SUMMARY, description = ENDPOINT_DELETE_TEMPLATE_DESCRIPTION)
   @ApiResponse(responseCode = NO_CONTENT_CODE, description = RESPONSE_TEMPLATE_DELETED)
+  @ApiResponse(responseCode = BAD_REQUEST_CODE, description = "Cannot delete template: it is a target for other relations", content = {
+      @Content(schema = @Schema(implementation = ErrorResponse.class))})
   @ApiResponse(responseCode = NOT_FOUND_CODE, description = RESPONSE_TEMPLATE_NOT_FOUND_IDENTIFIER, content = {
       @Content(schema = @Schema(implementation = ErrorResponse.class))})
   @ResponseStatus(NO_CONTENT)
