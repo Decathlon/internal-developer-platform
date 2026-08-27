@@ -1,6 +1,7 @@
 ---
 title: Entity Relationship Graph
 description: Visualize entity relationships and dependencies as interactive graphs
+status: 🕐 Done
 ---
 
 The Internal Developer Platform provides a powerful graph endpoint that returns entity relationships in a standardized format. You can easily visualize these relationships using frontend libraries like React Flow, D3.js, or similar graph visualization tools.

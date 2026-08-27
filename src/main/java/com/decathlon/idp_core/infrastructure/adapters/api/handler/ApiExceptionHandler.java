@@ -190,6 +190,19 @@ public class ApiExceptionHandler {
     return createErrorResponse(HttpStatus.BAD_REQUEST, ex.getMessage());
   }
 
+  /// Handles domain exception when attempting to delete a template that is still
+  /// referenced as a relation target in another template.
+  ///
+  /// **HTTP mapping:** Maps domain [EntityTemplateIsRelationTargetException] to
+  /// HTTP 400 Bad Request to signal a business rule violation that must be
+  /// resolved by the caller before retrying the deletion.
+  @ExceptionHandler(EntityTemplateIsRelationTargetException.class)
+  public ResponseEntity<ErrorResponse> handleEntityTemplateIsRelationTargetException(
+      EntityTemplateIsRelationTargetException ex) {
+    log.warn("Template deletion blocked – still a relation target: {}", ex.getMessage());
+    return createErrorResponse(HttpStatus.BAD_REQUEST, ex.getMessage());
+  }
+
   /// Handles domain exception when type changes are attempted.
   ///
   /// **HTTP mapping:** Maps domain PropertyTypeChangeException to HTTP 400 status
