@@ -23,6 +23,7 @@ import com.decathlon.idp_core.AbstractIntegrationTest;
 import com.decathlon.idp_core.domain.constant.ValidationMessages;
 import com.decathlon.idp_core.domain.exception.webhook.WebhookConnectorConfigurationException;
 import com.decathlon.idp_core.infrastructure.adapters.api.dto.out.entity_dynamic_mapping.InboundWebhookEntityMappingDtoOut;
+import com.decathlon.idp_core.infrastructure.adapters.ingestion.exception.WebhookAuthForbiddenException;
 import com.decathlon.idp_core.infrastructure.adapters.persistence.mapper.WebhookMappingLinkPersistenceMapper;
 import com.decathlon.idp_core.infrastructure.adapters.persistence.model.webhook.WebhookMappingLinkJpaEntity;
 
@@ -163,10 +164,9 @@ class InboundWebhookManagementControllerTest extends AbstractIntegrationTest {
       mockMvc.perform(get(WEBHOOK_PATH).accept(APPLICATION_JSON)).andExpect(status().isOk())
           .andExpect(content().contentType(APPLICATION_JSON))
           .andExpect(jsonPath("$.content").isArray())
-          .andExpect(jsonPath("$.page.total_elements").value(3))
-          .andExpect(jsonPath("$.content[0].identifier").value("github-dora-connector"))
-          .andExpect(jsonPath("$.content[1].identifier").value("public-connector"))
-          .andExpect(jsonPath("$.content[2].identifier").value("token-connector"));
+          .andExpect(jsonPath("$.page.total_elements").value(4))
+          .andExpect(jsonPath("$.content[*].identifier", containsInAnyOrder("github-dora-connector",
+              "github-dora-connector-success", "public-connector", "token-connector")));
     }
   }
 
@@ -750,6 +750,19 @@ class InboundWebhookManagementControllerTest extends AbstractIntegrationTest {
 
       assertInstanceOf(RuntimeException.class, exception);
       assertEquals("Webhook connector name is mandatory", exception.getMessage());
+    }
+
+    @Test
+    @DisplayName("WebhookAuthForbiddenException should expose message and cause")
+    void webhookAuthForbiddenException_shouldExposeMessageAndCause() {
+      IllegalArgumentException cause = new IllegalArgumentException("root-cause");
+      WebhookAuthForbiddenException exception = new WebhookAuthForbiddenException(
+          "Basic credentials were rejected", cause);
+
+      assertInstanceOf(RuntimeException.class, exception);
+      assertEquals("Basic credentials were rejected", exception.getMessage());
+      assertSame(cause, exception.getCause());
+      assertEquals("root-cause", exception.getCause().getMessage());
     }
 
     @Test

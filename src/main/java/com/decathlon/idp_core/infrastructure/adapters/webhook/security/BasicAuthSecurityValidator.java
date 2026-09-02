@@ -24,6 +24,8 @@ import lombok.extern.slf4j.Slf4j;
 public class BasicAuthSecurityValidator implements WebhookSecurityStrategy {
 
   private static final String USERNAME_KEY = "username";
+  private static final String SECRET_ALIAS_KEY_SNAKE_CASE = "secret_alias";
+  private static final String SECRET_ALIAS_KEY_CAMEL_CASE = "secretAlias";
 
   @Override
   public boolean supports(WebhookSecurityType securityType) {
@@ -32,9 +34,13 @@ public class BasicAuthSecurityValidator implements WebhookSecurityStrategy {
 
   @Override
   public void validateConfiguration(Map<String, String> config) {
-    WebhookSecurityConfigurationUtils.required(config, USERNAME_KEY);
-    String alias = WebhookSecurityConfigurationUtils.required(config, "secret_alias",
-        "secretAlias");
+    String configuredUsername = WebhookSecurityConfigurationUtils.required(config, USERNAME_KEY);
+    if (WebhookSecurityConfigurationUtils.isEnvironmentReference(configuredUsername)) {
+      WebhookSecurityConfigurationUtils.validateSecretAliasExists(configuredUsername);
+    }
+
+    String alias = WebhookSecurityConfigurationUtils.required(config, SECRET_ALIAS_KEY_SNAKE_CASE,
+        SECRET_ALIAS_KEY_CAMEL_CASE);
     WebhookSecurityConfigurationUtils.validateSecretAliasFormat(alias);
     WebhookSecurityConfigurationUtils.validateSecretAliasExists(alias);
   }
@@ -42,9 +48,9 @@ public class BasicAuthSecurityValidator implements WebhookSecurityStrategy {
   @Override
   public void validateRequest(Map<String, Object> headers, byte[] rawPayload,
       Map<String, String> config) {
-    String expectedUsername = WebhookSecurityConfigurationUtils.required(config, USERNAME_KEY);
+    String expectedUsername = resolveExpectedUsername(config);
     String expectedPassword = WebhookSecurityConfigurationUtils.resolveRequiredRuntimeValue(config,
-        "secret_alias", "secretAlias");
+        SECRET_ALIAS_KEY_SNAKE_CASE, SECRET_ALIAS_KEY_CAMEL_CASE);
 
     // Extract Authorization header (may throw WebhookAuthenticationException)
     String authorization = WebhookSecurityConfigurationUtils.requiredHeader(headers,
@@ -93,5 +99,14 @@ public class BasicAuthSecurityValidator implements WebhookSecurityStrategy {
     }
 
     log.debug("Basic Auth validation successful for username '{}'", expectedUsername);
+  }
+
+  private String resolveExpectedUsername(Map<String, String> config) {
+    String configuredUsername = WebhookSecurityConfigurationUtils.required(config, USERNAME_KEY);
+    if (WebhookSecurityConfigurationUtils.isEnvironmentReference(configuredUsername)) {
+      return WebhookSecurityConfigurationUtils.resolveRuntimeSecret(configuredUsername);
+    }
+
+    return configuredUsername;
   }
 }

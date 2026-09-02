@@ -12,8 +12,8 @@ import com.decathlon.idp_core.domain.exception.webhook.WebhookDisabledException;
 import com.decathlon.idp_core.domain.model.inbound_connectors.webhook.WebhookConnector;
 import com.decathlon.idp_core.domain.service.webhook.WebhookConnectorService;
 import com.decathlon.idp_core.infrastructure.adapters.ingestion.exception_handler.WebhookExceptionRouteBuilder;
-import com.decathlon.idp_core.infrastructure.adapters.ingestion.processor.SecurityProcessor;
 import com.decathlon.idp_core.infrastructure.adapters.ingestion.processor.IngestionProcessor;
+import com.decathlon.idp_core.infrastructure.adapters.ingestion.processor.SecurityProcessor;
 import com.decathlon.idp_core.infrastructure.adapters.ingestion.processor.decoder.DecodingProcessor;
 
 import lombok.RequiredArgsConstructor;
@@ -35,8 +35,8 @@ public class GenericInboundEventRouteBuilder extends RouteBuilder {
     from(DIRECT_PROCESS_EVENT).routeId(ROUTE_ID_WEBHOOK_PIPELINE)
         .setProperty(RAW_PAYLOAD_BODY_PROPERTY, body()).to(DIRECT_FETCH_CONFIGURATION)
         .to(DIRECT_VALIDATE_ENABLED).to(DIRECT_VALIDATE_SECURITY).to(DIRECT_DECODE_PAYLOAD)
-        .to(DIRECT_INGEST_PAYLOAD)
-        .removeHeaders("*") // Clear all accumulated incoming and internal headers
+        .to(DIRECT_INGEST_PAYLOAD).removeHeaders("*") // Clear all accumulated incoming and internal
+                                                      // headers
         .setHeader(Exchange.HTTP_RESPONSE_CODE, constant(HTTP_CREATED))
         .setHeader(Exchange.CONTENT_TYPE, constant(APPLICATION_JSON))
         .setBody(constant(SUCCESS_WEBHOOK_EVENT_PROCESSED));

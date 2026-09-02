@@ -6,6 +6,7 @@ import static com.decathlon.idp_core.infrastructure.adapters.ingestion.configura
 
 import org.apache.camel.Exchange;
 import org.apache.camel.LoggingLevel;
+import org.apache.camel.Message;
 import org.apache.camel.builder.RouteBuilder;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Component;
@@ -31,37 +32,69 @@ import lombok.extern.slf4j.Slf4j;
 @Slf4j
 public class WebhookExceptionHandlerHelper {
 
+  private static final String STRUCTURED_LOG_MESSAGE = "webhook_ingestion_error code={} status={} connector_identifier={} exception_type={} message={}";
+
   private final ObjectMapper objectMapper;
 
-  /// Binds an exception type to a standardized HTTP error response and
-  /// structured log.
   public <T extends Throwable> void registerHandler(RouteBuilder routeBuilder,
       Class<T> exceptionType, WebhookErrorCode error) {
+    registerHandler(routeBuilder, exceptionType, error, false);
+  }
 
-    routeBuilder.onException(exceptionType).handled(true)
-        .process(exchange -> setJsonErrorResponse(exchange, error.code(), error.httpStatus(),
-            resolveErrorDescription(exchange, error.description())))
+  /// Binds an exception type and optionally exposes the exception message in the
+  /// HTTP response when the exception message is controlled and safe for clients.
+  public <T extends Throwable> void registerHandler(RouteBuilder routeBuilder,
+      Class<T> exceptionType, WebhookErrorCode error, boolean exposeExceptionMessage) {
+
+    routeBuilder.onException(exceptionType).handled(true).removeHeaders("*")
+        .process(exchange -> setJsonErrorResponse(exchange, error, exposeExceptionMessage))
         .process(exchange -> logHandledException(exchange, error.logLevel(), error.code(),
             error.httpStatus().value()));
   }
 
-  private void setJsonErrorResponse(Exchange exchange, String errorCode, HttpStatus httpStatus,
-      String errorDescription) throws JsonProcessingException {
-    ErrorResponse errorResponse = new ErrorResponse(errorCode, errorDescription);
+  /// Binds multiple exception types and optionally exposes exception messages in
+  /// HTTP responses.
+  ///
+  /// Useful for grouping semantically related exceptions that should be handled
+  /// identically. For example: register all JSLT validation errors with
+  /// ENTITY_INGESTION_ERROR code.
+  @SuppressWarnings("unchecked")
+  public void registerHandlers(RouteBuilder routeBuilder, WebhookErrorCode error,
+      boolean exposeExceptionMessage, Class<? extends Throwable>... exceptionTypes) {
 
-    exchange.getMessage().setHeader(Exchange.HTTP_RESPONSE_CODE, httpStatus.value());
-    exchange.getMessage().setHeader(Exchange.CONTENT_TYPE, APPLICATION_JSON);
-    exchange.getMessage().setBody(objectMapper.writeValueAsString(errorResponse));
+    for (var exceptionType : exceptionTypes) {
+      registerHandler(routeBuilder, exceptionType, error, exposeExceptionMessage);
+    }
   }
 
-  private String resolveErrorDescription(Exchange exchange, String fallbackDescription) {
+  private void setJsonErrorResponse(Exchange exchange, WebhookErrorCode error,
+      boolean exposeExceptionMessage) throws JsonProcessingException {
+    HttpStatus httpStatus = error.httpStatus();
+    String errorDescription = resolveErrorDescription(exchange, error, exposeExceptionMessage);
+    ErrorResponse errorResponse = new ErrorResponse(error.code(), errorDescription);
+    Message message = exchange.getMessage();
+    message.setHeader(Exchange.HTTP_RESPONSE_CODE, httpStatus.value());
+    message.setHeader(Exchange.CONTENT_TYPE, APPLICATION_JSON);
+    message.setBody(objectMapper.writeValueAsString(errorResponse));
+  }
+
+  private String resolveErrorDescription(Exchange exchange, WebhookErrorCode error,
+      boolean exposeExceptionMessage) {
     Throwable throwable = exchange.getProperty(Exchange.EXCEPTION_CAUGHT, Throwable.class);
-    if ((throwable instanceof WebhookAuthUnauthorizedException
-        || throwable instanceof WebhookAuthForbiddenException)
-        && StringUtils.hasText(throwable.getMessage())) {
+    if (throwable == null || !StringUtils.hasText(throwable.getMessage())) {
+      return error.description();
+    }
+
+    if (exposeExceptionMessage || isAuthenticationException(throwable)) {
       return throwable.getMessage();
     }
-    return fallbackDescription;
+
+    return error.description();
+  }
+
+  private boolean isAuthenticationException(Throwable throwable) {
+    return throwable instanceof WebhookAuthUnauthorizedException
+        || throwable instanceof WebhookAuthForbiddenException;
   }
 
   private void logHandledException(Exchange exchange, LoggingLevel level, String errorCode,
@@ -72,19 +105,17 @@ public class WebhookExceptionHandlerHelper {
     String exceptionType = throwable == null ? UNKNOWN_VALUE : throwable.getClass().getName();
     String exceptionMessage = throwable == null ? "no exception captured" : throwable.getMessage();
 
-    String structuredMessage = "webhook_ingestion_error code={} status={} connector_identifier={} exception_type={} message={}";
-
     if (level == LoggingLevel.ERROR) {
-      log.error(structuredMessage, errorCode, statusCode, targetIdentifier, exceptionType,
+      log.error(STRUCTURED_LOG_MESSAGE, errorCode, statusCode, targetIdentifier, exceptionType,
           exceptionMessage, throwable);
       return;
     }
 
     if (log.isDebugEnabled()) {
-      log.warn(structuredMessage, errorCode, statusCode, targetIdentifier, exceptionType,
+      log.warn(STRUCTURED_LOG_MESSAGE, errorCode, statusCode, targetIdentifier, exceptionType,
           exceptionMessage, throwable);
     } else {
-      log.warn(structuredMessage, errorCode, statusCode, targetIdentifier, exceptionType,
+      log.warn(STRUCTURED_LOG_MESSAGE, errorCode, statusCode, targetIdentifier, exceptionType,
           exceptionMessage);
     }
   }

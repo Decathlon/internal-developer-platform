@@ -46,15 +46,7 @@ public class WebhookExceptionRouteBuilder {
     handlerHelper.registerHandler(routeBuilder, WebhookSecurityException.class,
         WebhookErrorCode.AUTHENTICATION_REQUIRED);
 
-    handlerHelper.registerHandlers(routeBuilder, WebhookErrorCode.ENTITY_INGESTION_ERROR, true, // expose
-                                                                                                // exception
-                                                                                                // message
-                                                                                                // —
-                                                                                                // messages
-                                                                                                // are
-                                                                                                // safe,
-                                                                                                // domain-controlled
-                                                                                                // strings
+    handlerHelper.registerHandlers(routeBuilder, WebhookErrorCode.ENTITY_INGESTION_ERROR, true,
         EntityDynamicMappingJsltErrorException.class, ExpressionEvaluationFailedException.class,
         EntityDynamicMappingConfigurationException.class, EntityValidationException.class,
         EntityNotFoundException.class, EntityAlreadyExistsException.class,

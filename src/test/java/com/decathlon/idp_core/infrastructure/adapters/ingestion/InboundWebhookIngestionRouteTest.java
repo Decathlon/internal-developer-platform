@@ -241,9 +241,22 @@ class InboundWebhookIngestionRouteTest extends AbstractIntegrationTest {
   @Test
   @DisplayName("Route returns 201 when HMAC signature matches runtime secret")
   void postWebhookRoute_201_whenHmacAuthenticationSucceeds() throws Exception {
-    String payload = "{\"action\":\"pushed\"}";
+    String payload = """
+        {
+          "action": "pushed",
+          "repository": {
+            "full_name": "acme/payment-service",
+            "name": "payment-service",
+            "language": "JAVA"
+          },
+          "sender": {
+            "email": "owner@acme.test"
+          },
+          "ref": "1.0.0"
+        }
+        """;
     String signature = computeHmacSha256Signature(payload);
-    Exchange exchange = invokeIngestionRoute("github-dora-connector", payload, null,
+    Exchange exchange = invokeIngestionRoute("github-dora-connector-success", payload, null,
         Map.of("X-Hub-Signature-256", signature));
 
     assertEquals(HTTP_CREATED, exchange.getMessage().getHeader(Exchange.HTTP_RESPONSE_CODE));
