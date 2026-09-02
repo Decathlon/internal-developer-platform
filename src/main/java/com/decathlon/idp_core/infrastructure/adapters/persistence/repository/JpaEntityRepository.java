@@ -34,16 +34,15 @@ public interface JpaEntityRepository
   ///
   /// **Design:** Uses a native SQL query with tuple IN clause to match composite
   /// key pairs. Returns only the essential fields (identifier, name,
-  /// templateIdentifier)
-  /// for summary DTOs.
+  /// templateIdentifier) for summary DTOs.
   ///
   /// **Why composite keys?** Entity identifiers are unique within a template, not
   /// globally. Using both templateIdentifier and identifier ensures we fetch the
   /// correct entity without conflicts.
   ///
-  /// **Note:** Uses native SQL because JPQL doesn't support tuple IN clauses.
-  /// The unnest function creates a table from the parameter arrays, and we join
-  /// on both columns to match composite keys.
+  /// **Note:** Uses native SQL because JPQL doesn't support tuple IN clauses. The
+  /// unnest function creates a table from the parameter arrays, and we join on
+  /// both columns to match composite keys.
   ///
   /// @param templateIdentifiers list of template identifiers (parallel to
   /// identifiers)
@@ -108,9 +107,8 @@ public interface JpaEntityRepository
   /// cleaned up before reloading.
   ///
   /// **Design:** Uses a nested query to identify relations first, then removes
-  /// them.
-  /// The `@Modifying` annotation automatically clears the persistence context and
-  /// flushes changes to the database.
+  /// them. The `@Modifying` annotation automatically clears the persistence
+  /// context and flushes changes to the database.
   ///
   /// @param templateIdentifier the template identifier to filter entities
   /// @param relationNames collection of relation names to delete
@@ -135,8 +133,8 @@ public interface JpaEntityRepository
   /// delete).
   ///
   /// **Design:** Uses the composite key (templateIdentifier, identifier) to
-  /// uniquely
-  /// identify the entity, matching the domain model's identity semantics.
+  /// uniquely identify the entity, matching the domain model's identity
+  /// semantics.
   ///
   /// @param templateIdentifier the template identifier of the entity
   /// @param entityIdentifier the identifier of the entity within its template
@@ -162,26 +160,24 @@ public interface JpaEntityRepository
   /// Finds all entities that have relations pointing to a target entity.
   ///
   /// **Purpose:** Discovers inbound relationships—entities that reference the
-  /// given
-  /// target identifier. Essential for bidirectional graph traversal to find
+  /// given target identifier. Essential for bidirectional graph traversal to find
   /// dependents.
   ///
   /// **Design:** Uses a native SQL query for complex join logic across the
-  /// relation
-  /// hierarchy (entity → entity_relations → relation_target_entities → entity
-  /// target).
-  /// This provides better control over the join strategy than JPQL for this
-  /// specific
-  /// multi-level traversal.
+  /// relation hierarchy (entity → entity_relations → relation_target_entities →
+  /// entity target). This provides better control over the join strategy than
+  /// JPQL
+  /// for this specific multi-level traversal.
   ///
   /// **Performance:** Avoids N+1 by using a single join query. The DISTINCT
   /// clause
   /// eliminates duplicates when multiple relations point to the same target.
   ///
   /// @param targetIdentifier the identifier of the target entity to find
-  /// referrers for
-  /// @return list of entities that have relations to the target, or empty list if
-  /// none
+  /// referrers
+  /// for
+  /// @return list of entities that have relations to the target, or empty list
+  /// if none
   @Query(value = """
       SELECT DISTINCT e.*
       FROM idp_core.entity e
@@ -203,8 +199,8 @@ public interface JpaEntityRepository
   /// phases:
   ///
   /// 1. **Anchor Member**: Initializes state tokens (UUID, depth, flow direction)
-  /// for
-  /// root entities. Flow direction matches the traversal mode:
+  /// for root entities. Flow direction matches the traversal mode:
+  ///
   /// - `OUTBOUND_ONLY`: Only OUTBOUND flow
   /// - `DIRECT_LINEAGE`: Both OUTBOUND and INBOUND (separate tokens per root)
   /// - `BIDIRECTIONAL`: Only ANY flow (follows both directions)
@@ -224,9 +220,8 @@ public interface JpaEntityRepository
   /// - They never cross over (outbound token cannot follow inbound edge)
   ///
   /// **Performance:** Returns only UUIDs (no entity hydration). Bulk entity
-  /// loading
-  /// happens in a separate query to avoid N+1 problems. The depth limit prevents
-  /// unbounded traversal in cyclic graphs.
+  /// loading happens in a separate query to avoid N+1 problems. The depth limit
+  /// prevents unbounded traversal in cyclic graphs.
   ///
   /// @param rootIds collection of root entity UUIDs (single or multiple)
   /// @param depth maximum traversal depth (must be >= 1, typically clamped by
@@ -234,8 +229,7 @@ public interface JpaEntityRepository
   /// @param mode traversal mode as string ('OUTBOUND_ONLY', 'DIRECT_LINEAGE',
   /// 'BIDIRECTIONAL')
   /// @return list of all discovered entity UUIDs in the reachable subgraph, or
-  /// empty
-  /// list if no entities are reachable
+  /// empty list if no entities are reachable
   @Query(value = """
       WITH RECURSIVE entity_graph(id, depth, flow) AS (
           -- 1. ANCHOR MEMBER: Initialize state tokens for multiple root entities
@@ -294,4 +288,23 @@ public interface JpaEntityRepository
       """, nativeQuery = true)
   List<UUID> findEntityIdsInGraph(@Param("rootIds") Collection<UUID> rootIds,
       @Param("depth") int depth, @Param("mode") String mode);
+
+  /// Deletes all entities belonging to the given template.
+  ///
+  /// Spring Data loads each entity and removes it via `em.remove()`, which
+  /// triggers JPA cascade (`CascadeType.ALL`, `orphanRemoval = true`) so
+  /// entity-owned properties and relations are also removed.
+  /// Finds all entities belonging to the given template, for cascade deletion.
+  ///
+  /// **Purpose:** Used exclusively by `deleteAllByTemplateIdentifier` cleanup to
+  /// load managed entities before removal. Loading managed instances (rather than
+  /// issuing a bulk `DELETE` statement) ensures JPA cascade (`CascadeType.ALL`),
+  /// `orphanRemoval`, and Hibernate Envers auditing all fire correctly, since
+  /// these mechanisms hook into the entity lifecycle and are bypassed by bulk
+  /// JPQL/SQL deletes.
+  ///
+  /// @param templateIdentifier the template identifier to filter entities
+  /// @return list of entities belonging to the template
+  List<EntityJpaEntity> findAllByTemplateIdentifier(String templateIdentifier);
+
 }

@@ -10,6 +10,7 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
 import com.decathlon.idp_core.domain.model.entity_mapping.EntityDynamicMapping;
+import com.decathlon.idp_core.domain.model.entity_mapping.MappingAction;
 import com.decathlon.idp_core.domain.model.entity_mapping.RelationMapping;
 import com.decathlon.idp_core.domain.model.enums.WebhookSecurityType;
 import com.decathlon.idp_core.domain.model.inbound_connectors.webhook.WebhookConnector;
@@ -27,8 +28,8 @@ class InboundWebhookMapperTest {
 
   private static EntityDynamicMapping resolvedMapping() {
     return new EntityDynamicMapping(UUID.randomUUID(), "deployment-mapping", "deployment",
-        ".eventType == \"DEPLOYED\"", "deployment mapping", "deployment mapping description", ".id",
-        ".name", Map.of("environment", ".env"),
+        ".eventType == \"DEPLOYED\"", MappingAction.UPDATE_ENTITY, "deployment mapping",
+        "deployment mapping description", ".id", ".name", Map.of("environment", ".env"),
         List.of(new RelationMapping("service", List.of(".service"))));
   }
 
@@ -49,6 +50,22 @@ class InboundWebhookMapperTest {
     assertThat(domain.mappings()).hasSize(1);
     assertThat(domain.security().type()).isEqualTo(WebhookSecurityType.HMAC_SHA256);
     assertThat(domain.security().config()).containsEntry("prefix", "sha256=");
+  }
+
+  @Test
+  @DisplayName("Should preserve the DELETE mapping action when mapping an update request")
+  void shouldPreserveDeleteMappingAction() {
+    var request = new InboundWebhookUpdateDtoIn("GitHub DORA", "Delete deployments", true,
+        List.of("deployment-mapping"), new InboundWebhookSecurityContractDtoIn("NONE", Map.of()));
+    var mapping = new EntityDynamicMapping(UUID.randomUUID(), "deployment-mapping", "deployment",
+        ".eventType == \"DELETED\"", MappingAction.DELETE_ENTITY, "deployment mapping",
+        "deployment mapping description", ".id", ".name", Map.of(), List.of());
+
+    WebhookConnector domain = mapper.toDomainForUpdate("identifier_from_path", request,
+        List.of(mapping));
+
+    assertThat(domain.mappings()).singleElement().extracting(EntityDynamicMapping::action)
+        .isEqualTo(MappingAction.DELETE_ENTITY);
   }
 
   @Test

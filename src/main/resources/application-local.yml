@@ -34,6 +34,12 @@ spring:
         jwt:
           jwk-set-uri: http://localhost:8080/auth/.well-known/jwks.json
 app:
+  # security:
+  #   mock-enabled: true
+  ingestion:
+    webhook:
+      base-path: /webhooks
+      identifier-path: /{webhookIdentifier}
   full-refresh-at-startup: true
   # The base URL of the IDP Core service. Used for OAuth2 token exchange and JWKS retrieval.
   # or keep mock for local test without managing of authentication
@@ -55,3 +61,12 @@ logging:
     org.hibernate.SQL: WARN
     org.hibernate.stat: WARN
     org.hibernate.type.descriptor.sql.BasicBinder: TRACE
+
+camel:
+  component:
+    platform-http:
+      engine: "servlet"
+
+management:
+  tracing:
+    enabled: false

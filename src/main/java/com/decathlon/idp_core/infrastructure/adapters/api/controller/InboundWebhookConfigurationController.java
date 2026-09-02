@@ -16,8 +16,8 @@ import com.decathlon.idp_core.infrastructure.adapters.api.configuration.SwaggerC
 import com.decathlon.idp_core.infrastructure.adapters.api.dto.in.InboundWebhookCreateDtoIn;
 import com.decathlon.idp_core.infrastructure.adapters.api.dto.in.InboundWebhookUpdateDtoIn;
 import com.decathlon.idp_core.infrastructure.adapters.api.dto.out.webhook.InboundWebhookDtoOut;
-import com.decathlon.idp_core.infrastructure.adapters.api.handler.ApiExceptionHandler;
 import com.decathlon.idp_core.infrastructure.adapters.api.mapper.connector.webhook.InboundWebhookMapper;
+import com.decathlon.idp_core.infrastructure.adapters.common.model.ErrorResponse;
 
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -59,7 +59,7 @@ public class InboundWebhookConfigurationController {
   @Operation(summary = ENDPOINT_GET_WEBHOOK_CONNECTOR_PAGINATED_SUMMARY, description = ENDPOINT_GET_WEBHOOK_CONNECTOR_PAGINATED_DESCRIPTION)
   @ApiResponse(responseCode = OK_CODE, description = RESPONSE_WEBHOOK_CONNECTOR_PAGINATED_SUCCESS, content = @Content(schema = @Schema(implementation = SwaggerConfiguration.WebhookConnectorPageResponse.class)))
   @ApiResponse(responseCode = BAD_REQUEST_CODE, description = RESPONSE_INVALID_PAGINATION, content = {
-      @Content(schema = @Schema(implementation = ApiExceptionHandler.ErrorResponse.class))})
+      @Content(schema = @Schema(implementation = ErrorResponse.class))})
   @Parameter(name = "page", description = PARAM_PAGE_DESCRIPTION, in = ParameterIn.QUERY, content = @Content(schema = @Schema(type = "integer", defaultValue = "0")))
   @Parameter(name = "size", description = PARAM_SIZE_DESCRIPTION, in = ParameterIn.QUERY, content = @Content(schema = @Schema(type = "integer", defaultValue = "20")))
   @Parameter(name = "sort", description = PARAM_SORT_DESCRIPTION, in = ParameterIn.QUERY, content = @Content(schema = @Schema(type = "string", defaultValue = "identifier,asc")))
@@ -74,7 +74,7 @@ public class InboundWebhookConfigurationController {
   @Operation(summary = ENDPOINT_DELETE_WEBHOOK_CONNECTOR_SUMMARY, description = ENDPOINT_DELETE_WEBHOOK_CONNECTOR_DESCRIPTION)
   @ApiResponse(responseCode = NO_CONTENT_CODE, description = RESPONSE_WEBHOOK_CONNECTOR_DELETED)
   @ApiResponse(responseCode = NOT_FOUND_CODE, description = RESPONSE_WEBHOOK_CONNECTOR_NOT_FOUND_IDENTIFIER, content = {
-      @Content(schema = @Schema(implementation = ApiExceptionHandler.ErrorResponse.class))})
+      @Content(schema = @Schema(implementation = ErrorResponse.class))})
   @ResponseStatus(NO_CONTENT)
   @DeleteMapping("/{identifier}")
   public void deleteWebhookConnector(@PathVariable String identifier) {
@@ -85,7 +85,7 @@ public class InboundWebhookConfigurationController {
   @ApiResponse(responseCode = OK_CODE, description = RESPONSE_WEBHOOK_CONNECTOR_FOUND, content = {
       @Content(schema = @Schema(implementation = InboundWebhookDtoOut.class))})
   @ApiResponse(responseCode = NOT_FOUND_CODE, description = RESPONSE_WEBHOOK_CONNECTOR_NOT_FOUND_IDENTIFIER, content = {
-      @Content(schema = @Schema(implementation = ApiExceptionHandler.ErrorResponse.class))})
+      @Content(schema = @Schema(implementation = ErrorResponse.class))})
   @GetMapping("/{identifier}")
   @ResponseStatus(OK)
   public InboundWebhookDtoOut getWebhookConnectorByIdentifier(@PathVariable String identifier) {
@@ -97,11 +97,11 @@ public class InboundWebhookConfigurationController {
   @ApiResponse(responseCode = OK_CODE, description = RESPONSE_WEBHOOK_CONNECTOR_UPDATED, content = {
       @Content(schema = @Schema(implementation = InboundWebhookDtoOut.class))})
   @ApiResponse(responseCode = NOT_FOUND_CODE, description = RESPONSE_WEBHOOK_CONNECTOR_NOT_FOUND_IDENTIFIER, content = {
-      @Content(schema = @Schema(implementation = ApiExceptionHandler.ErrorResponse.class))})
+      @Content(schema = @Schema(implementation = ErrorResponse.class))})
   @ApiResponse(responseCode = BAD_REQUEST_CODE, description = "Invalid request payload", content = {
-      @Content(schema = @Schema(implementation = ApiExceptionHandler.ErrorResponse.class))})
+      @Content(schema = @Schema(implementation = ErrorResponse.class))})
   @ApiResponse(responseCode = CONFLICT_CODE, description = "Webhook connector name already exists", content = {
-      @Content(schema = @Schema(implementation = ApiExceptionHandler.ErrorResponse.class))})
+      @Content(schema = @Schema(implementation = ErrorResponse.class))})
   @PutMapping("/{identifier}")
   @ResponseStatus(OK)
   public InboundWebhookDtoOut putWebhookConnector(@PathVariable String identifier,

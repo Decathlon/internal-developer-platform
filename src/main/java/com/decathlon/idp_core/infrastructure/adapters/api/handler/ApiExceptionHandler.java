@@ -32,10 +32,8 @@ import com.decathlon.idp_core.domain.exception.filter.InvalidFilterDslException;
 import com.decathlon.idp_core.domain.exception.principal.PrincipalNotFoundException;
 import com.decathlon.idp_core.domain.exception.search.InvalidSearchQueryException;
 import com.decathlon.idp_core.domain.exception.webhook.*;
+import com.decathlon.idp_core.infrastructure.adapters.common.model.ErrorResponse;
 
-import lombok.AllArgsConstructor;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import tools.jackson.core.JacksonException;
 import tools.jackson.databind.exc.InvalidFormatException;
@@ -190,6 +188,19 @@ public class ApiExceptionHandler {
   public ResponseEntity<ErrorResponse> handleTargetTemplateNotFoundException(
       TargetTemplateNotFoundException ex) {
     log.warn("Target entityTemplateIdentifier not found: {}", ex.getMessage());
+    return createErrorResponse(HttpStatus.BAD_REQUEST, ex.getMessage());
+  }
+
+  /// Handles domain exception when attempting to delete a template that is still
+  /// referenced as a relation target in another template.
+  ///
+  /// **HTTP mapping:** Maps domain [EntityTemplateIsRelationTargetException] to
+  /// HTTP 400 Bad Request to signal a business rule violation that must be
+  /// resolved by the caller before retrying the deletion.
+  @ExceptionHandler(EntityTemplateIsRelationTargetException.class)
+  public ResponseEntity<ErrorResponse> handleEntityTemplateIsRelationTargetException(
+      EntityTemplateIsRelationTargetException ex) {
+    log.warn("Template deletion blocked – still a relation target: {}", ex.getMessage());
     return createErrorResponse(HttpStatus.BAD_REQUEST, ex.getMessage());
   }
 
@@ -358,7 +369,7 @@ public class ApiExceptionHandler {
   public ResponseEntity<ErrorResponse> handlePropertyNameNotFoundEntityTemplatePropertiesException(
       PropertyNameNotFoundEntityTemplatePropertiesException ex) {
     log.warn("Webhook mapping references unknown property: {}", ex.getMessage());
-    return createErrorResponse(HttpStatus.BAD_REQUEST, ex.getMessage());
+    return createErrorResponse(HttpStatus.UNPROCESSABLE_CONTENT, ex.getMessage());
   }
 
   @ExceptionHandler(RelationNameNotFoundEntityTemplateRelationsException.class)
@@ -646,11 +657,4 @@ public class ApiExceptionHandler {
     return new ResponseEntity<>(new ErrorResponse(httpStatus.name(), errorMessage), httpStatus);
   }
 
-  @Getter
-  @AllArgsConstructor
-  @NoArgsConstructor(force = true)
-  public static class ErrorResponse {
-    private String error;
-    private String errorDescription;
-  }
 }

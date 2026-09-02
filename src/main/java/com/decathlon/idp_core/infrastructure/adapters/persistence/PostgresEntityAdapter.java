@@ -180,6 +180,29 @@ public class PostgresEntityAdapter implements EntityRepositoryPort {
     return jpaEntityRepository
         .findAllByTemplateIdentifierAndIdentifierIn(templateIdentifier, identifiers).stream()
         .map(mapper::toDomain).toList();
+  /// Deletes all entities belonging to the given template.
+  ///
+  /// **Important:** Entities are loaded as managed instances and removed
+  /// individually via `deleteAll(Iterable)` (which internally calls
+  /// `entityManager.remove()` per entity). This is intentional — it is the
+  /// only way to guarantee:
+  ///
+  /// - JPA cascade (`CascadeType.ALL`) removes owned properties and relations
+  /// - `orphanRemoval` cleans up orphaned child records
+  /// - Hibernate Envers records an audit revision for each deleted entity
+  ///
+  /// A derived bulk-delete method (`deleteAllByTemplateIdentifier` with `void`
+  /// return type) would instead issue a single `DELETE FROM ... WHERE ...`
+  /// statement, bypassing all of the above — silently breaking cascade cleanup
+  /// and the audit trail.
+  ///
+  /// @param templateIdentifier the template identifier whose entities must be
+  /// removed
+  @Override
+  public void deleteAllByTemplateIdentifier(String templateIdentifier) {
+    List<EntityJpaEntity> entities = jpaEntityRepository
+        .findAllByTemplateIdentifier(templateIdentifier);
+    jpaEntityRepository.deleteAll(entities);
   }
 
 }

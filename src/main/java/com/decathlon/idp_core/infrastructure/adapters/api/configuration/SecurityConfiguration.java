@@ -5,6 +5,9 @@ import java.util.List;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.core.annotation.Order;
+import org.springframework.security.config.Customizer;
+import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationConverter;
@@ -25,6 +28,8 @@ import lombok.extern.slf4j.Slf4j;
 ///   - JWT (OAuth2 resource server with JWT validation)
 ///   - API_KEY (simple key-based authentication for webhooks)
 ///   - MOCK (for local development only)
+/// API and platform Spring Security configuration for OAuth2 resource server with JWT
+/// authentication.
 ///
 /// **Infrastructure specifics:**
 /// - CORS origins externalized via `spring.web.cors.allowed-origins` in `application.yml`
@@ -63,6 +68,13 @@ public class SecurityConfiguration {
     converter.setJwtGrantedAuthoritiesConverter(
         jwt -> List.of(new SimpleGrantedAuthority(securityRoleProperties.baselineRole())));
     return converter;
+  @Order(2)
+  public SecurityFilterChain apiSecurityFilterChain(HttpSecurity http) {
+    http.authorizeHttpRequests(authorize -> authorize.requestMatchers("/actuator/**").permitAll()
+        .requestMatchers("/", "/swagger-ui/**", "/swagger-ui.html", "/v3/api-docs/**").permitAll()
+        .requestMatchers("/api/**").fullyAuthenticated().anyRequest().authenticated())
+        .cors(withDefaults()).oauth2ResourceServer(oauth2 -> oauth2.jwt(Customizer.withDefaults()));
+    return http.build();
   }
 
   @Bean

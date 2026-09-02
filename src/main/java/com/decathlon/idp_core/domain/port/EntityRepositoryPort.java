@@ -82,4 +82,18 @@ public interface EntityRepositoryPort {
   List<Entity> findAllByTemplateIdentifierAndIdentifierIn(String templateIdentifier,
       List<String> identifiers);
 
+  /// Deletes all entities that belong to the given template.
+  ///
+  /// **Business contract:** Called as part of the template cascade-delete flow
+  /// after all
+  /// referential integrity checks have passed. Implementors must ensure that
+  /// entity-owned
+  /// child records (properties, relations) are also removed.
+  ///
+  /// @param templateIdentifier the business identifier of the template whose
+  /// entities
+  /// should be deleted
+  void deleteAllByTemplateIdentifier(String templateIdentifier);
+
+
 }
