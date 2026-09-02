@@ -47,12 +47,11 @@ app:
         legacy-fallback-claims: "grant_type,service_name,client_id"
       # ✅ Un-indented: Now properly binds to app.security.authentication.jit-provisioning-excluded-paths
       jit-provisioning-excluded-paths: "/,/actuator/**,/swagger-ui/**,/swagger-ui.html,/v3/api-docs/**"
-
-app:
   ingestion:
     webhook:
       base-path: /webhooks
       identifier-path: /{webhookIdentifier}
+
 management:
   endpoint:
     health:

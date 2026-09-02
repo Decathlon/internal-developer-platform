@@ -1,16 +1,18 @@
 package com.decathlon.idp_core.infrastructure.adapters.api.configuration;
 
+import static org.springframework.security.config.Customizer.withDefaults;
+
 import java.util.List;
 
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.annotation.Order;
-import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationConverter;
+import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
@@ -61,19 +63,20 @@ public class SecurityConfiguration {
     this.securityRoleProperties = securityRoleProperties;
   }
 
-  ///
   @Bean
   public JwtAuthenticationConverter jwtAuthenticationConverter() {
     JwtAuthenticationConverter converter = new JwtAuthenticationConverter();
     converter.setJwtGrantedAuthoritiesConverter(
         jwt -> List.of(new SimpleGrantedAuthority(securityRoleProperties.baselineRole())));
     return converter;
+  }
+
   @Order(2)
   public SecurityFilterChain apiSecurityFilterChain(HttpSecurity http) {
     http.authorizeHttpRequests(authorize -> authorize.requestMatchers("/actuator/**").permitAll()
         .requestMatchers("/", "/swagger-ui/**", "/swagger-ui.html", "/v3/api-docs/**").permitAll()
         .requestMatchers("/api/**").fullyAuthenticated().anyRequest().authenticated())
-        .cors(withDefaults()).oauth2ResourceServer(oauth2 -> oauth2.jwt(Customizer.withDefaults()));
+        .cors(withDefaults()).oauth2ResourceServer(oauth2 -> oauth2.jwt(withDefaults()));
     return http.build();
   }
 

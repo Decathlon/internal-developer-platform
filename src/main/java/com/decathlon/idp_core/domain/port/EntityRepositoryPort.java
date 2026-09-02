@@ -95,5 +95,4 @@ public interface EntityRepositoryPort {
   /// should be deleted
   void deleteAllByTemplateIdentifier(String templateIdentifier);
 
-
 }
