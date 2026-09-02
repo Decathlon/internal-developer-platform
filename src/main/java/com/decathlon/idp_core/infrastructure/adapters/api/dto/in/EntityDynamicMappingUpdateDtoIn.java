@@ -6,6 +6,7 @@ import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 
+import com.decathlon.idp_core.domain.model.entity_mapping.MappingAction;
 import com.fasterxml.jackson.databind.PropertyNamingStrategies;
 import com.fasterxml.jackson.databind.annotation.JsonNaming;
 
@@ -14,12 +15,13 @@ import com.fasterxml.jackson.databind.annotation.JsonNaming;
 public record EntityDynamicMappingUpdateDtoIn(
     @NotBlank(message = ENTITY_DYNAMIC_MAPPING_TEMPLATE_IDENTIFIER_MANDATORY) String entityTemplateIdentifier,
     @NotBlank(message = ENTITY_DYNAMIC_MAPPING_FILTER_MANDATORY) String filter,
+    @NotNull(message = ENTITY_DYNAMIC_MAPPING_ACTION_MANDATORY) MappingAction action,
     @NotBlank(message = ENTITY_DYNAMIC_MAPPING_NAME_MANDATORY) String name, String description,
     @NotNull(message = ENTITY_DYNAMIC_MAPPING_ENTITY_MANDATORY) @Valid EntityMappingDtoIn entity) {
 
   /// Returns a CommonFields view for compatibility with the mapper.
   public EntityDynamicMappingDtoInCommonFields commonFields() {
-    return new EntityDynamicMappingDtoInCommonFields(entityTemplateIdentifier, filter, name,
+    return new EntityDynamicMappingDtoInCommonFields(entityTemplateIdentifier, filter, action, name,
         description, entity);
   }
 }

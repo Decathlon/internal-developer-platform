@@ -20,7 +20,12 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
-/// Helper component providing reusable exception mapping and structured logging for Camel routes.
+/// Helper component providing reusable exception mapping and structured logging
+/// for Camel routes.
+///
+/// Supports binding single or multiple exception types to standardized HTTP
+/// error responses with structured logging. Exception messages can optionally be
+/// exposed to clients when safe.
 @Component
 @RequiredArgsConstructor
 @Slf4j
@@ -28,8 +33,8 @@ public class WebhookExceptionHandlerHelper {
 
   private final ObjectMapper objectMapper;
 
-  /// Binds an exception type to a standardized HTTP error response and structured
-  /// log.
+  /// Binds an exception type to a standardized HTTP error response and
+  /// structured log.
   public <T extends Throwable> void registerHandler(RouteBuilder routeBuilder,
       Class<T> exceptionType, WebhookErrorCode error) {
 

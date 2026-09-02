@@ -27,7 +27,10 @@ public enum WebhookErrorCode {
       LoggingLevel.ERROR, "Webhook configuration unavailable"),
 
   UNEXPECTED_ERROR("webhook_ingestion_unexpected_error", HttpStatus.INTERNAL_SERVER_ERROR,
-      LoggingLevel.ERROR, "Internal server error processing ingestion payload");
+      LoggingLevel.ERROR, "Internal server error processing ingestion payload"),
+
+  ENTITY_INGESTION_ERROR("webhook_ingestion_entity_error", HttpStatus.UNPROCESSABLE_CONTENT,
+      LoggingLevel.ERROR, "Error while ingesting the entity");
 
   private final String code;
   private final HttpStatus httpStatus;

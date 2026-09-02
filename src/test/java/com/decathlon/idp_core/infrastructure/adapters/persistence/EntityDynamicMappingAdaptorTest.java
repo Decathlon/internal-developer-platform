@@ -20,6 +20,7 @@ import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 
 import com.decathlon.idp_core.domain.model.entity_mapping.EntityDynamicMapping;
+import com.decathlon.idp_core.domain.model.entity_mapping.MappingAction;
 import com.decathlon.idp_core.domain.model.entity_template.EntityTemplate;
 import com.decathlon.idp_core.domain.port.EntityTemplateRepositoryPort;
 import com.decathlon.idp_core.infrastructure.adapters.persistence.mapper.EntityDynamicMappingPersistenceMapper;
@@ -201,6 +202,26 @@ class EntityDynamicMappingAdaptorTest {
       assertThat(jpa.getEntityTemplateId()).isEqualTo(templateId);
       verify(jpaEntityDynamicMappingRepository).save(jpa);
     }
+
+    @Test
+    @DisplayName("Should preserve the DELETE action when saving a mapping")
+    void shouldPreserveDeleteAction() {
+      EntityDynamicMapping domain = buildDomainMapping("delete-mapping",
+          MappingAction.DELETE_ENTITY);
+      EntityDynamicMappingJpaEntity jpa = buildJpaEntity("delete-mapping");
+      EntityDynamicMappingJpaEntity savedJpa = buildJpaEntity("delete-mapping");
+      UUID templateId = UUID.randomUUID();
+
+      when(entityTemplateRepositoryPort.findByIdentifier("web-service"))
+          .thenReturn(Optional.of(new EntityTemplate(templateId, "web-service", "Web Service", null,
+              List.of(), List.of())));
+      when(entityDynamicMappingPersistenceMapper.toJpa(domain)).thenReturn(jpa);
+      when(jpaEntityDynamicMappingRepository.save(jpa)).thenReturn(savedJpa);
+
+      EntityDynamicMapping result = adaptor.save(domain);
+
+      assertThat(result.action()).isEqualTo(MappingAction.DELETE_ENTITY);
+    }
   }
 
   // ---------------------------------------------------------------------------
@@ -268,11 +289,15 @@ class EntityDynamicMappingAdaptorTest {
     // name,
     // description, entityIdentifier, entityName, properties, relations
     return new EntityDynamicMappingJpaEntity(UUID.randomUUID(), identifier, UUID.randomUUID(), null,
-        ".filter", "name", "desc", ".id", ".title", "{}", "{}");
+        ".filter", MappingAction.UPDATE_ENTITY, "name", "desc", ".id", ".title", "{}", "{}");
   }
 
   private EntityDynamicMapping buildDomainMapping(String identifier) {
-    return new EntityDynamicMapping(UUID.randomUUID(), identifier, "web-service", ".filter", "name",
-        "desc", ".id", ".title", Map.of(), List.of());
+    return buildDomainMapping(identifier, MappingAction.UPDATE_ENTITY);
+  }
+
+  private EntityDynamicMapping buildDomainMapping(String identifier, MappingAction action) {
+    return new EntityDynamicMapping(UUID.randomUUID(), identifier, "web-service", ".filter", action,
+        "name", "desc", ".id", ".title", Map.of(), List.of());
   }
 }

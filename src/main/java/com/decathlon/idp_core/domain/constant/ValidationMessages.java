@@ -59,6 +59,7 @@ public class ValidationMessages {
   public static final String RELATION_TARGET_TEMPLATE_MISMATCH = "Relation '%s' targets entities with template '%s', but entity '%s' has template '%s'";
   public static final String RELATION_TARGET_TEMPLATE_CANNOT_CHANGE = "Cannot change target template of relation '%s' from '%s' to '%s'. Target template cannot be modified after creation. Please delete and recreate the relation instead.";
   public static final String RELATION_CANNOT_TARGET_ITSELF = "Relation '%s' cannot reference its own template '%s' as the target.";
+  public static final String TEMPLATE_IS_RELATION_TARGET = "Cannot delete template '%s': it is referenced as a target in another template's relation definition.";
 
   // Entity input validation messages
   public static final String ENTITY_NAME_MANDATORY = "Entity name is mandatory and cannot be blank";
@@ -130,6 +131,7 @@ public class ValidationMessages {
   public static final String ENTITY_DYNAMIC_MAPPING_FILTER_MANDATORY = "Webhook mapping filter is mandatory";
   public static final String ENTITY_DYNAMIC_MAPPING_IDENTIFIER_MANDATORY = "Entity dynamic mapping identifier is mandatory";
   public static final String ENTITY_DYNAMIC_MAPPING_NAME_MANDATORY = "Entity dynamic mapping name is mandatory";
+  public static final String ENTITY_DYNAMIC_MAPPING_ACTION_MANDATORY = "Entity dynamic mapping action is mandatory";
   public static final String ENTITY_DYNAMIC_MAPPING_TEMPLATE_IDENTIFIER_MANDATORY = "Entity Template Identifier is mandatory";
   public static final String ENTITY_DYNAMIC_MAPPING_ENTITY_MANDATORY = "Dynamic mapping entity section is mandatory";
   public static final String ENTITY_DYNAMIC_MAPPING_ENTITY_NAME_MANDATORY = "Entity name is mandatory";

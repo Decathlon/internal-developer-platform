@@ -1,5 +1,6 @@
 package com.decathlon.idp_core.domain.service.webhook;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.*;
@@ -19,6 +20,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import com.decathlon.idp_core.domain.exception.webhook.WebhookConnectorAlreadyExistException;
 import com.decathlon.idp_core.domain.exception.webhook.WebhookConnectorNotFoundException;
 import com.decathlon.idp_core.domain.model.entity_mapping.EntityDynamicMapping;
+import com.decathlon.idp_core.domain.model.entity_mapping.MappingAction;
 import com.decathlon.idp_core.domain.model.enums.WebhookSecurityType;
 import com.decathlon.idp_core.domain.model.inbound_connectors.webhook.WebhookConnector;
 import com.decathlon.idp_core.domain.model.inbound_connectors.webhook.WebhookSecurity;
@@ -96,6 +98,20 @@ class WebhookConnectorValidationServiceTest {
     }
 
     @Test
+    @DisplayName("Should validate a connector mapping with the UPDATE_RELATIONS action")
+    void shouldValidateMappingWithNonDefaultAction() {
+      WebhookConnector connectorToUpdate = buildWebhookConnectorWithMappings("github-dora", "Title",
+          MappingAction.UPDATE_RELATIONS);
+
+      service.validateWebhookConnectorForUpdate(connectorToUpdate);
+
+      verify(webhookConnectorMappingValidationService)
+          .validateMappings(connectorToUpdate.mappings());
+      assertThat(connectorToUpdate.mappings().getFirst().action())
+          .isEqualTo(MappingAction.UPDATE_RELATIONS);
+    }
+
+    @Test
     @DisplayName("Should skip mapping validation when connector has no mappings")
     void shouldSkipMappingValidationWhenNoMappings() {
       WebhookConnector connectorToUpdate = buildWebhookConnector("github-dora", "Title");
@@ -149,10 +165,15 @@ class WebhookConnectorValidationServiceTest {
   }
 
   private WebhookConnector buildWebhookConnectorWithMappings(String identifier, String title) {
+    return buildWebhookConnectorWithMappings(identifier, title, MappingAction.UPDATE_ENTITY);
+  }
+
+  private WebhookConnector buildWebhookConnectorWithMappings(String identifier, String title,
+      MappingAction action) {
     WebhookSecurity security = new WebhookSecurity(WebhookSecurityType.HMAC_SHA256,
         Map.of("header_name", "X-Hub-Signature-256", "secret_alias", "MY_SECRET"));
     EntityDynamicMapping mapping = new EntityDynamicMapping(UUID.randomUUID(), "my-mapping",
-        "web-service", ".filter", "name", "desc", ".id", ".name", Map.of(), List.of());
+        "web-service", ".filter", action, "name", "desc", ".id", ".name", Map.of(), List.of());
     return new WebhookConnector(UUID.randomUUID(), identifier, title, "desc", true,
         List.of(mapping), security);
   }
