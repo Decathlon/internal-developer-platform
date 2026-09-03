@@ -49,4 +49,5 @@ untracked
 Performance
 Envers
 untrusted
+Keycloak
 depends_on
