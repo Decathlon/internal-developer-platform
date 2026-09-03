@@ -11,9 +11,9 @@ public class PrincipalStrategiesConstants {
   public static final String NAME = "name";
   public static final String EMAIL = "email";
   public static final String GROUPS = "groups";
-  public final static String GRANT_TYPE = "grant_type";
-  public final static String GTY = "gty";
-  public final static String PREFERRED_USERNAME = "preferred_username";
-  public final static String ORIGIN = "origin";
-  public final static String CLIENT_CREDENTIALS = "client_credentials";
+  public static final String GRANT_TYPE = "grant_type";
+  public static final String GTY = "gty";
+  public static final String PREFERRED_USERNAME = "preferred_username";
+  public static final String ORIGIN = "origin";
+  public static final String CLIENT_CREDENTIALS = "client_credentials";
 }

@@ -739,6 +739,27 @@ class PrincipalExtractorTest {
     }
 
     @Test
+    @DisplayName("Should prefer configured preferred username for OAuth2User identifier")
+    void shouldPreferConfiguredPreferredUsernameForOAuth2UserIdentifier() {
+      // Given: OAuth2User exposing a provider-specific login
+      Map<String, Object> attributes = new HashMap<>();
+      attributes.put("sub", "user-123");
+      attributes.put("preferred_username", "john.doe");
+      attributes.put("name", "John Doe");
+
+      OAuth2User oauth2User = new DefaultOAuth2User(List.of(), attributes, "sub");
+      Authentication auth = mock(Authentication.class);
+      when(auth.getPrincipal()).thenReturn(oauth2User);
+
+      // When: Extract principal
+      PrincipalInfo principal = oauth2Strategy.extract(auth);
+
+      // Then: Identifier uses the human-friendly login
+      assertThat(principal.identifier()).isEqualTo("john.doe");
+      assertThat(principal.name()).isEqualTo("John Doe");
+    }
+
+    @Test
     @DisplayName("Should fall back to identifier when name not present in OAuth2User")
     void shouldFallbackToIdentifierWhenNameNotPresent() {
       // Given: OAuth2User without name attribute
@@ -773,6 +794,36 @@ class PrincipalExtractorTest {
 
       // Then: Email not in attributes
       assertThat(principal.attributes()).doesNotContainKey("email");
+    }
+
+    @Test
+    @DisplayName("Should support GitHub-style OAuth2 attributes for JIT provisioning")
+    void shouldSupportGithubStyleOAuth2AttributesForJitProvisioning() {
+      // Given: GitHub returns id/login and may omit the display name
+      Map<String, String> githubClaimMappings = new HashMap<>(authProperties.userClaimMappings());
+      githubClaimMappings.put("sub", "id");
+      githubClaimMappings.put("preferred_username", "login");
+      authProperties = new AuthenticationProperties(githubClaimMappings,
+          new ServiceAccountDetection(true, "legacy", "token_type", "m2m",
+              List.of("grant_type", "service_name", "client_id")),
+          List.of());
+      oauth2Strategy = new OAuth2UserPrincipalExtractionStrategy(authProperties);
+
+      Map<String, Object> attributes = new HashMap<>();
+      attributes.put("id", 42_4242L);
+      attributes.put("login", "octocat");
+
+      OAuth2User oauth2User = new DefaultOAuth2User(List.of(), attributes, "id");
+      Authentication auth = mock(Authentication.class);
+      when(auth.getPrincipal()).thenReturn(oauth2User);
+
+      // When: Extract principal
+      PrincipalInfo principal = oauth2Strategy.extract(auth);
+
+      // Then: JIT provisioning gets a stable identifier and usable display name
+      assertThat(principal.identifier()).isEqualTo("octocat");
+      assertThat(principal.name()).isEqualTo("octocat");
+      assertThat(principal.kind()).isEqualTo(PrincipalKind.HUMAN);
     }
 
     @Test

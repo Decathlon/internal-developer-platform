@@ -53,24 +53,21 @@ class MockFilterChainConfigTest {
     MockHttpServletRequest request = new MockHttpServletRequest();
     MockHttpServletResponse response = new MockHttpServletResponse();
 
-    FilterChain filterChain = new FilterChain() {
-      @Override
-      public void doFilter(ServletRequest request, ServletResponse response) {
-        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+    FilterChain filterChain = (req, res) -> {
+      Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+      assertThat(auth).isNotNull();
+      assertThat(auth).isInstanceOf(JwtAuthenticationToken.class);
 
-        assertThat(auth).isNotNull();
-        assertThat(auth).isInstanceOf(JwtAuthenticationToken.class);
+      JwtAuthenticationToken jwtAuth = (JwtAuthenticationToken) auth;
 
-        JwtAuthenticationToken jwtAuth = (JwtAuthenticationToken) auth;
+      assertThat(jwtAuth.getToken().getClaimAsString("sub")).isEqualTo("local-developer");
+      assertThat(jwtAuth.getToken().getClaimAsString("email")).isEqualTo("developer@local.dev");
+      assertThat(jwtAuth.getToken().getClaimAsString("client_id")).isEqualTo("client-id");
 
-        assertThat(jwtAuth.getToken().getClaimAsString("sub")).isEqualTo("local-developer");
-        assertThat(jwtAuth.getToken().getClaimAsString("email")).isEqualTo("developer@local.dev");
-        assertThat(jwtAuth.getToken().getClaimAsString("client_id")).isEqualTo("client-id");
-
-        assertThat(jwtAuth.getAuthorities()).extracting(GrantedAuthority::getAuthority)
-            .containsExactlyInAnyOrder("ROLE_USER", "ROLE_API_CLIENT");
-      }
+      assertThat(jwtAuth.getAuthorities()).extracting(GrantedAuthority::getAuthority)
+          .containsExactlyInAnyOrder("ROLE_USER", "ROLE_API_CLIENT");
     };
+
     SecurityContextHolder.clearContext();
 
     // When
@@ -141,13 +138,10 @@ class MockFilterChainConfigTest {
       MockHttpServletRequest request = new MockHttpServletRequest();
       MockHttpServletResponse response = new MockHttpServletResponse();
 
-      FilterChain filterChain = new FilterChain() {
-        @Override
-        public void doFilter(ServletRequest request, ServletResponse response) {
-          Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-          Jwt jwt = ((JwtAuthenticationToken) auth).getToken();
-          assertThat(jwt.getSubject()).isEqualTo("local-developer");
-        }
+      FilterChain filterChain = (req, res) -> {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        Jwt jwt = ((JwtAuthenticationToken) auth).getToken();
+        assertThat(jwt.getSubject()).isEqualTo("local-developer");
       };
 
       // When
@@ -165,13 +159,11 @@ class MockFilterChainConfigTest {
       MockHttpServletRequest request = new MockHttpServletRequest();
       MockHttpServletResponse response = new MockHttpServletResponse();
 
-      FilterChain filterChain = new FilterChain() {
-        @Override
-        public void doFilter(ServletRequest request, ServletResponse response) {
-          Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-          Jwt jwt = ((JwtAuthenticationToken) auth).getToken();
-          assertThat(jwt.getClaimAsString("client_id")).isEqualTo("client-id");
-        }
+      FilterChain filterChain = (req, res) -> {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        Jwt jwt = ((JwtAuthenticationToken) auth).getToken();
+        assertThat(jwt.getClaimAsString("client_id")).isEqualTo("client-id");
+
       };
 
       // When
@@ -189,13 +181,11 @@ class MockFilterChainConfigTest {
       MockHttpServletRequest request = new MockHttpServletRequest();
       MockHttpServletResponse response = new MockHttpServletResponse();
 
-      FilterChain filterChain = new FilterChain() {
-        @Override
-        public void doFilter(ServletRequest request, ServletResponse response) {
-          Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-          Jwt jwt = ((JwtAuthenticationToken) auth).getToken();
-          assertThat(jwt.getClaimAsString("scope")).isEqualTo("auth read write");
-        }
+      FilterChain filterChain = (req, res) -> {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        Jwt jwt = ((JwtAuthenticationToken) auth).getToken();
+        assertThat(jwt.getClaimAsString("scope")).isEqualTo("auth read write");
+
       };
 
       // When
@@ -213,14 +203,11 @@ class MockFilterChainConfigTest {
       MockHttpServletRequest request = new MockHttpServletRequest();
       MockHttpServletResponse response = new MockHttpServletResponse();
 
-      FilterChain filterChain = new FilterChain() {
-        @Override
-        public void doFilter(ServletRequest request, ServletResponse response) {
-          Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-          Jwt jwt = ((JwtAuthenticationToken) auth).getToken();
-          assertThat(jwt.getIssuedAt()).isNotNull();
-          assertThat(jwt.getExpiresAt()).isNotNull().isAfter(jwt.getIssuedAt());
-        }
+      FilterChain filterChain = (req, res) -> {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        Jwt jwt = ((JwtAuthenticationToken) auth).getToken();
+        assertThat(jwt.getIssuedAt()).isNotNull();
+        assertThat(jwt.getExpiresAt()).isNotNull().isAfter(jwt.getIssuedAt());
       };
 
       // When
@@ -238,15 +225,12 @@ class MockFilterChainConfigTest {
       MockHttpServletRequest request = new MockHttpServletRequest();
       MockHttpServletResponse response = new MockHttpServletResponse();
 
-      FilterChain filterChain = new FilterChain() {
-        @Override
-        public void doFilter(ServletRequest request, ServletResponse response) {
-          Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-          Jwt jwt = ((JwtAuthenticationToken) Objects.requireNonNull(auth)).getToken();
-          long expirationDurationSeconds = Objects.requireNonNull(jwt.getExpiresAt())
-              .getEpochSecond() - Objects.requireNonNull(jwt.getIssuedAt()).getEpochSecond();
-          assertThat(expirationDurationSeconds).isEqualTo(3600);
-        }
+      FilterChain filterChain = (req, res) -> {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        Jwt jwt = ((JwtAuthenticationToken) Objects.requireNonNull(auth)).getToken();
+        long expirationDurationSeconds = Objects.requireNonNull(jwt.getExpiresAt()).getEpochSecond()
+            - Objects.requireNonNull(jwt.getIssuedAt()).getEpochSecond();
+        assertThat(expirationDurationSeconds).isEqualTo(3600);
       };
 
       // When
@@ -261,14 +245,11 @@ class MockFilterChainConfigTest {
       MockHttpServletRequest request = new MockHttpServletRequest();
       MockHttpServletResponse response = new MockHttpServletResponse();
 
-      FilterChain filterChain = new FilterChain() {
-        @Override
-        public void doFilter(ServletRequest request, ServletResponse response) {
-          Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-          Jwt jwt = ((JwtAuthenticationToken) Objects.requireNonNull(auth)).getToken();
-          assertThat(jwt.getClaimAsString("user_id")).isEqualTo("dev-user-001");
-          assertThat(jwt.getClaimAsString("email")).isEqualTo("developer@local.dev");
-        }
+      FilterChain filterChain = (req, res) -> {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        Jwt jwt = ((JwtAuthenticationToken) Objects.requireNonNull(auth)).getToken();
+        assertThat(jwt.getClaimAsString("user_id")).isEqualTo("dev-user-001");
+        assertThat(jwt.getClaimAsString("email")).isEqualTo("developer@local.dev");
       };
 
       // When
@@ -283,14 +264,11 @@ class MockFilterChainConfigTest {
       MockHttpServletRequest request = new MockHttpServletRequest();
       MockHttpServletResponse response = new MockHttpServletResponse();
 
-      FilterChain filterChain = new FilterChain() {
-        @Override
-        public void doFilter(ServletRequest request, ServletResponse response) {
-          Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-          Jwt jwt = ((JwtAuthenticationToken) Objects.requireNonNull(auth)).getToken();
-          assertThat(jwt.getHeaders()).containsEntry("alg", "RS256");
-          assertThat(jwt.getHeaders()).containsEntry("typ", "JWT");
-        }
+      FilterChain filterChain = (req, res) -> {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        Jwt jwt = ((JwtAuthenticationToken) Objects.requireNonNull(auth)).getToken();
+        assertThat(jwt.getHeaders()).containsEntry("alg", "RS256");
+        assertThat(jwt.getHeaders()).containsEntry("typ", "JWT");
       };
       // When
       filter.doFilter(request, response, filterChain);
@@ -309,12 +287,8 @@ class MockFilterChainConfigTest {
       MockHttpServletRequest request = new MockHttpServletRequest();
       MockHttpServletResponse response = new MockHttpServletResponse();
 
-      FilterChain filterChain = new FilterChain() {
-        @Override
-        public void doFilter(ServletRequest request, ServletResponse response)
-            throws ServletException {
-          throw new ServletException("Test exception");
-        }
+      FilterChain filterChain = (req, res) -> {
+        throw new ServletException("Test exception");
       };
 
       // When & Then
@@ -333,11 +307,8 @@ class MockFilterChainConfigTest {
       MockHttpServletRequest request = new MockHttpServletRequest();
       MockHttpServletResponse response = new MockHttpServletResponse();
 
-      FilterChain filterChain = new FilterChain() {
-        @Override
-        public void doFilter(ServletRequest request, ServletResponse response) throws IOException {
-          throw new IOException("Test IO exception");
-        }
+      FilterChain filterChain = (req, res) -> {
+        throw new IOException("Test IO exception");
       };
 
       // When & Then
@@ -361,14 +332,11 @@ class MockFilterChainConfigTest {
       MockHttpServletRequest request = new MockHttpServletRequest();
       MockHttpServletResponse response = new MockHttpServletResponse();
 
-      FilterChain filterChain = new FilterChain() {
-        @Override
-        public void doFilter(ServletRequest request, ServletResponse response) {
-          Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-          assertThat(Objects.requireNonNull(auth).getAuthorities())
-              .extracting(GrantedAuthority::getAuthority)
-              .containsExactlyInAnyOrder("ROLE_USER", "ROLE_API_CLIENT");
-        }
+      FilterChain filterChain = (req, res) -> {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        assertThat(Objects.requireNonNull(auth).getAuthorities())
+            .extracting(GrantedAuthority::getAuthority)
+            .containsExactlyInAnyOrder("ROLE_USER", "ROLE_API_CLIENT");
       };
 
       // When
