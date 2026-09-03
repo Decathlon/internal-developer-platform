@@ -15,10 +15,13 @@ public enum WebhookErrorCode {
       "Webhook connector is disabled"),
 
   INVALID_COMPRESSED_PAYLOAD("invalid_compressed_payload", HttpStatus.BAD_REQUEST,
-      LoggingLevel.WARN, "Invalid or corrupted compressed payload"),
+      LoggingLevel.WARN, "Invalid, unsupported, or oversized compressed payload"),
 
   AUTHENTICATION_REQUIRED("webhook_authentication_failed", HttpStatus.UNAUTHORIZED,
       LoggingLevel.WARN, "Webhook authentication failed"),
+
+  AUTHENTICATION_FAILED("webhook_authentication_failed", HttpStatus.UNAUTHORIZED, LoggingLevel.WARN,
+      "Webhook authentication failed"),
 
   AUTHENTICATION_FORBIDDEN("webhook_forbidden", HttpStatus.FORBIDDEN, LoggingLevel.WARN,
       "Invalid credentials"),

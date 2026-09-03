@@ -5,6 +5,8 @@ import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.when;
 
+import java.net.InetAddress;
+import java.net.UnknownHostException;
 import java.time.Instant;
 import java.util.List;
 import java.util.Map;
@@ -39,6 +41,19 @@ class JwtBearerSecurityValidatorTest {
   @BeforeEach
   void setUp() {
     validator = new JwtBearerSecurityValidator(jwtDecoderProvider);
+  }
+
+  private JwtBearerSecurityValidator validatorWithPublicHostResolution() {
+    return new JwtBearerSecurityValidator(jwtDecoderProvider) {
+      @Override
+      protected InetAddress[] resolveHostAddresses(String host) {
+        try {
+          return new InetAddress[]{InetAddress.getByAddress(host, new byte[]{8, 8, 8, 8})};
+        } catch (UnknownHostException exception) {
+          throw new AssertionError(exception);
+        }
+      }
+    };
   }
 
   @Test
@@ -76,21 +91,72 @@ class JwtBearerSecurityValidatorTest {
     }
 
     @Test
-    @DisplayName("Should skip HTTPS validation when jwks_uri is an environment reference")
-    void shouldSkipSsrfValidationForEnvReference() {
-      Map<String, String> config = Map.of("jwks_uri", "${JWKS_URI}", "client_id_field", "email",
-          "client_id_values", "expected@example.com");
+    @DisplayName("Should reject jwks_uri when it is an environment reference")
+    void shouldRejectJwksUriWhenItIsAnEnvironmentReference() {
+      String envKey = "JWKS_URI";
+      System.setProperty(envKey, "https://issuer/.well-known/jwks.json");
 
-      assertThatCode(() -> validator.validateConfiguration(config)).doesNotThrowAnyException();
+      try {
+        Map<String, String> config = Map.of("jwks_uri", "${JWKS_URI}", "client_id_field", "email",
+            "client_id_values", "expected@example.com");
+
+        assertThatThrownBy(() -> validator.validateConfiguration(config)).isInstanceOf(
+            com.decathlon.idp_core.domain.exception.webhook.WebhookSecurityConfigurationException.class)
+            .hasMessageContaining("runtime environment references are not supported");
+      } finally {
+        System.clearProperty(envKey);
+      }
+    }
+
+    @Test
+    @DisplayName("Should throw when jwks_uri points to localhost")
+    void shouldThrowWhenJwksUriPointsToLocalhost() {
+      Map<String, String> config = Map.of("jwks_uri", "https://localhost/.well-known/jwks.json",
+          "client_id_field", "email", "client_id_values", "expected@example.com");
+
+      assertThatThrownBy(() -> validator.validateConfiguration(config)).isInstanceOf(
+          com.decathlon.idp_core.domain.exception.webhook.WebhookSecurityConfigurationException.class)
+          .hasMessageContaining("localhost");
+    }
+
+    @Test
+    @DisplayName("Should throw when jwks_uri points to a private IP address")
+    void shouldThrowWhenJwksUriPointsToPrivateIpAddress() {
+      Map<String, String> config = Map.of("jwks_uri", "https://192.168.1.10/.well-known/jwks.json",
+          "client_id_field", "email", "client_id_values", "expected@example.com");
+
+      assertThatThrownBy(() -> validator.validateConfiguration(config)).isInstanceOf(
+          com.decathlon.idp_core.domain.exception.webhook.WebhookSecurityConfigurationException.class)
+          .hasMessageContaining("private and link-local hosts");
+    }
+
+    @Test
+    @DisplayName("Should throw when a domain name resolves to a loopback address")
+    void shouldThrowWhenJwksUriDomainResolvesToLoopbackAddress() {
+      JwtBearerSecurityValidator loopingValidator = new JwtBearerSecurityValidator(
+          jwtDecoderProvider) {
+        @Override
+        protected InetAddress[] resolveHostAddresses(String host) throws UnknownHostException {
+          return new InetAddress[]{InetAddress.getByName("127.0.0.1")};
+        }
+      };
+
+      Map<String, String> config = Map.of("jwks_uri", "https://jwks.internal.example/keys",
+          "client_id_field", "email", "client_id_values", "expected@example.com");
+
+      assertThatThrownBy(() -> loopingValidator.validateConfiguration(config)).isInstanceOf(
+          com.decathlon.idp_core.domain.exception.webhook.WebhookSecurityConfigurationException.class)
+          .hasMessageContaining("localhost, loopback, private and link-local hosts");
     }
 
     @Test
     @DisplayName("Should throw when client_id_field is missing from config")
     void shouldThrowWhenClientIdFieldMissing() {
+      JwtBearerSecurityValidator safeValidator = validatorWithPublicHostResolution();
       Map<String, String> config = Map.of("jwks_uri", "https://issuer/.well-known/jwks.json",
           "client_id_values", "expected@example.com");
 
-      assertThatThrownBy(() -> validator.validateConfiguration(config)).isInstanceOf(
+      assertThatThrownBy(() -> safeValidator.validateConfiguration(config)).isInstanceOf(
           com.decathlon.idp_core.domain.exception.webhook.WebhookSecurityConfigurationException.class)
           .hasMessageContaining("client_id_field").hasMessageContaining("email")
           .hasMessageContaining("azp");
@@ -99,10 +165,11 @@ class JwtBearerSecurityValidatorTest {
     @Test
     @DisplayName("Should throw when client_id_values is missing from config")
     void shouldThrowWhenClientIdValuesMissing() {
+      JwtBearerSecurityValidator safeValidator = validatorWithPublicHostResolution();
       Map<String, String> config = Map.of("jwks_uri", "https://issuer/.well-known/jwks.json",
           "client_id_field", "email");
 
-      assertThatThrownBy(() -> validator.validateConfiguration(config)).isInstanceOf(
+      assertThatThrownBy(() -> safeValidator.validateConfiguration(config)).isInstanceOf(
           com.decathlon.idp_core.domain.exception.webhook.WebhookSecurityConfigurationException.class)
           .hasMessageContaining("client_id_values");
     }
@@ -110,10 +177,11 @@ class JwtBearerSecurityValidatorTest {
     @Test
     @DisplayName("Should throw when client_id_values is an env reference")
     void shouldThrowWhenClientIdValuesIsEnvironmentReference() {
+      JwtBearerSecurityValidator safeValidator = validatorWithPublicHostResolution();
       Map<String, String> config = Map.of("jwks_uri", "https://issuer/.well-known/jwks.json",
           "client_id_field", "email", "client_id_values", "env:JWT_ALLOWED_CLIENTS");
 
-      assertThatThrownBy(() -> validator.validateConfiguration(config)).isInstanceOf(
+      assertThatThrownBy(() -> safeValidator.validateConfiguration(config)).isInstanceOf(
           com.decathlon.idp_core.domain.exception.webhook.WebhookSecurityConfigurationException.class)
           .hasMessageContaining("runtime environment references are not supported");
     }
@@ -121,10 +189,11 @@ class JwtBearerSecurityValidatorTest {
     @Test
     @DisplayName("Should throw when client_id_field is neither azp nor email")
     void shouldThrowWhenClientIdFieldIsUnsupported() {
+      JwtBearerSecurityValidator safeValidator = validatorWithPublicHostResolution();
       Map<String, String> config = Map.of("jwks_uri", "https://issuer/.well-known/jwks.json",
           "client_id_field", "sub", "client_id_values", "expected@example.com");
 
-      assertThatThrownBy(() -> validator.validateConfiguration(config)).isInstanceOf(
+      assertThatThrownBy(() -> safeValidator.validateConfiguration(config)).isInstanceOf(
           com.decathlon.idp_core.domain.exception.webhook.WebhookSecurityConfigurationException.class)
           .hasMessageContaining("azp").hasMessageContaining("email");
     }
@@ -132,20 +201,22 @@ class JwtBearerSecurityValidatorTest {
     @Test
     @DisplayName("Should accept missing audience because it is optional")
     void shouldAcceptMissingAudience() {
+      JwtBearerSecurityValidator safeValidator = validatorWithPublicHostResolution();
       Map<String, String> config = Map.of("jwks_uri", "https://issuer/.well-known/jwks.json",
           "client_id_field", "email", "client_id_values", "expected@example.com");
 
-      assertThatCode(() -> validator.validateConfiguration(config)).doesNotThrowAnyException();
+      assertThatCode(() -> safeValidator.validateConfiguration(config)).doesNotThrowAnyException();
     }
 
     @Test
     @DisplayName("Should throw when expected_audience is an env reference")
     void shouldThrowWhenAudienceIsEnvironmentReference() {
+      JwtBearerSecurityValidator safeValidator = validatorWithPublicHostResolution();
       Map<String, String> config = Map.of("jwks_uri", "https://issuer/.well-known/jwks.json",
           "client_id_field", "email", "client_id_values", "expected@example.com",
           "expected_audience", "env:JWT_AUDIENCE");
 
-      assertThatThrownBy(() -> validator.validateConfiguration(config)).isInstanceOf(
+      assertThatThrownBy(() -> safeValidator.validateConfiguration(config)).isInstanceOf(
           com.decathlon.idp_core.domain.exception.webhook.WebhookSecurityConfigurationException.class)
           .hasMessageContaining("Invalid expected_audience");
     }
@@ -169,6 +240,31 @@ class JwtBearerSecurityValidatorTest {
       when(jwtDecoder.decode(token)).thenReturn(jwt);
 
       assertThatCode(() -> validator.validateRequest(headers, new byte[0], config))
+          .doesNotThrowAnyException();
+    }
+
+    @Test
+    @DisplayName("Should not revalidate jwks_uri on every request once configuration is valid")
+    void shouldNotRevalidateJwksUriAtRuntime() {
+      JwtBearerSecurityValidator runtimeValidator = new JwtBearerSecurityValidator(
+          jwtDecoderProvider) {
+        @Override
+        protected InetAddress[] resolveHostAddresses(String host) {
+          throw new AssertionError("JWKS host validation should not run during request validation");
+        }
+      };
+
+      when(jwtDecoderProvider.get("https://issuer/.well-known/jwks.json")).thenReturn(jwtDecoder);
+      Map<String, String> config = Map.of("jwks_uri", "https://issuer/.well-known/jwks.json",
+          "client_id_field", "email", "client_id_values",
+          "ps-fb25-product-events-produ@cpe-idp-stg-337o.iam.gserviceaccount.com");
+      String token = "signed-token";
+      Map<String, Object> headers = Map.of("Authorization", "Bearer " + token);
+      Jwt jwt = jwtWithClaim("email",
+          "ps-fb25-product-events-produ@cpe-idp-stg-337o.iam.gserviceaccount.com");
+      when(jwtDecoder.decode(token)).thenReturn(jwt);
+
+      assertThatCode(() -> runtimeValidator.validateRequest(headers, new byte[0], config))
           .doesNotThrowAnyException();
     }
 

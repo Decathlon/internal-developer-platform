@@ -1,6 +1,8 @@
 package com.decathlon.idp_core.infrastructure.adapters.webhook.security;
 
+import java.net.InetAddress;
 import java.net.URI;
+import java.net.UnknownHostException;
 import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -51,9 +53,12 @@ public class JwtBearerSecurityValidator implements WebhookSecurityStrategy {
       throw new WebhookSecurityConfigurationException("Invalid jwks_uri for JWT_BEARER security");
     }
 
-    if (!WebhookSecurityConfigurationUtils.isEnvironmentReference(jwksUriValue)) {
-      validateJwksUri(jwksUriValue);
+    if (WebhookSecurityConfigurationUtils.isEnvironmentReference(jwksUriValue)) {
+      throw new WebhookSecurityConfigurationException(
+          "Invalid jwks_uri for JWT_BEARER security: runtime environment references are not supported");
     }
+
+    validateJwksUri(jwksUriValue);
 
     String clientIdField = resolveRequiredClientIdField(config);
     if (WebhookSecurityConfigurationUtils.isEnvironmentReference(clientIdField)) {
@@ -99,10 +104,6 @@ public class JwtBearerSecurityValidator implements WebhookSecurityStrategy {
     String jwksUriValue = WebhookSecurityConfigurationUtils.required(config,
         KEY_JWKS_URI_SNAKE_CASE, KEY_JWKS_URI_CAMEL_CASE);
 
-    if (WebhookSecurityConfigurationUtils.isEnvironmentReference(jwksUriValue)) {
-      jwksUriValue = WebhookSecurityConfigurationUtils.resolveRuntimeSecret(jwksUriValue);
-    }
-
     String clientIdField = resolveRequiredClientIdField(config);
     String clientIdValues = WebhookSecurityConfigurationUtils.required(config,
         KEY_CLIENT_ID_VALUES_SNAKE_CASE, KEY_CLIENT_ID_VALUES_CAMEL_CASE);
@@ -136,10 +137,8 @@ public class JwtBearerSecurityValidator implements WebhookSecurityStrategy {
   }
 
   /// Validates the jwks_uri to prevent SSRF attacks.
-  ///
-  /// Enforces HTTPS-only to ensure the JWKS endpoint is reachable over an
-  /// encrypted
-  /// and authenticated channel, blocking plaintext HTTP and non-URL values.
+  /// Enforces HTTPS-only and blocks internal, private, link-local, and loopback
+  /// IP destinations.
   private void validateJwksUri(String jwksUri) {
     URI uri;
     try {
@@ -158,6 +157,33 @@ public class JwtBearerSecurityValidator implements WebhookSecurityStrategy {
       throw new WebhookSecurityConfigurationException(
           "Invalid jwks_uri for JWT_BEARER security: host is missing");
     }
+
+    if (isPrivateOrLoopbackHost(uri.getHost())) {
+      throw new WebhookSecurityConfigurationException(
+          "Invalid jwks_uri for JWT_BEARER security: localhost, loopback, private and link-local hosts are not allowed");
+    }
+  }
+
+  private boolean isPrivateOrLoopbackHost(String host) {
+    String normalizedHost = host.trim();
+
+    try {
+      for (InetAddress address : resolveHostAddresses(normalizedHost)) {
+        if (address.isAnyLocalAddress() || address.isLoopbackAddress()
+            || address.isLinkLocalAddress() || address.isSiteLocalAddress()
+            || address.isMulticastAddress()) {
+          return true;
+        }
+      }
+      return false;
+    } catch (UnknownHostException _) {
+      throw new WebhookSecurityConfigurationException(
+          "Invalid jwks_uri for JWT_BEARER security: host cannot be resolved");
+    }
+  }
+
+  protected InetAddress[] resolveHostAddresses(String host) throws UnknownHostException {
+    return InetAddress.getAllByName(host);
   }
 
   private String resolveRequiredClientIdField(Map<String, String> config) {

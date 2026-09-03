@@ -10,6 +10,7 @@ import com.decathlon.idp_core.domain.exception.entity.EntityValidationException;
 import com.decathlon.idp_core.domain.exception.entity_dynamic_mapping.EntityDynamicMappingConfigurationException;
 import com.decathlon.idp_core.domain.exception.entity_dynamic_mapping.EntityDynamicMappingJsltErrorException;
 import com.decathlon.idp_core.domain.exception.entity_dynamic_mapping.ExpressionEvaluationFailedException;
+import com.decathlon.idp_core.domain.exception.webhook.WebhookAuthenticationException;
 import com.decathlon.idp_core.domain.exception.webhook.WebhookConfigurationMissingException;
 import com.decathlon.idp_core.domain.exception.webhook.WebhookConnectorNotFoundException;
 import com.decathlon.idp_core.domain.exception.webhook.WebhookDisabledException;
@@ -39,6 +40,8 @@ public class WebhookExceptionRouteBuilder {
         WebhookErrorCode.CONFIGURATION_MISSING);
     handlerHelper.registerHandler(routeBuilder, WebhookDecodingException.class,
         WebhookErrorCode.INVALID_COMPRESSED_PAYLOAD);
+    handlerHelper.registerHandler(routeBuilder, WebhookAuthenticationException.class,
+        WebhookErrorCode.AUTHENTICATION_FAILED);
     handlerHelper.registerHandler(routeBuilder, WebhookAuthUnauthorizedException.class,
         WebhookErrorCode.AUTHENTICATION_REQUIRED);
     handlerHelper.registerHandler(routeBuilder, WebhookAuthForbiddenException.class,

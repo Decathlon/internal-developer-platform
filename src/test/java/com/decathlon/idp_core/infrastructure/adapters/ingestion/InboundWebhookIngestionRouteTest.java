@@ -405,7 +405,7 @@ class InboundWebhookIngestionRouteTest extends AbstractIntegrationTest {
     assertEquals(HTTP_BAD_REQUEST, exchange.getMessage().getHeader(Exchange.HTTP_RESPONSE_CODE));
     assertEquals("application/json", exchange.getMessage().getHeader(Exchange.CONTENT_TYPE));
     assertJsonErrorResponse(exchange, "invalid_compressed_payload",
-        "Invalid or corrupted compressed payload");
+        "Invalid, unsupported, or oversized compressed payload");
   }
 
   @Test
@@ -416,7 +416,7 @@ class InboundWebhookIngestionRouteTest extends AbstractIntegrationTest {
     assertEquals(HTTP_BAD_REQUEST, exchange.getMessage().getHeader(Exchange.HTTP_RESPONSE_CODE));
     assertEquals("application/json", exchange.getMessage().getHeader(Exchange.CONTENT_TYPE));
     assertJsonErrorResponse(exchange, "invalid_compressed_payload",
-        "Invalid or corrupted compressed payload");
+        "Invalid, unsupported, or oversized compressed payload");
   }
 
   private static Stream<Arguments> successDecodingCases() throws Exception {
