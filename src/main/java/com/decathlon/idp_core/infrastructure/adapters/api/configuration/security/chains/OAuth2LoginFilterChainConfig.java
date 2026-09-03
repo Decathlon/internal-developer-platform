@@ -33,7 +33,7 @@ public class OAuth2LoginFilterChainConfig {
   public SecurityFilterChain oauth2LoginSecurityFilterChain(HttpSecurity http) {
     http.sessionManagement(
         session -> session.sessionCreationPolicy(SessionCreationPolicy.IF_REQUIRED))
-        .cors(withDefaults()).csrf(csrf -> csrf.disable())
+        .cors(withDefaults()).csrf(withDefaults())
         .authorizeHttpRequests(auth -> auth.requestMatchers("/oauth2/**", "/login/**").permitAll()
             .requestMatchers("/api/v1/**").fullyAuthenticated().anyRequest().authenticated())
         .oauth2Login(withDefaults())
