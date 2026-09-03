@@ -22,6 +22,12 @@ import org.springframework.security.web.SecurityFilterChain;
 @ConditionalOnProperty(name = "app.security.mock-enabled", havingValue = "false", matchIfMissing = true)
 public class IngestionSecurityConfiguration {
 
+  private final IngestionProperties ingestionProperties;
+
+  public IngestionSecurityConfiguration(IngestionProperties ingestionProperties) {
+    this.ingestionProperties = ingestionProperties;
+  }
+
   // Configures a dedicated filter chain for webhook ingestion.
   // The chain is scoped to `/webhooks/**`, allows unauthenticated access at
   // Spring
@@ -29,9 +35,11 @@ public class IngestionSecurityConfiguration {
   @Bean
   @Order(1)
   public SecurityFilterChain ingestionSecurityFilterChain(HttpSecurity http) {
-    http.securityMatcher("/webhooks/**")
+    String webhookMatcher = ingestionProperties.basePath() + "/**";
+
+    http.securityMatcher(webhookMatcher)
         .authorizeHttpRequests(authorize -> authorize.anyRequest().permitAll())
-        .csrf(csrf -> csrf.ignoringRequestMatchers("/webhooks/**"));
+        .csrf(csrf -> csrf.ignoringRequestMatchers(webhookMatcher));
 
     return http.build();
   }

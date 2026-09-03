@@ -23,6 +23,7 @@ import com.decathlon.idp_core.AbstractIntegrationTest;
 import com.decathlon.idp_core.domain.constant.ValidationMessages;
 import com.decathlon.idp_core.domain.exception.webhook.WebhookConnectorConfigurationException;
 import com.decathlon.idp_core.infrastructure.adapters.api.dto.out.entity_dynamic_mapping.InboundWebhookEntityMappingDtoOut;
+import com.decathlon.idp_core.infrastructure.adapters.ingestion.exception.WebhookAuthForbiddenException;
 import com.decathlon.idp_core.infrastructure.adapters.persistence.mapper.WebhookMappingLinkPersistenceMapper;
 import com.decathlon.idp_core.infrastructure.adapters.persistence.model.webhook.WebhookMappingLinkJpaEntity;
 
@@ -48,6 +49,25 @@ class InboundWebhookManagementControllerTest extends AbstractIntegrationTest {
   private static final String WEBHOOK_PATH = "/api/v1/inbound_webhooks";
   private static final String ENTITY_DYNAMIC_MAPPING_PATH = "/api/v1/entity_dynamic_mappings";
   private static final String JSON_PATH = "integration_test/json/webhook/v1/";
+
+  // Secret alias env vars referenced across all tests — must exist for
+  // validateSecretAliasExists to pass at creation time
+  private static final String[] TEST_SECRET_ALIAS_KEYS = {"MY_WEBHOOK_SECRET", "MY_TOKEN",
+      "TOKEN_SECRET", "BASIC_PASS", "BASIC_SECRET", "MY_SECRET"};
+
+  @BeforeEach
+  void setUpSecretAliasEnvVars() {
+    for (String key : TEST_SECRET_ALIAS_KEYS) {
+      System.setProperty(key, "test-value-for-" + key);
+    }
+  }
+
+  @AfterEach
+  void clearSecretAliasEnvVars() {
+    for (String key : TEST_SECRET_ALIAS_KEYS) {
+      System.clearProperty(key);
+    }
+  }
 
   /// Creates an entity dynamic mapping via API required for webhook connector
   /// creation.
@@ -144,10 +164,9 @@ class InboundWebhookManagementControllerTest extends AbstractIntegrationTest {
       mockMvc.perform(get(WEBHOOK_PATH).accept(APPLICATION_JSON)).andExpect(status().isOk())
           .andExpect(content().contentType(APPLICATION_JSON))
           .andExpect(jsonPath("$.content").isArray())
-          .andExpect(jsonPath("$.page.total_elements").value(3))
-          .andExpect(jsonPath("$.content[0].identifier").value("github-dora-connector"))
-          .andExpect(jsonPath("$.content[1].identifier").value("public-connector"))
-          .andExpect(jsonPath("$.content[2].identifier").value("token-connector"));
+          .andExpect(jsonPath("$.page.total_elements").value(4))
+          .andExpect(jsonPath("$.content[*].identifier", containsInAnyOrder("github-dora-connector",
+              "github-dora-connector-success", "public-connector", "token-connector")));
     }
   }
 
@@ -403,17 +422,20 @@ class InboundWebhookManagementControllerTest extends AbstractIntegrationTest {
 
     @Test
     @WithMockUser
-    @DisplayName("Should return 400 when name is blank")
-    void postWebhook_400_title_blank() throws Exception {
+    @DisplayName("Should return 400 when secret_alias references an env variable that does not exist")
+    void postWebhook_400_secret_alias_env_var_not_set() throws Exception {
       var payload = """
           {
-            "identifier": "blank-name-webhook",
-            "name": "   ",
-            "enabled": true,
+            "identifier": "webhook-missing-env",
+            "name": "Webhook Missing Env",
+            "enabled": false,
             "mapping_identifiers": [],
             "security": {
-              "type": "NONE",
-              "config": {}
+              "type": "STATIC_TOKEN",
+              "config": {
+                "header_name": "X-Token",
+                "secret_alias": "THIS_ENV_VAR_DOES_NOT_EXIST_AT_ALL"
+              }
             }
           }
           """;
@@ -421,7 +443,9 @@ class InboundWebhookManagementControllerTest extends AbstractIntegrationTest {
       mockMvc
           .perform(MockMvcRequestBuilders.post(WEBHOOK_PATH).contentType(APPLICATION_JSON)
               .accept(APPLICATION_JSON).with(csrf()).content(payload))
-          .andExpect(status().isBadRequest()).andExpect(jsonPath("$.error").value("BAD_REQUEST"));
+          .andExpect(status().isBadRequest()).andExpect(jsonPath("$.error").value("BAD_REQUEST"))
+          .andExpect(jsonPath("$.error_description")
+              .value(containsString("THIS_ENV_VAR_DOES_NOT_EXIST_AT_ALL")));
     }
 
     @Test
@@ -726,6 +750,19 @@ class InboundWebhookManagementControllerTest extends AbstractIntegrationTest {
 
       assertInstanceOf(RuntimeException.class, exception);
       assertEquals("Webhook connector name is mandatory", exception.getMessage());
+    }
+
+    @Test
+    @DisplayName("WebhookAuthForbiddenException should expose message and cause")
+    void webhookAuthForbiddenException_shouldExposeMessageAndCause() {
+      IllegalArgumentException cause = new IllegalArgumentException("root-cause");
+      WebhookAuthForbiddenException exception = new WebhookAuthForbiddenException(
+          "Basic credentials were rejected", cause);
+
+      assertInstanceOf(RuntimeException.class, exception);
+      assertEquals("Basic credentials were rejected", exception.getMessage());
+      assertSame(cause, exception.getCause());
+      assertEquals("root-cause", exception.getCause().getMessage());
     }
 
     @Test
@@ -1196,7 +1233,11 @@ class InboundWebhookManagementControllerTest extends AbstractIntegrationTest {
     @DisplayName("JWT_BEARER — Should create with valid jwks_uri")
     void security_jwt_bearer_valid_201() throws Exception {
       var config = """
-          { "jwks_uri": "https://auth.example.com/.well-known/jwks.json" }
+          {
+            "jwks_uri": "https://www.googleapis.com/oauth2/v3/certs",
+            "client_id_field": "email",
+            "client_id_values": "ps-fb25-product-events-produ@cpe-idp-stg-337o.iam.gserviceaccount.com"
+          }
           """;
       mockMvc
           .perform(MockMvcRequestBuilders.post(WEBHOOK_PATH).contentType(APPLICATION_JSON)
@@ -1208,15 +1249,19 @@ class InboundWebhookManagementControllerTest extends AbstractIntegrationTest {
 
     @Test
     @WithMockUser
-    @DisplayName("JWT_BEARER — Should create with jwks_uri as environment reference")
-    void security_jwt_bearer_env_reference_201() throws Exception {
+    @DisplayName("JWT_BEARER — Should create with jwks_uri stored as a literal HTTPS URL")
+    void security_jwt_bearer_literal_jwks_uri_201() throws Exception {
       var config = """
-          { "jwks_uri": "${JWKS_URI}" }
+          {
+            "jwks_uri": "https://www.googleapis.com/oauth2/v3/certs",
+            "client_id_field": "email",
+            "client_id_values": "ps-fb25-product-events-produ@cpe-idp-stg-337o.iam.gserviceaccount.com"
+          }
           """;
       mockMvc
           .perform(MockMvcRequestBuilders.post(WEBHOOK_PATH).contentType(APPLICATION_JSON)
-              .accept(APPLICATION_JSON).with(csrf())
-              .content(buildSecurityPayload("sec-jwt-env", "JWT Env", "JWT_BEARER", config)))
+              .accept(APPLICATION_JSON).with(csrf()).content(
+                  buildSecurityPayload("sec-jwt-literal", "JWT Literal", "JWT_BEARER", config)))
           .andExpect(status().isCreated())
           .andExpect(jsonPath("$.security.type").value("JWT_BEARER"));
     }
