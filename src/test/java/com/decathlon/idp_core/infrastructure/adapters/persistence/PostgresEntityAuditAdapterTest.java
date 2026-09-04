@@ -1043,5 +1043,132 @@ class PostgresEntityAuditAdapterTest {
             .isEmpty();
       }
     }
+
+    @Test
+    @DisplayName("Should merge revisions for all matching entity UUIDs")
+    void shouldMergeRevisionsForAllMatchingEntityIds() {
+      UUID firstEntityId = UUID.randomUUID();
+      UUID secondEntityId = UUID.randomUUID();
+      String templateIdentifier = "web-service";
+      String entityIdentifier = "web-api";
+
+      EntityJpaEntity firstEntity = mock(EntityJpaEntity.class);
+      when(firstEntity.getId()).thenReturn(firstEntityId);
+      EntityJpaEntity secondEntity = mock(EntityJpaEntity.class);
+      when(secondEntity.getId()).thenReturn(secondEntityId);
+
+      CustomRevisionEntity firstRevisionEntity = mock(CustomRevisionEntity.class);
+      when(firstRevisionEntity.getRev()).thenReturn(3L);
+      when(firstRevisionEntity.getRevisionTimestamp()).thenReturn(3_000L);
+      when(firstRevisionEntity.getAuthId()).thenReturn("first-user");
+      CustomRevisionEntity secondRevisionEntity = mock(CustomRevisionEntity.class);
+      when(secondRevisionEntity.getRev()).thenReturn(5L);
+      when(secondRevisionEntity.getRevisionTimestamp()).thenReturn(5_000L);
+      when(secondRevisionEntity.getAuthId()).thenReturn("second-user");
+
+      Object[] firstRevision = {firstEntity, firstRevisionEntity, RevisionType.ADD};
+      Object[] secondRevision = {secondEntity, secondRevisionEntity, RevisionType.MOD};
+
+      try (
+          MockedStatic<org.hibernate.envers.AuditReaderFactory> auditReaderFactoryMock = org.mockito.Mockito
+              .mockStatic(org.hibernate.envers.AuditReaderFactory.class)) {
+        auditReaderFactoryMock
+            .when(() -> org.hibernate.envers.AuditReaderFactory.get(entityManager))
+            .thenReturn(auditReader);
+        when(auditReader.createQuery()).thenReturn(auditQueryCreator);
+        when(auditQueryCreator.forRevisionsOfEntity(EntityJpaEntity.class, false, true))
+            .thenReturn(auditQuery);
+        when(auditQuery.add(any())).thenReturn(auditQuery);
+        when(auditQuery.addOrder(any())).thenReturn(auditQuery);
+        when(auditQuery.getResultList())
+            .thenReturn(List.<Object[]>of(secondRevision, firstRevision));
+
+        EntityJpaEntity firstHistoricalEntity = mock(EntityJpaEntity.class);
+        when(firstHistoricalEntity.getId()).thenReturn(firstEntityId);
+        when(firstHistoricalEntity.getTemplateIdentifier()).thenReturn(templateIdentifier);
+        when(firstHistoricalEntity.getIdentifier()).thenReturn(entityIdentifier);
+        when(firstHistoricalEntity.getProperties()).thenReturn(Set.of());
+        when(firstHistoricalEntity.getRelations()).thenReturn(Set.of());
+        EntityJpaEntity secondHistoricalEntity = mock(EntityJpaEntity.class);
+        when(secondHistoricalEntity.getId()).thenReturn(secondEntityId);
+        when(secondHistoricalEntity.getTemplateIdentifier()).thenReturn(templateIdentifier);
+        when(secondHistoricalEntity.getIdentifier()).thenReturn(entityIdentifier);
+        when(secondHistoricalEntity.getProperties()).thenReturn(Set.of());
+        when(secondHistoricalEntity.getRelations()).thenReturn(Set.of());
+        when(auditReader.find(EntityJpaEntity.class, firstEntityId, 3L))
+            .thenReturn(firstHistoricalEntity);
+        when(auditReader.find(EntityJpaEntity.class, secondEntityId, 5L))
+            .thenReturn(secondHistoricalEntity);
+
+        List<EntityAuditInfo> result = adapter.getEntityAuditHistory(templateIdentifier,
+            entityIdentifier);
+
+        assertThat(result).extracting(EntityAuditInfo::revisionNumber).containsExactly(5L, 3L);
+        assertThat(result).extracting(EntityAuditInfo::modifiedBy).containsExactly("second-user",
+            "first-user");
+      }
+    }
+
+    @Test
+    @DisplayName("Should return deleted revision without snapshot when no previous revision exists")
+    void shouldHandleDeletedRevisionWithoutPreviousRevision() {
+      UUID entityId = UUID.randomUUID();
+      EntityJpaEntity entity = mock(EntityJpaEntity.class);
+      when(entity.getId()).thenReturn(entityId);
+      CustomRevisionEntity revisionEntity = mock(CustomRevisionEntity.class);
+      when(revisionEntity.getRev()).thenReturn(1L);
+      when(revisionEntity.getRevisionTimestamp()).thenReturn(1_000L);
+      Object[] deletedRevision = {entity, revisionEntity, RevisionType.DEL};
+
+      try (
+          MockedStatic<org.hibernate.envers.AuditReaderFactory> auditReaderFactoryMock = org.mockito.Mockito
+              .mockStatic(org.hibernate.envers.AuditReaderFactory.class)) {
+        auditReaderFactoryMock
+            .when(() -> org.hibernate.envers.AuditReaderFactory.get(entityManager))
+            .thenReturn(auditReader);
+        when(auditReader.createQuery()).thenReturn(auditQueryCreator);
+        when(auditQueryCreator.forRevisionsOfEntity(EntityJpaEntity.class, false, true))
+            .thenReturn(auditQuery);
+        when(auditQuery.add(any())).thenReturn(auditQuery);
+        when(auditQuery.addOrder(any())).thenReturn(auditQuery);
+        when(auditQuery.getResultList()).thenReturn(List.<Object[]>of(deletedRevision));
+
+        List<EntityAuditInfo> result = adapter.getEntityAuditHistory("web-service", "deleted");
+
+        assertThat(result).singleElement().satisfies(auditInfo -> {
+          assertThat(auditInfo.revisionType()).isEqualTo("DELETED");
+          assertThat(auditInfo.snapshot()).isNull();
+        });
+        verify(auditReader, org.mockito.Mockito.never()).find(EntityJpaEntity.class, entityId, 1L);
+      }
+    }
+
+    @Test
+    @DisplayName("Should ignore malformed audit rows when resolving entity UUIDs")
+    void shouldIgnoreMalformedAuditRows() {
+      EntityJpaEntity entity = mock(EntityJpaEntity.class);
+      CustomRevisionEntity revisionEntity = mock(CustomRevisionEntity.class);
+      Object[] tooShort = {entity, revisionEntity};
+      Object[] invalidRevisionEntity = {entity, "invalid-revision", RevisionType.ADD};
+      Object[] invalidRevisionType = {entity, revisionEntity, "invalid-type"};
+
+      try (
+          MockedStatic<org.hibernate.envers.AuditReaderFactory> auditReaderFactoryMock = org.mockito.Mockito
+              .mockStatic(org.hibernate.envers.AuditReaderFactory.class)) {
+        auditReaderFactoryMock
+            .when(() -> org.hibernate.envers.AuditReaderFactory.get(entityManager))
+            .thenReturn(auditReader);
+        when(auditReader.createQuery()).thenReturn(auditQueryCreator);
+        when(auditQueryCreator.forRevisionsOfEntity(EntityJpaEntity.class, false, true))
+            .thenReturn(auditQuery);
+        when(auditQuery.add(any())).thenReturn(auditQuery);
+        when(auditQuery.addOrder(any())).thenReturn(auditQuery);
+        when(auditQuery.getResultList())
+            .thenReturn(List.<Object[]>of(tooShort, invalidRevisionEntity, invalidRevisionType));
+
+        assertThatThrownBy(() -> adapter.getEntityAuditHistory("web-service", "invalid"))
+            .isInstanceOf(EntityNotFoundException.class);
+      }
+    }
   }
 }
