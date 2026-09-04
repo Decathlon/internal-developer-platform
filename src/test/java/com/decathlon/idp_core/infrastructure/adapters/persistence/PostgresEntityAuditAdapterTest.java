@@ -62,7 +62,7 @@ class PostgresEntityAuditAdapterTest {
   @BeforeEach
   void setUp() {
     MockitoAnnotations.openMocks(this);
-    adapter = new PostgresEntityAuditAdapter(entityManager, jpaEntityRepository);
+    adapter = new PostgresEntityAuditAdapter(entityManager);
   }
 
   @Nested

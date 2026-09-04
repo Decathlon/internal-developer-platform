@@ -5,6 +5,8 @@ import java.util.List;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.decathlon.idp_core.domain.exception.entity.EntityNotFoundException;
+import com.decathlon.idp_core.domain.exception.entity_template.EntityTemplateNotFoundException;
 import com.decathlon.idp_core.domain.model.entity.EntityAuditInfo;
 import com.decathlon.idp_core.domain.port.audit.EntityAuditPort;
 import com.decathlon.idp_core.domain.service.entity_template.EntityTemplateService;
@@ -41,11 +43,10 @@ public class EntityAuditService {
   /// @return list of audit information ordered by revision number (newest first)
   /// @throws
   /// com.decathlon.idp_core.domain.exception.entity_template.EntityTemplateNotFoundException
-  /// if the template does not exist
+  /// if the template or entity does not exist in audit table
   @Transactional(readOnly = true)
   public List<EntityAuditInfo> getEntityAuditHistory(String templateIdentifier,
       String entityIdentifier) {
-    entityTemplateService.getEntityTemplateByIdentifier(templateIdentifier);
     return entityAuditPort.getEntityAuditHistory(templateIdentifier, entityIdentifier);
   }
 }

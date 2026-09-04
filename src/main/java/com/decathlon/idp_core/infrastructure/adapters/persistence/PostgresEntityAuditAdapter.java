@@ -22,7 +22,6 @@ import com.decathlon.idp_core.infrastructure.adapters.persistence.model.entity.E
 import com.decathlon.idp_core.infrastructure.adapters.persistence.model.entity.PropertyJpaEntity;
 import com.decathlon.idp_core.infrastructure.adapters.persistence.model.entity.RelationJpaEntity;
 import com.decathlon.idp_core.infrastructure.adapters.persistence.model.entity.RelationTargetJpaEntity;
-import com.decathlon.idp_core.infrastructure.adapters.persistence.repository.JpaEntityRepository;
 
 import lombok.RequiredArgsConstructor;
 
@@ -31,7 +30,6 @@ import lombok.RequiredArgsConstructor;
 public class PostgresEntityAuditAdapter implements EntityAuditPort {
 
   private final EntityManager entityManager;
-  private final JpaEntityRepository jpaEntityRepository;
 
   @Override
   public List<EntityAuditInfo> getEntityAuditHistory(String templateIdentifier,
@@ -72,10 +70,7 @@ public class PostgresEntityAuditAdapter implements EntityAuditPort {
   }
 
   private UUID getEntityId(String templateIdentifier, String entityIdentifier) {
-    return jpaEntityRepository
-        .findByTemplateIdentifierAndIdentifier(templateIdentifier, entityIdentifier)
-        .map(EntityJpaEntity::getId)
-        .orElseGet(() -> findEntityIdInAuditHistory(templateIdentifier, entityIdentifier));
+    return findEntityIdInAuditHistory(templateIdentifier, entityIdentifier);
   }
 
   private UUID findEntityIdInAuditHistory(String templateIdentifier, String entityIdentifier) {
