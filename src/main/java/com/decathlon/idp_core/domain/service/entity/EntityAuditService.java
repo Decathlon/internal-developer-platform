@@ -5,8 +5,6 @@ import java.util.List;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import com.decathlon.idp_core.domain.exception.entity.EntityNotFoundException;
-import com.decathlon.idp_core.domain.exception.entity_template.EntityTemplateNotFoundException;
 import com.decathlon.idp_core.domain.model.entity.EntityAuditInfo;
 import com.decathlon.idp_core.domain.port.audit.EntityAuditPort;
 import com.decathlon.idp_core.domain.service.entity_template.EntityTemplateService;
