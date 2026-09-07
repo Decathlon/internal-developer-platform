@@ -89,12 +89,11 @@ import com.decathlon.idp_core.infrastructure.adapters.api.dto.in.EntityCreateDto
 import com.decathlon.idp_core.infrastructure.adapters.api.dto.in.EntitySearchRequestDtoIn;
 import com.decathlon.idp_core.infrastructure.adapters.api.dto.in.EntityUpdateDtoIn;
 import com.decathlon.idp_core.infrastructure.adapters.api.dto.out.entity.EntityDtoOut;
-import com.decathlon.idp_core.infrastructure.adapters.api.handler.ApiExceptionHandler;
-import com.decathlon.idp_core.infrastructure.adapters.api.handler.ApiExceptionHandler.ErrorResponse;
 import com.decathlon.idp_core.infrastructure.adapters.api.mapper.entity.EntityDtoInMapper;
 import com.decathlon.idp_core.infrastructure.adapters.api.mapper.entity.EntityDtoOutFromEntityNodeMapper;
 import com.decathlon.idp_core.infrastructure.adapters.api.mapper.entity.EntityDtoOutMapper;
 import com.decathlon.idp_core.infrastructure.adapters.api.mapper.entity.SearchFilterMapper;
+import com.decathlon.idp_core.infrastructure.adapters.common.model.ErrorResponse;
 
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -155,9 +154,9 @@ public class EntityController {
   @Operation(summary = ENDPOINT_GET_ENTITIES_SUMMARY, description = ENDPOINT_GET_ENTITIES_PAGINATED_DESCRIPTION)
   @ApiResponse(responseCode = OK_CODE, description = RESPONSE_ENTITIES_PAGINATED_SUCCESS, content = @Content(schema = @Schema(implementation = EntityPageResponse.class)))
   @ApiResponse(responseCode = BAD_REQUEST_CODE, description = RESPONSE_INVALID_PAGINATION, content = {
-      @Content(schema = @Schema(implementation = ApiExceptionHandler.ErrorResponse.class))})
+      @Content(schema = @Schema(implementation = ErrorResponse.class))})
   @ApiResponse(responseCode = BAD_REQUEST_CODE, description = RESPONSE_INVALID_QUERY, content = {
-      @Content(schema = @Schema(implementation = ApiExceptionHandler.ErrorResponse.class))})
+      @Content(schema = @Schema(implementation = ErrorResponse.class))})
   @Parameter(name = "page", description = PARAM_PAGE_DESCRIPTION, in = ParameterIn.QUERY, content = @Content(schema = @Schema(type = "integer", defaultValue = "0")))
   @Parameter(name = "size", description = PARAM_SIZE_DESCRIPTION, in = ParameterIn.QUERY, content = @Content(schema = @Schema(type = "integer", defaultValue = "20")))
   @Parameter(name = "sort", description = PARAM_SORT_DESCRIPTION, in = ParameterIn.QUERY, content = @Content(schema = @Schema(type = "string", defaultValue = "identifier,asc")))
@@ -207,7 +206,7 @@ public class EntityController {
   @ApiResponse(responseCode = OK_CODE, description = RESPONSE_ENTITY_FOUND, content = {
       @Content(schema = @Schema(implementation = EntityDtoOut.class))})
   @ApiResponse(responseCode = NOT_FOUND_CODE, description = RESPONSE_ENTITY_NOT_FOUND_IDENTIFIER, content = {
-      @Content(schema = @Schema(implementation = ApiExceptionHandler.ErrorResponse.class))})
+      @Content(schema = @Schema(implementation = ErrorResponse.class))})
   @Parameter(name = "relations_depth", description = RELATIONS_DEPTH_DESCRIPTION, in = ParameterIn.QUERY, schema = @Schema(type = "integer", defaultValue = "1", minimum = "1", maximum = "6"))
   @Parameter(name = "relations_to_display", description = RELATIONS_TO_DISPLAY_DESCRIPTION, in = ParameterIn.QUERY, schema = @Schema(type = "array"))
   @GetMapping("/{templateIdentifier}/{entityIdentifier}")

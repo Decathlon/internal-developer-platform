@@ -25,6 +25,11 @@ spring:
       resourceserver:
         jwt:
           jwk-set-uri: fakeJwkUri
+app:
+  ingestion:
+    webhook:
+      base-path: /webhooks
+      identifier-path: /{webhookIdentifier}
 management:
   endpoint:
     health:

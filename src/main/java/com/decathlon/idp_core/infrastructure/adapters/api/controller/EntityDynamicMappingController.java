@@ -20,10 +20,10 @@ import com.decathlon.idp_core.infrastructure.adapters.api.dto.in.EntityDynamicMa
 import com.decathlon.idp_core.infrastructure.adapters.api.dto.in.EntityDynamicMappingUpdateDtoIn;
 import com.decathlon.idp_core.infrastructure.adapters.api.dto.out.entity_dynamic_mapping.EntityDynamicMappingDryRunDtoOut;
 import com.decathlon.idp_core.infrastructure.adapters.api.dto.out.entity_dynamic_mapping.EntityDynamicMappingDtoOut;
-import com.decathlon.idp_core.infrastructure.adapters.api.handler.ApiExceptionHandler;
 import com.decathlon.idp_core.infrastructure.adapters.api.mapper.entity_dynamic_mapping.EntityDynamicMappingDryRunDtoInMapper;
 import com.decathlon.idp_core.infrastructure.adapters.api.mapper.entity_dynamic_mapping.EntityDynamicMappingDryRunDtoOutMapper;
 import com.decathlon.idp_core.infrastructure.adapters.api.mapper.entity_dynamic_mapping.EntityDynamicMappingMapper;
+import com.decathlon.idp_core.infrastructure.adapters.common.model.ErrorResponse;
 
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -62,7 +62,7 @@ public class EntityDynamicMappingController {
   @Operation(summary = ENDPOINT_GET_ENTITY_DYNAMIC_MAPPING_PAGINATED_SUMMARY, description = ENDPOINT_GET_ENTITY_DYNAMIC_MAPPING_PAGINATED_DESCRIPTION)
   @ApiResponse(responseCode = OK_CODE, description = RESPONSE_ENTITY_DYNAMIC_MAPPING_PAGINATED_SUCCESS, content = @Content(schema = @Schema(implementation = SwaggerConfiguration.EntityDynamicMappingPageResponse.class)))
   @ApiResponse(responseCode = BAD_REQUEST_CODE, description = RESPONSE_INVALID_PAGINATION, content = {
-      @Content(schema = @Schema(implementation = ApiExceptionHandler.ErrorResponse.class))})
+      @Content(schema = @Schema(implementation = ErrorResponse.class))})
   @Parameter(name = "page", description = PARAM_PAGE_DESCRIPTION, in = ParameterIn.QUERY, content = @Content(schema = @Schema(type = "integer", defaultValue = "0")))
   @Parameter(name = "size", description = PARAM_SIZE_DESCRIPTION, in = ParameterIn.QUERY, content = @Content(schema = @Schema(type = "integer", defaultValue = "20")))
   @Parameter(name = "sort", description = PARAM_SORT_DESCRIPTION, in = ParameterIn.QUERY, content = @Content(schema = @Schema(type = "string", defaultValue = "identifier,asc")))
@@ -77,7 +77,7 @@ public class EntityDynamicMappingController {
   @Operation(summary = ENDPOINT_DELETE_ENTITY_DYNAMIC_MAPPING_SUMMARY, description = ENDPOINT_DELETE_ENTITY_DYNAMIC_MAPPING_DESCRIPTION)
   @ApiResponse(responseCode = NO_CONTENT_CODE, description = RESPONSE_ENTITY_DYNAMIC_MAPPING_DELETED)
   @ApiResponse(responseCode = NOT_FOUND_CODE, description = RESPONSE_ENTITY_DYNAMIC_MAPPING_NOT_FOUND_IDENTIFIER, content = {
-      @Content(schema = @Schema(implementation = ApiExceptionHandler.ErrorResponse.class))})
+      @Content(schema = @Schema(implementation = ErrorResponse.class))})
   @ResponseStatus(NO_CONTENT)
   @DeleteMapping("/{identifier}")
   public void deleteEntityDynamicMapping(@PathVariable String identifier) {
@@ -88,7 +88,7 @@ public class EntityDynamicMappingController {
   @ApiResponse(responseCode = OK_CODE, description = RESPONSE_ENTITY_DYNAMIC_MAPPING_FOUND, content = {
       @Content(schema = @Schema(implementation = EntityDynamicMappingDtoOut.class))})
   @ApiResponse(responseCode = NOT_FOUND_CODE, description = RESPONSE_ENTITY_DYNAMIC_MAPPING_NOT_FOUND_IDENTIFIER, content = {
-      @Content(schema = @Schema(implementation = ApiExceptionHandler.ErrorResponse.class))})
+      @Content(schema = @Schema(implementation = ErrorResponse.class))})
   @GetMapping("/{identifier}")
   @ResponseStatus(OK)
   public EntityDynamicMappingDtoOut getEntityDynamicMappingByIdentifier(
@@ -102,11 +102,11 @@ public class EntityDynamicMappingController {
   @ApiResponse(responseCode = OK_CODE, description = RESPONSE_ENTITY_DYNAMIC_MAPPING_UPDATED, content = {
       @Content(schema = @Schema(implementation = EntityDynamicMappingDtoOut.class))})
   @ApiResponse(responseCode = NOT_FOUND_CODE, description = RESPONSE_ENTITY_DYNAMIC_MAPPING_NOT_FOUND_IDENTIFIER, content = {
-      @Content(schema = @Schema(implementation = ApiExceptionHandler.ErrorResponse.class))})
+      @Content(schema = @Schema(implementation = ErrorResponse.class))})
   @ApiResponse(responseCode = BAD_REQUEST_CODE, description = RESPONSE_ENTITY_DYNAMIC_MAPPING_UPDATE_INVALID_TEMPLATE, content = {
-      @Content(schema = @Schema(implementation = ApiExceptionHandler.ErrorResponse.class))})
+      @Content(schema = @Schema(implementation = ErrorResponse.class))})
   @ApiResponse(responseCode = CONFLICT_CODE, description = RESPONSE_ENTITY_DYNAMIC_MAPPING_UPDATE_CONFLICT, content = {
-      @Content(schema = @Schema(implementation = ApiExceptionHandler.ErrorResponse.class))})
+      @Content(schema = @Schema(implementation = ErrorResponse.class))})
   @PutMapping("/{identifier}")
   @ResponseStatus(OK)
   public EntityDynamicMappingDtoOut updateEntityDynamicMapping(@PathVariable String identifier,
@@ -120,11 +120,11 @@ public class EntityDynamicMappingController {
   @ApiResponse(responseCode = OK_CODE, description = RESPONSE_ENTITY_DYNAMIC_MAPPING_DRY_RUN_SUCCESS, content = {
       @Content(schema = @Schema(implementation = EntityDynamicMappingDryRunDtoOut.class))})
   @ApiResponse(responseCode = BAD_REQUEST_CODE, description = RESPONSE_ENTITY_DYNAMIC_MAPPING_DATA, content = {
-      @Content(schema = @Schema(implementation = ApiExceptionHandler.ErrorResponse.class))})
+      @Content(schema = @Schema(implementation = ErrorResponse.class))})
   @ApiResponse(responseCode = NOT_FOUND_CODE, description = RESPONSE_ENTITY_DYNAMIC_MAPPING_DRY_RUN_TEMPLATE_NOT_FOUND, content = {
-      @Content(schema = @Schema(implementation = ApiExceptionHandler.ErrorResponse.class))})
+      @Content(schema = @Schema(implementation = ErrorResponse.class))})
   @ApiResponse(responseCode = UNPROCESSABLE_CONTENT_CODE, description = RESPONSE_ENTITY_DYNAMIC_MAPPING_DRY_RUN_VALIDATION_ERROR, content = {
-      @Content(schema = @Schema(implementation = ApiExceptionHandler.ErrorResponse.class))})
+      @Content(schema = @Schema(implementation = ErrorResponse.class))})
   @PostMapping("/dry-run")
   @ResponseStatus(OK)
   public EntityDynamicMappingDryRunDtoOut executeDryRun(

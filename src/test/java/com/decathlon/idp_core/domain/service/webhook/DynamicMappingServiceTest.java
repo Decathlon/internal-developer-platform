@@ -27,6 +27,7 @@ import com.decathlon.idp_core.domain.exception.entity_dynamic_mapping.EntityDyna
 import com.decathlon.idp_core.domain.exception.entity_dynamic_mapping.EntityDynamicMappingAlreadyInUseException;
 import com.decathlon.idp_core.domain.exception.entity_dynamic_mapping.EntityDynamicMappingNotFoundException;
 import com.decathlon.idp_core.domain.model.entity_mapping.EntityDynamicMapping;
+import com.decathlon.idp_core.domain.model.entity_mapping.MappingAction;
 import com.decathlon.idp_core.domain.model.entity_mapping.RelationMapping;
 import com.decathlon.idp_core.domain.model.enums.WebhookSecurityType;
 import com.decathlon.idp_core.domain.model.inbound_connectors.webhook.WebhookConnector;
@@ -63,6 +64,18 @@ class DynamicMappingServiceTest {
   @Nested
   @DisplayName("createEntityDynamicMapping")
   class CreateEntityDynamicMappingTests {
+
+    @Test
+    @DisplayName("Should preserve a non-default mapping action when creating a mapping")
+    void shouldPreserveMappingAction() {
+      EntityDynamicMapping mapping = buildMapping(MappingAction.UPDATE_PROPERTIES);
+      when(entityDynamicMappingPort.existsByIdentifier(MAPPING_IDENTIFIER)).thenReturn(false);
+      when(entityDynamicMappingPort.save(mapping)).thenReturn(mapping);
+
+      EntityDynamicMapping result = service.createEntityDynamicMapping(mapping);
+
+      assertThat(result.action()).isEqualTo(MappingAction.UPDATE_PROPERTIES);
+    }
 
     @Test
     @DisplayName("Should validate uniqueness, validate mapping then save")
@@ -159,8 +172,8 @@ class DynamicMappingServiceTest {
     void shouldPreserveIdAndIdentifier() {
       EntityDynamicMapping existing = buildMapping();
       EntityDynamicMapping incoming = new EntityDynamicMapping(null, "ignored-id",
-          "new-entityTemplateIdentifier", ".newFilter", "New Name", "New Desc", ".newId",
-          ".newTitle", Map.of("prop", ".val"), List.of());
+          "new-entityTemplateIdentifier", ".newFilter", MappingAction.UPDATE_ENTITY, "New Name",
+          "New Desc", ".newId", ".newTitle", Map.of("prop", ".val"), List.of());
 
       when(entityDynamicMappingPort.findByIdentifier(MAPPING_IDENTIFIER))
           .thenReturn(Optional.of(existing));
@@ -178,8 +191,9 @@ class DynamicMappingServiceTest {
     void shouldApplyIncomingFields() {
       EntityDynamicMapping existing = buildMapping();
       EntityDynamicMapping incoming = new EntityDynamicMapping(null, "ignored",
-          "new-entityTemplateIdentifier", ".newFilter", "New Name", "New Desc", ".newId",
-          ".newTitle", Map.of("k", ".v"), List.of(new RelationMapping("rel", List.of(".rel"))));
+          "new-entityTemplateIdentifier", ".newFilter", MappingAction.UPDATE_ENTITY, "New Name",
+          "New Desc", ".newId", ".newTitle", Map.of("k", ".v"),
+          List.of(new RelationMapping("rel", List.of(".rel"))));
 
       when(entityDynamicMappingPort.findByIdentifier(MAPPING_IDENTIFIER))
           .thenReturn(Optional.of(existing));
@@ -228,8 +242,8 @@ class DynamicMappingServiceTest {
     void shouldSaveMergedMapping() {
       EntityDynamicMapping existing = buildMapping();
       EntityDynamicMapping incoming = new EntityDynamicMapping(null, "ignored",
-          "updated-entityTemplateIdentifier", ".updated", "Updated Name", "Updated Desc", ".uid",
-          ".utitle", Map.of(), List.of());
+          "updated-entityTemplateIdentifier", ".updated", MappingAction.UPDATE_ENTITY,
+          "Updated Name", "Updated Desc", ".uid", ".utitle", Map.of(), List.of());
 
       when(entityDynamicMappingPort.findByIdentifier(MAPPING_IDENTIFIER))
           .thenReturn(Optional.of(existing));
@@ -323,9 +337,14 @@ class DynamicMappingServiceTest {
   }
 
   private EntityDynamicMapping buildMapping() {
+    return buildMapping(MappingAction.UPDATE_ENTITY);
+  }
+
+  private EntityDynamicMapping buildMapping(MappingAction action) {
     return new EntityDynamicMapping(UUID.randomUUID(), MAPPING_IDENTIFIER,
-        "github_deployment_status", ".deployment_status != null", "github deployment status name",
-        "github deployment status description", ".id", ".name", Map.of(), List.of());
+        "github_deployment_status", ".deployment_status != null", action,
+        "github deployment status name", "github deployment status description", ".id", ".name",
+        Map.of(), List.of());
   }
 
   private WebhookConnector buildWebhookConnector(String identifier) {

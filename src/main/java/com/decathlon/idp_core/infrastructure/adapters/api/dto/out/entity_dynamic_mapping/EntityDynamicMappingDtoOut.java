@@ -3,9 +3,12 @@ package com.decathlon.idp_core.infrastructure.adapters.api.dto.out.entity_dynami
 import java.util.List;
 import java.util.Map;
 
+import com.decathlon.idp_core.domain.model.entity_mapping.MappingAction;
+
 /// Mapping rule returned by the inbound webhook management API.
 public record EntityDynamicMappingDtoOut(String identifier, String entityTemplateIdentifier,
-    String filter, String name, String description, InboundWebhookEntityMappingDtoOut entity) {
+    String filter, MappingAction action, String name, String description,
+    InboundWebhookEntityMappingDtoOut entity) {
   /// Entity projection details exposed in webhook mapping responses.
   public static record InboundWebhookEntityMappingDtoOut(String identifier, String name,
       Map<String, String> properties, List<RelationMappingDtoOut> relations) {

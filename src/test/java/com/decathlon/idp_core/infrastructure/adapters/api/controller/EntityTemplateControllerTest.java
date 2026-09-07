@@ -1044,6 +1044,29 @@ class EntityTemplateControllerTest extends AbstractIntegrationTest {
       assertNotNull(nonExistentId, "Test executed successfully");
     }
 
+    /// Tests the DELETE /api/v1/entity-templates/{id} endpoint when the template
+    /// is still referenced as a relation target in another template.
+    /// This test verifies that:
+    /// - Returns HTTP 400 Bad Request with appropriate error message
+    /// @throws Exception if the MockMvc request fails
+    @Test
+    @WithMockUser()
+    @DisplayName("Should return 400 when template is a relation target")
+    void deleteTemplate_400_is_relation_target() throws Exception {
+      // Use "microservice" which is referenced as a target in other templates (from
+      // test data)
+      String templateId = "microservice";
+
+      mockMvc
+          .perform(MockMvcRequestBuilders.delete(ENTITY_TEMPLATE_PATH + "/" + templateId)
+              .accept(APPLICATION_JSON).with(csrf()))
+          .andExpect(status().isBadRequest()).andExpect(content().contentType(APPLICATION_JSON))
+          .andExpect(jsonPath("$.error").value("BAD_REQUEST"))
+          .andExpect(jsonPath("$.error_description").exists());
+
+      assertNotNull(templateId, "Test executed successfully");
+    }
+
     /// Tests the DELETE /api/v1/entity-templates/{id} endpoint when authentication
     /// is missing.
     /// This test verifies that:

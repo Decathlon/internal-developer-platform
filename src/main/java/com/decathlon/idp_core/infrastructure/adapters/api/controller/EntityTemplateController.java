@@ -1,5 +1,4 @@
 package com.decathlon.idp_core.infrastructure.adapters.api.controller;
-
 import static com.decathlon.idp_core.infrastructure.adapters.api.configuration.SwaggerDescription.BAD_REQUEST_CODE;
 import static com.decathlon.idp_core.infrastructure.adapters.api.configuration.SwaggerDescription.CREATED_CODE;
 import static com.decathlon.idp_core.infrastructure.adapters.api.configuration.SwaggerDescription.ENDPOINT_DELETE_TEMPLATE_DESCRIPTION;
@@ -52,8 +51,8 @@ import com.decathlon.idp_core.infrastructure.adapters.api.dto.in.EntityTemplateC
 import com.decathlon.idp_core.infrastructure.adapters.api.dto.in.EntityTemplateUpdateDtoIn;
 import com.decathlon.idp_core.infrastructure.adapters.api.dto.out.entity_template.EntityTemplateDtoOut;
 import com.decathlon.idp_core.infrastructure.adapters.api.handler.ApiExceptionHandler;
-import com.decathlon.idp_core.infrastructure.adapters.api.handler.ApiExceptionHandler.ErrorResponse;
 import com.decathlon.idp_core.infrastructure.adapters.api.mapper.entity_template.EntityTemplateMapper;
+import com.decathlon.idp_core.infrastructure.adapters.common.model.ErrorResponse;
 
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -99,7 +98,7 @@ public class EntityTemplateController {
   @Operation(summary = ENDPOINT_GET_TEMPLATES_PAGINATED_SUMMARY, description = ENDPOINT_GET_TEMPLATES_PAGINATED_DESCRIPTION)
   @ApiResponse(responseCode = OK_CODE, description = RESPONSE_TEMPLATES_PAGINATED_SUCCESS, content = @Content(schema = @Schema(implementation = TemplatePageResponse.class)))
   @ApiResponse(responseCode = BAD_REQUEST_CODE, description = RESPONSE_INVALID_PAGINATION, content = {
-      @Content(schema = @Schema(implementation = ApiExceptionHandler.ErrorResponse.class))})
+      @Content(schema = @Schema(implementation = ErrorResponse.class))})
   @Parameter(name = "page", description = PARAM_PAGE_DESCRIPTION, in = ParameterIn.QUERY, content = @Content(schema = @Schema(type = "integer", defaultValue = "0")))
   @Parameter(name = "size", description = PARAM_SIZE_DESCRIPTION, in = ParameterIn.QUERY, content = @Content(schema = @Schema(type = "integer", defaultValue = "20")))
   @Parameter(name = "sort", description = PARAM_SORT_DESCRIPTION, in = ParameterIn.QUERY, content = @Content(schema = @Schema(type = "string", defaultValue = "identifier,asc")))
@@ -120,7 +119,7 @@ public class EntityTemplateController {
   @ApiResponse(responseCode = OK_CODE, description = RESPONSE_TEMPLATE_FOUND, content = {
       @Content(schema = @Schema(implementation = EntityTemplateDtoOut.class))})
   @ApiResponse(responseCode = NOT_FOUND_CODE, description = RESPONSE_TEMPLATE_NOT_FOUND_IDENTIFIER, content = {
-      @Content(schema = @Schema(implementation = ApiExceptionHandler.ErrorResponse.class))})
+      @Content(schema = @Schema(implementation = ErrorResponse.class))})
   @GetMapping("/{identifier}")
   @ResponseStatus(OK)
   public EntityTemplateDtoOut getTemplateByIdentifier(@PathVariable String identifier) {
@@ -138,7 +137,7 @@ public class EntityTemplateController {
   @ApiResponse(responseCode = CREATED_CODE, description = RESPONSE_TEMPLATE_CREATED, content = {
       @Content(schema = @Schema(implementation = EntityTemplateDtoOut.class))})
   @ApiResponse(responseCode = BAD_REQUEST_CODE, description = RESPONSE_INVALID_TEMPLATE_DATA, content = {
-      @Content(schema = @Schema(implementation = ApiExceptionHandler.ErrorResponse.class))})
+      @Content(schema = @Schema(implementation = ErrorResponse.class))})
   @PostMapping
   @ResponseStatus(CREATED)
   public EntityTemplateDtoOut createTemplate(
@@ -158,7 +157,7 @@ public class EntityTemplateController {
   @ApiResponse(responseCode = OK_CODE, description = RESPONSE_TEMPLATE_UPDATED, content = {
       @Content(schema = @Schema(implementation = EntityTemplateDtoOut.class))})
   @ApiResponse(responseCode = "404", description = RESPONSE_TEMPLATE_NOT_FOUND_IDENTIFIER, content = {
-      @Content(schema = @Schema(implementation = ApiExceptionHandler.ErrorResponse.class))})
+      @Content(schema = @Schema(implementation = ErrorResponse.class))})
   @PutMapping("/{identifier}")
   public EntityTemplateDtoOut updateTemplate(@PathVariable(name = "identifier") String identifier,
       @RequestBody @Valid EntityTemplateUpdateDtoIn entityTemplateUpdateDtoIn) {
@@ -169,12 +168,15 @@ public class EntityTemplateController {
 
   /// Deletes entity template by business identifier with safety checks.
   ///
-  /// **API contract:** Permanently removes template with HTTP 204 response.
-  /// Operation is idempotent - returns success even for non-existent templates.
-  /// **Warning:** Irreversible operation requiring referential integrity
-  /// validation.
+  /// **API contract:** Validates existence and referential integrity before
+  /// permanently removing the template and cascade-purging all its entities.
+  /// Returns HTTP 200 on success. Returns HTTP 400 when another template still
+  /// references this template as a relation target. Returns HTTP 404 when the
+  /// template does not exist.
   @Operation(summary = ENDPOINT_DELETE_TEMPLATE_SUMMARY, description = ENDPOINT_DELETE_TEMPLATE_DESCRIPTION)
   @ApiResponse(responseCode = NO_CONTENT_CODE, description = RESPONSE_TEMPLATE_DELETED)
+  @ApiResponse(responseCode = BAD_REQUEST_CODE, description = "Cannot delete template: it is a target for other relations", content = {
+      @Content(schema = @Schema(implementation = ErrorResponse.class))})
   @ApiResponse(responseCode = NOT_FOUND_CODE, description = RESPONSE_TEMPLATE_NOT_FOUND_IDENTIFIER, content = {
       @Content(schema = @Schema(implementation = ErrorResponse.class))})
   @ResponseStatus(NO_CONTENT)

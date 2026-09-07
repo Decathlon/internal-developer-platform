@@ -3,8 +3,10 @@ package com.decathlon.idp_core.domain.service.entity;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.mock;
@@ -22,6 +24,7 @@ import java.util.UUID;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.InOrder;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
@@ -991,5 +994,165 @@ class EntityServiceTest {
     assertEquals(null, result);
     verify(template).relationsDefinitions();
     verifyNoCollaboratorInteractions();
+  }
+
+  @Test
+  @DisplayName("Should patch entity name, properties, and relations when validations pass")
+  void shouldPatchEntityWhenValidationsPass() {
+    // Arrange
+    UUID existingId = UUID.randomUUID();
+    var existing = new Entity(existingId, "web-service", "Old Name", "catalog-api",
+        List.of(property("language", "java"), property("tier", "backend")),
+        List.of(relation("owner", "team", "team-a")));
+
+    var patchData = new Entity(null, null, "New Name", null,
+        List.of(property("language", "kotlin")), // Overrides language, leaves tier alone
+        List.of(relation("owner", "placeholder", "team-b"))); // Overrides owner relation
+
+    var template = templateWithRelations("web-service",
+        relationDefinition("owner", "team", true, false));
+
+    when(entityTemplateService.getEntityTemplateByIdentifier("web-service")).thenReturn(template);
+    when(entityRepository.findByTemplateIdentifierAndIdentifier("web-service", "catalog-api"))
+        .thenReturn(Optional.of(existing));
+
+    ArgumentCaptor<Entity> entityCaptor = ArgumentCaptor.forClass(Entity.class);
+    when(entityRepository.save(entityCaptor.capture()))
+        .thenAnswer(invocation -> invocation.getArgument(0));
+
+    // Act
+    var result = entityService.patchEntity("web-service", "catalog-api", patchData);
+
+    // Assert
+    assertEquals("New Name", result.name()); // Name updated
+
+    // Properties merged
+    assertEquals(2, result.properties().size());
+    assertTrue(result.properties().stream()
+        .anyMatch(p -> p.name().equals("language") && p.value().equals("kotlin")));
+    assertTrue(result.properties().stream()
+        .anyMatch(p -> p.name().equals("tier") && p.value().equals("backend")));
+
+    // Relations merged and enriched
+    assertEquals(1, result.relations().size());
+    assertTrue(result.relations().stream()
+        .anyMatch(r -> r.name().equals("owner") && r.targetTemplateIdentifier().equals("team")
+            && r.targetEntityIdentifiers().contains("team-b")));
+
+    verify(entityValidationService).validateForUpdate(entityCaptor.getValue(), template);
+    verify(entityRepository).save(any(Entity.class));
+  }
+
+  @Test
+  @DisplayName("Should return existing entity without saving when patch contains no actual changes")
+  void shouldReturnExistingEntityWhenPatchDoesNotChangeContent() {
+    // Arrange
+    var existing = new Entity(UUID.randomUUID(), "web-service", "Catalog API", "catalog-api",
+        List.of(property("language", "java")), List.of(relation("owner", "team", "team-a")));
+
+    // Patch with nulls or identical values
+    var patchData = new Entity(null, null, null, null, null, null);
+    var template = templateWithRelations("web-service");
+
+    when(entityTemplateService.getEntityTemplateByIdentifier("web-service")).thenReturn(template);
+    when(entityRepository.findByTemplateIdentifierAndIdentifier("web-service", "catalog-api"))
+        .thenReturn(Optional.of(existing));
+
+    // Act
+    var result = entityService.patchEntity("web-service", "catalog-api", patchData);
+
+    // Assert
+    assertSame(existing, result);
+    verify(entityValidationService).validateForUpdate(any(Entity.class), eq(template));
+    verify(entityRepository, never()).save(any());
+  }
+
+  @Test
+  @DisplayName("Should save patch when only a property changes")
+  void shouldSavePatchWhenOnlyPropertyChanges() {
+    var existing = new Entity(UUID.randomUUID(), "web-service", "Catalog API", "catalog-api",
+        List.of(property("language", "java")), List.of());
+    var patchData = new Entity(null, null, null, null, List.of(property("language", "kotlin")),
+        null);
+    var template = templateWithRelations("web-service");
+
+    when(entityTemplateService.getEntityTemplateByIdentifier("web-service")).thenReturn(template);
+    when(entityRepository.findByTemplateIdentifierAndIdentifier("web-service", "catalog-api"))
+        .thenReturn(Optional.of(existing));
+    when(entityRepository.save(any(Entity.class)))
+        .thenAnswer(invocation -> invocation.getArgument(0));
+
+    var result = entityService.patchEntity("web-service", "catalog-api", patchData);
+
+    assertEquals("kotlin", result.properties().getFirst().value());
+    verify(entityValidationService).validateForUpdate(any(Entity.class), eq(template));
+    verify(entityRepository).save(any(Entity.class));
+  }
+
+  @Test
+  @DisplayName("Should save patch when only a relation changes")
+  void shouldSavePatchWhenOnlyRelationChanges() {
+    var existing = new Entity(UUID.randomUUID(), "web-service", "Catalog API", "catalog-api",
+        List.of(), List.of(relation("owner", "team", "team-a")));
+    var patchData = new Entity(null, null, null, null, null,
+        List.of(relation("owner", "team", "team-b")));
+    var template = templateWithRelations("web-service",
+        relationDefinition("owner", "team", true, false));
+
+    when(entityTemplateService.getEntityTemplateByIdentifier("web-service")).thenReturn(template);
+    when(entityRepository.findByTemplateIdentifierAndIdentifier("web-service", "catalog-api"))
+        .thenReturn(Optional.of(existing));
+    when(entityRepository.save(any(Entity.class)))
+        .thenAnswer(invocation -> invocation.getArgument(0));
+
+    var result = entityService.patchEntity("web-service", "catalog-api", patchData);
+
+    assertEquals(List.of("team-b"), result.relations().getFirst().targetEntityIdentifiers());
+    verify(entityValidationService).validateForUpdate(any(Entity.class), eq(template));
+    verify(entityRepository).save(any(Entity.class));
+  }
+
+  @Test
+  @DisplayName("Should handle null patch collections without replacing existing content")
+  void shouldHandleNullPatchCollections() {
+    var existing = new Entity(UUID.randomUUID(), "web-service", "Catalog API", "catalog-api",
+        List.of(property("language", "java")), List.of(relation("owner", "team", "team-a")));
+    var patchData = mock(Entity.class);
+    var template = templateWithRelations("web-service");
+
+    when(patchData.properties()).thenReturn(null);
+    when(patchData.relations()).thenReturn(null);
+    when(patchData.name()).thenReturn(null);
+    when(entityTemplateService.getEntityTemplateByIdentifier("web-service")).thenReturn(template);
+    when(entityRepository.findByTemplateIdentifierAndIdentifier("web-service", "catalog-api"))
+        .thenReturn(Optional.of(existing));
+
+    var result = entityService.patchEntity("web-service", "catalog-api", patchData);
+
+    assertSame(existing, result);
+    verify(entityValidationService).validateForUpdate(any(Entity.class), eq(template));
+    verify(entityRepository, never()).save(any());
+  }
+
+  @Test
+  @DisplayName("Should throw when patching non-existing entity")
+  void shouldThrowWhenPatchingNonExistingEntity() {
+    // Arrange
+    var patchData = new Entity(null, null, "New Name", null, null, null);
+    var template = new EntityTemplate(UUID.randomUUID(), "web-service", "Web Service", "desc",
+        List.of(), List.of());
+
+    when(entityTemplateService.getEntityTemplateByIdentifier("web-service")).thenReturn(template);
+    when(entityRepository.findByTemplateIdentifierAndIdentifier("web-service", "missing-api"))
+        .thenReturn(Optional.empty());
+
+    // Act & Assert
+    assertThrows(EntityNotFoundException.class,
+        () -> entityService.patchEntity("web-service", "missing-api", patchData));
+
+    verify(entityTemplateService).getEntityTemplateByIdentifier("web-service");
+    verify(entityRepository).findByTemplateIdentifierAndIdentifier("web-service", "missing-api");
+    verifyNoInteractions(entityValidationService);
+    verifyNoMoreInteractions(entityRepository);
   }
 }

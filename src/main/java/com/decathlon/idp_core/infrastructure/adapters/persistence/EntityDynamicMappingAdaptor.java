@@ -76,9 +76,10 @@ public class EntityDynamicMappingAdaptor implements EntityDynamicMappingPort {
 
     return new EntityDynamicMapping(persistedEntity.getId(), entityDynamicMapping.identifier(),
         entityDynamicMapping.entityTemplateIdentifier(), entityDynamicMapping.filter(),
-        entityDynamicMapping.name(), entityDynamicMapping.description(),
-        entityDynamicMapping.entityIdentifier(), entityDynamicMapping.entityName(),
-        entityDynamicMapping.properties(), entityDynamicMapping.relations());
+        entityDynamicMapping.action(), entityDynamicMapping.name(),
+        entityDynamicMapping.description(), entityDynamicMapping.entityIdentifier(),
+        entityDynamicMapping.entityName(), entityDynamicMapping.properties(),
+        entityDynamicMapping.relations());
   }
 
   @Override

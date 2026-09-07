@@ -100,7 +100,7 @@ public class EntityDynamicMappingService {
 
     EntityDynamicMapping mergedMapping = new EntityDynamicMapping(existingMapping.id(),
         existingMapping.identifier(), entityDynamicMapping.entityTemplateIdentifier(),
-        entityDynamicMapping.filter(), entityDynamicMapping.name(),
+        entityDynamicMapping.filter(), entityDynamicMapping.action(), entityDynamicMapping.name(),
         entityDynamicMapping.description(), entityDynamicMapping.entityIdentifier(),
         entityDynamicMapping.entityName(), entityDynamicMapping.properties(),
         entityDynamicMapping.relations());

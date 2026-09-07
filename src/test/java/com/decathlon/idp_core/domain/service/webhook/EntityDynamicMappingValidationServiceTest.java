@@ -22,6 +22,7 @@ import com.decathlon.idp_core.domain.exception.entity_template.EntityTemplateNot
 import com.decathlon.idp_core.domain.exception.entity_template.PropertyNameNotFoundEntityTemplatePropertiesException;
 import com.decathlon.idp_core.domain.exception.entity_template.RelationNameNotFoundEntityTemplateRelationsException;
 import com.decathlon.idp_core.domain.model.entity_mapping.EntityDynamicMapping;
+import com.decathlon.idp_core.domain.model.entity_mapping.MappingAction;
 import com.decathlon.idp_core.domain.model.entity_mapping.RelationMapping;
 import com.decathlon.idp_core.domain.model.entity_template.EntityTemplate;
 import com.decathlon.idp_core.domain.model.entity_template.PropertyDefinition;
@@ -63,8 +64,15 @@ class EntityDynamicMappingValidationServiceTest {
   private EntityDynamicMapping buildMapping(String templateIdentifier,
       String entityDynamicMappingIdentifier, Map<String, String> properties,
       Map<String, String> relations) {
+    return buildMapping(templateIdentifier, entityDynamicMappingIdentifier, properties, relations,
+        MappingAction.UPDATE_ENTITY);
+  }
+
+  private EntityDynamicMapping buildMapping(String templateIdentifier,
+      String entityDynamicMappingIdentifier, Map<String, String> properties,
+      Map<String, String> relations, MappingAction action) {
     return new EntityDynamicMapping(null, entityDynamicMappingIdentifier, templateIdentifier,
-        ".eventType == \"DEPLOYED\"", "name", "description", ".id", ".name", properties,
+        ".eventType == \"DEPLOYED\"", action, "name", "description", ".id", ".name", properties,
         toRelationMappings(relations));
   }
 
@@ -94,6 +102,20 @@ class EntityDynamicMappingValidationServiceTest {
   @Nested
   @DisplayName("validateWebhookMapping - happy paths")
   class ValidateWebhookMappingHappyPathTests {
+
+    @Test
+    @DisplayName("Should validate a mapping with the UPDATE_PROPERTIES action")
+    void shouldValidateUpdatePropertiesAction() {
+      EntityTemplate template = buildEntityTemplate(List.of(), List.of());
+      EntityDynamicMapping mapping = buildMapping("deployment", "properties_mapping", Map.of(),
+          Map.of(), MappingAction.UPDATE_PROPERTIES);
+
+      when(entityTemplateService.getEntityTemplateByIdentifier("deployment")).thenReturn(template);
+
+      assertThatNoException().isThrownBy(() -> service.validateMappings(List.of(mapping)));
+
+      verify(entityDynamicMapperValidator).validate(mapping);
+    }
 
     @Test
     @DisplayName("Should pass with valid mapping having matching properties")
@@ -161,8 +183,8 @@ class EntityDynamicMappingValidationServiceTest {
       PropertyDefinition property2 = buildProperty("version", false);
       EntityTemplate template2 = buildEntityTemplate(List.of(property2), List.of());
       EntityDynamicMapping mapping2 = new EntityDynamicMapping(null, "service_mapping", "service",
-          ".type == \"SERVICE\"", "service mapping", "service mapping description", ".id", ".name",
-          Map.of("version", ".ver"), List.of());
+          ".type == \"SERVICE\"", MappingAction.UPDATE_ENTITY, "service mapping",
+          "service mapping description", ".id", ".name", Map.of("version", ".ver"), List.of());
 
       when(entityTemplateService.getEntityTemplateByIdentifier("deployment")).thenReturn(template1);
       when(entityTemplateService.getEntityTemplateByIdentifier("service")).thenReturn(template2);

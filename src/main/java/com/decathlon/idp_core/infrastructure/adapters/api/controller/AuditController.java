@@ -30,8 +30,8 @@ import org.springframework.web.bind.annotation.RestController;
 import com.decathlon.idp_core.domain.model.entity.EntityAuditInfo;
 import com.decathlon.idp_core.domain.service.entity.EntityAuditService;
 import com.decathlon.idp_core.infrastructure.adapters.api.dto.out.entity.audit.EntityAuditDtoOut;
-import com.decathlon.idp_core.infrastructure.adapters.api.handler.ApiExceptionHandler.ErrorResponse;
 import com.decathlon.idp_core.infrastructure.adapters.api.mapper.entity.EntityAuditDtoOutMapper;
+import com.decathlon.idp_core.infrastructure.adapters.common.model.ErrorResponse;
 
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.ArraySchema;
