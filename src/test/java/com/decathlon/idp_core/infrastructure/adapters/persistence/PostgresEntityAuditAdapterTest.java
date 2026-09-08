@@ -36,6 +36,7 @@ import com.decathlon.idp_core.infrastructure.adapters.persistence.model.entity.E
 import com.decathlon.idp_core.infrastructure.adapters.persistence.model.entity.PropertyJpaEntity;
 import com.decathlon.idp_core.infrastructure.adapters.persistence.model.entity.RelationJpaEntity;
 import com.decathlon.idp_core.infrastructure.adapters.persistence.model.entity.RelationTargetJpaEntity;
+import com.decathlon.idp_core.infrastructure.adapters.persistence.repository.JpaAuditRepository;
 import com.decathlon.idp_core.infrastructure.adapters.persistence.repository.JpaEntityRepository;
 
 /// Unit tests for PostgresEntityAuditAdapter.
@@ -63,7 +64,7 @@ class PostgresEntityAuditAdapterTest {
   @BeforeEach
   void setUp() {
     MockitoAnnotations.openMocks(this);
-    adapter = new PostgresEntityAuditAdapter(entityManager);
+    adapter = new PostgresEntityAuditAdapter(entityManager, new JpaAuditRepository());
   }
 
   @Nested

@@ -2,7 +2,6 @@ package com.decathlon.idp_core.infrastructure.adapters.persistence;
 
 import java.time.Instant;
 import java.util.ArrayList;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.UUID;
@@ -12,19 +11,16 @@ import jakarta.persistence.EntityManager;
 import org.hibernate.envers.AuditReader;
 import org.hibernate.envers.AuditReaderFactory;
 import org.hibernate.envers.RevisionType;
-import org.hibernate.envers.query.AuditEntity;
-import org.hibernate.envers.query.AuditQuery;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
-import com.decathlon.idp_core.domain.exception.entity.EntityNotFoundException;
 import com.decathlon.idp_core.domain.model.entity.EntityAuditInfo;
 import com.decathlon.idp_core.domain.port.audit.EntityAuditPort;
-import com.decathlon.idp_core.infrastructure.adapters.persistence.model.audit.CustomRevisionEntity;
 import com.decathlon.idp_core.infrastructure.adapters.persistence.model.entity.EntityJpaEntity;
 import com.decathlon.idp_core.infrastructure.adapters.persistence.model.entity.PropertyJpaEntity;
 import com.decathlon.idp_core.infrastructure.adapters.persistence.model.entity.RelationJpaEntity;
 import com.decathlon.idp_core.infrastructure.adapters.persistence.model.entity.RelationTargetJpaEntity;
+import com.decathlon.idp_core.infrastructure.adapters.persistence.repository.JpaAuditRepository;
 
 import lombok.RequiredArgsConstructor;
 
@@ -34,25 +30,21 @@ import lombok.RequiredArgsConstructor;
 public class PostgresEntityAuditAdapter implements EntityAuditPort {
 
   private final EntityManager entityManager;
+  private final JpaAuditRepository jpaAuditRepository;
 
   @Override
   public List<EntityAuditInfo> getEntityAuditHistory(String templateIdentifier,
       String entityIdentifier) {
     AuditReader auditReader = AuditReaderFactory.get(entityManager);
-    Set<UUID> entityIds = findEntityIdsInAuditHistory(auditReader, templateIdentifier,
+    var entityIds = jpaAuditRepository.findEntityIdsInAuditHistory(auditReader, templateIdentifier,
         entityIdentifier);
 
-    // Fetch all revisions for all matching IDs in a single query (fixes N+1 issue)
-    AuditQuery query = auditReader.createQuery()
-        .forRevisionsOfEntity(EntityJpaEntity.class, false, true)
-        .add(AuditEntity.id().in(entityIds)).addOrder(AuditEntity.revisionNumber().desc());
-
-    List<EnversRevision<EntityJpaEntity>> revisions = executeAuditQuery(query,
-        EntityJpaEntity.class);
+    List<JpaAuditRepository.EnversRevision<EntityJpaEntity>> revisions = jpaAuditRepository
+        .findEntityRevisions(auditReader, entityIds);
 
     List<EntityAuditInfo> auditInfoList = new ArrayList<>(revisions.size());
     for (int i = 0; i < revisions.size(); i++) {
-      EnversRevision<EntityJpaEntity> currentRevision = revisions.get(i);
+      JpaAuditRepository.EnversRevision<EntityJpaEntity> currentRevision = revisions.get(i);
 
       Number snapshotRevisionNumber;
       if (currentRevision.revisionType() != RevisionType.DEL) {
@@ -68,10 +60,11 @@ public class PostgresEntityAuditAdapter implements EntityAuditPort {
     return auditInfoList;
   }
 
-  private Number findPreviousRevisionNumber(List<EnversRevision<EntityJpaEntity>> revisions,
-      int currentIndex, UUID entityId) {
+  private Number findPreviousRevisionNumber(
+      List<JpaAuditRepository.EnversRevision<EntityJpaEntity>> revisions, int currentIndex,
+      UUID entityId) {
     for (int i = currentIndex + 1; i < revisions.size(); i++) {
-      EnversRevision<EntityJpaEntity> previousRevision = revisions.get(i);
+      JpaAuditRepository.EnversRevision<EntityJpaEntity> previousRevision = revisions.get(i);
       if (previousRevision.entity().getId().equals(entityId)) {
         return previousRevision.revisionEntity().getRev();
       }
@@ -79,49 +72,9 @@ public class PostgresEntityAuditAdapter implements EntityAuditPort {
     return null;
   }
 
-  private Set<UUID> findEntityIdsInAuditHistory(AuditReader auditReader, String templateIdentifier,
-      String entityIdentifier) {
-    AuditQuery query = auditReader.createQuery()
-        .forRevisionsOfEntity(EntityJpaEntity.class, false, true)
-        .add(AuditEntity.property("templateIdentifier").eq(templateIdentifier))
-        .add(AuditEntity.property("identifier").eq(entityIdentifier))
-        .addOrder(AuditEntity.revisionNumber().desc());
-
-    List<EnversRevision<EntityJpaEntity>> revisions = executeAuditQuery(query,
-        EntityJpaEntity.class);
-
-    Set<UUID> entityIds = new HashSet<>();
-    for (EnversRevision<EntityJpaEntity> revision : revisions) {
-      if (revision.entity() != null && revision.entity().getId() != null) {
-        entityIds.add(revision.entity().getId());
-      }
-    }
-
-    if (!entityIds.isEmpty()) {
-      return entityIds;
-    }
-
-    throw new EntityNotFoundException(templateIdentifier, entityIdentifier);
-  }
-
-  /**
-   * Centralized utility method to execute the query and safely map the raw
-   * Object[] array. This is the ONLY place where the unchecked cast warning is
-   * suppressed.
-   */
-  @SuppressWarnings("unchecked")
-  private <T> List<EnversRevision<T>> executeAuditQuery(AuditQuery query, Class<T> entityType) {
-    List<Object[]> results = query.getResultList();
-    return results.stream()
-        .filter(row -> row.length >= 3 && entityType.isInstance(row[0])
-            && row[1] instanceof CustomRevisionEntity && row[2] instanceof RevisionType)
-        .map(row -> new EnversRevision<>(entityType.cast(row[0]), (CustomRevisionEntity) row[1],
-            (RevisionType) row[2]))
-        .toList();
-  }
-
-  private EntityAuditInfo mapToEntityAuditInfo(EnversRevision<EntityJpaEntity> revision,
-      AuditReader auditReader, Number snapshotRevisionNumber) {
+  private EntityAuditInfo mapToEntityAuditInfo(
+      JpaAuditRepository.EnversRevision<EntityJpaEntity> revision, AuditReader auditReader,
+      Number snapshotRevisionNumber) {
     Number revisionNumber = revision.revisionEntity().getRev();
     Instant revisionDate = Instant.ofEpochMilli(revision.revisionEntity().getRevisionTimestamp());
     String revisionTypeStr = mapRevisionType(revision.revisionType());
@@ -185,10 +138,4 @@ public class PostgresEntityAuditAdapter implements EntityAuditPort {
     };
   }
 
-  /**
-   * strongly-typed record to replace the ambiguous Object[] array from Envers.
-   */
-  private record EnversRevision<T> (T entity, CustomRevisionEntity revisionEntity,
-      RevisionType revisionType) {
-  }
 }
