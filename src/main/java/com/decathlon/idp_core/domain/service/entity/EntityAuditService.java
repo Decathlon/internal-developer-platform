@@ -41,11 +41,10 @@ public class EntityAuditService {
   /// @return list of audit information ordered by revision number (newest first)
   /// @throws
   /// com.decathlon.idp_core.domain.exception.entity_template.EntityTemplateNotFoundException
-  /// if the template does not exist
+  /// if the template or entity does not exist in audit table
   @Transactional(readOnly = true)
   public List<EntityAuditInfo> getEntityAuditHistory(String templateIdentifier,
       String entityIdentifier) {
-    entityTemplateService.getEntityTemplateByIdentifier(templateIdentifier);
     return entityAuditPort.getEntityAuditHistory(templateIdentifier, entityIdentifier);
   }
 }
