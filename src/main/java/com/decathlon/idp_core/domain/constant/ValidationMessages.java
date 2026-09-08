@@ -81,6 +81,9 @@ public class ValidationMessages {
   public static final String ENTITY_VALIDATION_FAILED = "Entity validation failed: ";
   public static final String ENTITY_DELETION_BLOCKED = "Cannot delete entity '%s' (template: '%s') because it is referenced by required relations in the following entities: %s. Please update the relation definitions to make them optional or remove the required constraint before deleting this entity.";
 
+  // Principal provisioning validation messages
+  public static final String PRINCIPAL_CREATION_FAILED = "Failed to create principal with identifier '%s'. The principal provider is currently unavailable. The system will automatically retry provisioning on the next request.";
+
   // Helper method to construct rules incompatibility message
   public static String rulesAreIncompatible(String rule1, String rule2) {
     return PROPERTY_RULES_MUTUALLY_EXCLUSIVE.replace("{rule1}", rule1).replace("{rule2}", rule2);
