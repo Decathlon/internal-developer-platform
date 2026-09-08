@@ -274,6 +274,48 @@ Retrieve a paginated list of entities for a given template:
 GET /api/v1/entities/{templateIdentifier}?page=0&size=20&sort=identifier,asc
 ```
 
+By default, list responses return entity properties only and omit relations, since resolving
+relations for every item in a paginated result set adds a significant per-item cost and payload
+size. Pass `include_relations=true` to opt in and get each entity's resolved relations (outbound
+and inbound), the same shape returned by [Get Entity by Identifier](#get-entity-by-identifier):
+
+```text
+GET /api/v1/entities/{templateIdentifier}?include_relations=true
+```
+
+Without `include_relations` (default, `false`):
+
+```json
+{
+  "identifier": "web-api-1",
+  "name": "Web API 1",
+  "properties": { "...": "..." }
+}
+```
+
+With `include_relations=true`:
+
+```json
+{
+  "identifier": "web-api-1",
+  "name": "Web API 1",
+  "properties": { "...": "..." },
+  "relations": {
+    "depends-on": [
+      {
+        "identifier": "database-1",
+        "name": "Database 1",
+        "template_identifier": "database"
+      }
+    ]
+  }
+}
+```
+
+Only request `include_relations=true` when the relations are actually needed by the caller;
+leaving it at the default keeps list/search calls fast on templates with many entities or a
+large relation graph.
+
 ### Get Entity by Identifier
 
 Retrieve a specific entity using its template and entity identifiers:
