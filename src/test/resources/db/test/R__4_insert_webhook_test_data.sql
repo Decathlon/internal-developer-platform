@@ -71,3 +71,38 @@ INSERT INTO webhook_mapping_link (webhook_id,  entity_mapping_id, jslt_filter) V
         '770e8400-e29b-41d4-a716-446655440001',
         '880e8400-e29b-41d4-a716-446655440001',
         '.action == "pushed"');
+
+-- Webhook Connector 4: GitHub Connector success fixture (HMAC_SHA256)
+INSERT INTO webhook_connector (id, identifier, name, description, enabled, security)
+VALUES ('770e8400-e29b-41d4-a716-446655440006',
+        'github-dora-connector-success',
+        'GitHub Connector Success',
+        'HMAC connector dedicated to end-to-end success test',
+        true,
+        '{
+          "type": "HMAC_SHA256",
+          "config": {
+            "header_name": "X-Hub-Signature-256",
+            "secret_alias": "GITHUB_SECRET",
+            "prefix": "sha256="
+          }
+        }'::jsonb);
+
+INSERT INTO entity_dynamic_mapping (id, identifier, template_id, filter, action, name, description,
+                                    entity_identifier, entity_name, properties, relations)
+VALUES ('880e8400-e29b-41d4-a716-446655440006',
+        'microservice-mapping-hmac-success',
+        '550e8400-e29b-41d4-a716-446655440071',
+        '.action == "pushed"',
+        'UPDATE_ENTITY',
+        'Microservice Mapping HMAC Success',
+        'Mapping used by HMAC success integration test',
+        '.repository.full_name',
+        '.repository.name',
+        '{"applicationName": ".repository.name", "ownerEmail": ".sender.email", "environment": "\"DEV\"", "version": ".ref", "port": "8080", "programmingLanguage": ".repository.language"}',
+        '[]'::jsonb);
+
+INSERT INTO webhook_mapping_link (webhook_id, entity_mapping_id, jslt_filter)
+VALUES ('770e8400-e29b-41d4-a716-446655440006',
+        '880e8400-e29b-41d4-a716-446655440006',
+        '.action == "pushed"');

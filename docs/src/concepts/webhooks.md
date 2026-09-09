@@ -77,13 +77,13 @@ This validation keeps the connector configuration aligned with the current data 
 Each connector declares one security type. IDP-Core validates the configuration at creation time and validates requests
 again at runtime.
 
-| Type           | Required configuration keys             | Runtime behavior                                                                       |
-|----------------|-----------------------------------------|----------------------------------------------------------------------------------------|
-| `HMAC_SHA256`  | `header_name`, `secret_alias`, `prefix` | Computes the SHA-256 HMAC of the raw body and compares it with the request header      |
-| `STATIC_TOKEN` | `header_name`, `secret_alias`           | Compares a header value with a secret loaded from the environment                      |
-| `BASIC_AUTH`   | `username`, `secret_alias`              | Compares the `Authorization: Basic ...` header with the configured username and secret |
-| `JWT_BEARER`   | `jwks_uri`                              | Validates the bearer token against a JWKS endpoint                                     |
-| `NONE`         | none                                    | Skips authentication                                                                   |
+| Type           | Required configuration keys                       | Runtime behavior                                                                                 |
+|----------------|---------------------------------------------------|--------------------------------------------------------------------------------------------------|
+| `HMAC_SHA256`  | `header_name`, `secret_alias`, `prefix`           | Computes the SHA-256 HMAC of the raw body and compares it with the request header                |
+| `STATIC_TOKEN` | `header_name`, `secret_alias`                     | Compares a header value with a secret loaded from the environment                                |
+| `BASIC_AUTH`   | `username`, `secret_alias`                        | Compares the `Authorization: Basic ...` header with the configured username and secret           |
+| `JWT_BEARER`   | `jwks_uri`, `client_id_field`, `client_id_values` | Validates the bearer token against a JWKS endpoint, then checks caller identity claim allow-list |
+| `NONE`         | none                                              | Skips authentication                                                                             |
 
 > [!IMPORTANT]
 > Security configuration keys accept `snake_case` and `camelCase` variants for the supported fields.
@@ -136,10 +136,25 @@ value in the connector configuration.
 {
   "type": "JWT_BEARER",
   "config": {
-    "jwks_uri": "https://issuer.example.com/.well-known/jwks.json"
+    "jwks_uri": "https://www.googleapis.com/oauth2/v3/certs",
+    "client_id_field": "email",
+    "client_id_values": "idp-webhook-caller-1@example.test,idp-webhook-caller-2@example.test",
+    "expected_audience": "https://idp-core.example.test/webhooks"
   }
 }
 ```
+
+### JWT_BEARER Configuration Reference
+
+- `jwks_uri` (required): literal HTTPS URL used to validate JWT signatures.
+- `client_id_field` (required): claim name used to identify the caller. Allowed values are only `azp` or `email`.
+- `client_id_values` (required): comma-separated allow-list of accepted claim values.
+- `expected_audience` (optional): comma-separated allow-list for the `aud` claim. If present, at least one JWT audience must match.
+
+> [!WARNING]
+> `jwks_uri` must use a resolvable public HTTPS host. Local hosts, private networks, link-local addresses, and group-address destinations are rejected at connector creation.
+
+`jwks_uri` is stored as a literal URL in the connector configuration. Environment references are not supported for this field.
 
 ## Runtime Flow
 

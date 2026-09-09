@@ -1,6 +1,8 @@
 package com.decathlon.idp_core.infrastructure.adapters.webhook.security;
 
+import java.nio.charset.StandardCharsets;
 import java.util.Map;
+import java.util.Objects;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -29,9 +31,8 @@ public final class WebhookSecurityConfigurationUtils {
   /// @return the first non-blank value found
   /// @throws WebhookSecurityConfigurationException if no value is found (at
   /// creation time)
-  /// @throws WebhookAuthenticationException if no value is found (at runtime)
   public static String required(Map<String, String> config, String... keys) {
-    return required(config, false, keys);
+    return requiredInternal(config, keys);
   }
 
   /// Retrieves an optional configuration value, returning a default if not found.
@@ -53,6 +54,33 @@ public final class WebhookSecurityConfigurationUtils {
     validateEnvironmentReferenceFormat(alias, "secret_alias");
   }
 
+  /// Validates that the environment variable referenced by the alias actually
+  /// exists
+  /// at connector creation time. Rejects the configuration if the variable is
+  /// absent
+  /// or blank, preventing silent failures at runtime.
+  ///
+  /// @param alias the secret alias (plain `MY_VAR`, `env:MY_VAR`, or `${MY_VAR}`)
+  /// @throws WebhookSecurityConfigurationException if the environment variable is
+  /// missing or blank
+  public static void validateSecretAliasExists(String alias) {
+    String envKey = normalizeEnvironmentAlias(alias);
+    if (!StringUtils.hasText(envKey)) {
+      throw new WebhookSecurityConfigurationException("Secret alias is missing or blank");
+    }
+
+    String resolved = System.getenv(envKey);
+    if (!StringUtils.hasText(resolved)) {
+      resolved = System.getProperty(envKey);
+    }
+    if (!StringUtils.hasText(resolved)) {
+      throw new WebhookSecurityConfigurationException(
+          ("Environment variable '%s' referenced by secret_alias is not set. "
+              + "Ensure the variable is defined before creating this connector.")
+                  .formatted(envKey));
+    }
+  }
+
   /// Validates that an environment reference follows the UPPER_SNAKE_CASE
   /// convention.
   ///
@@ -63,8 +91,7 @@ public final class WebhookSecurityConfigurationUtils {
     String normalizedAlias = normalizeEnvironmentAlias(value);
     if (!ENV_ALIAS.matcher(normalizedAlias).matches()) {
       throw new WebhookSecurityConfigurationException(
-          "Invalid '%s'. Use UPPER_SNAKE_CASE or an environment reference (${MY_VAR} or env:MY_VAR)"
-              .formatted(fieldName));
+          "Invalid '%s'. Use UPPER_SNAKE_CASE".formatted(fieldName));
     }
   }
 
@@ -80,6 +107,76 @@ public final class WebhookSecurityConfigurationUtils {
     }
     String trimmed = value.trim();
     return trimmed.startsWith("env:") || BRACED_ENV_REFERENCE.matcher(trimmed).matches();
+  }
+
+  /// Resolves a configured alias/reference to a runtime secret value from
+  /// environment variables.
+  ///
+  /// @param aliasOrReference alias format supported: `MY_VAR`, `${MY_VAR}`,
+  /// `env:MY_VAR`
+  /// @return resolved secret value
+  /// @throws WebhookAuthenticationException if the environment variable is
+  /// missing or blank
+  public static String resolveRuntimeSecret(String aliasOrReference) {
+    String envKey = normalizeEnvironmentAlias(aliasOrReference);
+    if (!StringUtils.hasText(envKey)) {
+      throw new WebhookAuthenticationException("Security secret alias is missing");
+    }
+
+    String resolved = System.getenv(envKey);
+    if (!StringUtils.hasText(resolved)) {
+      // Test-friendly fallback: allows setting runtime secrets through JVM system
+      // properties.
+      resolved = System.getProperty(envKey);
+    }
+    if (!StringUtils.hasText(resolved)) {
+      throw new WebhookAuthenticationException(
+          "Environment variable or system property '%s' is missing or blank for webhook authentication"
+              .formatted(envKey));
+    }
+    return resolved;
+  }
+
+  /// Reads an inbound HTTP header value in a case-insensitive way.
+  ///
+  /// HTTP/1.1 headers are case-insensitive (RFC 7230). Gateways and proxies may
+  /// normalize header names to lowercase before forwarding, so case-insensitive
+  /// matching is required for reliable interoperability.
+  ///
+  /// @param headers inbound headers
+  /// @param headerName target header name
+  /// @return header value as string
+  /// @throws WebhookAuthenticationException when header is missing
+  public static String requiredHeader(Map<String, Object> headers, String headerName) {
+    if (headers == null || headers.isEmpty()) {
+      throw new WebhookAuthenticationException(
+          "Missing required header '%s' for webhook authentication".formatted(headerName));
+    }
+
+    return headers.entrySet().stream()
+        .filter(entry -> entry.getKey() != null && entry.getKey().equalsIgnoreCase(headerName))
+        .map(Map.Entry::getValue).filter(Objects::nonNull).map(Object::toString)
+        .filter(StringUtils::hasText).findFirst()
+        .orElseThrow(() -> new WebhookAuthenticationException(
+            "Missing required header '%s' for webhook authentication".formatted(headerName)));
+  }
+
+  /// Resolves a required runtime value from configuration.
+  ///
+  /// This helper combines required key lookup (snake/camel + _env/Env aliases)
+  /// and runtime environment resolution in one call.
+  public static String resolveRequiredRuntimeValue(Map<String, String> config, String... keys) {
+    String aliasOrReference = required(config, keys);
+    return resolveRuntimeSecret(aliasOrReference);
+  }
+
+  /// Constant-time string comparison to reduce timing attack signal.
+  public static boolean constantTimeEquals(String left, String right) {
+    if (left == null || right == null) {
+      return false;
+    }
+    return java.security.MessageDigest.isEqual(left.getBytes(StandardCharsets.UTF_8),
+        right.getBytes(StandardCharsets.UTF_8));
   }
 
   private static String normalizeEnvironmentAlias(String aliasOrReference) {
@@ -100,7 +197,7 @@ public final class WebhookSecurityConfigurationUtils {
     return trimmed;
   }
 
-  private static String required(Map<String, String> config, boolean isRuntime, String... keys) {
+  private static String requiredInternal(Map<String, String> config, String... keys) {
     for (String key : keys) {
       String value = config.get(key);
       if (StringUtils.hasText(value)) {
@@ -121,12 +218,7 @@ public final class WebhookSecurityConfigurationUtils {
     }
 
     String keysStr = String.join(", ", keys);
-    if (isRuntime) {
-      throw new WebhookAuthenticationException(
-          "Missing security config key. Expected one of: " + keysStr);
-    } else {
-      throw new WebhookSecurityConfigurationException(
-          "Missing required security config key. Expected one of: " + keysStr);
-    }
+    throw new WebhookSecurityConfigurationException(
+        "Missing required security config key. Expected one of: " + keysStr);
   }
 }
