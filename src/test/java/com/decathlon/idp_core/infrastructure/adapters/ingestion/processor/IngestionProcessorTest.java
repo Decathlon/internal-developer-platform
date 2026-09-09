@@ -27,6 +27,7 @@ import org.slf4j.LoggerFactory;
 import com.decathlon.idp_core.domain.exception.entity.EntityNotFoundException;
 import com.decathlon.idp_core.domain.exception.entity_dynamic_mapping.EntityDynamicMappingConfigurationException;
 import com.decathlon.idp_core.domain.model.entity.Entity;
+import com.decathlon.idp_core.domain.model.entity.EntityPatch;
 import com.decathlon.idp_core.domain.model.entity.Property;
 import com.decathlon.idp_core.domain.model.entity.Relation;
 import com.decathlon.idp_core.domain.model.entity_mapping.EntityDynamicMapping;
@@ -191,7 +192,7 @@ class IngestionProcessorTest {
 
       ingestionProcessor.ingest(payload, connector);
 
-      verify(entityService).patchEntity("test-template", "test-id", entity);
+      verify(entityService).patchEntity("test-template", "test-id", EntityPatch.fromEntity(entity));
       verify(entityService, never()).createEntity(any());
     }
   }
