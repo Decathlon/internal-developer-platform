@@ -12,6 +12,7 @@ import org.junit.jupiter.api.Test;
 import com.decathlon.idp_core.domain.model.entity.Entity;
 import com.decathlon.idp_core.infrastructure.adapters.api.dto.in.EntityCreateDtoIn;
 import com.decathlon.idp_core.infrastructure.adapters.api.dto.in.EntityDtoInCommonFields;
+import com.decathlon.idp_core.infrastructure.adapters.api.dto.in.EntityPatchDtoIn;
 import com.decathlon.idp_core.infrastructure.adapters.api.dto.in.EntityUpdateDtoIn;
 
 @DisplayName("EntityDtoInMapper Tests")
@@ -80,6 +81,19 @@ class EntityDtoInMapperTest {
     assertThat(result.templateIdentifier()).isEqualTo("service-template");
     assertThat(result.name()).isEqualTo("catalog-service");
     assertThat(result.identifier()).isEqualTo("catalog-service-42");
+    assertThat(result.properties()).isEmpty();
+    assertThat(result.relations()).isEmpty();
+  }
+
+  @Test
+  @DisplayName("Should map patch DTO while preserving omitted fields")
+  void shouldMapPatchDtoToEntity() {
+    var patchDto = EntityPatchDtoIn.builder().properties(new LinkedHashMap<>()).build();
+
+    Entity result = mapper.fromPatchEntityDtoInToEntity(patchDto, "service-template",
+        "catalog-service-42");
+
+    assertThat(result.name()).isNull();
     assertThat(result.properties()).isEmpty();
     assertThat(result.relations()).isEmpty();
   }

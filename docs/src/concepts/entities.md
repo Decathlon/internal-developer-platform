@@ -365,6 +365,22 @@ curl -X PUT http://localhost:8084/api/v1/entities/web-service/my-web-service \
 }
 ```
 
+## Partially Updating an Entity
+
+Use `PATCH` when only selected fields should change. Fields omitted from the
+request remain unchanged. Properties and relations supplied in the request are
+merged with the existing values by name.
+
+```text
+PATCH /api/v1/entities/{templateIdentifier}/{entityIdentifier}
+```
+
+```bash
+curl -X PATCH http://localhost:8084/api/v1/entities/web-service/my-web-service \
+  -H "Content-Type: application/json" \
+  -d '{"properties": {"port": "9090"}}'
+```
+
 ### Update Response Codes
 
 | Code  | Description                                            |

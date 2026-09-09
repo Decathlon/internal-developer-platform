@@ -10,6 +10,7 @@ import com.decathlon.idp_core.domain.model.entity.Property;
 import com.decathlon.idp_core.domain.model.entity.Relation;
 import com.decathlon.idp_core.infrastructure.adapters.api.dto.in.EntityCreateDtoIn;
 import com.decathlon.idp_core.infrastructure.adapters.api.dto.in.EntityDtoInCommonFields;
+import com.decathlon.idp_core.infrastructure.adapters.api.dto.in.EntityPatchDtoIn;
 import com.decathlon.idp_core.infrastructure.adapters.api.dto.in.EntityUpdateDtoIn;
 
 /// Adapter mapper for converting API request DTOs to domain [Entity] objects.
@@ -51,6 +52,25 @@ public class EntityDtoInMapper {
       String entityTemplateIdentifier, String entityIdentifier) {
     return buildEntity(entityUpdateDtoIn.getEntityDtoInCommonFields(), entityTemplateIdentifier,
         entityIdentifier);
+  }
+
+  /// Converts a partial entity update request DTO to a domain entity.
+  ///
+  /// Null fields are preserved so the domain service can merge them with the
+  /// existing entity.
+  public Entity fromPatchEntityDtoInToEntity(EntityPatchDtoIn patchDtoIn,
+      String entityTemplateIdentifier, String entityIdentifier) {
+    List<Property> properties = patchDtoIn.getProperties() == null
+        ? null
+        : patchDtoIn.getProperties().entrySet().stream()
+            .map(entry -> new Property(null, entry.getKey(), entry.getValue())).toList();
+    List<Relation> relations = patchDtoIn.getRelations() == null
+        ? null
+        : patchDtoIn.getRelations().stream().map(relDto -> new Relation(null, relDto.getName(),
+            null, relDto.getTargetEntityIdentifiers())).toList();
+
+    return new Entity(null, entityTemplateIdentifier, patchDtoIn.getName(), entityIdentifier,
+        properties, relations);
   }
 
   /// Shared helper method to build the domain entity from common fields.
