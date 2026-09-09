@@ -77,6 +77,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.decathlon.idp_core.domain.model.entity.Entity;
 import com.decathlon.idp_core.domain.model.entity.EntityFilter;
+import com.decathlon.idp_core.domain.model.entity.EntityPatch;
 import com.decathlon.idp_core.domain.model.entity_graph.EntityGraphNode;
 import com.decathlon.idp_core.domain.model.entity_graph.EntityGraphTraversalMode;
 import com.decathlon.idp_core.domain.model.search.PaginatedResult;
@@ -319,8 +320,7 @@ public class EntityController {
   public EntityDtoOut patchEntity(@NotBlank @PathVariable String templateIdentifier,
       @NotBlank @PathVariable String entityIdentifier,
       @Valid @RequestBody EntityPatchDtoIn patchDtoIn) {
-    Entity patchData = entityDtoInMapper.fromPatchEntityDtoInToEntity(patchDtoIn,
-        templateIdentifier, entityIdentifier);
+    EntityPatch patchData = entityDtoInMapper.fromPatchEntityDtoInToEntity(patchDtoIn);
     Entity updatedEntity = entityService.patchEntity(templateIdentifier, entityIdentifier,
         patchData);
     return entityDtoOutMapper.fromEntity(updatedEntity);

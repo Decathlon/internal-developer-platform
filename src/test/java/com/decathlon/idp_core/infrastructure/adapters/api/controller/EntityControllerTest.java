@@ -712,12 +712,12 @@ public class EntityControllerTest extends AbstractIntegrationTest {
               patch(ENTITIES_BY_IDENTIFIER_PATH, PATCH_TEMPLATE_IDENTIFIER, PATCH_ENTITY_IDENTIFIER)
                   .contentType(APPLICATION_JSON).accept(APPLICATION_JSON).with(csrf()).content("""
                       {
-                        "name": "Web API Patch 1 Patched"
+                       "properties": { "port": "9090" }
                       }
                       """))
-          .andExpect(status().isOk()).andExpect(jsonPath("$.name").value("Web API Patch 1 Patched"))
+          .andExpect(status().isOk()).andExpect(jsonPath("$.name").value("Web API Patch 1"))
           .andExpect(jsonPath("$.properties.applicationName").value("catalog-api"))
-          .andExpect(jsonPath("$.properties.port").value(8080));
+          .andExpect(jsonPath("$.properties.port").value(9090));
     }
 
     @Test

@@ -381,7 +381,7 @@ curl -X PATCH http://localhost:8084/api/v1/entities/web-service/my-web-service \
   -d '{"properties": {"port": "9090"}}'
 ```
 
-### Update Response Codes
+### Patch Response Codes
 
 | Code  | Description                                            |
 |-------|--------------------------------------------------------|

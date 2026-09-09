@@ -44,6 +44,7 @@ import com.decathlon.idp_core.domain.exception.search.InvalidSearchQueryExceptio
 import com.decathlon.idp_core.domain.model.entity.Entity;
 import com.decathlon.idp_core.domain.model.entity.EntityCompositeKey;
 import com.decathlon.idp_core.domain.model.entity.EntityFilter;
+import com.decathlon.idp_core.domain.model.entity.EntityPatch;
 import com.decathlon.idp_core.domain.model.entity.EntitySummary;
 import com.decathlon.idp_core.domain.model.entity.FilterCriterion;
 import com.decathlon.idp_core.domain.model.entity.Property;
@@ -1005,8 +1006,11 @@ class EntityServiceTest {
         List.of(property("language", "java"), property("tier", "backend")),
         List.of(relation("owner", "team", "team-a")));
 
-    var patchData = new Entity(null, null, "New Name", null,
-        List.of(property("language", "kotlin")), // Overrides language, leaves tier alone
+    var patchData = new EntityPatch("New Name", List.of(property("language", "kotlin")), // Overrides
+                                                                                         // language,
+                                                                                         // leaves
+                                                                                         // tier
+                                                                                         // alone
         List.of(relation("owner", "placeholder", "team-b"))); // Overrides owner relation
 
     var template = templateWithRelations("web-service",
@@ -1051,7 +1055,7 @@ class EntityServiceTest {
         List.of(property("language", "java")), List.of(relation("owner", "team", "team-a")));
 
     // Patch with nulls or identical values
-    var patchData = new Entity(null, null, null, null, null, null);
+    var patchData = new EntityPatch(null, null, null);
     var template = templateWithRelations("web-service");
 
     when(entityTemplateService.getEntityTemplateByIdentifier("web-service")).thenReturn(template);
@@ -1072,8 +1076,7 @@ class EntityServiceTest {
   void shouldSavePatchWhenOnlyPropertyChanges() {
     var existing = new Entity(UUID.randomUUID(), "web-service", "Catalog API", "catalog-api",
         List.of(property("language", "java")), List.of());
-    var patchData = new Entity(null, null, null, null, List.of(property("language", "kotlin")),
-        null);
+    var patchData = new EntityPatch(null, List.of(property("language", "kotlin")), null);
     var template = templateWithRelations("web-service");
 
     when(entityTemplateService.getEntityTemplateByIdentifier("web-service")).thenReturn(template);
@@ -1094,8 +1097,7 @@ class EntityServiceTest {
   void shouldSavePatchWhenOnlyRelationChanges() {
     var existing = new Entity(UUID.randomUUID(), "web-service", "Catalog API", "catalog-api",
         List.of(), List.of(relation("owner", "team", "team-a")));
-    var patchData = new Entity(null, null, null, null, null,
-        List.of(relation("owner", "team", "team-b")));
+    var patchData = new EntityPatch(null, null, List.of(relation("owner", "team", "team-b")));
     var template = templateWithRelations("web-service",
         relationDefinition("owner", "team", true, false));
 
@@ -1117,7 +1119,7 @@ class EntityServiceTest {
   void shouldHandleNullPatchCollections() {
     var existing = new Entity(UUID.randomUUID(), "web-service", "Catalog API", "catalog-api",
         List.of(property("language", "java")), List.of(relation("owner", "team", "team-a")));
-    var patchData = mock(Entity.class);
+    var patchData = mock(EntityPatch.class);
     var template = templateWithRelations("web-service");
 
     when(patchData.properties()).thenReturn(null);
@@ -1138,7 +1140,7 @@ class EntityServiceTest {
   @DisplayName("Should throw when patching non-existing entity")
   void shouldThrowWhenPatchingNonExistingEntity() {
     // Arrange
-    var patchData = new Entity(null, null, "New Name", null, null, null);
+    var patchData = new EntityPatch("New Name", null, null);
     var template = new EntityTemplate(UUID.randomUUID(), "web-service", "Web Service", "desc",
         List.of(), List.of());
 

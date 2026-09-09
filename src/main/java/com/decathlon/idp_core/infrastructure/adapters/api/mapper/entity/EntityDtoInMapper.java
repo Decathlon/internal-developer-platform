@@ -6,6 +6,7 @@ import java.util.List;
 import org.springframework.stereotype.Component;
 
 import com.decathlon.idp_core.domain.model.entity.Entity;
+import com.decathlon.idp_core.domain.model.entity.EntityPatch;
 import com.decathlon.idp_core.domain.model.entity.Property;
 import com.decathlon.idp_core.domain.model.entity.Relation;
 import com.decathlon.idp_core.infrastructure.adapters.api.dto.in.EntityCreateDtoIn;
@@ -58,8 +59,7 @@ public class EntityDtoInMapper {
   ///
   /// Null fields are preserved so the domain service can merge them with the
   /// existing entity.
-  public Entity fromPatchEntityDtoInToEntity(EntityPatchDtoIn patchDtoIn,
-      String entityTemplateIdentifier, String entityIdentifier) {
+  public EntityPatch fromPatchEntityDtoInToEntity(EntityPatchDtoIn patchDtoIn) {
     List<Property> properties = patchDtoIn.getProperties() == null
         ? null
         : patchDtoIn.getProperties().entrySet().stream()
@@ -69,8 +69,7 @@ public class EntityDtoInMapper {
         : patchDtoIn.getRelations().stream().map(relDto -> new Relation(null, relDto.getName(),
             null, relDto.getTargetEntityIdentifiers())).toList();
 
-    return new Entity(null, entityTemplateIdentifier, patchDtoIn.getName(), entityIdentifier,
-        properties, relations);
+    return new EntityPatch(patchDtoIn.getName(), properties, relations);
   }
 
   /// Shared helper method to build the domain entity from common fields.

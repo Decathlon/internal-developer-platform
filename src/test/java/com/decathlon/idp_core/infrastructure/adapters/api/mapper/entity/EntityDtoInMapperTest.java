@@ -10,6 +10,7 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
 import com.decathlon.idp_core.domain.model.entity.Entity;
+import com.decathlon.idp_core.domain.model.entity.EntityPatch;
 import com.decathlon.idp_core.infrastructure.adapters.api.dto.in.EntityCreateDtoIn;
 import com.decathlon.idp_core.infrastructure.adapters.api.dto.in.EntityDtoInCommonFields;
 import com.decathlon.idp_core.infrastructure.adapters.api.dto.in.EntityPatchDtoIn;
@@ -90,11 +91,10 @@ class EntityDtoInMapperTest {
   void shouldMapPatchDtoToEntity() {
     var patchDto = EntityPatchDtoIn.builder().properties(new LinkedHashMap<>()).build();
 
-    Entity result = mapper.fromPatchEntityDtoInToEntity(patchDto, "service-template",
-        "catalog-service-42");
+    EntityPatch result = mapper.fromPatchEntityDtoInToEntity(patchDto);
 
     assertThat(result.name()).isNull();
     assertThat(result.properties()).isEmpty();
-    assertThat(result.relations()).isEmpty();
+    assertThat(result.relations()).isNull();
   }
 }
