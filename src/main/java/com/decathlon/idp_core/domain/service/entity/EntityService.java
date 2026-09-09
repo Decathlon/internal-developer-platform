@@ -29,6 +29,7 @@ import com.decathlon.idp_core.domain.exception.search.InvalidSearchQueryExceptio
 import com.decathlon.idp_core.domain.model.entity.Entity;
 import com.decathlon.idp_core.domain.model.entity.EntityCompositeKey;
 import com.decathlon.idp_core.domain.model.entity.EntityFilter;
+import com.decathlon.idp_core.domain.model.entity.EntityPatch;
 import com.decathlon.idp_core.domain.model.entity.EntitySummary;
 import com.decathlon.idp_core.domain.model.entity.Property;
 import com.decathlon.idp_core.domain.model.entity.Relation;
@@ -213,7 +214,7 @@ public class EntityService {
   ///
   /// @param templateIdentifier template identifier from the request path
   /// @param entityIdentifier entity identifier from the request path
-  /// @param patchData validated entity patch payload
+  /// @param patchData nullable entity patch payload
   /// @return persisted updated entity
   /// @throws EntityTemplateNotFoundException when template doesn't exist
   /// @throws EntityNotFoundException when target entity doesn't exist
@@ -221,7 +222,7 @@ public class EntityService {
   /// template constraints
   @Transactional
   public Entity patchEntity(String templateIdentifier, String entityIdentifier,
-      @Valid Entity patchData) {
+      EntityPatch patchData) {
 
     EntityTemplate template = entityTemplateService
         .getEntityTemplateByIdentifier(templateIdentifier);

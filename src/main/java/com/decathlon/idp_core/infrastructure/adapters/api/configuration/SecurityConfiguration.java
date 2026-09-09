@@ -89,7 +89,7 @@ public class SecurityConfiguration {
     if (!corsProperties.allowedOriginPatterns().isEmpty()) {
       configuration.setAllowedOriginPatterns(corsProperties.allowedOriginPatterns());
     }
-    configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
+    configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
     configuration.setAllowedHeaders(List.of("*"));
     configuration.setAllowCredentials(true);
 
