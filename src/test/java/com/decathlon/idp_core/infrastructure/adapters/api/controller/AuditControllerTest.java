@@ -31,17 +31,13 @@ class AuditControllerTest extends AbstractIntegrationTest {
   @Test
   @WithMockUser
   @DisplayName("Should return audit history for existing entity")
-  void getAuditHistory_shouldReturnEmptyAuditHistory_whenEntityExistsBeforeAudit()
-      throws Exception {
+  void getAuditHistory_shouldReturnAuditNotFound_whenEntityExistsBeforeAudit() throws Exception {
     String templateIdentifier = "web-service";
     String entityIdentifier = "web-api-1";
 
     // When requesting audit history
-    mockMvc
-        .perform(get(AUDIT_BASE_PATH + "/{templateIdentifier}/{entityIdentifier}",
-            templateIdentifier, entityIdentifier).with(csrf()))
-        .andExpect(status().isOk()).andExpect(jsonPath("$").isArray())
-        .andExpect(jsonPath("$").isEmpty());
+    mockMvc.perform(get(AUDIT_BASE_PATH + "/{templateIdentifier}/{entityIdentifier}",
+        templateIdentifier, entityIdentifier).with(csrf())).andExpect(status().isNotFound());
   }
 
   @Test
