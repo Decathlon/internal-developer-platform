@@ -30,6 +30,15 @@ app:
     webhook:
       base-path: /webhooks
       identifier-path: /{webhookIdentifier}
+      test-security:
+        token-env-key: WEBHOOK_TOKEN
+        token-env-value: test-static-token-value
+        basic-auth-env-key: BASIC_PASS
+        basic-auth-env-value: test-basic-password
+        hmac-env-key: GITHUB_SECRET
+        hmac-env-value: test-github-secret
+        jwks-env-key: JWKS_URI
+        jwks-env-value: https://auth.example.com/.well-known/jwks.json
 management:
   endpoint:
     health:

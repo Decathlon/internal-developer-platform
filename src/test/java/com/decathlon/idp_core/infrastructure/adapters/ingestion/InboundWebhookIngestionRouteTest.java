@@ -3,35 +3,137 @@ package com.decathlon.idp_core.infrastructure.adapters.ingestion;
 import static com.decathlon.idp_core.infrastructure.adapters.ingestion.configuration.IngestionConstants.HTTP_BAD_REQUEST;
 import static com.decathlon.idp_core.infrastructure.adapters.ingestion.configuration.IngestionConstants.HTTP_CREATED;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 import java.io.ByteArrayOutputStream;
 import java.nio.charset.StandardCharsets;
+import java.util.Base64;
+import java.util.List;
+import java.util.Map;
+import java.util.UUID;
 import java.util.stream.Stream;
 import java.util.zip.GZIPOutputStream;
 
+import javax.crypto.Mac;
+import javax.crypto.spec.SecretKeySpec;
+
 import org.apache.camel.Exchange;
 import org.apache.camel.ProducerTemplate;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.test.context.TestConfiguration;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Import;
+import org.springframework.context.annotation.Primary;
+import org.springframework.security.oauth2.jwt.Jwt;
+import org.springframework.security.oauth2.jwt.JwtDecoder;
 import org.springframework.test.context.jdbc.Sql;
 
 import com.decathlon.idp_core.AbstractIntegrationTest;
+import com.decathlon.idp_core.domain.model.enums.WebhookSecurityType;
+import com.decathlon.idp_core.domain.model.inbound_connectors.webhook.WebhookConnector;
+import com.decathlon.idp_core.domain.model.inbound_connectors.webhook.WebhookSecurity;
+import com.decathlon.idp_core.infrastructure.adapters.webhook.security.WebhookJwtDecoderProvider;
 import com.fasterxml.jackson.databind.JsonNode;
 
 /**
  * Integration tests for Camel webhook ingestion entrypoint.
  */
 @DisplayName("Inbound Webhook Ingestion Route Integration Tests")
+@Import(InboundWebhookIngestionRouteTest.JwtDecoderProviderTestConfiguration.class)
 @Sql(scripts = {"/db/test/R__1_Insert_test_data.sql", "/db/test/R__4_insert_webhook_test_data.sql",
     "/db/test/R__5_insert_disabled_webhook_connector.sql"}, executionPhase = Sql.ExecutionPhase.BEFORE_TEST_METHOD)
 class InboundWebhookIngestionRouteTest extends AbstractIntegrationTest {
 
+  private static final String HMAC_PREFIX = "sha256=";
+  private static final String BASIC_AUTH_USERNAME_ENV_KEY = "BASIC_AUTH_USERNAME";
+  private static final String BASIC_AUTH_USERNAME = "admin";
+
+  @Value("${app.ingestion.webhook.test-security.token-env-key}")
+  private String webhookTokenEnvKey;
+
+  @Value("${app.ingestion.webhook.test-security.token-env-value}")
+  private String webhookTokenEnvValue;
+
+  @Value("${app.ingestion.webhook.test-security.hmac-env-key}")
+  private String githubSecretEnvKey;
+
+  @Value("${app.ingestion.webhook.test-security.hmac-env-value}")
+  private String githubSecretEnvValue;
+
+  @Value("${app.ingestion.webhook.test-security.basic-auth-env-key}")
+  private String basicAuthEnvKey;
+
+  @Value("${app.ingestion.webhook.test-security.basic-auth-env-value}")
+  private String basicAuthEnvValue;
+
+  @Value("${app.ingestion.webhook.test-security.jwks-env-key}")
+  private String jwksEnvKey;
+
+  @Value("${app.ingestion.webhook.test-security.jwks-env-value}")
+  private String jwksEnvValue;
+
   @Autowired
   private ProducerTemplate producerTemplate;
+
+  @Autowired
+  private WebhookJwtDecoderProvider jwtDecoderProvider;
+
+  @Autowired
+  private JwtDecoder jwtDecoder;
+
+  @TestConfiguration
+  static class JwtDecoderProviderTestConfiguration {
+
+    @Bean
+    @Primary
+    WebhookJwtDecoderProvider jwtDecoderProvider() {
+      return mock(WebhookJwtDecoderProvider.class);
+    }
+  }
+
+  @BeforeEach
+  void configureRuntimeSecretsForWebhookSecurity() {
+    System.setProperty(webhookTokenEnvKey, webhookTokenEnvValue);
+    System.setProperty(githubSecretEnvKey, githubSecretEnvValue);
+    System.setProperty(basicAuthEnvKey, basicAuthEnvValue);
+    System.setProperty(BASIC_AUTH_USERNAME_ENV_KEY, BASIC_AUTH_USERNAME);
+    System.setProperty(jwksEnvKey, jwksEnvValue);
+  }
+
+  @AfterEach
+  void clearRuntimeSecretsForWebhookSecurity() {
+    System.clearProperty(webhookTokenEnvKey);
+    System.clearProperty(githubSecretEnvKey);
+    System.clearProperty(basicAuthEnvKey);
+    System.clearProperty(BASIC_AUTH_USERNAME_ENV_KEY);
+    System.clearProperty(jwksEnvKey);
+  }
+
+  private Exchange invokeValidateSecurityRoute(WebhookConnector webhookConnector,
+      Map<String, Object> headers) {
+    return producerTemplate.request("direct:validate-security", exchange -> {
+      exchange.setProperty("connectorIdentifier", webhookConnector.identifier());
+      exchange.setProperty("webhookConfig", webhookConnector);
+      exchange.setProperty("rawPayloadBody", "{}");
+      headers.forEach((name, value) -> exchange.getIn().setHeader(name, value));
+    });
+  }
+
+  private WebhookConnector webhookConnectorWithSecurity(String identifier,
+      WebhookSecurity security) {
+    return new WebhookConnector(UUID.randomUUID(), identifier, "Test Connector", "test", true,
+        List.of(), security);
+  }
 
   private Exchange invokeIngestionRoute(String connectorIdentifier) {
     return invokeIngestionRoute(connectorIdentifier, "{\"event\":\"ping\"}", null);
@@ -39,12 +141,18 @@ class InboundWebhookIngestionRouteTest extends AbstractIntegrationTest {
 
   private Exchange invokeIngestionRoute(String connectorIdentifier, Object payload,
       String contentEncoding) {
+    return invokeIngestionRoute(connectorIdentifier, payload, contentEncoding, Map.of());
+  }
+
+  private Exchange invokeIngestionRoute(String connectorIdentifier, Object payload,
+      String contentEncoding, Map<String, Object> additionalHeaders) {
     return producerTemplate.request("direct:process-event", exchange -> {
       exchange.setProperty("connectorIdentifier", connectorIdentifier);
       exchange.getIn().setBody(payload);
       if (contentEncoding != null) {
         exchange.getIn().setHeader("Content-Encoding", contentEncoding);
       }
+      additionalHeaders.forEach((name, value) -> exchange.getIn().setHeader(name, value));
     });
   }
 
@@ -55,6 +163,22 @@ class InboundWebhookIngestionRouteTest extends AbstractIntegrationTest {
       gzipOutput.finish();
       return output.toByteArray();
     }
+  }
+
+  private String computeHmacSha256Signature(String payload) throws Exception {
+    Mac mac = Mac.getInstance("HmacSHA256");
+    mac.init(
+        new SecretKeySpec(githubSecretEnvValue.getBytes(StandardCharsets.UTF_8), "HmacSHA256"));
+    byte[] digest = mac.doFinal(payload.getBytes(StandardCharsets.UTF_8));
+    return HMAC_PREFIX + toHex(digest);
+  }
+
+  private static String toHex(byte[] bytes) {
+    StringBuilder builder = new StringBuilder(bytes.length * 2);
+    for (byte value : bytes) {
+      builder.append(String.format("%02x", value));
+    }
+    return builder.toString();
   }
 
   private Exchange invokeValidationWithoutWebhookConfig() {
@@ -75,6 +199,11 @@ class InboundWebhookIngestionRouteTest extends AbstractIntegrationTest {
     assertEquals(expectedDescription, response.get("error_description").asText());
   }
 
+  private void assertSecurityValidationSucceeded(Exchange exchange) {
+    assertNull(exchange.getMessage().getHeader(Exchange.HTTP_RESPONSE_CODE));
+    assertNull(exchange.getMessage().getBody());
+  }
+
   @Test
   @DisplayName("Route returns 200 when webhook exists and is enabled")
   void postWebhookRoute_201_whenWebhookExistsAndEnabled() throws Exception {
@@ -92,7 +221,8 @@ class InboundWebhookIngestionRouteTest extends AbstractIntegrationTest {
 
     assertEquals(404, exchange.getMessage().getHeader(Exchange.HTTP_RESPONSE_CODE));
     assertEquals("application/json", exchange.getMessage().getHeader(Exchange.CONTENT_TYPE));
-    assertJsonErrorResponse(exchange, "NOT_FOUND", "Webhook configuration not found");
+    assertJsonErrorResponse(exchange, "webhook_connector_not_found",
+        "Webhook configuration not found");
   }
 
   @Test
@@ -102,7 +232,182 @@ class InboundWebhookIngestionRouteTest extends AbstractIntegrationTest {
 
     assertEquals(403, exchange.getMessage().getHeader(Exchange.HTTP_RESPONSE_CODE));
     assertEquals("application/json", exchange.getMessage().getHeader(Exchange.CONTENT_TYPE));
-    assertJsonErrorResponse(exchange, "FORBIDDEN", "Webhook connector is disabled");
+    assertJsonErrorResponse(exchange, "webhook_connector_disabled",
+        "Webhook connector is disabled");
+  }
+
+  @Test
+  @DisplayName("Route returns 401 when webhook authentication is missing")
+  void postWebhookRoute_401_whenWebhookAuthenticationIsMissing() throws Exception {
+    Exchange exchange = invokeIngestionRoute("token-connector");
+
+    assertEquals(401, exchange.getMessage().getHeader(Exchange.HTTP_RESPONSE_CODE));
+    assertEquals("application/json", exchange.getMessage().getHeader(Exchange.CONTENT_TYPE));
+    assertJsonErrorResponse(exchange, "webhook_authentication_failed",
+        "Webhook authentication failed for connector 'token-connector' with strategy 'STATIC_TOKEN'");
+  }
+
+  @Test
+  @DisplayName("Route returns 403 when webhook authentication credentials are rejected")
+  void postWebhookRoute_403_whenWebhookAuthenticationFails() throws Exception {
+    Exchange exchange = invokeIngestionRoute("token-connector", "{\"event\":\"ping\"}", null,
+        Map.of("X-Auth-Token", "invalid-token"));
+
+    assertEquals(403, exchange.getMessage().getHeader(Exchange.HTTP_RESPONSE_CODE));
+    assertEquals("application/json", exchange.getMessage().getHeader(Exchange.CONTENT_TYPE));
+    assertJsonErrorResponse(exchange, "webhook_forbidden", "Static token was rejected");
+  }
+
+  @Test
+  @DisplayName("Route returns 201 when STATIC_TOKEN header matches runtime secret")
+  void postWebhookRoute_201_whenStaticTokenAuthenticationSucceeds() throws Exception {
+    Exchange exchange = invokeIngestionRoute("token-connector", "{\"event\":\"ping\"}", null,
+        Map.of("X-Auth-Token", webhookTokenEnvValue));
+
+    assertEquals(HTTP_CREATED, exchange.getMessage().getHeader(Exchange.HTTP_RESPONSE_CODE));
+    assertEquals("application/json", exchange.getMessage().getHeader(Exchange.CONTENT_TYPE));
+    assertJsonSuccessResponse(exchange);
+  }
+
+  @Test
+  @DisplayName("Route returns 201 when HMAC signature matches runtime secret")
+  void postWebhookRoute_201_whenHmacAuthenticationSucceeds() throws Exception {
+    String payload = """
+        {
+          "action": "pushed",
+          "repository": {
+            "full_name": "acme/payment-service",
+            "name": "payment-service",
+            "language": "JAVA"
+          },
+          "sender": {
+            "email": "owner@acme.test"
+          },
+          "ref": "1.0.0"
+        }
+        """;
+    String signature = computeHmacSha256Signature(payload);
+    Exchange exchange = invokeIngestionRoute("github-dora-connector-success", payload, null,
+        Map.of("X-Hub-Signature-256", signature));
+
+    assertEquals(HTTP_CREATED, exchange.getMessage().getHeader(Exchange.HTTP_RESPONSE_CODE));
+    assertEquals("application/json", exchange.getMessage().getHeader(Exchange.CONTENT_TYPE));
+    assertJsonSuccessResponse(exchange);
+  }
+
+  @Test
+  @DisplayName("Route returns 401 when HMAC signature prefix format is invalid")
+  void postWebhookRoute_401_whenHmacSignaturePrefixIsInvalid() throws Exception {
+    Exchange exchange = invokeIngestionRoute("github-dora-connector", "{\"action\":\"pushed\"}",
+        null, Map.of("X-Hub-Signature-256", "sha1=abc123"));
+
+    assertEquals(401, exchange.getMessage().getHeader(Exchange.HTTP_RESPONSE_CODE));
+    assertEquals("application/json", exchange.getMessage().getHeader(Exchange.CONTENT_TYPE));
+    assertJsonErrorResponse(exchange, "webhook_authentication_failed",
+        "HMAC signature format is invalid");
+  }
+
+  @Test
+  @DisplayName("Validate-security route accepts NONE mode")
+  void validateSecurityRoute_acceptsNoneMode() {
+    WebhookConnector connector = webhookConnectorWithSecurity("none-connector",
+        new WebhookSecurity(WebhookSecurityType.NONE, Map.of()));
+
+    Exchange exchange = invokeValidateSecurityRoute(connector, Map.of());
+
+    assertNull(exchange.getException());
+  }
+
+  @Test
+  @DisplayName("Validate-security route accepts BASIC_AUTH mode")
+  void validateSecurityRoute_acceptsBasicAuthMode() {
+    String credentials = Base64.getEncoder().encodeToString(
+        (BASIC_AUTH_USERNAME + ":" + basicAuthEnvValue).getBytes(StandardCharsets.UTF_8));
+    WebhookConnector connector = webhookConnectorWithSecurity("basic-connector",
+        new WebhookSecurity(WebhookSecurityType.BASIC_AUTH, Map.of("username",
+            "env:" + BASIC_AUTH_USERNAME_ENV_KEY, "secret_alias", basicAuthEnvKey)));
+
+    Exchange exchange = invokeValidateSecurityRoute(connector,
+        Map.of("Authorization", "Basic " + credentials));
+
+    assertSecurityValidationSucceeded(exchange);
+  }
+
+  @Test
+  @DisplayName("Validate-security route returns 401 when Basic auth scheme is invalid")
+  void validateSecurityRoute_401_whenBasicSchemeIsInvalid() throws Exception {
+    WebhookConnector connector = webhookConnectorWithSecurity("basic-connector",
+        new WebhookSecurity(WebhookSecurityType.BASIC_AUTH,
+            Map.of("username", BASIC_AUTH_USERNAME_ENV_KEY, "secret_alias", basicAuthEnvKey)));
+
+    Exchange exchange = invokeValidateSecurityRoute(connector,
+        Map.of("Authorization", "Bearer not-basic"));
+
+    assertEquals(401, exchange.getMessage().getHeader(Exchange.HTTP_RESPONSE_CODE));
+    assertEquals("application/json", exchange.getMessage().getHeader(Exchange.CONTENT_TYPE));
+    assertJsonErrorResponse(exchange, "webhook_authentication_failed",
+        "Authorization header must use Basic authentication scheme");
+  }
+
+  @Test
+  @DisplayName("Validate-security route returns 403 when Basic username is rejected")
+  void validateSecurityRoute_403_whenBasicUsernameIsRejected() throws Exception {
+    String credentials = Base64.getEncoder()
+        .encodeToString(("wrong-user:" + basicAuthEnvValue).getBytes(StandardCharsets.UTF_8));
+    WebhookConnector connector = webhookConnectorWithSecurity("basic-connector",
+        new WebhookSecurity(WebhookSecurityType.BASIC_AUTH,
+            Map.of("username", BASIC_AUTH_USERNAME_ENV_KEY, "secret_alias", basicAuthEnvKey)));
+
+    Exchange exchange = invokeValidateSecurityRoute(connector,
+        Map.of("Authorization", "Basic " + credentials));
+
+    assertEquals(403, exchange.getMessage().getHeader(Exchange.HTTP_RESPONSE_CODE));
+    assertEquals("application/json", exchange.getMessage().getHeader(Exchange.CONTENT_TYPE));
+    assertJsonErrorResponse(exchange, "webhook_forbidden", "Basic credentials were rejected");
+  }
+
+  @Test
+  @DisplayName("Validate-security route returns 403 when Basic password is rejected")
+  void validateSecurityRoute_403_whenBasicPasswordIsRejected() throws Exception {
+    String credentials = Base64.getEncoder()
+        .encodeToString((BASIC_AUTH_USERNAME + ":wrong-password").getBytes(StandardCharsets.UTF_8));
+    WebhookConnector connector = webhookConnectorWithSecurity("basic-connector",
+        new WebhookSecurity(WebhookSecurityType.BASIC_AUTH,
+            Map.of("username", BASIC_AUTH_USERNAME_ENV_KEY, "secret_alias", basicAuthEnvKey)));
+
+    Exchange exchange = invokeValidateSecurityRoute(connector,
+        Map.of("Authorization", "Basic " + credentials));
+
+    assertEquals(403, exchange.getMessage().getHeader(Exchange.HTTP_RESPONSE_CODE));
+    assertEquals("application/json", exchange.getMessage().getHeader(Exchange.CONTENT_TYPE));
+    assertJsonErrorResponse(exchange, "webhook_forbidden", "Basic credentials were rejected");
+  }
+
+  @Test
+  @DisplayName("Validate-security route accepts JWT_BEARER mode")
+  void validateSecurityRoute_acceptsJwtBearerMode() {
+    String expectedClientEmail = "ps-fb25-product-events-produ@cpe-idp-stg-337o.iam.gserviceaccount.com";
+    String jwtPayload = "{\"email\":\"" + expectedClientEmail + "\"}";
+    String encodedHeader = Base64.getUrlEncoder().withoutPadding()
+        .encodeToString("{\"alg\":\"RS256\",\"typ\":\"JWT\"}".getBytes(StandardCharsets.UTF_8));
+    String encodedPayload = Base64.getUrlEncoder().withoutPadding()
+        .encodeToString(jwtPayload.getBytes(StandardCharsets.UTF_8));
+    String token = encodedHeader + "." + encodedPayload + ".signature";
+    String jwksUri = "https://www.googleapis.com/oauth2/v3/certs";
+
+    Jwt jwt = Jwt.withTokenValue(token).header("alg", "RS256").claim("email", expectedClientEmail)
+        .build();
+    when(jwtDecoderProvider.get(jwksUri)).thenReturn(jwtDecoder);
+    when(jwtDecoder.decode(token)).thenReturn(jwt);
+
+    WebhookConnector connector = webhookConnectorWithSecurity("jwt-connector",
+        new WebhookSecurity(WebhookSecurityType.JWT_BEARER, Map.of("jwks_uri", jwksUri,
+            "client_id_field", "email", "client_id_values", expectedClientEmail)));
+
+    Exchange exchange = invokeValidateSecurityRoute(connector,
+        Map.of("Authorization", "Bearer " + token));
+
+    assertSecurityValidationSucceeded(exchange);
   }
 
   @Test
@@ -112,7 +417,8 @@ class InboundWebhookIngestionRouteTest extends AbstractIntegrationTest {
 
     assertEquals(500, exchange.getMessage().getHeader(Exchange.HTTP_RESPONSE_CODE));
     assertEquals("application/json", exchange.getMessage().getHeader(Exchange.CONTENT_TYPE));
-    assertJsonErrorResponse(exchange, "INTERNAL_SERVER_ERROR", "Webhook configuration unavailable");
+    assertJsonErrorResponse(exchange, "webhook_configuration_missing",
+        "Webhook configuration unavailable");
   }
 
   @ParameterizedTest(name = "[{index}]")
@@ -135,7 +441,8 @@ class InboundWebhookIngestionRouteTest extends AbstractIntegrationTest {
 
     assertEquals(HTTP_BAD_REQUEST, exchange.getMessage().getHeader(Exchange.HTTP_RESPONSE_CODE));
     assertEquals("application/json", exchange.getMessage().getHeader(Exchange.CONTENT_TYPE));
-    assertJsonErrorResponse(exchange, "BAD_REQUEST", "Corrupted or invalid compressed gzip stream");
+    assertJsonErrorResponse(exchange, "invalid_compressed_payload",
+        "Invalid, unsupported, or oversized compressed payload");
   }
 
   @Test
@@ -145,7 +452,8 @@ class InboundWebhookIngestionRouteTest extends AbstractIntegrationTest {
 
     assertEquals(HTTP_BAD_REQUEST, exchange.getMessage().getHeader(Exchange.HTTP_RESPONSE_CODE));
     assertEquals("application/json", exchange.getMessage().getHeader(Exchange.CONTENT_TYPE));
-    assertJsonErrorResponse(exchange, "BAD_REQUEST", "Empty payload cannot be decoded as gzip");
+    assertJsonErrorResponse(exchange, "invalid_compressed_payload",
+        "Invalid, unsupported, or oversized compressed payload");
   }
 
   private static Stream<Arguments> successDecodingCases() throws Exception {
