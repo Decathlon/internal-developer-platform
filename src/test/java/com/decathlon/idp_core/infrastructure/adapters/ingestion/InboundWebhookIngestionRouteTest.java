@@ -4,6 +4,8 @@ import static com.decathlon.idp_core.infrastructure.adapters.ingestion.configura
 import static com.decathlon.idp_core.infrastructure.adapters.ingestion.configuration.IngestionConstants.HTTP_CREATED;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 import java.io.ByteArrayOutputStream;
 import java.nio.charset.StandardCharsets;
@@ -28,18 +30,26 @@ import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.test.context.TestConfiguration;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Import;
+import org.springframework.context.annotation.Primary;
+import org.springframework.security.oauth2.jwt.Jwt;
+import org.springframework.security.oauth2.jwt.JwtDecoder;
 import org.springframework.test.context.jdbc.Sql;
 
 import com.decathlon.idp_core.AbstractIntegrationTest;
 import com.decathlon.idp_core.domain.model.enums.WebhookSecurityType;
 import com.decathlon.idp_core.domain.model.inbound_connectors.webhook.WebhookConnector;
 import com.decathlon.idp_core.domain.model.inbound_connectors.webhook.WebhookSecurity;
+import com.decathlon.idp_core.infrastructure.adapters.webhook.security.WebhookJwtDecoderProvider;
 import com.fasterxml.jackson.databind.JsonNode;
 
 /**
  * Integration tests for Camel webhook ingestion entrypoint.
  */
 @DisplayName("Inbound Webhook Ingestion Route Integration Tests")
+@Import(InboundWebhookIngestionRouteTest.JwtDecoderProviderTestConfiguration.class)
 @Sql(scripts = {"/db/test/R__1_Insert_test_data.sql", "/db/test/R__4_insert_webhook_test_data.sql",
     "/db/test/R__5_insert_disabled_webhook_connector.sql"}, executionPhase = Sql.ExecutionPhase.BEFORE_TEST_METHOD)
 class InboundWebhookIngestionRouteTest extends AbstractIntegrationTest {
@@ -74,6 +84,22 @@ class InboundWebhookIngestionRouteTest extends AbstractIntegrationTest {
 
   @Autowired
   private ProducerTemplate producerTemplate;
+
+  @Autowired
+  private WebhookJwtDecoderProvider jwtDecoderProvider;
+
+  @Autowired
+  private JwtDecoder jwtDecoder;
+
+  @TestConfiguration
+  static class JwtDecoderProviderTestConfiguration {
+
+    @Bean
+    @Primary
+    WebhookJwtDecoderProvider jwtDecoderProvider() {
+      return mock(WebhookJwtDecoderProvider.class);
+    }
+  }
 
   @BeforeEach
   void configureRuntimeSecretsForWebhookSecurity() {
@@ -171,6 +197,11 @@ class InboundWebhookIngestionRouteTest extends AbstractIntegrationTest {
     JsonNode response = objectMapper.readTree(exchange.getMessage().getBody(String.class));
     assertEquals(expectedError, response.get("error").asText());
     assertEquals(expectedDescription, response.get("error_description").asText());
+  }
+
+  private void assertSecurityValidationSucceeded(Exchange exchange) {
+    assertNull(exchange.getMessage().getHeader(Exchange.HTTP_RESPONSE_CODE));
+    assertNull(exchange.getMessage().getBody());
   }
 
   @Test
@@ -293,13 +324,13 @@ class InboundWebhookIngestionRouteTest extends AbstractIntegrationTest {
     String credentials = Base64.getEncoder().encodeToString(
         (BASIC_AUTH_USERNAME + ":" + basicAuthEnvValue).getBytes(StandardCharsets.UTF_8));
     WebhookConnector connector = webhookConnectorWithSecurity("basic-connector",
-        new WebhookSecurity(WebhookSecurityType.BASIC_AUTH,
-            Map.of("username", BASIC_AUTH_USERNAME_ENV_KEY, "secret_alias", basicAuthEnvKey)));
+        new WebhookSecurity(WebhookSecurityType.BASIC_AUTH, Map.of("username",
+            "env:" + BASIC_AUTH_USERNAME_ENV_KEY, "secret_alias", basicAuthEnvKey)));
 
     Exchange exchange = invokeValidateSecurityRoute(connector,
         Map.of("Authorization", "Basic " + credentials));
 
-    assertNull(exchange.getException());
+    assertSecurityValidationSucceeded(exchange);
   }
 
   @Test
@@ -362,15 +393,21 @@ class InboundWebhookIngestionRouteTest extends AbstractIntegrationTest {
     String encodedPayload = Base64.getUrlEncoder().withoutPadding()
         .encodeToString(jwtPayload.getBytes(StandardCharsets.UTF_8));
     String token = encodedHeader + "." + encodedPayload + ".signature";
+    String jwksUri = "https://www.googleapis.com/oauth2/v3/certs";
+
+    Jwt jwt = Jwt.withTokenValue(token).header("alg", "RS256").claim("email", expectedClientEmail)
+        .build();
+    when(jwtDecoderProvider.get(jwksUri)).thenReturn(jwtDecoder);
+    when(jwtDecoder.decode(token)).thenReturn(jwt);
 
     WebhookConnector connector = webhookConnectorWithSecurity("jwt-connector",
-        new WebhookSecurity(WebhookSecurityType.JWT_BEARER, Map.of("jwks_uri", "env:" + jwksEnvKey,
+        new WebhookSecurity(WebhookSecurityType.JWT_BEARER, Map.of("jwks_uri", jwksUri,
             "client_id_field", "email", "client_id_values", expectedClientEmail)));
 
     Exchange exchange = invokeValidateSecurityRoute(connector,
         Map.of("Authorization", "Bearer " + token));
 
-    assertNull(exchange.getException());
+    assertSecurityValidationSucceeded(exchange);
   }
 
   @Test

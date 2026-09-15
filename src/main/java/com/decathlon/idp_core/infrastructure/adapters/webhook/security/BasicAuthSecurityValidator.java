@@ -26,6 +26,7 @@ public class BasicAuthSecurityValidator implements WebhookSecurityStrategy {
   private static final String USERNAME_KEY = "username";
   private static final String SECRET_ALIAS_KEY_SNAKE_CASE = "secret_alias";
   private static final String SECRET_ALIAS_KEY_CAMEL_CASE = "secretAlias";
+  private static final String BASIC_AUTH_SCHEME = "Basic";
 
   @Override
   public boolean supports(WebhookSecurityType securityType) {
@@ -56,13 +57,14 @@ public class BasicAuthSecurityValidator implements WebhookSecurityStrategy {
     String authorization = WebhookSecurityConfigurationUtils.requiredHeader(headers,
         "Authorization");
 
-    if (!authorization.startsWith("Basic ")) {
-      log.debug("Basic Auth validation failed: Authorization header does not start with 'Basic '");
+    if (!authorization.regionMatches(true, 0, BASIC_AUTH_SCHEME + " ", 0,
+        BASIC_AUTH_SCHEME.length() + 1)) {
+      log.debug("Basic Auth validation failed: Authorization header does not use the Basic scheme");
       throw new WebhookAuthUnauthorizedException(
           "Authorization header must use Basic authentication scheme");
     }
 
-    String encodedCredentials = authorization.substring("Basic ".length()).trim();
+    String encodedCredentials = authorization.substring(BASIC_AUTH_SCHEME.length() + 1).trim();
     String decodedCredentials;
     try {
       decodedCredentials = new String(Base64.getDecoder().decode(encodedCredentials),
