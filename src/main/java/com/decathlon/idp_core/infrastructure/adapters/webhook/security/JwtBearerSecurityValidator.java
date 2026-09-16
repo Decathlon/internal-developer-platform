@@ -33,6 +33,7 @@ public class JwtBearerSecurityValidator
   private static final String KEY_CLIENT_ID_VALUES_SNAKE_CASE = "client_id_values";
   private static final String KEY_CLIENT_ID_VALUES_CAMEL_CASE = "clientIdValues";
   private static final String KEY_EXPECTED_AUDIENCE_SNAKE_CASE = "expected_audience";
+  private static final String KEY_EXPECTED_AUDIENCE_CAMEL_CASE = "expectedAudience";
 
   private static final String BEARER_PREFIX = "Bearer ";
   private static final String CLIENT_CLAIM_AZP = "azp";
@@ -172,8 +173,10 @@ public class JwtBearerSecurityValidator
 
     try {
       for (InetAddress address : resolveHostAddresses(normalizedHost)) {
+        byte[] rawAddress = address.getAddress();
+        boolean isIpv6UniqueLocal = rawAddress.length == 16 && (rawAddress[0] & 0xfe) == 0xfc;
         if (address.isAnyLocalAddress() || address.isLoopbackAddress()
-            || address.isLinkLocalAddress() || address.isSiteLocalAddress()
+            || address.isLinkLocalAddress() || address.isSiteLocalAddress() || isIpv6UniqueLocal
             || address.isMulticastAddress()) {
           return true;
         }
@@ -202,7 +205,11 @@ public class JwtBearerSecurityValidator
   }
 
   private String resolveOptionalExpectedAudience(Map<String, String> config) {
-    return config.get(KEY_EXPECTED_AUDIENCE_SNAKE_CASE);
+    String value = config.get(KEY_EXPECTED_AUDIENCE_SNAKE_CASE);
+    if (value != null) {
+      return value;
+    }
+    return config.get(KEY_EXPECTED_AUDIENCE_CAMEL_CASE);
   }
 
   private Jwt decodeAndValidateJwt(String token, String jwksUri) {

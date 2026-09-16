@@ -84,7 +84,7 @@ public class WebhookExceptionHandlerHelper {
       return error.description();
     }
 
-    if (exposeExceptionMessage) {
+    if (exposeExceptionMessage && StringUtils.hasText(throwable.getMessage())) {
       return throwable.getMessage();
     }
 
