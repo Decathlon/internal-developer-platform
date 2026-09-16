@@ -1,6 +1,5 @@
 package com.decathlon.idp_core.infrastructure.adapters.ingestion.processor;
 
-import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Map;
 
@@ -27,7 +26,7 @@ public class SecurityProcessor {
     this.strategies = List.copyOf(strategies);
   }
 
-  public void validate(Map<String, Object> headers, Object rawPayload,
+  public void validate(Map<String, Object> headers, byte[] rawPayload,
       WebhookConnector webhookConnector) {
     WebhookSecurity security = webhookConnector.security();
     if (security == null || security.type() == WebhookSecurityType.NONE) {
@@ -42,21 +41,11 @@ public class SecurityProcessor {
       throw new WebhookSecurityException(WEBHOOK_AUTHENTICATION_FAILED_MESSAGE);
     }
 
-    authenticator.validateRequest(headers, toByteArray(rawPayload), security.config());
+    authenticator.validateRequest(headers, rawPayload == null ? new byte[0] : rawPayload,
+        security.config());
 
     log.debug("Webhook security validation passed for connector '{}' with strategy '{}'.",
         webhookConnector.identifier(), security.type());
-  }
-
-  private byte[] toByteArray(Object payload) {
-    if (payload == null) {
-      return new byte[0];
-    }
-    return switch (payload) {
-      case byte[] bytes -> bytes;
-      case String string -> string.getBytes(StandardCharsets.UTF_8);
-      default -> payload.toString().getBytes(StandardCharsets.UTF_8);
-    };
   }
 
 }

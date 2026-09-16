@@ -36,7 +36,7 @@ class DecodingProcessorTest {
   @DisplayName("Returns raw payload for pass-through encodings")
   void decode_returnsRawPayload_forPassThroughEncodings(String payload,
       Map<String, Object> headers) {
-    String decoded = decodingProcessor.decode(payload, headers);
+    String decoded = decodingProcessor.decode(payload.getBytes(StandardCharsets.UTF_8), headers);
     assertEquals(payload, decoded);
   }
 
@@ -89,9 +89,11 @@ class DecodingProcessorTest {
       String contentEncoding) {
     Map<String, Object> headers = Map.of("Content-Encoding", contentEncoding);
     String payload = "{\"status\":\"OK\"}";
+    byte[] payloadBytes = payload.getBytes(StandardCharsets.UTF_8);
+    var failureCase = new DecodeFailureCase(decodingProcessor, payloadBytes, headers);
 
     WebhookDecodingException exception = assertThrows(WebhookDecodingException.class,
-        () -> decodingProcessor.decode(payload, headers));
+        failureCase::execute);
 
     assertThat(exception.getMessage()).contains("Unsupported Content-Encoding: '")
         .contains(contentEncoding);
@@ -114,9 +116,11 @@ class DecodingProcessorTest {
   @DisplayName("Strips CRLF injection characters from Content-Encoding header in exception messages")
   void decode_sanitizesHeaderValue_whenContentEncodingContainsCrLfCharacters() {
     Map<String, Object> headers = Map.of("Content-Encoding", "br\r\nX-Injected: evil");
+    byte[] payloadBytes = "{}".getBytes(StandardCharsets.UTF_8);
+    var failureCase = new DecodeFailureCase(decodingProcessor, payloadBytes, headers);
 
     WebhookDecodingException exception = assertThrows(WebhookDecodingException.class,
-        () -> decodingProcessor.decode("{}", headers));
+        failureCase::execute);
 
     assertThat(exception.getMessage()).doesNotContain("\r").doesNotContain("\n");
   }
@@ -142,6 +146,14 @@ class DecodingProcessorTest {
       gzipOutput.write(payload.getBytes(StandardCharsets.UTF_8));
       gzipOutput.finish();
       return output.toByteArray();
+    }
+  }
+
+  private record DecodeFailureCase(DecodingProcessor decodingProcessor, byte[] payload,
+      Map<String, Object> headers) {
+
+    void execute() {
+      decodingProcessor.decode(payload, headers);
     }
   }
 }

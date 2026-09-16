@@ -1,8 +1,6 @@
 package com.decathlon.idp_core.infrastructure.adapters.webhook.security;
 
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatCode;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.assertj.core.api.Assertions.*;
 import static org.mockito.Mockito.when;
 
 import java.net.InetAddress;
@@ -296,6 +294,22 @@ class JwtBearerSecurityValidatorTest {
 
       assertThatThrownBy(() -> validator.validateRequest(headers, new byte[0], config))
           .isInstanceOf(WebhookAuthUnauthorizedException.class);
+    }
+
+    @Test
+    @DisplayName("Should accept bearer scheme tokens regardless of case")
+    void shouldAcceptBearerSchemeRegardlessOfCase() {
+      when(jwtDecoderProvider.get("https://issuer/.well-known/jwks.json")).thenReturn(jwtDecoder);
+      Map<String, String> config = Map.of("jwks_uri", "https://issuer/.well-known/jwks.json",
+          "client_id_field", "email", "client_id_values", "expected@example.com");
+      String token = "signed-token";
+      Jwt jwt = jwtWithClaim("email", "expected@example.com");
+      when(jwtDecoder.decode(token)).thenReturn(jwt);
+
+      assertThatCode(() -> validator.validateRequest(Map.of("Authorization", "bearer " + token),
+          new byte[0], config)).doesNotThrowAnyException();
+      assertThatCode(() -> validator.validateRequest(Map.of("Authorization", "BeArEr " + token),
+          new byte[0], config)).doesNotThrowAnyException();
     }
 
     @Test

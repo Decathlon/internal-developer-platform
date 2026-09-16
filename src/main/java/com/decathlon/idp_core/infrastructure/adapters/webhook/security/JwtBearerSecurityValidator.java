@@ -103,6 +103,7 @@ public class JwtBearerSecurityValidator
     parseAllowedClientIdValues(clientIdValues);
   }
 
+  @Override
   public void validateRequest(Map<String, Object> headers, byte[] rawPayload,
       Map<String, String> config) {
     String jwksUriValue = WebhookSecurityConfigurationUtils.required(config,
@@ -115,7 +116,7 @@ public class JwtBearerSecurityValidator
 
     String authorization = WebhookSecurityConfigurationUtils.requiredHeader(headers,
         "Authorization");
-    if (!authorization.startsWith(BEARER_PREFIX)
+    if (!hasBearerPrefix(authorization)
         || authorization.substring(BEARER_PREFIX.length()).isBlank()) {
       throw new WebhookAuthUnauthorizedException(
           "Authorization header must use Bearer token format");
@@ -218,6 +219,10 @@ public class JwtBearerSecurityValidator
     } catch (JwtException exception) {
       throw new WebhookAuthUnauthorizedException("JWT token validation failed", exception);
     }
+  }
+
+  private boolean hasBearerPrefix(String authorization) {
+    return authorization.regionMatches(true, 0, BEARER_PREFIX, 0, BEARER_PREFIX.length());
   }
 
   private Set<String> parseAllowedClientIdValues(String clientIdValues) {

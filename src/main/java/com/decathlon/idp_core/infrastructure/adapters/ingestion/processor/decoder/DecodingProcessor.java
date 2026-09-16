@@ -52,7 +52,7 @@ public class DecodingProcessor {
 
   /// Decodes incoming payload bytes or string representations based on request
   /// headers.
-  public String decode(Object encodedPayload, Map<String, Object> headers) {
+  public String decode(byte[] encodedPayload, Map<String, Object> headers) {
     String contentEncoding = extractContentEncodingHeader(headers);
     List<String> encodingChain = parseEncodingChain(contentEncoding);
 
@@ -73,23 +73,22 @@ public class DecodingProcessor {
               + "'. Supported encodings: " + String.join(", ", decoders.keySet()));
     }
 
-    byte[] decodedPayload = toByteArray(encodedPayload);
-    if (decodedPayload.length == 0 && encodingChain.contains(CONTENT_ENCODING_GZIP)) {
+    if (encodedPayload == null && encodingChain.contains(CONTENT_ENCODING_GZIP)) {
       throw new WebhookDecodingException("Empty payload cannot be decoded as gzip");
     }
 
+    byte[] decodedPayload = encodedPayload == null ? new byte[0] : encodedPayload;
     try {
       for (int i = encodingChain.size() - 1; i >= 0; i--) {
         decodedPayload = decoders.get(encodingChain.get(i)).decode(decodedPayload);
       }
+      return new String(decodedPayload, StandardCharsets.UTF_8);
     } catch (ZipException e) {
       throw new WebhookDecodingException("Corrupted or invalid compressed gzip stream", e);
     } catch (IOException e) {
       throw new WebhookDecodingException(
           "Failed to decompress payload for encoding: " + sanitizeHeaderValue(contentEncoding), e);
     }
-
-    return new String(decodedPayload, StandardCharsets.UTF_8);
   }
 
   private String extractContentEncodingHeader(Map<String, Object> headers) {
@@ -139,24 +138,11 @@ public class DecodingProcessor {
     }
   }
 
-  private String payloadToString(Object payload) {
-    if (payload == null) return "";
+  private String payloadToString(byte[] payload) {
+    if (payload == null)
+      return "";
 
-    return switch (payload) {
-      case String s -> s;
-      case byte[] b -> new String(b, StandardCharsets.UTF_8);
-      default -> payload.toString();
-    };
-  }
-
-  private byte[] toByteArray(Object payload) {
-    if (payload == null) return new byte[0];
-
-    return switch (payload) {
-      case byte[] b -> b;
-      case String s -> s.getBytes(StandardCharsets.UTF_8);
-      default -> payload.toString().getBytes(StandardCharsets.UTF_8);
-    };
+    return new String(payload, StandardCharsets.UTF_8);
   }
 
   /// Strips control characters (including CRLF) and truncates header values to
