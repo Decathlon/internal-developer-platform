@@ -15,6 +15,7 @@ import com.decathlon.idp_core.domain.model.inbound_connectors.webhook.WebhookCon
 import com.decathlon.idp_core.domain.service.webhook.WebhookConnectorService;
 import com.decathlon.idp_core.infrastructure.adapters.ingestion.exception_handler.WebhookExceptionRouteBuilder;
 import com.decathlon.idp_core.infrastructure.adapters.ingestion.processor.IngestionProcessor;
+import com.decathlon.idp_core.infrastructure.adapters.ingestion.processor.PayloadValidationProcessor;
 import com.decathlon.idp_core.infrastructure.adapters.ingestion.processor.SecurityProcessor;
 import com.decathlon.idp_core.infrastructure.adapters.ingestion.processor.decoder.DecodingProcessor;
 
@@ -29,25 +30,18 @@ public class GenericInboundEventRouteBuilder extends RouteBuilder {
   private final DecodingProcessor decodingProcessor;
   private final SecurityProcessor securityProcessor;
   private final IngestionProcessor ingestionProcessor;
+  private final PayloadValidationProcessor payloadValidationProcessor;
   private final WebhookExceptionRouteBuilder webhookExceptionRouteBuilder;
+
   @Override
   public void configure() throws Exception {
     webhookExceptionRouteBuilder.configureExceptions(this);
 
-    from(DIRECT_PROCESS_EVENT).routeId(ROUTE_ID_WEBHOOK_PIPELINE).process(exchange -> {
-      // Materialize the servlet/platform-http body once so downstream processors
-      // reuse
-      // the exact received bytes for authentication and decoding.
-      byte[] rawPayload = exchange.getMessage().getBody(byte[].class);
-      exchange.setProperty(RAW_PAYLOAD_BODY_PROPERTY, rawPayload);
-      exchange.getMessage().setBody(rawPayload);
-    }).to(DIRECT_FETCH_CONFIGURATION).to(DIRECT_VALIDATE_ENABLED).to(DIRECT_VALIDATE_SECURITY)
-        .to(DIRECT_DECODE_PAYLOAD).to(DIRECT_INGEST_PAYLOAD).removeHeaders("*") // Clear all
-                                                                                // accumulated
-                                                                                // incoming and
-                                                                                // internal
-                                                                                // headers
-        .setHeader(Exchange.HTTP_RESPONSE_CODE, constant(HTTP_CREATED))
+    // Main Pipeline
+    from(DIRECT_PROCESS_EVENT).routeId(ROUTE_ID_WEBHOOK_PIPELINE).to(DIRECT_FETCH_CONFIGURATION)
+        .to(DIRECT_VALIDATE_ENABLED).process(payloadValidationProcessor::validate)
+        .to(DIRECT_VALIDATE_SECURITY).to(DIRECT_DECODE_PAYLOAD).to(DIRECT_INGEST_PAYLOAD)
+        .removeHeaders("*").setHeader(Exchange.HTTP_RESPONSE_CODE, constant(HTTP_CREATED))
         .setHeader(Exchange.CONTENT_TYPE, constant(APPLICATION_JSON))
         .setBody(constant(SUCCESS_WEBHOOK_EVENT_PROCESSED));
 
@@ -119,6 +113,5 @@ public class GenericInboundEventRouteBuilder extends RouteBuilder {
           ingestionProcessor.ingest(decodedPayload,
               Objects.requireNonNull(config, "Webhook connector config must not be null"));
         });
-
   }
 }

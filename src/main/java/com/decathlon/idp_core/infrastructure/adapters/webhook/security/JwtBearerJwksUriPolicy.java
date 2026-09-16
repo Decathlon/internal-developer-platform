@@ -4,7 +4,8 @@ import java.net.InetAddress;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.UnknownHostException;
-import java.util.function.Function;
+import java.util.Arrays;
+import java.util.Set;
 
 import org.springframework.util.StringUtils;
 import org.springframework.web.client.RestClientException;
@@ -15,9 +16,10 @@ import com.decathlon.idp_core.domain.exception.webhook.WebhookSecurityConfigurat
 final class JwtBearerJwksUriPolicy {
 
   private static final String HTTPS_SCHEME = "https";
-  private static final String LOCALHOST = "localhost";
+  private static final Set<String> BLOCKED_HOSTS = Set.of("localhost", "127.0.0.1", "::1");
 
   private JwtBearerJwksUriPolicy() {
+    throw new UnsupportedOperationException("Utility class");
   }
 
   static void validateConfiguredJwksUri(String jwksUri) {
@@ -33,45 +35,65 @@ final class JwtBearerJwksUriPolicy {
     validateUri(jwksUri, RestClientException::new);
   }
 
-  private static void validateUri(URI jwksUri,
-      Function<String, RuntimeException> exceptionFactory) {
+  private static void validateUri(URI jwksUri, ExceptionFactory exceptionFactory) {
     if (!HTTPS_SCHEME.equalsIgnoreCase(jwksUri.getScheme())) {
       throw exceptionFactory
-          .apply("Invalid jwks_uri for JWT_BEARER security: only HTTPS URIs are allowed");
+          .create("Invalid jwks_uri for JWT_BEARER security: cause=only_https_allowed");
     }
 
-    if (!StringUtils.hasText(jwksUri.getHost())) {
-      throw exceptionFactory.apply("Invalid jwks_uri for JWT_BEARER security: host is missing");
+    String host = jwksUri.getHost();
+    if (!StringUtils.hasText(host)) {
+      throw exceptionFactory.create("Invalid jwks_uri for JWT_BEARER security: cause=host_missing");
     }
 
-    if (isPrivateOrLoopbackHost(jwksUri.getHost(), exceptionFactory)) {
-      throw exceptionFactory.apply(
-          "Invalid jwks_uri for JWT_BEARER security: localhost, loopback, private and link-local hosts are not allowed");
+    if (isPrivateOrLoopbackHost(host.trim(), exceptionFactory)) {
+      throw exceptionFactory.create("Invalid jwks_uri for JWT_BEARER security: cause=unsafe_host");
     }
   }
 
-  private static boolean isPrivateOrLoopbackHost(String host,
-      Function<String, RuntimeException> exceptionFactory) {
-    String normalizedHost = host.trim();
-
-    if (LOCALHOST.equalsIgnoreCase(normalizedHost)) {
+  private static boolean isPrivateOrLoopbackHost(String host, ExceptionFactory exceptionFactory) {
+    if (BLOCKED_HOSTS.contains(host.toLowerCase())) {
       return true;
     }
 
     try {
-      for (InetAddress address : InetAddress.getAllByName(normalizedHost)) {
-        byte[] rawAddress = address.getAddress();
-        boolean isIpv6UniqueLocal = rawAddress.length == 16 && (rawAddress[0] & 0xfe) == 0xfc;
-        if (address.isAnyLocalAddress() || address.isLoopbackAddress()
-            || address.isLinkLocalAddress() || address.isSiteLocalAddress() || isIpv6UniqueLocal
-            || address.isMulticastAddress()) {
-          return true;
-        }
-      }
-      return false;
+      return containsPrivateOrLoopbackAddress(InetAddress.getAllByName(host));
     } catch (UnknownHostException _) {
       throw exceptionFactory
-          .apply("Invalid jwks_uri for JWT_BEARER security: host cannot be resolved");
+          .create("Invalid jwks_uri for JWT_BEARER security: cause=host_unresolvable");
     }
+  }
+
+  static boolean containsPrivateOrLoopbackAddress(InetAddress[] addresses) {
+    return Arrays.stream(addresses).anyMatch(JwtBearerJwksUriPolicy::isPrivateOrLoopbackAddress);
+  }
+
+  static boolean isPrivateOrLoopbackAddress(InetAddress address) {
+    // 1. Predicates standards du JDK
+    if (address.isAnyLocalAddress() || address.isLoopbackAddress() || address.isLinkLocalAddress()
+        || address.isSiteLocalAddress() || address.isMulticastAddress()) {
+      return true;
+    }
+
+    byte[] bytes = address.getAddress();
+
+    // 2. IPv6 Unique Local Addresses (fc00::/7 -> RFC 4193)
+    if (bytes.length == 16 && (bytes[0] & 0xFE) == 0xFC) {
+      return true;
+    }
+
+    // 3. IPv4 Reserved Ranges : CGNAT (100.64.0.0/10) & Benchmarking
+    // (198.18.0.0/15)
+    if (bytes.length == 4) {
+      int b0 = Byte.toUnsignedInt(bytes[0]);
+      int b1 = Byte.toUnsignedInt(bytes[1]);
+
+      boolean isCgnat = (b0 == 100 && b1 >= 64 && b1 <= 127);
+      boolean isBenchmarking = (b0 == 198 && b1 == 18 || b1 == 19);
+
+      return isCgnat || isBenchmarking;
+    }
+
+    return false;
   }
 }
