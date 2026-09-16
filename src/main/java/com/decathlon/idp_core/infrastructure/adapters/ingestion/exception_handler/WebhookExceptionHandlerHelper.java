@@ -12,9 +12,8 @@ import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 
+import com.decathlon.idp_core.domain.exception.webhook.WebhookAuthenticationException;
 import com.decathlon.idp_core.infrastructure.adapters.common.model.ErrorResponse;
-import com.decathlon.idp_core.infrastructure.adapters.ingestion.exception.WebhookAuthForbiddenException;
-import com.decathlon.idp_core.infrastructure.adapters.ingestion.exception.WebhookAuthUnauthorizedException;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
@@ -81,20 +80,15 @@ public class WebhookExceptionHandlerHelper {
   private String resolveErrorDescription(Exchange exchange, WebhookErrorCode error,
       boolean exposeExceptionMessage) {
     Throwable throwable = exchange.getProperty(Exchange.EXCEPTION_CAUGHT, Throwable.class);
-    if (throwable == null || !StringUtils.hasText(throwable.getMessage())) {
+    if (throwable == null) {
       return error.description();
     }
 
-    if (exposeExceptionMessage || isAuthenticationException(throwable)) {
+    if (exposeExceptionMessage) {
       return throwable.getMessage();
     }
 
     return error.description();
-  }
-
-  private boolean isAuthenticationException(Throwable throwable) {
-    return throwable instanceof WebhookAuthUnauthorizedException
-        || throwable instanceof WebhookAuthForbiddenException;
   }
 
   private void logHandledException(Exchange exchange, LoggingLevel level, String errorCode,
@@ -103,7 +97,7 @@ public class WebhookExceptionHandlerHelper {
     String connectorIdentifier = exchange.getProperty(CONNECTOR_IDENTIFIER_PROPERTY, String.class);
     String targetIdentifier = connectorIdentifier == null ? UNKNOWN_VALUE : connectorIdentifier;
     String exceptionType = throwable == null ? UNKNOWN_VALUE : throwable.getClass().getName();
-    String exceptionMessage = throwable == null ? "no exception captured" : throwable.getMessage();
+    String exceptionMessage = resolveLogMessage(throwable, targetIdentifier);
 
     if (level == LoggingLevel.ERROR) {
       log.error(STRUCTURED_LOG_MESSAGE, errorCode, statusCode, targetIdentifier, exceptionType,
@@ -118,5 +112,22 @@ public class WebhookExceptionHandlerHelper {
       log.warn(STRUCTURED_LOG_MESSAGE, errorCode, statusCode, targetIdentifier, exceptionType,
           exceptionMessage);
     }
+  }
+
+  private String resolveLogMessage(Throwable throwable, String connectorIdentifier) {
+    if (throwable == null) {
+      return "no exception captured";
+    }
+
+    String message = throwable.getMessage();
+    if (!StringUtils.hasText(message)) {
+      return "no exception message captured";
+    }
+
+    if (throwable instanceof WebhookAuthenticationException) {
+      return "%s for connector '%s'".formatted(message, connectorIdentifier);
+    }
+
+    return message;
   }
 }

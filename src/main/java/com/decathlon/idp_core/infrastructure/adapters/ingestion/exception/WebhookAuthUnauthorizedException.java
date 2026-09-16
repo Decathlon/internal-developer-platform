@@ -1,6 +1,9 @@
 package com.decathlon.idp_core.infrastructure.adapters.ingestion.exception;
 
-public class WebhookAuthUnauthorizedException extends RuntimeException {
+import com.decathlon.idp_core.domain.exception.webhook.WebhookAuthenticationException;
+
+public class WebhookAuthUnauthorizedException extends WebhookAuthenticationException {
+
   public WebhookAuthUnauthorizedException(String message) {
     super(message);
   }

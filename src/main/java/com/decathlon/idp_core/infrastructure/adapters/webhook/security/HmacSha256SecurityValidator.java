@@ -8,6 +8,7 @@ import com.decathlon.idp_core.domain.model.enums.WebhookSecurityType;
 import com.decathlon.idp_core.domain.port.WebhookSecurityStrategy;
 import com.decathlon.idp_core.infrastructure.adapters.ingestion.exception.WebhookAuthForbiddenException;
 import com.decathlon.idp_core.infrastructure.adapters.ingestion.exception.WebhookAuthUnauthorizedException;
+import com.decathlon.idp_core.infrastructure.adapters.ingestion.security.WebhookRequestAuthenticator;
 
 import lombok.RequiredArgsConstructor;
 
@@ -17,7 +18,10 @@ import lombok.RequiredArgsConstructor;
 /// incoming webhook requests by verifying the signature against a stored secret.
 @Component
 @RequiredArgsConstructor
-public class HmacSha256SecurityValidator implements WebhookSecurityStrategy {
+public class HmacSha256SecurityValidator
+    implements
+      WebhookSecurityStrategy,
+      WebhookRequestAuthenticator {
 
   private static final String DEFAULT_HMAC_PREFIX = "sha256=";
 
@@ -52,7 +56,8 @@ public class HmacSha256SecurityValidator implements WebhookSecurityStrategy {
     String receivedSignature = WebhookSecurityConfigurationUtils.requiredHeader(headers,
         headerName);
     if (!receivedSignature.startsWith(prefix)) {
-      throw new WebhookAuthUnauthorizedException("HMAC signature format is invalid");
+      throw new WebhookAuthUnauthorizedException(
+          "Header %s lacks required '%s' prefix".formatted(headerName, prefix));
     }
 
     String computedSignature = prefix
@@ -60,7 +65,8 @@ public class HmacSha256SecurityValidator implements WebhookSecurityStrategy {
 
     if (!WebhookSecurityConfigurationUtils.constantTimeEquals(computedSignature,
         receivedSignature)) {
-      throw new WebhookAuthForbiddenException("HMAC signature was rejected");
+      throw new WebhookAuthForbiddenException(
+          "Header %s signature does not match computed HMAC".formatted(headerName));
     }
   }
 

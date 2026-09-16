@@ -244,7 +244,7 @@ class InboundWebhookIngestionRouteTest extends AbstractIntegrationTest {
     assertEquals(401, exchange.getMessage().getHeader(Exchange.HTTP_RESPONSE_CODE));
     assertEquals("application/json", exchange.getMessage().getHeader(Exchange.CONTENT_TYPE));
     assertJsonErrorResponse(exchange, "webhook_authentication_failed",
-        "Webhook authentication failed for connector 'token-connector' with strategy 'STATIC_TOKEN'");
+        "Webhook authentication failed");
   }
 
   @Test
@@ -255,7 +255,7 @@ class InboundWebhookIngestionRouteTest extends AbstractIntegrationTest {
 
     assertEquals(403, exchange.getMessage().getHeader(Exchange.HTTP_RESPONSE_CODE));
     assertEquals("application/json", exchange.getMessage().getHeader(Exchange.CONTENT_TYPE));
-    assertJsonErrorResponse(exchange, "webhook_forbidden", "Static token was rejected");
+    assertJsonErrorResponse(exchange, "webhook_forbidden", "Invalid credentials");
   }
 
   @Test
@@ -304,7 +304,7 @@ class InboundWebhookIngestionRouteTest extends AbstractIntegrationTest {
     assertEquals(401, exchange.getMessage().getHeader(Exchange.HTTP_RESPONSE_CODE));
     assertEquals("application/json", exchange.getMessage().getHeader(Exchange.CONTENT_TYPE));
     assertJsonErrorResponse(exchange, "webhook_authentication_failed",
-        "HMAC signature format is invalid");
+        "Webhook authentication failed");
   }
 
   @Test
@@ -346,7 +346,7 @@ class InboundWebhookIngestionRouteTest extends AbstractIntegrationTest {
     assertEquals(401, exchange.getMessage().getHeader(Exchange.HTTP_RESPONSE_CODE));
     assertEquals("application/json", exchange.getMessage().getHeader(Exchange.CONTENT_TYPE));
     assertJsonErrorResponse(exchange, "webhook_authentication_failed",
-        "Authorization header must use Basic authentication scheme");
+        "Webhook authentication failed");
   }
 
   @Test
@@ -363,7 +363,7 @@ class InboundWebhookIngestionRouteTest extends AbstractIntegrationTest {
 
     assertEquals(403, exchange.getMessage().getHeader(Exchange.HTTP_RESPONSE_CODE));
     assertEquals("application/json", exchange.getMessage().getHeader(Exchange.CONTENT_TYPE));
-    assertJsonErrorResponse(exchange, "webhook_forbidden", "Basic credentials were rejected");
+    assertJsonErrorResponse(exchange, "webhook_forbidden", "Invalid credentials");
   }
 
   @Test
@@ -380,7 +380,7 @@ class InboundWebhookIngestionRouteTest extends AbstractIntegrationTest {
 
     assertEquals(403, exchange.getMessage().getHeader(Exchange.HTTP_RESPONSE_CODE));
     assertEquals("application/json", exchange.getMessage().getHeader(Exchange.CONTENT_TYPE));
-    assertJsonErrorResponse(exchange, "webhook_forbidden", "Basic credentials were rejected");
+    assertJsonErrorResponse(exchange, "webhook_forbidden", "Invalid credentials");
   }
 
   @Test

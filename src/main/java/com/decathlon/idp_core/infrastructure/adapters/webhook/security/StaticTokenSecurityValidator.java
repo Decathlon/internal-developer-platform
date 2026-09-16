@@ -7,12 +7,16 @@ import org.springframework.stereotype.Component;
 import com.decathlon.idp_core.domain.model.enums.WebhookSecurityType;
 import com.decathlon.idp_core.domain.port.WebhookSecurityStrategy;
 import com.decathlon.idp_core.infrastructure.adapters.ingestion.exception.WebhookAuthForbiddenException;
+import com.decathlon.idp_core.infrastructure.adapters.ingestion.security.WebhookRequestAuthenticator;
 
 /// Static Token security strategy for webhooks.
 ///
 /// Validates static token configuration at creation time and authenticates incoming
 @Component
-public class StaticTokenSecurityValidator implements WebhookSecurityStrategy {
+public class StaticTokenSecurityValidator
+    implements
+      WebhookSecurityStrategy,
+      WebhookRequestAuthenticator {
 
   @Override
   public boolean supports(WebhookSecurityType securityType) {

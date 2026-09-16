@@ -40,14 +40,14 @@ public class WebhookExceptionRouteBuilder {
         WebhookErrorCode.CONFIGURATION_MISSING);
     handlerHelper.registerHandler(routeBuilder, WebhookDecodingException.class,
         WebhookErrorCode.INVALID_COMPRESSED_PAYLOAD);
-    handlerHelper.registerHandler(routeBuilder, WebhookAuthenticationException.class,
-        WebhookErrorCode.AUTHENTICATION_FAILED);
     handlerHelper.registerHandler(routeBuilder, WebhookAuthUnauthorizedException.class,
         WebhookErrorCode.AUTHENTICATION_REQUIRED);
     handlerHelper.registerHandler(routeBuilder, WebhookAuthForbiddenException.class,
         WebhookErrorCode.AUTHENTICATION_FORBIDDEN);
+    handlerHelper.registerHandler(routeBuilder, WebhookAuthenticationException.class,
+        WebhookErrorCode.AUTHENTICATION_FAILED);
     handlerHelper.registerHandler(routeBuilder, WebhookSecurityException.class,
-        WebhookErrorCode.AUTHENTICATION_REQUIRED);
+        WebhookErrorCode.AUTHENTICATION_FAILED);
 
     handlerHelper.registerHandlers(routeBuilder, WebhookErrorCode.ENTITY_INGESTION_ERROR, true,
         EntityDynamicMappingJsltErrorException.class, ExpressionEvaluationFailedException.class,

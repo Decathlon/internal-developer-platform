@@ -10,6 +10,7 @@ import com.decathlon.idp_core.domain.model.enums.WebhookSecurityType;
 import com.decathlon.idp_core.domain.port.WebhookSecurityStrategy;
 import com.decathlon.idp_core.infrastructure.adapters.ingestion.exception.WebhookAuthForbiddenException;
 import com.decathlon.idp_core.infrastructure.adapters.ingestion.exception.WebhookAuthUnauthorizedException;
+import com.decathlon.idp_core.infrastructure.adapters.ingestion.security.WebhookRequestAuthenticator;
 
 import lombok.NoArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -21,7 +22,10 @@ import lombok.extern.slf4j.Slf4j;
 @Component
 @NoArgsConstructor
 @Slf4j
-public class BasicAuthSecurityValidator implements WebhookSecurityStrategy {
+public class BasicAuthSecurityValidator
+    implements
+      WebhookSecurityStrategy,
+      WebhookRequestAuthenticator {
 
   private static final String USERNAME_KEY = "username";
   private static final String SECRET_ALIAS_KEY_SNAKE_CASE = "secret_alias";

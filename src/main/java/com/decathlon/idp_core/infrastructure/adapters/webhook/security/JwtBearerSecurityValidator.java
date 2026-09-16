@@ -18,9 +18,13 @@ import com.decathlon.idp_core.domain.model.enums.WebhookSecurityType;
 import com.decathlon.idp_core.domain.port.WebhookSecurityStrategy;
 import com.decathlon.idp_core.infrastructure.adapters.ingestion.exception.WebhookAuthForbiddenException;
 import com.decathlon.idp_core.infrastructure.adapters.ingestion.exception.WebhookAuthUnauthorizedException;
+import com.decathlon.idp_core.infrastructure.adapters.ingestion.security.WebhookRequestAuthenticator;
 
 @Component
-public class JwtBearerSecurityValidator implements WebhookSecurityStrategy {
+public class JwtBearerSecurityValidator
+    implements
+      WebhookSecurityStrategy,
+      WebhookRequestAuthenticator {
 
   private static final String KEY_JWKS_URI_SNAKE_CASE = "jwks_uri";
   private static final String KEY_JWKS_URI_CAMEL_CASE = "jwksUri";
@@ -98,7 +102,6 @@ public class JwtBearerSecurityValidator implements WebhookSecurityStrategy {
     parseAllowedClientIdValues(clientIdValues);
   }
 
-  @Override
   public void validateRequest(Map<String, Object> headers, byte[] rawPayload,
       Map<String, String> config) {
     String jwksUriValue = WebhookSecurityConfigurationUtils.required(config,

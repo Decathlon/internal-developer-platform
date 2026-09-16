@@ -4,13 +4,11 @@ import java.util.Map;
 
 import com.decathlon.idp_core.domain.model.enums.WebhookSecurityType;
 
-/// Unified strategy contract for webhook security handling.
+/// Unified strategy contract for webhook security configuration handling.
 ///
-/// This interface consolidates two responsibilities that were previously scattered:
-/// 1. Validating security configuration at creation/update time
-/// 2. Validating incoming webhook requests at runtime
-///
-/// Implementations should focus on security logic without side effects.
+/// This domain port validates the persisted security configuration at creation/update
+/// time. Runtime authentication is handled by an infrastructure-specific contract so
+/// the domain stays free of transport concerns.
 public interface WebhookSecurityStrategy {
 
   /// Checks if this strategy supports the given security type.
@@ -26,18 +24,5 @@ public interface WebhookSecurityStrategy {
   /// com.decathlon.idp_core.domain.exception.webhook.WebhookSecurityConfigurationException
   /// if validation fails
   void validateConfiguration(Map<String, String> config);
-
-  /// Validates an incoming webhook request at runtime.
-  ///
-  /// @param headers the inbound HTTP headers
-  /// @param rawPayload the exact inbound payload bytes (before decoding)
-  /// @param config the persisted security configuration
-  /// @throws
-  /// com.decathlon.idp_core.infrastructure.adapters.ingestion.exception.WebhookAuthUnauthorizedException
-  /// when authentication is missing or malformed (401)
-  /// @throws
-  /// com.decathlon.idp_core.infrastructure.adapters.ingestion.exception.WebhookAuthForbiddenException
-  /// when authentication is provided but rejected (403)
-  void validateRequest(Map<String, Object> headers, byte[] rawPayload, Map<String, String> config);
 
 }
