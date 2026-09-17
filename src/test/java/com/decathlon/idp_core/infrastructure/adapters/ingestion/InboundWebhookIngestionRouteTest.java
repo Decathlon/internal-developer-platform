@@ -410,7 +410,7 @@ class InboundWebhookIngestionRouteTest extends AbstractIntegrationTest {
   @Test
   @DisplayName("Validate-security route accepts JWT_BEARER mode")
   void validateSecurityRoute_acceptsJwtBearerMode() {
-    String expectedClientEmail = "ps-fb25-product-events-produ@cpe-idp-stg-337o.iam.gserviceaccount.com";
+    String expectedClientEmail = "service-account@example.iam.gserviceaccount.com";
     String jwtPayload = "{\"email\":\"" + expectedClientEmail + "\"}";
     String encodedHeader = Base64.getUrlEncoder().withoutPadding()
         .encodeToString("{\"alg\":\"RS256\",\"typ\":\"JWT\"}".getBytes(StandardCharsets.UTF_8));
@@ -502,6 +502,16 @@ class InboundWebhookIngestionRouteTest extends AbstractIntegrationTest {
     assertEquals("application/json", exchange.getMessage().getHeader(Exchange.CONTENT_TYPE));
     assertJsonErrorResponse(exchange, "invalid_compressed_payload",
         "Invalid, unsupported, or oversized compressed payload");
+  }
+
+  @Test
+  @DisplayName("Route returns 201 when gzip-compressed payload is decoded before processing")
+  void postWebhookRoute_201_whenPayloadIsGzipEncoded() throws Exception {
+    Exchange exchange = invokeIngestionRoute("public-connector", gzipSamplePayload(), "gzip");
+
+    assertEquals(HTTP_CREATED, exchange.getMessage().getHeader(Exchange.HTTP_RESPONSE_CODE));
+    assertEquals("application/json", exchange.getMessage().getHeader(Exchange.CONTENT_TYPE));
+    assertJsonSuccessResponse(exchange);
   }
 
   @Test

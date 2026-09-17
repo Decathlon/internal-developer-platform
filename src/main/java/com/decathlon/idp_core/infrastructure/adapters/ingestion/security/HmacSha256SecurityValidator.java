@@ -1,5 +1,6 @@
 package com.decathlon.idp_core.infrastructure.adapters.ingestion.security;
 
+import java.util.Locale;
 import java.util.Map;
 
 import org.springframework.stereotype.Component;
@@ -10,13 +11,11 @@ import com.decathlon.idp_core.infrastructure.adapters.ingestion.exception.Webhoo
 import com.decathlon.idp_core.infrastructure.adapters.ingestion.exception.WebhookAuthUnauthorizedException;
 
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 
-/// HMAC SHA256 security strategy for webhooks.
-///
-/// Validates HMAC SHA256 signature configuration at creation time and authenticates
-/// incoming webhook requests by verifying the signature against a stored secret.
 @Component
 @RequiredArgsConstructor
+@Slf4j
 public class HmacSha256SecurityValidator
     implements
       WebhookSecurityStrategy,
@@ -37,8 +36,6 @@ public class HmacSha256SecurityValidator
     String alias = WebhookSecurityConfigurationUtils.required(config, "secret_alias",
         "secretAlias");
     WebhookSecurityConfigurationUtils.validateSecretAliasFormat(alias);
-    // Verify the environment variable exists at creation time to fail-fast before
-    // runtime
     WebhookSecurityConfigurationUtils.validateSecretAliasExists(alias);
   }
 
@@ -54,19 +51,31 @@ public class HmacSha256SecurityValidator
         "secret_alias", "secretAlias");
     String receivedSignature = WebhookSecurityConfigurationUtils.requiredHeader(headers,
         headerName);
+
     if (!receivedSignature.startsWith(prefix)) {
       throw new WebhookAuthUnauthorizedException(
           "Header %s lacks required '%s' prefix".formatted(headerName, prefix));
     }
 
+    String contentType = String.valueOf(headers.getOrDefault("Content-Type", "")).trim();
+
     String computedSignature = prefix
         + hmacSignatureValidator.computeHexSha256(rawPayload, expectedSecret);
 
-    if (!WebhookSecurityConfigurationUtils.constantTimeEquals(computedSignature,
-        receivedSignature)) {
+    boolean matches = WebhookSecurityConfigurationUtils.constantTimeEquals(computedSignature,
+        receivedSignature);
+
+    if (!matches) {
+      String normalizedContentType = contentType.toLowerCase(Locale.ROOT);
+      if (normalizedContentType.contains("application/x-www-form-urlencoded")
+          || normalizedContentType.contains("multipart/form-data")) {
+        throw new WebhookAuthForbiddenException(
+            "Header %s signature does not match computed HMAC. The request body appears to have been transformed before validation (Content-Type: %s)."
+                .formatted(headerName, contentType));
+      }
+
       throw new WebhookAuthForbiddenException(
           "Header %s signature does not match computed HMAC".formatted(headerName));
     }
   }
-
 }

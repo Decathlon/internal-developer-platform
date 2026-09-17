@@ -1236,7 +1236,7 @@ class InboundWebhookManagementControllerTest extends AbstractIntegrationTest {
           {
             "jwks_uri": "https://www.googleapis.com/oauth2/v3/certs",
             "client_id_field": "email",
-            "client_id_values": "ps-fb25-product-events-produ@cpe-idp-stg-337o.iam.gserviceaccount.com"
+            "client_id_values": "service-account@example.iam.gserviceaccount.com"
           }
           """;
       mockMvc
@@ -1255,7 +1255,7 @@ class InboundWebhookManagementControllerTest extends AbstractIntegrationTest {
           {
             "jwks_uri": "https://www.googleapis.com/oauth2/v3/certs",
             "client_id_field": "email",
-            "client_id_values": "ps-fb25-product-events-produ@cpe-idp-stg-337o.iam.gserviceaccount.com"
+            "client_id_values": "service-account@example.iam.gserviceaccount.com"
           }
           """;
       mockMvc

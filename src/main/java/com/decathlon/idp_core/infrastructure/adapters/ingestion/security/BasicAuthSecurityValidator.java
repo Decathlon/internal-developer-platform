@@ -101,8 +101,6 @@ public class BasicAuthSecurityValidator
       log.debug("Basic Auth validation failed: password mismatch");
       throw new WebhookAuthForbiddenException("Basic credentials were rejected");
     }
-
-    log.debug("Basic Auth validation successful for username '{}'", expectedUsername);
   }
 
   private String resolveExpectedUsername(Map<String, String> config) {

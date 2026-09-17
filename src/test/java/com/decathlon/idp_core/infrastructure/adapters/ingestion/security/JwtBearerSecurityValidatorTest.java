@@ -270,11 +270,10 @@ class JwtBearerSecurityValidatorTest {
       when(jwtDecoderProvider.get("https://issuer/.well-known/jwks.json")).thenReturn(jwtDecoder);
       Map<String, String> config = Map.of("jwks_uri", "https://issuer/.well-known/jwks.json",
           "client_id_field", "email", "client_id_values",
-          "ps-fb25-product-events-produ@cpe-idp-stg-337o.iam.gserviceaccount.com");
+          "service-account@example.iam.gserviceaccount.com");
       String token = "signed-token";
       Map<String, Object> headers = Map.of("Authorization", "Bearer " + token);
-      Jwt jwt = jwtWithClaim("email",
-          "ps-fb25-product-events-produ@cpe-idp-stg-337o.iam.gserviceaccount.com");
+      Jwt jwt = jwtWithClaim("email", "service-account@example.iam.gserviceaccount.com");
       when(jwtDecoder.decode(token)).thenReturn(jwt);
 
       assertThatCode(() -> validator.validateRequest(headers, new byte[0], config))
@@ -295,11 +294,10 @@ class JwtBearerSecurityValidatorTest {
       when(jwtDecoderProvider.get("https://issuer/.well-known/jwks.json")).thenReturn(jwtDecoder);
       Map<String, String> config = Map.of("jwks_uri", "https://issuer/.well-known/jwks.json",
           "client_id_field", "email", "client_id_values",
-          "ps-fb25-product-events-produ@cpe-idp-stg-337o.iam.gserviceaccount.com");
+          "service-account@example.iam.gserviceaccount.com");
       String token = "signed-token";
       Map<String, Object> headers = Map.of("Authorization", "Bearer " + token);
-      Jwt jwt = jwtWithClaim("email",
-          "ps-fb25-product-events-produ@cpe-idp-stg-337o.iam.gserviceaccount.com");
+      Jwt jwt = jwtWithClaim("email", "service-account@example.iam.gserviceaccount.com");
       when(jwtDecoder.decode(token)).thenReturn(jwt);
 
       assertThatCode(() -> runtimeValidator.validateRequest(headers, new byte[0], config))
@@ -312,7 +310,7 @@ class JwtBearerSecurityValidatorTest {
       when(jwtDecoderProvider.get("https://issuer/.well-known/jwks.json")).thenReturn(jwtDecoder);
       Map<String, String> config = Map.of("jwks_uri", "https://issuer/.well-known/jwks.json",
           "client_id_field", "email", "client_id_values",
-          "ps-fb25-product-events-produ@cpe-idp-stg-337o.iam.gserviceaccount.com");
+          "service-account@example.iam.gserviceaccount.com");
       String token = "signed-token";
       Map<String, Object> headers = Map.of("Authorization", "Bearer " + token);
       Jwt jwt = jwtWithClaim("email", "another-service@project.iam.gserviceaccount.com");
