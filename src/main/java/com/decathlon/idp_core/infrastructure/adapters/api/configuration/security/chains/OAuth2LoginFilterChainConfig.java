@@ -2,12 +2,14 @@ package com.decathlon.idp_core.infrastructure.adapters.api.configuration.securit
 
 import static org.springframework.security.config.Customizer.withDefaults;
 
+import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.annotation.Order;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
+import org.springframework.security.oauth2.client.registration.ClientRegistrationRepository;
 import org.springframework.security.oauth2.client.web.OAuth2LoginAuthenticationFilter;
 import org.springframework.security.web.SecurityFilterChain;
 
@@ -20,6 +22,7 @@ import com.decathlon.idp_core.infrastructure.adapters.api.auth.JitProvisioningFi
 /// filter provisions the principal in the catalog on the callback request.
 @Configuration
 @ConditionalOnProperty(prefix = "app.security.authentication.oauth2-login", name = "enabled", havingValue = "true")
+@ConditionalOnBean(ClientRegistrationRepository.class)
 public class OAuth2LoginFilterChainConfig {
 
   private final JitProvisioningFilter jitProvisioningFilter;

@@ -12,6 +12,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.boot.autoconfigure.AutoConfigurations;
 import org.springframework.boot.test.context.runner.ApplicationContextRunner;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
+import org.springframework.security.oauth2.client.registration.ClientRegistrationRepository;
 import org.springframework.security.web.DefaultSecurityFilterChain;
 import org.springframework.security.web.SecurityFilterChain;
 
@@ -27,6 +28,7 @@ class OAuth2LoginFilterChainConfigTest {
   private final ApplicationContextRunner contextRunner = new ApplicationContextRunner()
       .withConfiguration(AutoConfigurations.of(OAuth2LoginFilterChainConfig.class))
       .withBean(JitProvisioningFilter.class, () -> mock(JitProvisioningFilter.class))
+      .withBean(ClientRegistrationRepository.class, () -> mock(ClientRegistrationRepository.class))
       .withBean(HttpSecurity.class, this::httpSecurity);
 
   @Test
@@ -39,6 +41,17 @@ class OAuth2LoginFilterChainConfigTest {
   @Test
   void shouldNotCreateOauth2LoginFilterChainWhenDisabled() {
     contextRunner.withPropertyValues("app.security.authentication.oauth2-login.enabled=false")
+        .run(context -> assertThat(context).doesNotHaveBean(OAuth2LoginFilterChainConfig.class)
+            .doesNotHaveBean(SecurityFilterChain.class));
+  }
+
+  @Test
+  void shouldNotCreateOauth2LoginFilterChainWithoutClientRegistration() {
+    new ApplicationContextRunner()
+        .withConfiguration(AutoConfigurations.of(OAuth2LoginFilterChainConfig.class))
+        .withBean(JitProvisioningFilter.class, () -> mock(JitProvisioningFilter.class))
+        .withBean(HttpSecurity.class, this::httpSecurity)
+        .withPropertyValues("app.security.authentication.oauth2-login.enabled=true")
         .run(context -> assertThat(context).doesNotHaveBean(OAuth2LoginFilterChainConfig.class)
             .doesNotHaveBean(SecurityFilterChain.class));
   }

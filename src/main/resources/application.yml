@@ -60,12 +60,12 @@ spring:
         provider:
           idp-core:
             # OAuth2 token endpoint (see docs/src/concepts/authentication.md)
-            token-uri: ${OAUTH_TOKEN_URI}
+            token-uri: ${OAUTH_TOKEN_URI:}
       resourceserver:
         jwt:
           # JWKS endpoint for JWT signature validation
           # See docs/src/concepts/authentication.md for detailed configuration
-          jwk-set-uri: ${OAUTH_JWK_URI}
+          jwk-set-uri: ${OAUTH_JWK_URI:}
 
   jpa:
     # Keeps the Hibernate session open for the entire HTTP request lifecycle.
@@ -181,7 +181,9 @@ management:
     tracing:
       endpoint: ${OPEN_TELEMETRY_URL:""}
       headers:
-        Authorization: ${OPEN_TELEMETRY_TOKEN:""}
+        swagger:
+          enabled: ${APP_SECURITY_SWAGGER_ENABLED:true}
+        authorization: ${OPEN_TELEMETRY_TOKEN:""}
 
   endpoints:
     web:

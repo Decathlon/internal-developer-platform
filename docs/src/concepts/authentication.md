@@ -91,10 +91,17 @@ claim mapping system allows you to configure these differences without code chan
 ### Optional Claim Mapping Configuration
 
 Configure claim mappings in `application.yml` under `app.security.authentication.user-claim-mappings`:
-Notice that only this two information is mandatory when JWT authentication is enabled :
+When JWT authentication is enabled, only these two pieces of information are
+mandatory:
 
 - spring.security.oauth2.resourceserver.jwt.jwk-set-uri required for signature validation.
 - A valid JWT signature and standard sub claim, sub is effectively required for JIT provisioning because it is the final identifier fallback.
+
+When `app.security.authentication.jwt.enabled` is `false`, the JWT decoder and
+JWT filter chain are not created, so `OAUTH_JWK_URI` is not required. Swagger
+can be disabled independently with `app.security.swagger.enabled=false`; when
+enabled without OAuth configuration, it publishes only the available security
+schemes.
 
 ```yaml
 app:

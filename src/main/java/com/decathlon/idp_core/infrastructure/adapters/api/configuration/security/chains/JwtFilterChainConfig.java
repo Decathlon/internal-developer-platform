@@ -14,7 +14,7 @@ import org.springframework.security.web.SecurityFilterChain;
 import com.decathlon.idp_core.infrastructure.adapters.api.auth.JitProvisioningFilter;
 
 @Configuration
-@ConditionalOnProperty(prefix = "app.security.authentication.jwt", name = "enabled", havingValue = "true", matchIfMissing = true)
+@ConditionalOnProperty(prefix = "app.security.authentication.jwt", name = "enabled", havingValue = "true", matchIfMissing = false)
 public class JwtFilterChainConfig {
 
   private final JitProvisioningFilter jitProvisioningFilter;

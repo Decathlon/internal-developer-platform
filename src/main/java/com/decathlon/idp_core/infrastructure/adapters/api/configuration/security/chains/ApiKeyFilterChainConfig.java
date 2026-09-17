@@ -18,7 +18,7 @@ import org.springframework.security.web.SecurityFilterChain;
 /// - CORS: Default configuration
 ///
 @Configuration
-@ConditionalOnProperty(prefix = "app.security.authentication.api-key", name = "enabled", havingValue = "true", matchIfMissing = true)
+@ConditionalOnProperty(prefix = "app.security.authentication.api-key", name = "enabled", havingValue = "true", matchIfMissing = false)
 public class ApiKeyFilterChainConfig {
 
   @Bean
