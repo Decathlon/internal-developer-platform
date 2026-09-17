@@ -8,6 +8,7 @@ public class PrincipalStrategiesConstants {
   public static final String CLIENT_ID = "client_id";
   public static final String SERVICE_NAME = "service_name";
   public static final String SUB = "sub";
+  public static final String UUID_CLAIM = "uuid";
   public static final String NAME = "name";
   public static final String EMAIL = "email";
   public static final String GROUPS = "groups";

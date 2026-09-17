@@ -40,6 +40,9 @@ nav = [
     "concepts/relations.md",
     "concepts/webhooks.md"
   ]},
+  { "Security" = [
+    "security/global-authorization.md"
+  ]},
   { "Features" = [
     "features/index.md",
     "features/data-integration.md",

@@ -189,7 +189,7 @@ class PrincipalExtractorTest {
     void setUp() {
       // Default configuration for tests
       Map<String, String> claimMappings = new HashMap<>();
-      claimMappings.put("preferred_username", "preferred_username");
+      claimMappings.put("uuid", "uuid");
       claimMappings.put("name", "name");
       claimMappings.put("email", "email");
       claimMappings.put("groups", "groups");
@@ -251,6 +251,25 @@ class PrincipalExtractorTest {
       assertThat(principal.kind()).isEqualTo(PrincipalKind.HUMAN);
       assertThat(principal.attributes()).containsEntry("email", "john@example.com");
       assertThat(principal.groups()).containsExactly("admin", "users");
+    }
+
+    @Test
+    @DisplayName("Should use UUID claim as human principal identifier")
+    void shouldUseUuidClaimAsHumanPrincipalIdentifier() {
+      Map<String, Object> claims = new HashMap<>();
+      claims.put("uuid", "7f6f0f4a-1f50-4d12-8d38-2ddf1d8c0f01");
+      claims.put("preferred_username", "john.doe");
+      claims.put("name", "John Doe");
+
+      var jwtToken = mock(org.springframework.security.oauth2.jwt.Jwt.class);
+      when(jwtToken.getSubject()).thenReturn("subject-123");
+      when(jwtToken.getClaims()).thenReturn(claims);
+
+      PrincipalInfo principal = jwtStrategy.extract(new JwtAuthenticationToken(jwtToken));
+
+      assertThat(principal.identifier()).isEqualTo("7f6f0f4a-1f50-4d12-8d38-2ddf1d8c0f01");
+      assertThat(principal.attributes()).containsEntry("uuid",
+          "7f6f0f4a-1f50-4d12-8d38-2ddf1d8c0f01");
     }
 
     @Test
@@ -631,6 +650,7 @@ class PrincipalExtractorTest {
     void setUp() {
 
       Map<String, String> claimMappings = new HashMap<>();
+      claimMappings.put("uuid", "uuid");
       claimMappings.put("preferred_username", "preferred_username");
       claimMappings.put("name", "name");
       claimMappings.put("email", "email");
@@ -881,6 +901,24 @@ class PrincipalExtractorTest {
       // Then: Uses preferred_username as identifier
       assertThat(principal.identifier()).isEqualTo("john.doe");
       assertThat(principal.name()).isEqualTo("John Doe");
+    }
+
+    @Test
+    @DisplayName("Should use UUID claim as OIDC human principal identifier")
+    void shouldUseUuidClaimAsOidcHumanPrincipalIdentifier() {
+      var idToken = mock(OidcIdToken.class);
+      when(idToken.getClaims())
+          .thenReturn(Map.of("sub", "subject-123", "uuid", "7f6f0f4a-1f50-4d12-8d38-2ddf1d8c0f01",
+              "preferred_username", "john.doe", "name", "John Doe"));
+
+      var oidcUser = new DefaultOidcUser(List.of(), idToken);
+      Authentication auth = mock(Authentication.class);
+      when(auth.getPrincipal()).thenReturn(oidcUser);
+      PrincipalInfo principal = oauth2Strategy.extract(auth);
+
+      assertThat(principal.identifier()).isEqualTo("7f6f0f4a-1f50-4d12-8d38-2ddf1d8c0f01");
+      assertThat(principal.attributes()).containsEntry("uuid",
+          "7f6f0f4a-1f50-4d12-8d38-2ddf1d8c0f01");
     }
 
     @Test

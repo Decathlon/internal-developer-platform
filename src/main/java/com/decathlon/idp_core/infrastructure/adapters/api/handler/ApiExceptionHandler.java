@@ -24,6 +24,7 @@ import org.springframework.web.servlet.NoHandlerFoundException;
 
 import com.decathlon.idp_core.domain.exception.entity.EntityAlreadyExistsException;
 import com.decathlon.idp_core.domain.exception.entity.EntityDeletionBlockedException;
+import com.decathlon.idp_core.domain.exception.entity.EntityDeletionNotAllowedException;
 import com.decathlon.idp_core.domain.exception.entity.EntityNotFoundException;
 import com.decathlon.idp_core.domain.exception.entity.EntityValidationException;
 import com.decathlon.idp_core.domain.exception.entity_dynamic_mapping.*;
@@ -447,6 +448,13 @@ public class ApiExceptionHandler {
       EntityDeletionBlockedException ex) {
     log.warn("Entity deletion blocked: {}", ex.getMessage());
     return createErrorResponse(HttpStatus.CONFLICT, ex.getMessage());
+  }
+
+  @ExceptionHandler(EntityDeletionNotAllowedException.class)
+  public ResponseEntity<ErrorResponse> handleEntityDeletionNotAllowedException(
+      EntityDeletionNotAllowedException ex) {
+    log.warn("Protected entity deletion attempted: {}", ex.getMessage());
+    return createErrorResponse(HttpStatus.FORBIDDEN, ex.getMessage());
   }
 
   /// Handles missing path variables in the request URL.

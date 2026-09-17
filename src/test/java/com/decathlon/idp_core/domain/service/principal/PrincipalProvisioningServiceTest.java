@@ -67,9 +67,10 @@ class PrincipalProvisioningServiceTest {
     assertThat(savedEntity.name()).isEqualTo("Alice Dupont");
 
     // Verify properties
-    assertThat(savedEntity.properties()).extracting(Property::name).contains("kind", "email");
+    assertThat(savedEntity.properties()).extracting(Property::name).contains("kind", "email",
+        "is_admin");
     assertThat(savedEntity.properties()).extracting(Property::value).contains("HUMAN",
-        "alice@decathlon.com");
+        "alice@decathlon.com", "false");
 
     // Verify relations
     assertThat(savedEntity.relations()).hasSize(1);

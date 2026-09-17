@@ -118,9 +118,14 @@ app:
   # Base URL of this service, used to build self-referencing links.
   idp-core-prefix-url: ${IDP_CORE_PREFIX_URL}
   security:
+    authorization:
+      mode: GLOBAL
+      global-principal-identifiers:
+        - ${IDP_SUPER_ADMIN_UUID:}
+        - ${IDP_PLATFORM_ADMIN_UUID:}
     roles:
-      # Baseline role assigned to all authenticated principals during V1 phase.
-      baseline-role: ${APP_SECURITY_ROLES_BASELINE_ROLE:*}
+      # Retained for compatibility with clients that inspect the legacy role claim.
+      baseline-role: ${APP_SECURITY_ROLES_BASELINE_ROLE:ROLE_READER}
 
     # Authentication configuration - externalized for multi-IdP support
     # See docs/src/concepts/authentication.md for comprehensive documentation
@@ -136,6 +141,7 @@ app:
       # See docs/src/concepts/authentication.md - JWT Claim Mappings section
       user-claim-mappings:
         sub: sub
+        uuid: uuid
         preferred_username: preferred_username
         name: name
         email: email

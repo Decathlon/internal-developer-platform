@@ -10,6 +10,7 @@ import static com.decathlon.idp_core.infrastructure.adapters.api.principal.strat
 import static com.decathlon.idp_core.infrastructure.adapters.api.principal.strategies.PrincipalStrategiesConstants.ORIGIN;
 import static com.decathlon.idp_core.infrastructure.adapters.api.principal.strategies.PrincipalStrategiesConstants.PREFERRED_USERNAME;
 import static com.decathlon.idp_core.infrastructure.adapters.api.principal.strategies.PrincipalStrategiesConstants.SERVICE_NAME;
+import static com.decathlon.idp_core.infrastructure.adapters.api.principal.strategies.PrincipalStrategiesConstants.UUID_CLAIM;
 import static org.springframework.security.oauth2.core.oidc.IdTokenClaimNames.AZP;
 
 import java.util.HashMap;
@@ -169,10 +170,16 @@ public class JwtPrincipalExtractionStrategy implements PrincipalExtractionStrate
   private PrincipalInfo extractHumanFromJwt(String sub, Map<String, Object> claims) {
     Map<String, String> claimMappings = authProperties.userClaimMappings();
 
-    // Try to extract preferred username, fallback to sub
-    String preferredUsernameClaim = claimMappings.get(PREFERRED_USERNAME);
-    String identifier = Optional.ofNullable(preferredUsernameClaim)
-        .flatMap(c -> Optional.ofNullable(claims.get(c))).map(Object::toString).orElse(sub);
+    // Use the provider UUID as the stable catalog identifier when available.
+    String uuidClaim = claimMappings.getOrDefault(UUID_CLAIM, UUID_CLAIM);
+    String uuid = valueOfClaim(claims, uuidClaim).orElse(null);
+
+    // Fall back to the configured username and then the JWT subject for providers
+    // without UUIDs.
+    String preferredUsernameClaim = claimMappings.getOrDefault(PREFERRED_USERNAME,
+        PREFERRED_USERNAME);
+    String identifier = Optional.ofNullable(uuid)
+        .or(() -> valueOfClaim(claims, preferredUsernameClaim)).orElse(sub);
 
     // Try to extract name, fallback to identifier
     String nameClaim = claimMappings.get(NAME);
@@ -180,6 +187,9 @@ public class JwtPrincipalExtractionStrategy implements PrincipalExtractionStrate
         .map(Object::toString).orElse(identifier);
 
     Map<String, String> attributes = new HashMap<>();
+    if (uuid != null) {
+      attributes.put(UUID_CLAIM, uuid);
+    }
 
     // Extract email if present
     String emailClaim = claimMappings.get(EMAIL);
@@ -191,6 +201,14 @@ public class JwtPrincipalExtractionStrategy implements PrincipalExtractionStrate
     List<String> groups = extractGroups(claims);
 
     return new PrincipalInfo(identifier, PrincipalKind.HUMAN, name, attributes, groups);
+  }
+
+  private Optional<String> valueOfClaim(Map<String, Object> claims, String claimName) {
+    if (claimName == null) {
+      return Optional.empty();
+    }
+    return Optional.ofNullable(claims.get(claimName)).map(Object::toString)
+        .filter(value -> !value.isBlank());
   }
 
   private PrincipalInfo extractServiceAccountFromJwt(String sub, Map<String, Object> claims) {

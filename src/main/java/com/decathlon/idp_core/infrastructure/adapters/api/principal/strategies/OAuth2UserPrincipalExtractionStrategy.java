@@ -5,6 +5,7 @@ import static com.decathlon.idp_core.infrastructure.adapters.api.principal.strat
 import static com.decathlon.idp_core.infrastructure.adapters.api.principal.strategies.PrincipalStrategiesConstants.NAME;
 import static com.decathlon.idp_core.infrastructure.adapters.api.principal.strategies.PrincipalStrategiesConstants.PREFERRED_USERNAME;
 import static com.decathlon.idp_core.infrastructure.adapters.api.principal.strategies.PrincipalStrategiesConstants.SUB;
+import static com.decathlon.idp_core.infrastructure.adapters.api.principal.strategies.PrincipalStrategiesConstants.UUID_CLAIM;
 
 import java.util.HashMap;
 import java.util.List;
@@ -67,16 +68,24 @@ public class OAuth2UserPrincipalExtractionStrategy implements PrincipalExtractio
     String sub = Optional.ofNullable(oauth2User.getAttribute(subClaim)).map(String::valueOf)
         .orElse(oauth2User.getName());
 
+    String uuidClaim = claimMappings.getOrDefault(UUID_CLAIM, UUID_CLAIM);
+    String uuid = Optional.ofNullable(oauth2User.getAttribute(uuidClaim)).map(String::valueOf)
+        .filter(value -> !value.isBlank()).orElse(null);
     String preferredUsernameClaim = claimMappings.getOrDefault(PREFERRED_USERNAME,
         PREFERRED_USERNAME);
-    String identifier = Optional.ofNullable(oauth2User.getAttribute(preferredUsernameClaim))
-        .map(String::valueOf).filter(value -> !value.isBlank()).orElse(sub);
+    String identifier = Optional.ofNullable(uuid)
+        .or(() -> Optional.ofNullable(oauth2User.getAttribute(preferredUsernameClaim))
+            .map(String::valueOf).filter(value -> !value.isBlank()))
+        .orElse(sub);
 
     String nameClaim = claimMappings.getOrDefault(NAME, NAME);
     String name = Optional.ofNullable(oauth2User.getAttribute(nameClaim)).map(String::valueOf)
         .filter(value -> !value.isBlank()).orElse(identifier);
 
     Map<String, String> attributes = new HashMap<>();
+    if (uuid != null) {
+      attributes.put(UUID_CLAIM, uuid);
+    }
     String emailClaim = claimMappings.getOrDefault(EMAIL, EMAIL);
     Optional.ofNullable(oauth2User.getAttribute(emailClaim)).map(String::valueOf)
         .ifPresent(email -> attributes.put(EMAIL, email));
@@ -94,13 +103,21 @@ public class OAuth2UserPrincipalExtractionStrategy implements PrincipalExtractio
   /// is accurately extracted from OIDC claims, which are standardized across
   /// compliant identity providers.
   private PrincipalInfo extractFromOidcUser(OidcUser oidcUser) {
+    Map<String, String> claimMappings = authProperties.userClaimMappings();
     String sub = oidcUser.getSubject();
-    String identifier = Optional.ofNullable(oidcUser.getPreferredUsername()).orElse(sub);
+    String uuidClaim = claimMappings.getOrDefault(UUID_CLAIM, UUID_CLAIM);
+    String uuid = Optional.ofNullable(oidcUser.getAttribute(uuidClaim)).map(String::valueOf)
+        .filter(value -> !value.isBlank()).orElse(null);
+    String identifier = Optional.ofNullable(uuid)
+        .or(() -> Optional.ofNullable(oidcUser.getPreferredUsername())).orElse(sub);
 
     String name = Optional.ofNullable(oidcUser.getFullName())
         .or(() -> Optional.ofNullable(oidcUser.getGivenName())).orElse(identifier);
 
     Map<String, String> attributes = new HashMap<>();
+    if (uuid != null) {
+      attributes.put(UUID_CLAIM, uuid);
+    }
     Optional.ofNullable(oidcUser.getEmail()).map(String::valueOf)
         .ifPresent(email -> attributes.put(EMAIL, email));
 

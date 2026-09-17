@@ -15,20 +15,20 @@ class SecurityRolePropertiesTest {
   }
 
   @Test
-  void shouldDefaultToStarWhenNull() {
+  void shouldDefaultToReaderWhenNull() {
     SecurityRoleProperties props = new SecurityRoleProperties(null);
-    assertEquals("*", props.baselineRole());
+    assertEquals("ROLE_READER", props.baselineRole());
   }
 
   @Test
-  void shouldDefaultToStarWhenEmpty() {
+  void shouldDefaultToReaderWhenEmpty() {
     SecurityRoleProperties props = new SecurityRoleProperties("");
-    assertEquals("*", props.baselineRole());
+    assertEquals("ROLE_READER", props.baselineRole());
   }
 
   @Test
-  void shouldDefaultToStarWhenBlank() {
+  void shouldDefaultToReaderWhenBlank() {
     SecurityRoleProperties props = new SecurityRoleProperties("   ");
-    assertEquals("*", props.baselineRole());
+    assertEquals("ROLE_READER", props.baselineRole());
   }
 }

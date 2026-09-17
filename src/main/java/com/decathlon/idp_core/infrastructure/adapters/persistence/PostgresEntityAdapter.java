@@ -91,6 +91,12 @@ public class PostgresEntityAdapter implements EntityRepositoryPort {
   }
 
   @Override
+  public boolean hasRelation(String sourceIdentifier, String relationName,
+      String targetIdentifier) {
+    return jpaEntityRepository.hasRelation(sourceIdentifier, relationName, targetIdentifier);
+  }
+
+  @Override
   public List<EntitySummary> findSummariesByCompositeKeys(List<EntityCompositeKey> compositeKeys) {
     if (compositeKeys == null || compositeKeys.isEmpty()) {
       return List.of();

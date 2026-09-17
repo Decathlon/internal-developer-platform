@@ -101,8 +101,8 @@ app:
   security:
     authentication:
       user-claim-mappings:
-        sub: "sub"                      # Unique user identifier - Mandatory
-        preferred_username: "preferred_username"  # Human-readable username
+        sub: "sub"                      # Subject fallback identifier
+        uuid: "uuid"                    # Stable provider UUID used for human principals
         name: "name"                    # Display name
         email: "email"                  # Email address
         groups: "groups"                # Group memberships
@@ -112,6 +112,11 @@ app:
         gty: "gty"                      # Grant type variant
         service_name: "service_name"    # Custom M2M service identifier
 ```
+
+For human users, configure `uuid` to the IdP claim containing the stable user UUID. When that claim is present,
+IDP-Core uses it as the principal entity identifier and stores it as the `uuid` property. This allows `owned_by` and
+other relations to target the same identifier consistently. If the UUID claim is absent, extraction falls back to
+`preferred_username` and then `sub`.
 
 ### Common IdP Configurations
 
@@ -123,6 +128,7 @@ app:
     authentication:
       user-claim-mappings:
         sub: "sub"
+        uuid: "uuid"
         preferred_username: "preferred_username"
         name: "name"
         email: "email"
@@ -143,6 +149,7 @@ app:
     authentication:
       user-claim-mappings:
         sub: "sub"
+        uuid: "uuid"
         preferred_username: "preferred_username"
         name: "name"
         email: "email"
@@ -162,6 +169,7 @@ app:
     authentication:
       user-claim-mappings:
         sub: "oid"                  # Object ID in Azure
+        uuid: "uuid"
         preferred_username: "unique_name"
         name: "name"
         email: "email"
@@ -422,6 +430,7 @@ app:
         enabled: false
       user-claim-mappings:
         sub: id
+        uuid: uuid
         preferred_username: login
         name: name
         email: email

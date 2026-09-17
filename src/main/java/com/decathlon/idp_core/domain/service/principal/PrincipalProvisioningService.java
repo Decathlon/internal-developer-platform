@@ -36,6 +36,7 @@ import lombok.RequiredArgsConstructor;
 public class PrincipalProvisioningService {
 
   private static final String PRINCIPAL_TEMPLATE_IDENTIFIER = "principal";
+  private static final String ADMIN_PROPERTY = "is_admin";
 
   private final EntityRepositoryPort entityRepository;
 
@@ -113,9 +114,10 @@ public class PrincipalProvisioningService {
   private List<Property> buildProperties(PrincipalInfo principalInfo) {
     List<Property> properties = new ArrayList<>();
     properties.add(new Property(null, "kind", principalInfo.kind().name()));
+    properties.add(new Property(null, ADMIN_PROPERTY, "false"));
 
     principalInfo.attributes().forEach((key, value) -> {
-      if (value != null && !value.isBlank()) {
+      if (!ADMIN_PROPERTY.equals(key) && value != null && !value.isBlank()) {
         properties.add(new Property(null, key, value));
       }
     });

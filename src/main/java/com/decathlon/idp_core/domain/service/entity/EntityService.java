@@ -22,6 +22,7 @@ import com.decathlon.idp_core.domain.constant.SearchConstraints;
 import com.decathlon.idp_core.domain.constant.ValidationMessages;
 import com.decathlon.idp_core.domain.exception.entity.EntityAlreadyExistsException;
 import com.decathlon.idp_core.domain.exception.entity.EntityDeletionBlockedException;
+import com.decathlon.idp_core.domain.exception.entity.EntityDeletionNotAllowedException;
 import com.decathlon.idp_core.domain.exception.entity.EntityNotFoundException;
 import com.decathlon.idp_core.domain.exception.entity.EntityValidationException;
 import com.decathlon.idp_core.domain.exception.entity_template.EntityTemplateNotFoundException;
@@ -406,6 +407,14 @@ public class EntityService {
   /// @throws EntityNotFoundException when target entity doesn't exist
   @Transactional
   public void deleteEntity(String templateIdentifier, String entityIdentifier) {
+    if ("team".equals(templateIdentifier) && "idp-platform-admins".equals(entityIdentifier)) {
+      throw new EntityDeletionNotAllowedException("team/idp-platform-admins",
+          "Cannot delete the core administration team.");
+    }
+    if ("entity_template".equals(templateIdentifier) && "principal".equals(entityIdentifier)) {
+      throw new EntityDeletionNotAllowedException("entity_template/principal",
+          "Cannot delete the principal template.");
+    }
     entityTemplateValidationService.validateTemplateExists(templateIdentifier);
     Entity entityToDelete = retrieveEntity(templateIdentifier, entityIdentifier);
     removeRelatedRelations(entityToDelete);

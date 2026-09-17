@@ -26,6 +26,19 @@ public interface JpaEntityRepository
   @Query("SELECT e.identifier AS identifier, e.name AS name, e.templateIdentifier AS templateIdentifier FROM EntityJpaEntity e WHERE e.identifier IN :identifiers")
   List<EntitySummary> findByIdentifierIn(List<String> identifiers);
 
+  @Query("""
+      SELECT CASE WHEN COUNT(e) > 0 THEN true ELSE false END
+      FROM EntityJpaEntity e JOIN e.relations r JOIN r.targetEntities t
+      WHERE e.templateIdentifier = 'principal'
+        AND e.identifier = :sourceIdentifier
+        AND r.name = :relationName
+        AND r.targetTemplateIdentifier = 'team'
+        AND t.targetEntityIdentifier = :targetIdentifier
+      """)
+  boolean hasRelation(@Param("sourceIdentifier") String sourceIdentifier,
+      @Param("relationName") String relationName,
+      @Param("targetIdentifier") String targetIdentifier);
+
   /// Finds entity summaries by composite keys (templateIdentifier + identifier).
   ///
   /// **Purpose:** Batch lookup of entity summaries using composite keys to ensure

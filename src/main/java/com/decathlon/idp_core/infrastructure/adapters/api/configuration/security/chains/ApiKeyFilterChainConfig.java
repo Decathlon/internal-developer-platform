@@ -9,6 +9,8 @@ import org.springframework.core.annotation.Order;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.web.SecurityFilterChain;
 
+import com.decathlon.idp_core.infrastructure.adapters.api.security.GlobalAuthorizationManager;
+
 /// Security filter chain for API key authentication.
 ///
 /// **Configuration:**
@@ -21,11 +23,17 @@ import org.springframework.security.web.SecurityFilterChain;
 @ConditionalOnProperty(prefix = "app.security.authentication.api-key", name = "enabled", havingValue = "true", matchIfMissing = true)
 public class ApiKeyFilterChainConfig {
 
+  private final GlobalAuthorizationManager globalAuthorizationManager;
+
+  public ApiKeyFilterChainConfig(GlobalAuthorizationManager globalAuthorizationManager) {
+    this.globalAuthorizationManager = globalAuthorizationManager;
+  }
+
   @Bean
   @Order(3)
   public SecurityFilterChain apiKeySecurityFilterChain(HttpSecurity http) {
-    http.authorizeHttpRequests(auth -> auth.requestMatchers("/api/v1/**").fullyAuthenticated()
-        .anyRequest().authenticated()).cors(withDefaults());
+    http.authorizeHttpRequests(auth -> auth.requestMatchers("/api/v1/**")
+        .access(globalAuthorizationManager).anyRequest().authenticated()).cors(withDefaults());
     return http.build();
   }
 }

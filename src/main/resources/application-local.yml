@@ -50,6 +50,7 @@ app:
         enabled: false
       user-claim-mappings:
         sub: id
+        uuid: uuid
         preferred_username: login
         name: name
         email: email

@@ -12,6 +12,7 @@ import org.springframework.security.oauth2.client.web.OAuth2LoginAuthenticationF
 import org.springframework.security.web.SecurityFilterChain;
 
 import com.decathlon.idp_core.infrastructure.adapters.api.auth.JitProvisioningFilter;
+import com.decathlon.idp_core.infrastructure.adapters.api.security.GlobalAuthorizationManager;
 
 /// Security filter chain for browser-based OAuth2 login.
 ///
@@ -23,9 +24,12 @@ import com.decathlon.idp_core.infrastructure.adapters.api.auth.JitProvisioningFi
 public class OAuth2LoginFilterChainConfig {
 
   private final JitProvisioningFilter jitProvisioningFilter;
+  private final GlobalAuthorizationManager globalAuthorizationManager;
 
-  public OAuth2LoginFilterChainConfig(JitProvisioningFilter jitProvisioningFilter) {
+  public OAuth2LoginFilterChainConfig(JitProvisioningFilter jitProvisioningFilter,
+      GlobalAuthorizationManager globalAuthorizationManager) {
     this.jitProvisioningFilter = jitProvisioningFilter;
+    this.globalAuthorizationManager = globalAuthorizationManager;
   }
 
   @Bean
@@ -35,7 +39,8 @@ public class OAuth2LoginFilterChainConfig {
         session -> session.sessionCreationPolicy(SessionCreationPolicy.IF_REQUIRED))
         .cors(withDefaults()).csrf(withDefaults())
         .authorizeHttpRequests(auth -> auth.requestMatchers("/oauth2/**", "/login/**").permitAll()
-            .requestMatchers("/api/v1/**").fullyAuthenticated().anyRequest().authenticated())
+            .requestMatchers("/api/v1/**").access(globalAuthorizationManager).anyRequest()
+            .authenticated())
         .oauth2Login(withDefaults())
         .addFilterAfter(jitProvisioningFilter, OAuth2LoginAuthenticationFilter.class);
 

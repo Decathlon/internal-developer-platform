@@ -11,10 +11,11 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 @ConfigurationProperties(prefix = "app.security.roles")
 public record SecurityRoleProperties(String baselineRole) {
 
-  /// Default baseline role is `*` (Super Admin) for V1 phase.
+  /// Every authenticated principal is a reader unless the catalog marks it as an
+  /// admin.
   public SecurityRoleProperties {
     if (baselineRole == null || baselineRole.isBlank()) {
-      baselineRole = "*";
+      baselineRole = "ROLE_READER";
     }
   }
 }

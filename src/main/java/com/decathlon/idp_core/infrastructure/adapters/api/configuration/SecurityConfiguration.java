@@ -17,7 +17,7 @@ import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
-import com.decathlon.idp_core.infrastructure.adapters.api.auth.JitProvisioningFilter;
+import com.decathlon.idp_core.infrastructure.adapters.api.security.GlobalAuthorizationManager;
 
 import lombok.extern.slf4j.Slf4j;
 
@@ -50,24 +50,29 @@ import lombok.extern.slf4j.Slf4j;
 @Configuration
 @EnableWebSecurity
 @Slf4j
-@EnableConfigurationProperties({CorsProperties.class, SecurityRoleProperties.class,
-    AuthenticationProperties.class})
+@EnableConfigurationProperties({CorsProperties.class, AuthenticationProperties.class,
+    AuthorizationProperties.class, SecurityRoleProperties.class})
 public class SecurityConfiguration {
 
   private final CorsProperties corsProperties;
   private final SecurityRoleProperties securityRoleProperties;
+  private final GlobalAuthorizationManager globalAuthorizationManager;
 
   public SecurityConfiguration(CorsProperties corsProperties,
-      SecurityRoleProperties securityRoleProperties) {
+      SecurityRoleProperties securityRoleProperties,
+      GlobalAuthorizationManager globalAuthorizationManager) {
     this.corsProperties = corsProperties;
     this.securityRoleProperties = securityRoleProperties;
+    this.globalAuthorizationManager = globalAuthorizationManager;
   }
 
   @Bean
   public JwtAuthenticationConverter jwtAuthenticationConverter() {
     JwtAuthenticationConverter converter = new JwtAuthenticationConverter();
-    converter.setJwtGrantedAuthoritiesConverter(
-        jwt -> List.of(new SimpleGrantedAuthority(securityRoleProperties.baselineRole())));
+    converter
+        .setJwtGrantedAuthoritiesConverter(jwt -> securityRoleProperties.baselineRole().isBlank()
+            ? List.of()
+            : List.of(new SimpleGrantedAuthority(securityRoleProperties.baselineRole())));
     return converter;
   }
 
@@ -75,7 +80,7 @@ public class SecurityConfiguration {
   public SecurityFilterChain apiSecurityFilterChain(HttpSecurity http) {
     http.authorizeHttpRequests(authorize -> authorize.requestMatchers("/actuator/**").permitAll()
         .requestMatchers("/", "/swagger-ui/**", "/swagger-ui.html", "/v3/api-docs/**").permitAll()
-        .requestMatchers("/api/**").fullyAuthenticated().anyRequest().authenticated())
+        .requestMatchers("/api/**").access(globalAuthorizationManager).anyRequest().authenticated())
         .cors(withDefaults()).oauth2ResourceServer(oauth2 -> oauth2.jwt(withDefaults()));
     return http.build();
   }

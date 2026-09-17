@@ -50,6 +50,8 @@ public interface EntityRepositoryPort {
 
   List<EntitySummary> findByIdentifierIn(List<String> identifiers);
 
+  boolean hasRelation(String sourceIdentifier, String relationName, String targetIdentifier);
+
   /// Finds entity summaries by composite keys (templateIdentifier, identifier).
   ///
   /// **Design:** Queries entities using both templateIdentifier and identifier
