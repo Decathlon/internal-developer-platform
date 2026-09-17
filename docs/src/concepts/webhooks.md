@@ -150,9 +150,12 @@ value in the connector configuration.
 - `client_id_field` (required): claim name used to identify the caller. Allowed values are only `azp` or `email`.
 - `client_id_values` (required): comma-separated allow-list of accepted claim values.
 - `expected_audience` (optional): comma-separated allow-list for the `aud` claim. If present, at least one JWT audience must match.
+- `allowed-jwks-hosts` (optional, environment-backed): comma-separated allow-list of trusted JWKS hosts under `idp.security.webhook`. Set `ALLOWED_JWKS_HOSTS` when you need to permit a specific issuer host explicitly.
 
 > [!WARNING]
 > `jwks_uri` must use a resolvable public HTTPS host. Local hosts, private networks, link-local addresses, and group-address destinations are rejected at connector creation.
+> If you configure `allowed-jwks-hosts`, the listed hosts bypass this rejection path intentionally.
+> This allow-list is configured under `idp.security.webhook.allowed-jwks-hosts`.
 
 `jwks_uri` is stored as a literal URL in the connector configuration. Environment references are not supported for this field.
 

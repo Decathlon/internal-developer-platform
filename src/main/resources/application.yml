@@ -120,6 +120,13 @@ app:
   # Base URL of this service, used to build self-referencing links.
   idp-core-prefix-url: ${IDP_CORE_PREFIX_URL}
 
+idp:
+  security:
+    webhook:
+      # Comma-separated allow-list for trusted JWKS hosts.
+      # Example: ALLOWED_JWKS_HOSTS=github.com,auth.decathlon.com
+      allowed-jwks-hosts: ${ALLOWED_JWKS_HOSTS:}
+
 logging:
   level:
     # Application log level, defaults to INFO. Override per environment via LOG_LEVEL env var.

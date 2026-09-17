@@ -1,4 +1,4 @@
-package com.decathlon.idp_core.infrastructure.adapters.webhook.security;
+package com.decathlon.idp_core.infrastructure.adapters.ingestion.security;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatCode;

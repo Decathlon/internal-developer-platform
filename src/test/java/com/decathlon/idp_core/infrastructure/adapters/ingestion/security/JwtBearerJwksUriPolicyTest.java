@@ -1,4 +1,4 @@
-package com.decathlon.idp_core.infrastructure.adapters.webhook.security;
+package com.decathlon.idp_core.infrastructure.adapters.ingestion.security;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatCode;
@@ -7,6 +7,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import java.lang.reflect.Constructor;
 import java.net.InetAddress;
 import java.net.URI;
+import java.util.Set;
 import java.util.stream.Stream;
 
 import org.junit.jupiter.api.DisplayName;
@@ -17,6 +18,7 @@ import org.junit.jupiter.params.provider.MethodSource;
 import org.springframework.web.client.RestClientException;
 
 import com.decathlon.idp_core.domain.exception.webhook.WebhookSecurityConfigurationException;
+import com.decathlon.idp_core.infrastructure.adapters.ingestion.exception.WebhookJwksHostForbiddenException;
 
 @DisplayName("JwtBearerJwksUriPolicy Tests")
 class JwtBearerJwksUriPolicyTest {
@@ -91,6 +93,50 @@ class JwtBearerJwksUriPolicyTest {
 
     assertThatThrownBy(() -> JwtBearerJwksUriPolicy.validateRuntimeJwksUri(jwksUri))
         .isInstanceOf(RestClientException.class).hasMessageContaining("unsafe_host");
+  }
+
+  @Test
+  @DisplayName("accepts localhost when the host is explicitly allow-listed for configuration")
+  void validateConfiguredJwksUri_acceptsAllowListedLocalhost() {
+    assertThatCode(() -> JwtBearerJwksUriPolicy
+        .validateConfiguredJwksUri("https://localhost/.well-known/jwks.json", Set.of("localhost")))
+            .doesNotThrowAnyException();
+  }
+
+  @Test
+  @DisplayName("accepts localhost when the host is explicitly allow-listed at runtime")
+  void validateRuntimeJwksUri_acceptsAllowListedLocalhost() {
+    URI jwksUri = URI.create("https://localhost/.well-known/jwks.json");
+
+    assertThatCode(
+        () -> JwtBearerJwksUriPolicy.validateRuntimeJwksUri(jwksUri, Set.of("localhost")))
+            .doesNotThrowAnyException();
+  }
+
+  @Test
+  @DisplayName("rejects a runtime JWKS host that is not allow-listed")
+  void validateRuntimeJwksUri_rejectsNonAllowListedHost() {
+    assertThatThrownBy(this::rejectNonAllowListedRuntimeHost)
+        .isInstanceOf(WebhookJwksHostForbiddenException.class)
+        .hasMessageContaining("not allow-listed");
+  }
+
+  @Test
+  @DisplayName("rejects a configured JWKS host that is not allow-listed")
+  void validateConfiguredJwksUri_rejectsNonAllowListedHost() {
+    assertThatThrownBy(this::rejectNonAllowListedConfiguredHost)
+        .isInstanceOf(WebhookSecurityConfigurationException.class)
+        .hasMessageContaining("cause=host_not_allow_listed");
+  }
+
+  private void rejectNonAllowListedRuntimeHost() {
+    URI jwksUri = URI.create("https://github.com/.well-known/jwks.json");
+    JwtBearerJwksUriPolicy.validateRuntimeJwksUri(jwksUri, Set.of("auth.decathlon.com"));
+  }
+
+  private void rejectNonAllowListedConfiguredHost() {
+    JwtBearerJwksUriPolicy.validateConfiguredJwksUri("https://github.com/.well-known/jwks.json",
+        Set.of("auth.decathlon.com"));
   }
 
   @Test

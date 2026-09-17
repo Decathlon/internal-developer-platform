@@ -1,9 +1,10 @@
-package com.decathlon.idp_core.infrastructure.adapters.webhook.security;
+package com.decathlon.idp_core.infrastructure.adapters.ingestion.security;
 
 import java.net.InetAddress;
 import java.net.URI;
 import java.net.UnknownHostException;
 import java.time.Duration;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
@@ -14,6 +15,7 @@ import org.apache.hc.client5.http.impl.classic.CloseableHttpClient;
 import org.apache.hc.client5.http.impl.classic.HttpClients;
 import org.apache.hc.client5.http.impl.io.PoolingHttpClientConnectionManagerBuilder;
 import org.apache.hc.core5.util.Timeout;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.client.HttpComponentsClientHttpRequestFactory;
 import org.springframework.security.oauth2.jwt.JwtDecoder;
 import org.springframework.security.oauth2.jwt.JwtValidators;
@@ -31,11 +33,23 @@ public class WebhookJwtDecoderProvider {
   private static final Duration CONNECT_TIMEOUT = Duration.ofSeconds(5);
   private static final Duration READ_TIMEOUT = Duration.ofSeconds(5);
 
+  private final Set<String> allowedJwksHosts;
   private final ConcurrentMap<String, JwtDecoder> decodersByJwksUri = new ConcurrentHashMap<>();
-  private final RestTemplate restTemplate = buildSecureRestTemplate();
+  private final RestTemplate restTemplate;
+
+  public WebhookJwtDecoderProvider() {
+    this.allowedJwksHosts = Set.of();
+    this.restTemplate = buildSecureRestTemplate();
+  }
+
+  @Autowired
+  public WebhookJwtDecoderProvider(WebhookSecurityProperties webhookSecurityProperties) {
+    this.allowedJwksHosts = Set.copyOf(webhookSecurityProperties.allowedJwksHosts());
+    this.restTemplate = buildSecureRestTemplate();
+  }
 
   public JwtDecoder get(String jwksUri) {
-    JwtBearerJwksUriPolicy.validateRuntimeJwksUri(URI.create(jwksUri));
+    JwtBearerJwksUriPolicy.validateRuntimeJwksUri(URI.create(jwksUri), allowedJwksHosts);
 
     return decodersByJwksUri.computeIfAbsent(jwksUri, this::createDecoder);
   }
@@ -79,6 +93,10 @@ public class WebhookJwtDecoderProvider {
 
   private InetAddress[] resolveAndValidateOnce(String host) throws UnknownHostException {
     InetAddress[] addresses = InetAddress.getAllByName(host);
+    if (JwtBearerJwksUriPolicy.isAllowedHost(host, allowedJwksHosts)) {
+      return addresses;
+    }
+
     if (JwtBearerJwksUriPolicy.containsPrivateOrLoopbackAddress(addresses)) {
       throw new UnknownHostException("JWKS host resolved to unsafe address: " + host);
     }

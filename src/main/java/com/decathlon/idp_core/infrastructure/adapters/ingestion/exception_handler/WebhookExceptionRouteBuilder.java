@@ -17,6 +17,7 @@ import com.decathlon.idp_core.domain.exception.webhook.WebhookDisabledException;
 import com.decathlon.idp_core.infrastructure.adapters.ingestion.exception.WebhookAuthForbiddenException;
 import com.decathlon.idp_core.infrastructure.adapters.ingestion.exception.WebhookAuthUnauthorizedException;
 import com.decathlon.idp_core.infrastructure.adapters.ingestion.exception.WebhookDecodingException;
+import com.decathlon.idp_core.infrastructure.adapters.ingestion.exception.WebhookJwksHostForbiddenException;
 import com.decathlon.idp_core.infrastructure.adapters.ingestion.exception.WebhookSecurityException;
 
 import lombok.RequiredArgsConstructor;
@@ -42,6 +43,8 @@ public class WebhookExceptionRouteBuilder {
         WebhookErrorCode.INVALID_COMPRESSED_PAYLOAD);
     handlerHelper.registerHandler(routeBuilder, WebhookAuthUnauthorizedException.class,
         WebhookErrorCode.AUTHENTICATION_REQUIRED);
+    handlerHelper.registerHandler(routeBuilder, WebhookJwksHostForbiddenException.class,
+        WebhookErrorCode.AUTHENTICATION_FORBIDDEN);
     handlerHelper.registerHandler(routeBuilder, WebhookAuthForbiddenException.class,
         WebhookErrorCode.AUTHENTICATION_FORBIDDEN);
     handlerHelper.registerHandler(routeBuilder, WebhookAuthenticationException.class,

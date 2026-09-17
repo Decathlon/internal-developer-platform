@@ -1,4 +1,4 @@
-package com.decathlon.idp_core.infrastructure.adapters.webhook.security;
+package com.decathlon.idp_core.infrastructure.adapters.ingestion.security;
 
 import static org.assertj.core.api.Assertions.*;
 import static org.mockito.Mockito.when;
@@ -8,6 +8,7 @@ import java.net.UnknownHostException;
 import java.time.Instant;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -19,10 +20,12 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.security.oauth2.jwt.JwtDecoder;
 import org.springframework.security.oauth2.jwt.JwtException;
+import org.springframework.web.client.RestClientException;
 
 import com.decathlon.idp_core.domain.model.enums.WebhookSecurityType;
 import com.decathlon.idp_core.infrastructure.adapters.ingestion.exception.WebhookAuthForbiddenException;
 import com.decathlon.idp_core.infrastructure.adapters.ingestion.exception.WebhookAuthUnauthorizedException;
+import com.decathlon.idp_core.infrastructure.adapters.ingestion.exception.WebhookJwksHostForbiddenException;
 
 @DisplayName("JwtBearerSecurityValidator Tests")
 @ExtendWith(MockitoExtension.class)
@@ -126,6 +129,43 @@ class JwtBearerSecurityValidatorTest {
       assertThatThrownBy(() -> validator.validateConfiguration(config)).isInstanceOf(
           com.decathlon.idp_core.domain.exception.webhook.WebhookSecurityConfigurationException.class)
           .hasMessageContaining("private and link-local hosts");
+    }
+
+    @Test
+    @DisplayName("Should accept a host when it is allow-listed in security properties")
+    void shouldAcceptAllowListedHost() {
+      JwtBearerSecurityValidator safeValidator = new JwtBearerSecurityValidator(jwtDecoderProvider,
+          new WebhookSecurityProperties(Set.of("github.com"))) {
+        @Override
+        protected InetAddress[] resolveHostAddresses(String host) {
+          throw new AssertionError("JWKS host validation should not run for allow-listed hosts");
+        }
+      };
+
+      Map<String, String> config = Map.of("jwks_uri", "https://github.com/.well-known/jwks.json",
+          "client_id_field", "email", "client_id_values", "expected@example.com");
+
+      assertThatCode(() -> safeValidator.validateConfiguration(config)).doesNotThrowAnyException();
+    }
+
+    @Test
+    @DisplayName("Should reject a host when it is not allow-listed in security properties")
+    void shouldRejectNonAllowListedHost() {
+      JwtBearerSecurityValidator safeValidator = new JwtBearerSecurityValidator(jwtDecoderProvider,
+          new WebhookSecurityProperties(Set.of("auth.decathlon.com"))) {
+        @Override
+        protected InetAddress[] resolveHostAddresses(String host) {
+          throw new AssertionError(
+              "JWKS host validation should not run when allow-list rejects the host");
+        }
+      };
+
+      Map<String, String> config = Map.of("jwks_uri", "https://github.com/.well-known/jwks.json",
+          "client_id_field", "email", "client_id_values", "expected@example.com");
+
+      assertThatThrownBy(() -> safeValidator.validateConfiguration(config)).isInstanceOf(
+          com.decathlon.idp_core.domain.exception.webhook.WebhookSecurityConfigurationException.class)
+          .hasMessageContaining("not allow-listed");
     }
 
     @Test
@@ -294,6 +334,35 @@ class JwtBearerSecurityValidatorTest {
 
       assertThatThrownBy(() -> validator.validateRequest(headers, new byte[0], config))
           .isInstanceOf(WebhookAuthUnauthorizedException.class);
+    }
+
+    @Test
+    @DisplayName("Should return unauthorized when the JWKS runtime fetch fails")
+    void shouldReturnUnauthorizedWhenJwksRuntimeFetchFails() {
+      when(jwtDecoderProvider.get("https://issuer/.well-known/jwks.json"))
+          .thenThrow(new RestClientException("JWKS host rejected"));
+      Map<String, String> config = Map.of("jwks_uri", "https://issuer/.well-known/jwks.json",
+          "client_id_field", "email", "client_id_values", "expected@example.com");
+      String token = "signed-token";
+      Map<String, Object> headers = Map.of("Authorization", "Bearer " + token);
+
+      assertThatThrownBy(() -> validator.validateRequest(headers, new byte[0], config))
+          .isInstanceOf(WebhookAuthUnauthorizedException.class)
+          .hasCauseInstanceOf(RestClientException.class);
+    }
+
+    @Test
+    @DisplayName("Should return forbidden when the JWKS host is not allow-listed at runtime")
+    void shouldReturnForbiddenWhenJwksHostIsNotAllowListed() {
+      when(jwtDecoderProvider.get("https://github.com/.well-known/jwks.json"))
+          .thenThrow(new WebhookJwksHostForbiddenException("github.com"));
+      Map<String, String> config = Map.of("jwks_uri", "https://github.com/.well-known/jwks.json",
+          "client_id_field", "email", "client_id_values", "expected@example.com");
+      String token = "signed-token";
+      Map<String, Object> headers = Map.of("Authorization", "Bearer " + token);
+
+      assertThatThrownBy(() -> validator.validateRequest(headers, new byte[0], config))
+          .isInstanceOf(WebhookJwksHostForbiddenException.class);
     }
 
     @Test

@@ -1,4 +1,4 @@
-package com.decathlon.idp_core.infrastructure.adapters.webhook.security;
+package com.decathlon.idp_core.infrastructure.adapters.ingestion.security;
 
 import java.util.Map;
 
@@ -8,7 +8,6 @@ import com.decathlon.idp_core.domain.model.enums.WebhookSecurityType;
 import com.decathlon.idp_core.domain.port.WebhookSecurityStrategy;
 import com.decathlon.idp_core.infrastructure.adapters.ingestion.exception.WebhookAuthForbiddenException;
 import com.decathlon.idp_core.infrastructure.adapters.ingestion.exception.WebhookAuthUnauthorizedException;
-import com.decathlon.idp_core.infrastructure.adapters.ingestion.security.WebhookRequestAuthenticator;
 
 import lombok.RequiredArgsConstructor;
 

@@ -46,7 +46,8 @@ import com.decathlon.idp_core.domain.model.enums.WebhookSecurityType;
 import com.decathlon.idp_core.domain.model.inbound_connectors.webhook.WebhookConnector;
 import com.decathlon.idp_core.domain.model.inbound_connectors.webhook.WebhookSecurity;
 import com.decathlon.idp_core.domain.port.WebhookSecurityStrategy;
-import com.decathlon.idp_core.infrastructure.adapters.webhook.security.WebhookJwtDecoderProvider;
+import com.decathlon.idp_core.infrastructure.adapters.ingestion.exception.WebhookJwksHostForbiddenException;
+import com.decathlon.idp_core.infrastructure.adapters.ingestion.security.WebhookJwtDecoderProvider;
 import com.fasterxml.jackson.databind.JsonNode;
 
 /**
@@ -431,6 +432,30 @@ class InboundWebhookIngestionRouteTest extends AbstractIntegrationTest {
         Map.of("Authorization", "Bearer " + token));
 
     assertSecurityValidationSucceeded(exchange);
+  }
+
+  @Test
+  @DisplayName("Validate-security route returns 403 when the JWKS host is not allow-listed")
+  void validateSecurityRoute_403_whenJwksHostIsNotAllowListed() {
+    String jwksUri = "https://github.com/oauth2/certs";
+    when(jwtDecoderProvider.get(jwksUri))
+        .thenThrow(new WebhookJwksHostForbiddenException("github.com"));
+    WebhookConnector connector = webhookConnectorWithSecurity("jwt-connector",
+        new WebhookSecurity(WebhookSecurityType.JWT_BEARER, Map.of("jwks_uri", jwksUri,
+            "client_id_field", "email", "client_id_values", "expected@example.com")));
+
+    Exchange exchange = invokeValidateSecurityRoute(connector,
+        Map.of("Authorization", "Bearer signed-token"));
+
+    assertEquals(403, exchange.getMessage().getHeader(Exchange.HTTP_RESPONSE_CODE));
+    assertEquals("application/json", exchange.getMessage().getHeader(Exchange.CONTENT_TYPE));
+    try {
+      JsonNode response = objectMapper.readTree(exchange.getMessage().getBody(String.class));
+      assertEquals("webhook_forbidden", response.get("error").asText());
+      assertEquals("Invalid credentials", response.get("error_description").asText());
+    } catch (Exception exception) {
+      throw new AssertionError("Unable to read webhook error response", exception);
+    }
   }
 
   @Test

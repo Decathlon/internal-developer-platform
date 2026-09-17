@@ -1,4 +1,4 @@
-package com.decathlon.idp_core.infrastructure.adapters.webhook.security;
+package com.decathlon.idp_core.infrastructure.adapters.ingestion.security;
 
 import java.net.InetAddress;
 import java.net.URI;
@@ -8,17 +8,18 @@ import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.security.oauth2.jwt.JwtException;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
+import org.springframework.web.client.RestClientException;
 
 import com.decathlon.idp_core.domain.exception.webhook.WebhookSecurityConfigurationException;
 import com.decathlon.idp_core.domain.model.enums.WebhookSecurityType;
 import com.decathlon.idp_core.domain.port.WebhookSecurityStrategy;
 import com.decathlon.idp_core.infrastructure.adapters.ingestion.exception.WebhookAuthForbiddenException;
 import com.decathlon.idp_core.infrastructure.adapters.ingestion.exception.WebhookAuthUnauthorizedException;
-import com.decathlon.idp_core.infrastructure.adapters.ingestion.security.WebhookRequestAuthenticator;
 
 @Component
 public class JwtBearerSecurityValidator
@@ -40,9 +41,18 @@ public class JwtBearerSecurityValidator
   private static final String CLIENT_CLAIM_EMAIL = "email";
 
   private final WebhookJwtDecoderProvider jwtDecoderProvider;
+  private final Set<String> allowedJwksHosts;
 
   public JwtBearerSecurityValidator(WebhookJwtDecoderProvider jwtDecoderProvider) {
     this.jwtDecoderProvider = jwtDecoderProvider;
+    this.allowedJwksHosts = Set.of();
+  }
+
+  @Autowired
+  public JwtBearerSecurityValidator(WebhookJwtDecoderProvider jwtDecoderProvider,
+      WebhookSecurityProperties webhookSecurityProperties) {
+    this.jwtDecoderProvider = jwtDecoderProvider;
+    this.allowedJwksHosts = Set.copyOf(webhookSecurityProperties.allowedJwksHosts());
   }
 
   @Override
@@ -163,6 +173,16 @@ public class JwtBearerSecurityValidator
           "Invalid jwks_uri for JWT_BEARER security: host is missing");
     }
 
+    if (!allowedJwksHosts.isEmpty()
+        && !JwtBearerJwksUriPolicy.isAllowedHost(uri.getHost(), allowedJwksHosts)) {
+      throw new WebhookSecurityConfigurationException(
+          "Invalid jwks_uri for JWT_BEARER security: host is not allow-listed");
+    }
+
+    if (JwtBearerJwksUriPolicy.isAllowedHost(uri.getHost(), allowedJwksHosts)) {
+      return;
+    }
+
     if (isPrivateOrLoopbackHost(uri.getHost())) {
       throw new WebhookSecurityConfigurationException(
           "Invalid jwks_uri for JWT_BEARER security: localhost, loopback, private and link-local hosts are not allowed");
@@ -216,7 +236,7 @@ public class JwtBearerSecurityValidator
   private Jwt decodeAndValidateJwt(String token, String jwksUri) {
     try {
       return jwtDecoderProvider.get(jwksUri).decode(token);
-    } catch (JwtException exception) {
+    } catch (JwtException | RestClientException exception) {
       throw new WebhookAuthUnauthorizedException("JWT token validation failed", exception);
     }
   }
