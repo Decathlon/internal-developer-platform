@@ -2,8 +2,6 @@ package com.decathlon.idp_core.infrastructure.adapters.ingestion.route;
 
 import static com.decathlon.idp_core.infrastructure.adapters.ingestion.configuration.IngestionConstants.*;
 
-import java.util.Objects;
-
 import org.apache.camel.Exchange;
 import org.apache.camel.LoggingLevel;
 import org.apache.camel.builder.RouteBuilder;
@@ -54,6 +52,9 @@ public class GenericInboundEventRouteBuilder extends RouteBuilder {
               String.class);
           WebhookConnector webhookConnector = webhookConnectorService
               .getWebhookConnector(connectorIdentifier);
+          if (webhookConnector == null) {
+            throw new WebhookConfigurationMissingException(connectorIdentifier);
+          }
           exchange.setProperty(WEBHOOK_CONFIG_PROPERTY, webhookConnector);
         });
 
@@ -110,8 +111,7 @@ public class GenericInboundEventRouteBuilder extends RouteBuilder {
           String decodedPayload = exchange.getIn().getBody(String.class);
           WebhookConnector config = exchange.getProperty(WEBHOOK_CONFIG_PROPERTY,
               WebhookConnector.class);
-          ingestionProcessor.ingest(decodedPayload,
-              Objects.requireNonNull(config, "Webhook connector config must not be null"));
+          ingestionProcessor.ingest(decodedPayload, config);
         });
   }
 }

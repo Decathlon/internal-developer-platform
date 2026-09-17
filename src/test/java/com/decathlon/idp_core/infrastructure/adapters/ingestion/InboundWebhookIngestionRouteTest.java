@@ -13,6 +13,7 @@ import java.util.Base64;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.stream.Stream;
 import java.util.zip.GZIPOutputStream;
 
@@ -34,6 +35,8 @@ import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Import;
 import org.springframework.context.annotation.Primary;
+import org.springframework.core.Ordered;
+import org.springframework.core.annotation.Order;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.security.oauth2.jwt.JwtDecoder;
 import org.springframework.test.context.jdbc.Sql;
@@ -42,6 +45,7 @@ import com.decathlon.idp_core.AbstractIntegrationTest;
 import com.decathlon.idp_core.domain.model.enums.WebhookSecurityType;
 import com.decathlon.idp_core.domain.model.inbound_connectors.webhook.WebhookConnector;
 import com.decathlon.idp_core.domain.model.inbound_connectors.webhook.WebhookSecurity;
+import com.decathlon.idp_core.domain.port.WebhookSecurityStrategy;
 import com.decathlon.idp_core.infrastructure.adapters.webhook.security.WebhookJwtDecoderProvider;
 import com.fasterxml.jackson.databind.JsonNode;
 
@@ -57,6 +61,8 @@ class InboundWebhookIngestionRouteTest extends AbstractIntegrationTest {
   private static final String HMAC_PREFIX = "sha256=";
   private static final String BASIC_AUTH_USERNAME_ENV_KEY = "BASIC_AUTH_USERNAME";
   private static final String BASIC_AUTH_USERNAME = "admin";
+  private static final AtomicBoolean UNSUPPORTED_STATIC_TOKEN_STRATEGY_ENABLED = new AtomicBoolean(
+      false);
 
   @Value("${app.ingestion.webhook.test-security.token-env-key}")
   private String webhookTokenEnvKey;
@@ -98,6 +104,23 @@ class InboundWebhookIngestionRouteTest extends AbstractIntegrationTest {
     @Primary
     WebhookJwtDecoderProvider jwtDecoderProvider() {
       return mock(WebhookJwtDecoderProvider.class);
+    }
+
+    @Bean
+    @Order(Ordered.HIGHEST_PRECEDENCE)
+    WebhookSecurityStrategy unsupportedStaticTokenStrategy() {
+      return new WebhookSecurityStrategy() {
+        @Override
+        public boolean supports(WebhookSecurityType securityType) {
+          return UNSUPPORTED_STATIC_TOKEN_STRATEGY_ENABLED.get()
+              && securityType == WebhookSecurityType.STATIC_TOKEN;
+        }
+
+        @Override
+        public void validateConfiguration(Map<String, String> config) {
+          // No-op on purpose: this bean only exists to exercise the runtime guard.
+        }
+      };
     }
   }
 
@@ -454,6 +477,27 @@ class InboundWebhookIngestionRouteTest extends AbstractIntegrationTest {
     assertEquals("application/json", exchange.getMessage().getHeader(Exchange.CONTENT_TYPE));
     assertJsonErrorResponse(exchange, "invalid_compressed_payload",
         "Invalid, unsupported, or oversized compressed payload");
+  }
+
+  @Test
+  @DisplayName("Validate-security route returns 401 when a matching strategy does not implement the runtime authenticator contract")
+  void validateSecurityRoute_401_whenMatchingStrategyIsNotAuthenticator() throws Exception {
+    UNSUPPORTED_STATIC_TOKEN_STRATEGY_ENABLED.set(true);
+    try {
+      WebhookConnector connector = webhookConnectorWithSecurity("static-token-connector",
+          new WebhookSecurity(WebhookSecurityType.STATIC_TOKEN,
+              Map.of("header_name", "X-Auth-Token", "secret_alias", webhookTokenEnvKey)));
+
+      Exchange exchange = invokeValidateSecurityRoute(connector,
+          Map.of("X-Auth-Token", "any-token"));
+
+      assertEquals(401, exchange.getMessage().getHeader(Exchange.HTTP_RESPONSE_CODE));
+      assertEquals("application/json", exchange.getMessage().getHeader(Exchange.CONTENT_TYPE));
+      assertJsonErrorResponse(exchange, "webhook_authentication_failed",
+          "Webhook authentication failed");
+    } finally {
+      UNSUPPORTED_STATIC_TOKEN_STRATEGY_ENABLED.set(false);
+    }
   }
 
   private static Stream<Arguments> successDecodingCases() throws Exception {
