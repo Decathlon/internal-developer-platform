@@ -81,8 +81,7 @@ INSERT INTO property_definition (id, name, description, type, required, rules_id
 -- Principal properties
 ('550e8400-e29b-41d4-a716-446655440045', 'kind', 'Kind of principal', 'STRING', true, '550e8400-e29b-41d4-a716-446655440015'),
 ('550e8400-e29b-41d4-a716-446655440046', 'email', 'Email address (for HUMAN principals)', 'STRING', false, '550e8400-e29b-41d4-a716-446655440001'),
-('550e8400-e29b-41d4-a716-446655440047', 'is_admin', 'is_admin', 'BOOLEAN', false, NULL),
-('550e8400-e29b-41d4-a716-446655440048', 'is_digital_teammate', 'is_digital_teammate', 'BOOLEAN', false, NULL);
+('550e8400-e29b-41d4-a716-446655440047', 'is_admin', 'is_admin', 'BOOLEAN', false, NULL);
 
 -- Insert diverse relation definitions
 INSERT INTO relation_definition (id, name, target_template_identifier, required, to_many) VALUES
@@ -110,10 +109,7 @@ INSERT INTO relation_definition (id, name, target_template_identifier, required,
 
 -- External relationships
 ('550e8400-e29b-41d4-a716-446655440064', 'external_apis', 'external_api', false, true),
-('550e8400-e29b-41d4-a716-446655440065', 'file_storage', 'storage', false, false),
-
--- Principal relationships
-('550e8400-e29b-41d4-a716-446655440066', 'principal-member_of-supportgroup', 'supportgroup', false, true);
+('550e8400-e29b-41d4-a716-446655440065', 'file_storage', 'storage', false, false);
 
 -- Insert 10 diverse entity templates
 INSERT INTO entity_template (id, identifier, name, description) VALUES
@@ -128,8 +124,7 @@ INSERT INTO entity_template (id, identifier, name, description) VALUES
 ('550e8400-e29b-41d4-a716-446655440078', 'cache-service', 'Cache Service', 'Template for caching services'),
 ('550e8400-e29b-41d4-a716-446655440079', 'monitoring-service', 'Monitoring Service', 'Template for monitoring and observability services'),
 ('550e8400-e29b-41d4-a716-446655440080', 'principal', 'Principal', 'Unified identity representing authenticated actors (humans or service accounts) in the IDP-Core catalog'),
-('550e8400-e29b-41d4-a716-446655440081', 'team', 'Team', 'Organizational team or group for access control and collaboration'),
-('550e8400-e29b-41d4-a716-446655440082', 'supportgroup', 'SupportGroup', 'Support Group');
+('550e8400-e29b-41d4-a716-446655440081', 'team', 'Team', 'Organizational team or group for access control and collaboration');
 
 -- Link web-service entityTemplateIdentifier (comprehensive web API)
 INSERT INTO entity_template_properties_definitions (entity_template_id, properties_definitions_id) VALUES
@@ -169,8 +164,4 @@ INSERT INTO entity_template_properties_definitions (entity_template_id, properti
 INSERT INTO entity_template_properties_definitions (entity_template_id, properties_definitions_id) VALUES
 ('550e8400-e29b-41d4-a716-446655440080', '550e8400-e29b-41d4-a716-446655440045'), -- kind
 ('550e8400-e29b-41d4-a716-446655440080', '550e8400-e29b-41d4-a716-446655440046'), -- email
-('550e8400-e29b-41d4-a716-446655440080', '550e8400-e29b-41d4-a716-446655440047'), -- is_admin
-('550e8400-e29b-41d4-a716-446655440080', '550e8400-e29b-41d4-a716-446655440048'); -- is_digital_teammate
-
-INSERT INTO entity_template_relations_definitions (entity_template_id, relations_definitions_id) VALUES
-('550e8400-e29b-41d4-a716-446655440080', '550e8400-e29b-41d4-a716-446655440066'); -- principal-member_of-supportgroup
+('550e8400-e29b-41d4-a716-446655440080', '550e8400-e29b-41d4-a716-446655440047'); -- is_admin
