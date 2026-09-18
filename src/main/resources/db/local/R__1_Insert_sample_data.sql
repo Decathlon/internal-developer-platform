@@ -37,7 +37,9 @@ INSERT INTO property_rules (id, format, enum_values, regex, max_length, min_leng
 -- Log level enum rule
 ('550e8400-e29b-41d4-a716-446655440013', NULL, ARRAY['DEBUG', 'INFO', 'WARN', 'ERROR'], NULL, NULL, NULL, NULL, NULL),
 -- Team name pattern rule
-('550e8400-e29b-41d4-a716-446655440014', NULL, NULL, '^[a-zA-Z0-9-_]+$', 30, 2, NULL, NULL);
+('550e8400-e29b-41d4-a716-446655440014', NULL, NULL, '^[a-zA-Z0-9-_]+$', 30, 2, NULL, NULL),
+-- Principal kind enum rule
+('550e8400-e29b-41d4-a716-446655440015', NULL, ARRAY['HUMAN', 'SERVICE_ACCOUNT'], NULL, NULL, NULL, NULL, NULL);
 
 -- Insert diverse property definitions
 INSERT INTO property_definition (id, name, description, type, required, rules_id) VALUES
@@ -77,10 +79,10 @@ INSERT INTO property_definition (id, name, description, type, required, rules_id
 ('550e8400-e29b-41d4-a716-446655440044', 'dataRetentionDays', 'Data retention period in days', 'NUMBER', false, NULL),
 
 -- Principal properties
-('550e8400-e29b-41d4-a716-446655440045', 'kind', 'Type of principal: HUMAN or SERVICE_ACCOUNT', 'STRING', true, NULL),
+('550e8400-e29b-41d4-a716-446655440045', 'kind', 'Kind of principal', 'STRING', true, '550e8400-e29b-41d4-a716-446655440015'),
 ('550e8400-e29b-41d4-a716-446655440046', 'email', 'Email address (for HUMAN principals)', 'STRING', false, '550e8400-e29b-41d4-a716-446655440001'),
-('550e8400-e29b-41d4-a716-446655440047', 'client_id', 'OAuth2 client identifier (for SERVICE_ACCOUNT principals)', 'STRING', false, NULL),
-('550e8400-e29b-41d4-a716-446655440048', 'origin', 'Origin system or service (for SERVICE_ACCOUNT principals)', 'STRING', false, NULL);
+('550e8400-e29b-41d4-a716-446655440047', 'is_admin', 'is_admin', 'BOOLEAN', false, NULL),
+('550e8400-e29b-41d4-a716-446655440048', 'is_digital_teammate', 'is_digital_teammate', 'BOOLEAN', false, NULL);
 
 -- Insert diverse relation definitions
 INSERT INTO relation_definition (id, name, target_template_identifier, required, to_many) VALUES
@@ -111,7 +113,7 @@ INSERT INTO relation_definition (id, name, target_template_identifier, required,
 ('550e8400-e29b-41d4-a716-446655440065', 'file_storage', 'storage', false, false),
 
 -- Principal relationships
-('550e8400-e29b-41d4-a716-446655440066', 'member_of', 'team', false, true);
+('550e8400-e29b-41d4-a716-446655440066', 'principal-member_of-supportgroup', 'supportgroup', false, true);
 
 -- Insert 10 diverse entity templates
 INSERT INTO entity_template (id, identifier, name, description) VALUES
@@ -126,7 +128,8 @@ INSERT INTO entity_template (id, identifier, name, description) VALUES
 ('550e8400-e29b-41d4-a716-446655440078', 'cache-service', 'Cache Service', 'Template for caching services'),
 ('550e8400-e29b-41d4-a716-446655440079', 'monitoring-service', 'Monitoring Service', 'Template for monitoring and observability services'),
 ('550e8400-e29b-41d4-a716-446655440080', 'principal', 'Principal', 'Unified identity representing authenticated actors (humans or service accounts) in the IDP-Core catalog'),
-('550e8400-e29b-41d4-a716-446655440081', 'team', 'Team', 'Organizational team or group for access control and collaboration');
+('550e8400-e29b-41d4-a716-446655440081', 'team', 'Team', 'Organizational team or group for access control and collaboration'),
+('550e8400-e29b-41d4-a716-446655440082', 'supportgroup', 'SupportGroup', 'Support Group');
 
 -- Link web-service entityTemplateIdentifier (comprehensive web API)
 INSERT INTO entity_template_properties_definitions (entity_template_id, properties_definitions_id) VALUES
@@ -166,8 +169,8 @@ INSERT INTO entity_template_properties_definitions (entity_template_id, properti
 INSERT INTO entity_template_properties_definitions (entity_template_id, properties_definitions_id) VALUES
 ('550e8400-e29b-41d4-a716-446655440080', '550e8400-e29b-41d4-a716-446655440045'), -- kind
 ('550e8400-e29b-41d4-a716-446655440080', '550e8400-e29b-41d4-a716-446655440046'), -- email
-('550e8400-e29b-41d4-a716-446655440080', '550e8400-e29b-41d4-a716-446655440047'), -- client_id
-('550e8400-e29b-41d4-a716-446655440080', '550e8400-e29b-41d4-a716-446655440048'); -- origin
+('550e8400-e29b-41d4-a716-446655440080', '550e8400-e29b-41d4-a716-446655440047'), -- is_admin
+('550e8400-e29b-41d4-a716-446655440080', '550e8400-e29b-41d4-a716-446655440048'); -- is_digital_teammate
 
 INSERT INTO entity_template_relations_definitions (entity_template_id, relations_definitions_id) VALUES
-('550e8400-e29b-41d4-a716-446655440080', '550e8400-e29b-41d4-a716-446655440066'); -- member_of
+('550e8400-e29b-41d4-a716-446655440080', '550e8400-e29b-41d4-a716-446655440066'); -- principal-member_of-supportgroup
