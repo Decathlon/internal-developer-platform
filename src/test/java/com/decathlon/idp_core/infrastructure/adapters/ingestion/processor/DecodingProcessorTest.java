@@ -36,7 +36,7 @@ class DecodingProcessorTest {
   @DisplayName("Returns raw payload for pass-through encodings")
   void decode_returnsRawPayload_forPassThroughEncodings(String payload,
       Map<String, Object> headers) {
-    String decoded = decodingProcessor.decode(payload, headers);
+    String decoded = decodingProcessor.decode(payload.getBytes(StandardCharsets.UTF_8), headers);
     assertEquals(payload, decoded);
   }
 
@@ -89,9 +89,11 @@ class DecodingProcessorTest {
       String contentEncoding) {
     Map<String, Object> headers = Map.of("Content-Encoding", contentEncoding);
     String payload = "{\"status\":\"OK\"}";
+    byte[] payloadBytes = payload.getBytes(StandardCharsets.UTF_8);
+    var failureCase = new DecodeFailureCase(decodingProcessor, payloadBytes, headers);
 
     WebhookDecodingException exception = assertThrows(WebhookDecodingException.class,
-        () -> decodingProcessor.decode(payload, headers));
+        failureCase::execute);
 
     assertThat(exception.getMessage()).contains("Unsupported Content-Encoding: '")
         .contains(contentEncoding);
@@ -114,11 +116,148 @@ class DecodingProcessorTest {
   @DisplayName("Strips CRLF injection characters from Content-Encoding header in exception messages")
   void decode_sanitizesHeaderValue_whenContentEncodingContainsCrLfCharacters() {
     Map<String, Object> headers = Map.of("Content-Encoding", "br\r\nX-Injected: evil");
+    byte[] payloadBytes = "{}".getBytes(StandardCharsets.UTF_8);
+    var failureCase = new DecodeFailureCase(decodingProcessor, payloadBytes, headers);
 
     WebhookDecodingException exception = assertThrows(WebhookDecodingException.class,
-        () -> decodingProcessor.decode("{}", headers));
+        failureCase::execute);
 
     assertThat(exception.getMessage()).doesNotContain("\r").doesNotContain("\n");
+  }
+
+  @Test
+  @DisplayName("Rejects oversized default-object payloads before calling toString")
+  void decode_throwsWebhookDecodingException_whenDefaultPayloadToStringIsTooLarge() {
+    Object oversizedPayload = new Object() {
+      @Override
+      public String toString() {
+        return "X".repeat((int) IngestionConstants.MAX_DECOMPRESSED_BYTES + 1);
+      }
+    };
+
+    WebhookDecodingException exception = assertThrows(WebhookDecodingException.class,
+        () -> decodingProcessor.decode(oversizedPayload, Map.of()));
+
+    assertThat(exception.getMessage()).contains("Input payload string length");
+  }
+
+  @Test
+  @DisplayName("Accepts String payload and returns it as-is when no encoding is provided")
+  void decode_acceptsStringPayload_whenNoEncodingIsProvided() {
+    String payload = "{\"event\":\"string-input\"}";
+    String decoded = decodingProcessor.decode(payload, Map.of());
+    assertEquals(payload, decoded);
+  }
+
+  @Test
+  @DisplayName("Converts byte[] to String correctly when no encoding is provided")
+  void decode_convertsByteArrayToString_whenNoEncodingIsProvided() {
+    byte[] payload = "{\"event\":\"bytes\"}".getBytes(StandardCharsets.UTF_8);
+    String decoded = decodingProcessor.decode(payload, Map.of());
+    assertEquals("{\"event\":\"bytes\"}", decoded);
+  }
+
+  @Test
+  @DisplayName("Rejects oversized String payload before encoding processing")
+  void decode_throwsWebhookDecodingException_whenStringPayloadExceedsMaxSize() {
+    // String that exceeds MAX_INPUT_PAYLOAD_BYTES (10 MB)
+    String oversizedPayload = "X".repeat((int) IngestionConstants.MAX_DECOMPRESSED_BYTES + 1);
+    WebhookDecodingException exception = assertThrows(WebhookDecodingException.class,
+        () -> decodingProcessor.decode(oversizedPayload, Map.of()));
+
+    assertThat(exception.getMessage()).contains("Input payload string length")
+        .contains("exceeds maximum allowed size");
+  }
+
+  @Test
+  @DisplayName("Rejects oversized byte[] payload before encoding processing")
+  void decode_throwsWebhookDecodingException_whenByteArrayPayloadExceedsMaxSize() {
+    byte[] oversizedPayload = new byte[(int) IngestionConstants.MAX_DECOMPRESSED_BYTES + 1];
+    Map<String, Object> headers = Map.of();
+
+    WebhookDecodingException exception = assertThrows(WebhookDecodingException.class,
+        () -> decodingProcessor.decode(oversizedPayload, headers));
+
+    assertThat(exception.getMessage()).contains("Input payload size")
+        .contains("exceeds maximum allowed size");
+  }
+
+  @Test
+  @DisplayName("Handles String payload with gzip encoding")
+  void decode_acceptsStringPayloadWithGzipEncoding() throws Exception {
+    String payload = "{\"event\":\"gzip-string\"}";
+    byte[] gzipPayload = gzip(payload);
+    // DecodingProcessor converts String→byte[] internally
+    String decoded = decodingProcessor.decode(gzipPayload, GZIP_HEADERS);
+    assertEquals(payload, decoded);
+  }
+
+  @Test
+  @DisplayName("Accepts null headers and treats as no encoding")
+  void decode_acceptsNullHeaders_andTreatsAsNoEncoding() {
+    String payload = "{\"event\":\"null-headers\"}";
+    String decoded = decodingProcessor.decode(payload, null);
+    assertEquals(payload, decoded);
+  }
+
+  @Test
+  @DisplayName("Handles multiple encoding separators correctly (gzip, identity)")
+  void decode_handlesStackedEncodings_gzipThenIdentity() throws Exception {
+    String payload = "{\"event\":\"stacked-encoding\"}";
+    byte[] gzipPayload = gzip(payload);
+    // Encodings are processed in reverse order: identity → gzip
+    String decoded = decodingProcessor.decode(gzipPayload,
+        Map.of("Content-Encoding", "gzip, identity"));
+    assertEquals(payload, decoded);
+  }
+
+  @Test
+  @DisplayName("Rejects payloads with only whitespace in Content-Encoding header")
+  void decode_treatsWhitespaceOnlyContentEncodingAsEmpty() {
+    byte[] payload = "{\"event\":\"test\"}".getBytes(StandardCharsets.UTF_8);
+    String decoded = decodingProcessor.decode(payload, Map.of("Content-Encoding", "   "));
+    assertEquals("{\"event\":\"test\"}", decoded);
+  }
+
+  @Test
+  @DisplayName("Handles case-insensitive Content-Encoding header name")
+  void decode_handlesCaseInsensitiveContentEncodingHeader() {
+    byte[] payload = "{\"event\":\"test\"}".getBytes(StandardCharsets.UTF_8);
+    String decoded = decodingProcessor.decode(payload, Map.of("content-ENCODING", "identity"));
+    assertEquals("{\"event\":\"test\"}", decoded);
+  }
+
+  @Test
+  @DisplayName("Rejects empty String payload when gzip encoding is declared")
+  void decode_throwsWebhookDecodingException_whenEmptyStringPayloadWithGzipEncoding() {
+    WebhookDecodingException exception = assertThrows(WebhookDecodingException.class,
+        () -> decodingProcessor.decode("", GZIP_HEADERS));
+
+    assertEquals("Empty payload cannot be decoded as gzip", exception.getMessage());
+  }
+
+  @Test
+  @DisplayName("Rejects empty byte[] payload when gzip encoding is declared")
+  void decode_throwsWebhookDecodingException_whenEmptyByteArrayPayloadWithGzipEncoding() {
+    WebhookDecodingException exception = assertThrows(WebhookDecodingException.class,
+        () -> decodingProcessor.decode(new byte[0], GZIP_HEADERS));
+
+    assertEquals("Empty payload cannot be decoded as gzip", exception.getMessage());
+  }
+
+  @Test
+  @DisplayName("Sanitizes long header values in exception messages")
+  void decode_truncatesLongSanitizedHeaderValuesInExceptions() {
+    // Create a long Content-Encoding header that will be truncated
+    String longEncoding = "unsupported" + "x".repeat(200);
+    Map<String, Object> headers = Map.of("Content-Encoding", longEncoding);
+    byte[] payload = "{}".getBytes(StandardCharsets.UTF_8);
+
+    WebhookDecodingException exception = assertThrows(WebhookDecodingException.class,
+        () -> decodingProcessor.decode(payload, headers));
+
+    assertThat(exception.getMessage()).contains("Unsupported Content-Encoding: '")
+        .doesNotContain("x".repeat(200)); // Verify long value was truncated
   }
 
   private static Stream<Arguments> passThroughCases() {
@@ -142,6 +281,14 @@ class DecodingProcessorTest {
       gzipOutput.write(payload.getBytes(StandardCharsets.UTF_8));
       gzipOutput.finish();
       return output.toByteArray();
+    }
+  }
+
+  private record DecodeFailureCase(DecodingProcessor decodingProcessor, byte[] payload,
+      Map<String, Object> headers) {
+
+    void execute() {
+      decodingProcessor.decode(payload, headers);
     }
   }
 }

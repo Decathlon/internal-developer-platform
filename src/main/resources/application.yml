@@ -99,7 +99,7 @@ spring:
           batch_versioned_data: true
 
 springdoc:
-    # Will expose the health endpoint in the OpenAPI spec.
+  # Will expose the health endpoint in the OpenAPI spec.
   show-actuator: true
   swagger-ui:
     # Sorts API tags alphabetically in the Swagger UI.
@@ -119,6 +119,13 @@ app:
       identifier-path: /{webhookIdentifier}
   # Base URL of this service, used to build self-referencing links.
   idp-core-prefix-url: ${IDP_CORE_PREFIX_URL}
+
+idp:
+  security:
+    webhook:
+      # Comma-separated allow-list for trusted JWKS hosts.
+      # Example: ALLOWED_JWKS_HOSTS=github.com,auth.decathlon.com
+      allowed-jwks-hosts: ${ALLOWED_JWKS_HOSTS:}
 
 logging:
   level:

@@ -13,6 +13,8 @@ import com.decathlon.idp_core.domain.model.inbound_connectors.webhook.WebhookCon
 import com.decathlon.idp_core.domain.service.webhook.WebhookConnectorService;
 import com.decathlon.idp_core.infrastructure.adapters.ingestion.exception_handler.WebhookExceptionRouteBuilder;
 import com.decathlon.idp_core.infrastructure.adapters.ingestion.processor.IngestionProcessor;
+import com.decathlon.idp_core.infrastructure.adapters.ingestion.processor.PayloadValidationProcessor;
+import com.decathlon.idp_core.infrastructure.adapters.ingestion.processor.SecurityProcessor;
 import com.decathlon.idp_core.infrastructure.adapters.ingestion.processor.decoder.DecodingProcessor;
 
 import lombok.RequiredArgsConstructor;
@@ -24,18 +26,20 @@ public class GenericInboundEventRouteBuilder extends RouteBuilder {
 
   private final WebhookConnectorService webhookConnectorService;
   private final DecodingProcessor decodingProcessor;
+  private final SecurityProcessor securityProcessor;
   private final IngestionProcessor ingestionProcessor;
+  private final PayloadValidationProcessor payloadValidationProcessor;
   private final WebhookExceptionRouteBuilder webhookExceptionRouteBuilder;
 
   @Override
   public void configure() throws Exception {
     webhookExceptionRouteBuilder.configureExceptions(this);
 
-    from(DIRECT_PROCESS_EVENT).routeId(ROUTE_ID_WEBHOOK_PIPELINE)
-        .setProperty(RAW_PAYLOAD_BODY_PROPERTY, body()).to(DIRECT_FETCH_CONFIGURATION)
-        .to(DIRECT_VALIDATE_ENABLED).to(DIRECT_DECODE_PAYLOAD).to(DIRECT_INGEST_PAYLOAD)
-        .removeHeaders("*") // Clear all accumulated incoming and internal headers
-        .setHeader(Exchange.HTTP_RESPONSE_CODE, constant(HTTP_CREATED))
+    // Main Pipeline
+    from(DIRECT_PROCESS_EVENT).routeId(ROUTE_ID_WEBHOOK_PIPELINE).to(DIRECT_FETCH_CONFIGURATION)
+        .to(DIRECT_VALIDATE_ENABLED).process(payloadValidationProcessor::validate)
+        .to(DIRECT_VALIDATE_SECURITY).to(DIRECT_DECODE_PAYLOAD).to(DIRECT_INGEST_PAYLOAD)
+        .removeHeaders("*").setHeader(Exchange.HTTP_RESPONSE_CODE, constant(HTTP_CREATED))
         .setHeader(Exchange.CONTENT_TYPE, constant(APPLICATION_JSON))
         .setBody(constant(SUCCESS_WEBHOOK_EVENT_PROCESSED));
 
@@ -48,6 +52,9 @@ public class GenericInboundEventRouteBuilder extends RouteBuilder {
               String.class);
           WebhookConnector webhookConnector = webhookConnectorService
               .getWebhookConnector(connectorIdentifier);
+          if (webhookConnector == null) {
+            throw new WebhookConfigurationMissingException(connectorIdentifier);
+          }
           exchange.setProperty(WEBHOOK_CONFIG_PROPERTY, webhookConnector);
         });
 
@@ -68,12 +75,28 @@ public class GenericInboundEventRouteBuilder extends RouteBuilder {
           }
         });
 
+    // --- Step A.2: Validate Webhook Security ---
+    from(DIRECT_VALIDATE_SECURITY).routeId(ROUTE_ID_VALIDATE_WEBHOOK_SECURITY)
+        .log(LoggingLevel.DEBUG,
+            "Validating webhook security for ID: ${exchangeProperty.connectorIdentifier}")
+        .process(exchange -> {
+          WebhookConnector config = exchange.getProperty(WEBHOOK_CONFIG_PROPERTY,
+              WebhookConnector.class);
+          if (config == null) {
+            String connectorIdentifier = exchange.getProperty(CONNECTOR_IDENTIFIER_PROPERTY,
+                String.class);
+            throw new WebhookConfigurationMissingException(connectorIdentifier);
+          }
+          byte[] rawPayload = exchange.getProperty(RAW_PAYLOAD_BODY_PROPERTY, byte[].class);
+          securityProcessor.validate(exchange.getIn().getHeaders(), rawPayload, config);
+        });
+
     // --- Step B: Decode Payload ---
     from(DIRECT_DECODE_PAYLOAD).routeId(ROUTE_ID_DECODE_PAYLOAD)
         .log(LoggingLevel.DEBUG,
             "Decoding payload for webhook ID: ${exchangeProperty.connectorIdentifier}")
         .process(exchange -> {
-          Object rawPayload = exchange.getProperty(RAW_PAYLOAD_BODY_PROPERTY);
+          byte[] rawPayload = exchange.getProperty(RAW_PAYLOAD_BODY_PROPERTY, byte[].class);
           String decodedPayload = decodingProcessor.decode(rawPayload,
               exchange.getIn().getHeaders());
           exchange.getIn().setBody(decodedPayload);
@@ -90,6 +113,5 @@ public class GenericInboundEventRouteBuilder extends RouteBuilder {
               WebhookConnector.class);
           ingestionProcessor.ingest(decodedPayload, config);
         });
-
   }
 }
