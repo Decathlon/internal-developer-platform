@@ -25,7 +25,7 @@ A mapping targets one Entity Template and describes how to derive entity fields 
 | ------------ | -------- | -------------------------------------------------------- |
 | `identifier` | ✅       | JSLT expression to generate the entity identifier        |
 | `name`       | ✅       | JSLT expression for the entity name                      |
-| `properties` |          | Map of property names to JSLT expressions                |
+| `properties` |          | Map of property names to JSLT expressions. Expressions can return native JSON scalars, arrays, or objects. |
 | `relations`  |          | Array of relation definitions (see below)                |
 
 ### Relation Definition
@@ -112,6 +112,15 @@ string(.project_id)
 
 # Extract with fallback
 .language // "Unknown"
+
+# Preserve a native array
+[for (.owners) .login]
+
+# Build a native object
+{
+  "team": .team.name,
+  "contacts": [for (.contacts) .email]
+}
 ```
 
 ##### Array Operations
@@ -173,8 +182,9 @@ if (.is_private == true) "PRIVATE_" + .name else .name
     "properties": {
       "name": ".repository.name",
       "url": ".repository.html_url",
-      "stars": "\"\" + .repository.stargazers_count",
-      "is_public": "if (.repository.private) \"false\" else \"true\""
+      "stars": ".repository.stargazers_count",
+      "is_public": "if (.repository.private) false else true",
+      "maintainers": "[for (.repository.maintainers) .login]"
     },
     "relations": {}
   }

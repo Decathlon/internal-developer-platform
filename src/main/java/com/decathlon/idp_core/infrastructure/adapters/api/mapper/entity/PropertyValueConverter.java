@@ -33,7 +33,7 @@ public final class PropertyValueConverter {
   /// @param definition the property definition for type information (may be null)
   /// @return the typed value, or the raw string value if type conversion fails
   public static Object convert(Property property, PropertyDefinition definition) {
-    String value = property.value();
+    Object value = property.value();
 
     if (definition == null) {
       return value;
@@ -43,12 +43,12 @@ public final class PropertyValueConverter {
 
     if (PropertyType.NUMBER.equals(type)) {
       try {
-        return Double.valueOf(value);
+        return Double.valueOf(value.toString());
       } catch (NumberFormatException _) {
         return value;
       }
     } else if (PropertyType.BOOLEAN.equals(type)) {
-      return Boolean.valueOf(value);
+      return Boolean.valueOf(value.toString());
     }
 
     return value;

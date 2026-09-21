@@ -26,9 +26,9 @@ VALUES
 -- Properties for default-team entity
 INSERT INTO idp_core.property (id, name, value)
 VALUES
-  ('aa000000-0000-0000-0000-000000000007', 'applicationName', 'test-app'),
-  ('aa000000-0000-0000-0000-000000000008', 'ownerEmail', 'team@example.com'),
-  ('aa000000-0000-0000-0000-000000000009', 'environment', 'DEV');
+  ('aa000000-0000-0000-0000-000000000007', 'applicationName', '"test-app"'),
+  ('aa000000-0000-0000-0000-000000000008', 'ownerEmail', '"team@example.com"'),
+  ('aa000000-0000-0000-0000-000000000009', 'environment', '"DEV"');
 INSERT INTO idp_core.entity_properties (entity_id, property_id)
 VALUES
   ('550e8400-e29b-41d4-a716-446655440115', 'aa000000-0000-0000-0000-000000000007'),
@@ -38,9 +38,9 @@ VALUES
 -- Properties for test-team-required entity
 INSERT INTO idp_core.property (id, name, value)
 VALUES
-  ('aa000000-0000-0000-0000-000000000010', 'applicationName', 'test-team-app'),
-  ('aa000000-0000-0000-0000-000000000011', 'ownerEmail', 'testteam@example.com'),
-  ('aa000000-0000-0000-0000-000000000012', 'environment', 'PROD');
+  ('aa000000-0000-0000-0000-000000000010', 'applicationName', '"test-team-app"'),
+  ('aa000000-0000-0000-0000-000000000011', 'ownerEmail', '"testteam@example.com"'),
+  ('aa000000-0000-0000-0000-000000000012', 'environment', '"PROD"');
 INSERT INTO idp_core.entity_properties (entity_id, property_id)
 VALUES
   ('550e8400-e29b-41d4-a716-446655440116', 'aa000000-0000-0000-0000-000000000010'),
@@ -50,11 +50,11 @@ VALUES
 -- Properties for test-support-with-required-team entity
 INSERT INTO idp_core.property (id, name, value)
 VALUES
-  ('aa000000-0000-0000-0000-000000000013', 'applicationName', 'support-app'),
-  ('aa000000-0000-0000-0000-000000000014', 'ownerEmail', 'support@example.com'),
-  ('aa000000-0000-0000-0000-000000000015', 'environment', 'PROD'),
-  ('aa000000-0000-0000-0000-000000000016', 'version', '1.0.0'),
-  ('aa000000-0000-0000-0000-000000000017', 'teamName', 'support-team');
+  ('aa000000-0000-0000-0000-000000000013', 'applicationName', '"support-app"'),
+  ('aa000000-0000-0000-0000-000000000014', 'ownerEmail', '"support@example.com"'),
+  ('aa000000-0000-0000-0000-000000000015', 'environment', '"PROD"'),
+  ('aa000000-0000-0000-0000-000000000016', 'version', '"1.0.0"'),
+  ('aa000000-0000-0000-0000-000000000017', 'teamName', '"support-team"');
 INSERT INTO idp_core.entity_properties (entity_id, property_id)
 VALUES
   ('550e8400-e29b-41d4-a716-446655440117', 'aa000000-0000-0000-0000-000000000013'),
@@ -66,9 +66,9 @@ VALUES
 -- Properties for web-api-1 (language=JAVA, environment=PROD)
 INSERT INTO idp_core.property (id, name, value)
 VALUES
-  ('aa000000-0000-0000-0000-000000000001', 'programmingLanguage', 'JAVA'),
-  ('aa000000-0000-0000-0000-000000000002', 'environment', 'PROD'),
-  ('aa000000-0000-0000-0000-000000000005', 'port', '8080');
+  ('aa000000-0000-0000-0000-000000000001', 'programmingLanguage', '"JAVA"'),
+  ('aa000000-0000-0000-0000-000000000002', 'environment', '"PROD"'),
+  ('aa000000-0000-0000-0000-000000000005', 'port', '"8080"');
 
 INSERT INTO idp_core.entity_properties (entity_id, property_id)
 VALUES
@@ -79,15 +79,21 @@ VALUES
 -- Properties for web-api-2 (language=PYTHON, environment=DEV)
 INSERT INTO idp_core.property (id, name, value)
 VALUES
-  ('aa000000-0000-0000-0000-000000000003', 'programmingLanguage', 'PYTHON'),
-  ('aa000000-0000-0000-0000-000000000004', 'environment', 'DEV'),
-  ('aa000000-0000-0000-0000-000000000006', 'port', '9090');
+  ('aa000000-0000-0000-0000-000000000003', 'programmingLanguage', '"PYTHON"'),
+  ('aa000000-0000-0000-0000-000000000004', 'environment', '"DEV"'),
+  ('aa000000-0000-0000-0000-000000000006', 'port', '"9090"'),
+  ('aa000000-0000-0000-0000-000000000018', 'stringArray', '["JAVA","SPRING"]'),
+  ('aa000000-0000-0000-0000-000000000019', 'numberArray', '[8080,9090]'),
+  ('aa000000-0000-0000-0000-000000000020', 'booleanArray', '[true,false]');
 
 INSERT INTO idp_core.entity_properties (entity_id, property_id)
 VALUES
   ('550e8400-e29b-41d4-a716-446655440101', 'aa000000-0000-0000-0000-000000000003'),
   ('550e8400-e29b-41d4-a716-446655440101', 'aa000000-0000-0000-0000-000000000004'),
-  ('550e8400-e29b-41d4-a716-446655440101', 'aa000000-0000-0000-0000-000000000006');
+  ('550e8400-e29b-41d4-a716-446655440101', 'aa000000-0000-0000-0000-000000000006'),
+  ('550e8400-e29b-41d4-a716-446655440101', 'aa000000-0000-0000-0000-000000000018'),
+  ('550e8400-e29b-41d4-a716-446655440101', 'aa000000-0000-0000-0000-000000000019'),
+  ('550e8400-e29b-41d4-a716-446655440101', 'aa000000-0000-0000-0000-000000000020');
 
 -- Relations for web-api-1 (database -> database-service, targetTemplateIdentifier = database-service)
 INSERT INTO idp_core.relation (id, name, target_template_identifier)

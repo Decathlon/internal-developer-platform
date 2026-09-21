@@ -98,6 +98,18 @@ final class JpaPredicateBuilder {
     };
   }
 
+  /// Converts a JSONB value to its textual representation without the quotes
+  /// added around JSON string scalars.
+  ///
+  /// Casting JSONB to text preserves numbers, booleans, and arrays. Removing
+  /// only surrounding quotes keeps the existing scalar string semantics while
+  /// avoiding a JSON path extraction that would return NULL for an empty path.
+  static Expression<String> jsonbAsText(CriteriaBuilder cb, Expression<?> field) {
+    var hcb = (HibernateCriteriaBuilder) cb;
+    var textField = hcb.cast((org.hibernate.query.criteria.JpaExpression<?>) field, String.class);
+    return cb.function("btrim", String.class, textField, cb.literal("\""));
+  }
+
   /// Escapes SQL LIKE wildcards (`%` and `_`) in the given value so they are
   /// treated as
   /// literal characters rather than pattern metacharacters.

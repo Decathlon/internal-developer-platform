@@ -4,6 +4,7 @@ import static com.decathlon.idp_core.domain.constant.ValidationMessages.*;
 
 import java.math.BigDecimal;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -52,6 +53,16 @@ public class PropertyValidationService {
    */
   public List<String> validatePropertyValue(PropertyDefinition propertyDefinition,
       Object rawValue) {
+    if (rawValue instanceof Collection<?> values) {
+      return values.stream()
+          .flatMap(value -> validateScalarPropertyValue(propertyDefinition, value).stream())
+          .toList();
+    }
+    return validateScalarPropertyValue(propertyDefinition, rawValue);
+  }
+
+  private List<String> validateScalarPropertyValue(PropertyDefinition propertyDefinition,
+      Object rawValue) {
     return switch (propertyDefinition.type()) {
       case STRING -> validateStringPropertyValue(propertyDefinition.name(), rawValue,
           propertyDefinition.rules());
@@ -97,7 +108,7 @@ public class PropertyValidationService {
     for (PropertyDefinition definition : definitions) {
       Property property = propertiesByName.get(definition.name());
       boolean missing = property == null || property.value() == null
-          || (property.value().isBlank());
+          || (property.value().toString().isBlank());
 
       if (missing) {
         if (definition.required()) {

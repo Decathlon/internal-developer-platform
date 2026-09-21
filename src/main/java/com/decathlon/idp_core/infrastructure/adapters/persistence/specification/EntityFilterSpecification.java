@@ -94,7 +94,8 @@ public final class EntityFilterSpecification {
       query.distinct(true);
       Join<EntityJpaEntity, PropertyJpaEntity> propJoin = root.join("properties");
       return cb.and(cb.equal(propJoin.get(NAME), criterion.key()),
-          buildPredicate(cb, propJoin.get("value"), criterion.operator(), criterion.value()));
+          buildPredicate(cb, JpaPredicateBuilder.jsonbAsText(cb, propJoin.get("value")),
+              criterion.operator(), criterion.value()));
     };
   }
 

@@ -52,6 +52,39 @@ class PropertyValidationServiceTest {
     }
 
     @Test
+    @DisplayName("Should validate every element of a STRING array")
+    void shouldValidateStringArrayElements() {
+      var definition = propertyDefinition("languages", PropertyType.STRING, null);
+
+      var violations = service.validatePropertyValue(definition, List.of("JAVA", "KOTLIN"));
+
+      assertEquals(List.of(), violations);
+    }
+
+    @Test
+    @DisplayName("Should validate every element of a NUMBER array")
+    void shouldValidateNumberArrayElements() {
+      var definition = propertyDefinition("ports", PropertyType.NUMBER, null);
+
+      var violations = service.validatePropertyValue(definition, List.of(8080, "9090"));
+
+      assertEquals(List.of(), violations);
+    }
+
+    @Test
+    @DisplayName("Should reject an invalid element in a BOOLEAN array")
+    void shouldRejectInvalidBooleanArrayElement() {
+      var definition = propertyDefinition("flags", PropertyType.BOOLEAN, null);
+
+      var violations = service.validatePropertyValue(definition, List.of(true, "not-a-boolean"));
+
+      assertEquals(
+          List.of(
+              ValidationMessages.PROPERTY_TYPE_MISMATCH.formatted("flags", PropertyType.BOOLEAN)),
+          violations);
+    }
+
+    @Test
     @DisplayName("Should report violation when required property is present but blank")
     void shouldReportViolationWhenRequiredPropertyIsBlank() {
       var template = new EntityTemplate(UUID.randomUUID(), "system-template", "System", "desc",

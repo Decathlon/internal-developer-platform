@@ -9,7 +9,9 @@ import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 
+import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.envers.Audited;
+import org.hibernate.type.SqlTypes;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -37,6 +39,7 @@ public class PropertyJpaEntity {
   @EqualsAndHashCode.Include
   private String name;
 
-  @Column
-  private String value;
+  @JdbcTypeCode(SqlTypes.JSON)
+  @Column(columnDefinition = "jsonb")
+  private Object value;
 }

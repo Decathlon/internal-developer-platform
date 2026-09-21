@@ -28,7 +28,7 @@ class EntityDtoInMapperTest {
   @DisplayName("Should map create DTO to Entity with populated properties and relations")
   void shouldMapCreateDtoToEntity() {
     // Given
-    var properties = new LinkedHashMap<String, String>();
+    var properties = new LinkedHashMap<String, Object>();
     properties.put("environment", "prod");
     properties.put("port", "8080");
 

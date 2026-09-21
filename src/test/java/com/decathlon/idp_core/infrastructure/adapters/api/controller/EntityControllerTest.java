@@ -261,6 +261,19 @@ public class EntityControllerTest extends AbstractIntegrationTest {
           .andExpect(jsonPath("$.content.length()").value(expectedCount));
     }
 
+    @ParameterizedTest(name = "array filter ''{0}'' returns {1} result(s)")
+    @CsvSource({"property.stringArray:JAVA, 1", "property.numberArray:9090, 1",
+        "property.booleanArray:true, 1"})
+    @DisplayName("Should filter JSONB arrays containing strings, numbers, and booleans")
+    @WithMockUser
+    void getEntities_200_containsOnJsonbArray(String query, int expectedCount) throws Exception {
+      mockMvc
+          .perform(get(ENTITIES_BY_TEMPLATE_IDENTIFIER_PATH, TEMPLATE_IDENTIFIER).param("q", query)
+              .accept(APPLICATION_JSON))
+          .andExpect(status().isOk())
+          .andExpect(jsonPath("$.content.length()").value(expectedCount));
+    }
+
     @ParameterizedTest(name = "blank q ''{0}'' behaves like no filter")
     @ValueSource(strings = {"", "   "})
     @DisplayName("Should return all entities when q is empty or blank")
