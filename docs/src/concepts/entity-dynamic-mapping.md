@@ -21,12 +21,12 @@ A mapping targets one Entity Template and describes how to derive entity fields 
 
 ## Entity Mapping Configuration
 
-| Field        | Required | Description                                              |
-| ------------ | -------- | -------------------------------------------------------- |
-| `identifier` | ✅       | JSLT expression to generate the entity identifier        |
-| `name`       | ✅       | JSLT expression for the entity name                      |
+| Field        | Required | Description                                                                                                |
+|--------------|----------|------------------------------------------------------------------------------------------------------------|
+| `identifier` | ✅       | JSLT expression to generate the entity identifier                                                          |
+| `name`       | ✅       | JSLT expression for the entity name                                                                        |
 | `properties` |          | Map of property names to JSLT expressions. Expressions can return native JSON scalars, arrays, or objects. |
-| `relations`  |          | Array of relation definitions (see below)                |
+| `relations`  |          | Array of relation definitions (see below)                                                                  |
 
 ### Relation Definition
 
