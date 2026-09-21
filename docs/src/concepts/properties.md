@@ -8,7 +8,7 @@ has a type, optional validation rules, and can be required or optional.
 
 Property values are stored as PostgreSQL `JSONB`. This preserves the existing
 scalar values (`STRING`, `NUMBER`, and `BOOLEAN`) and also supports JSON arrays
-and objects without requiring stringified JSON payloads.
+and objects without requiring string like JSON payloads.
 
 ## Overview
 
@@ -186,9 +186,9 @@ nested schema for arbitrary object fields. Model independently addressable
 entities, such as users or principals, as [relations](relations.md) instead
 of embedding them in a property.
 
-> [!NOTE]
+> [!TIP]
 > JSONB stores the native JSON type. Do not send an array or object as a
-> stringified JSON value such as `"[{\"id\":\"user1\"}]"`.
+> string like JSON value such as `"[{\"id\":\"user1\"}]"`.
 
 ---
 

@@ -174,8 +174,8 @@ defined in the template) are present.
 ## Properties
 
 Properties contain the actual native JSON values. The database stores these
-values as JSONB, so clients must send strings, numbers, booleans, arrays, and
-objects as JSON values rather than stringifying them.
+values as JSONB, so clients must send strings, numbers, boolean, arrays, and
+objects as JSON values.
 
 ```json
 {

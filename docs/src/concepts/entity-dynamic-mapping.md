@@ -67,9 +67,6 @@ The `filter` field determines whether a mapping applies to a payload:
 # Apply mapping only if webhook action is create/edit
 (.action == "created" or .action == "edited")
 
-# Apply mapping only if critical metrics exist
-(.measures[] | select(.metric == "new_violations") | .value) > 0
-
 # Complex: apply only if specific conditions are met
 (.visibility == "private" and .status == "active" and (.language // "java") == "java")
 ```
