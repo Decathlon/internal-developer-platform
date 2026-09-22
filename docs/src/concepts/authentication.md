@@ -183,6 +183,67 @@ app:
 When a JWT is received, the `PrincipalExtractor` uses these mappings to extract the actual claim values from the token,
 ensuring that regardless of IdP differences, your application always receives standardized `PrincipalInfo` objects.
 
+### How Claim Mappings Work
+
+While the examples above cover standard configurations, understanding the extraction engine's fallback logic is crucial
+when dealing with custom claims or missing data.
+
+The extraction strategy doesn't just rename claims; it applies specific fallback rules if a mapped claim is missing from
+the token:
+
+| Principal field    | Mapping key          | Fallback when the mapped claim is absent |
+|--------------------|----------------------|------------------------------------------|
+| `identifier`       | `preferred_username` | Original JWT `sub`                       |
+| `name`             | `name`               | Extracted `identifier`                   |
+| `attributes.email` | `email`              | Attribute omitted                        |
+| `groups`           | `groups`             | Empty list                               |
+
+> [!WARNING]
+> The current JWT extraction strategy ignores the `sub` mapping and reads the
+> original JWT subject directly. Setting `sub: uuid` alone does not select
+> `uuid` as the principal identifier. Use `preferred_username: uuid` for human
+> principals to select that claim with the current implementation.
+> Service accounts use different rules: mapped `client_id`, then mapped `azp`,
+> then the original JWT `sub`.
+
+### Example: UUID Identifier and Subject as Display Name
+
+The following decoded JWT payload contains only fictional values.
+It illustrates claim extraction, not a complete token for authentication.
+
+```json
+{
+  "sub": "demo-user",
+  "uuid": "00000000-0000-4000-8000-000000000001",
+  "email": "demo-user@example.com"
+}
+```
+
+To use `uuid` as the human principal identifier and `sub` as its display name,
+configure:
+
+```yaml
+app:
+  security:
+    authentication:
+      user-claim-mappings:
+        preferred_username: uuid
+        name: sub
+        email: email
+```
+
+For a token classified as human, the extracted `PrincipalInfo` contains:
+
+- `identifier`: `00000000-0000-4000-8000-000000000001`
+- `kind`: `HUMAN`
+- `name`: `demo-user`
+- `attributes.email`: `demo-user@example.com`
+- `groups`: `[]`
+
+> [!WARNING]
+> Changing the identifier mapping can provision a separate catalog principal.
+> Plan how to handle existing principals and their references before changing it.
+
 ## Service Account Detection
 
 Service accounts are **machine-to-machine (M2M) credentials** used for service-to-service authentication (for example,
