@@ -233,11 +233,14 @@ class PropertyValidationServiceTest {
 
     @Test
     void shouldRejectMappedPropertyNameNotDefinedInTemplate() {
+
       var template = templateWithDefinitions("system-template",
           propertyDefinition("owner", PropertyType.STRING, null));
+      var mappedProperties = List.of("unknown");
 
       assertThrows(PropertyNameNotFoundEntityTemplatePropertiesException.class,
-          () -> service.validateMappingPropertiesAgainstTemplate(template, List.of("unknown")));
+          () -> service.validateMappingPropertiesAgainstTemplate(template, mappedProperties));
+
     }
 
     @Test
