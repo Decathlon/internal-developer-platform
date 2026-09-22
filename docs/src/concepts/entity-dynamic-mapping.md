@@ -5,12 +5,13 @@ description: Understand Dynamic mappings and JSLT expressions.
 
 ## Overview
 
-A mapping targets one Entity Template and describes how to derive entity fields from the incoming JSON payload with a JSLT filter and entity projections.
+A mapping targets one Entity Template and describes how to derive entity fields from the incoming JSON payload with a
+JSLT filter and entity projections.
 
 ## Entity Dynamic Mapping Fields
 
 | Field                        | Required | Description                                                                                                          |
-| ---------------------------- | -------- | ---------------------------------------------------------------------------------------------------------------------|
+|------------------------------|----------|----------------------------------------------------------------------------------------------------------------------|
 | `identifier`                 | ✅       | Unique key for this mapping                                                                                          |
 | `name`                       | ✅       | Human-readable name                                                                                                  |
 | `description`                |          | Purpose of the mapping                                                                                               |
@@ -21,40 +22,42 @@ A mapping targets one Entity Template and describes how to derive entity fields 
 
 ## Entity Mapping Configuration
 
-| Field        | Required | Description                                                                                                |
-|--------------|----------|------------------------------------------------------------------------------------------------------------|
-| `identifier` | ✅       | JSLT expression to generate the entity identifier                                                          |
-| `name`       | ✅       | JSLT expression for the entity name                                                                        |
-| `properties` |          | Map of property names to JSLT expressions. Expressions can return native JSON scalars, arrays, or objects. |
-| `relations`  |          | Array of relation definitions (see below)                                                                  |
+| Field        | Required | Description                                                                                                                                                                                         |
+|--------------|----------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| `identifier` | ✅       | JSLT expression to generate the entity identifier                                                                                                                                                   |
+| `name`       | ✅       | JSLT expression for the entity name                                                                                                                                                                 |
+| `properties` |          | Map of property names to JSLT expressions. Expressions can return native JSON scalars or homogeneous arrays of scalars (String, Number, or Boolean). Complex objects are not valid property values. |
+| `relations`  |          | Array of relation definitions (see below)                                                                                                                                                           |
 
 ### Relation Definition
 
-| Field                       | Required | Description                                              |
-| --------------------------- | -------- | -------------------------------------------------------- |
-| `name`                      | ✅       | Relation name from the Entity Template                   |
-| `target_entity_identifiers` | ✅       | Array of JSLT expressions to extract target identifiers  |
+| Field                       | Required | Description                                             |
+|-----------------------------|----------|---------------------------------------------------------|
+| `name`                      | ✅       | Relation name from the Entity Template                  |
+| `target_entity_identifiers` | ✅       | Array of JSLT expressions to extract target identifiers |
 
 ### Mapping Actions
 
 The `action` field determines how the resolved entity payload modifies the entity in IDP-Core:
 
-| Action              | Behaviour                                                                   |
-| ------------------  | ----------------------------------------------------------------------------|
-| `UPDATE_ENTITY`     | Creates the entity if absent, otherwise patches all fields                  |
-| `UPDATE_PROPERTIES` | Creates the entity if absent, otherwise patches name and properties only    |
-| `UPDATE_RELATIONS`  | Creates the entity if absent, otherwise patches relations only              |
-| `DELETE_ENTITY`     | Deletes the entity if it exists                                             |
+| Action              | Behaviour                                                                |
+|---------------------|--------------------------------------------------------------------------|
+| `UPDATE_ENTITY`     | Creates the entity if absent, otherwise patches all fields               |
+| `UPDATE_PROPERTIES` | Creates the entity if absent, otherwise patches name and properties only |
+| `UPDATE_RELATIONS`  | Creates the entity if absent, otherwise patches relations only           |
+| `DELETE_ENTITY`     | Deletes the entity if it exists                                          |
 
 #### UPDATE_RELATIONS: Relation Normalization
 
-For the `UPDATE_RELATIONS` action, the resolved `target_entity_identifiers` array is treated as the **source of truth** for the final relation state. This means:
+For the `UPDATE_RELATIONS` action, the resolved `target_entity_identifiers` array is treated as the **source of truth**
+for the final relation state. This means:
 
 - If the resolved array is **empty** or is null, the existing links are **removed**.
 - If the previous state had **less identifiers than the newly resolved array**, the new ones are **linked**.
 - If the previous state had **more identifiers than the newly resolved array**, the missing ones are **unlinked**.
 
-This ensures predictable, idempotent behavior: each webhook event resets the relation to exactly match the resolved identifiers, with no implicit preservation of prior state.
+This ensures predictable, idempotent behavior: each webhook event resets the relation to exactly match the resolved
+identifiers, with no implicit preservation of prior state.
 
 ### Filtering Payloads with `filter`
 
@@ -73,14 +76,14 @@ The `filter` field determines whether a mapping applies to a payload:
 
 ## API Reference
 
-| Method   | Endpoint                                       | Purpose                                      |
-| -------- | ---------------------------------------------- | -------------------------------------------- |
-| `POST`   | `/api/v1/entity_dynamic_mappings`              | Create an entity dynamic mapping             |
-| `GET`    | `/api/v1/entity_dynamic_mappings`              | List entity dynamic mappings (paginated)     |
-| `GET`    | `/api/v1/entity_dynamic_mappings/{identifier}` | Read one entity dynamic mapping              |
-| `PUT`    | `/api/v1/entity_dynamic_mappings/{identifier}` | Update one entity dynamic mapping            |
-| `DELETE` | `/api/v1/entity_dynamic_mappings/{identifier}` | Delete one entity dynamic mapping            |
-| `POST`   | `/api/v1/entity_dynamic_mappings/dry-run`      | Test a mapping with sample payload           |
+| Method   | Endpoint                                       | Purpose                                  |
+|----------|------------------------------------------------|------------------------------------------|
+| `POST`   | `/api/v1/entity_dynamic_mappings`              | Create an entity dynamic mapping         |
+| `GET`    | `/api/v1/entity_dynamic_mappings`              | List entity dynamic mappings (paginated) |
+| `GET`    | `/api/v1/entity_dynamic_mappings/{identifier}` | Read one entity dynamic mapping          |
+| `PUT`    | `/api/v1/entity_dynamic_mappings/{identifier}` | Update one entity dynamic mapping        |
+| `DELETE` | `/api/v1/entity_dynamic_mappings/{identifier}` | Delete one entity dynamic mapping        |
+| `POST`   | `/api/v1/entity_dynamic_mappings/dry-run`      | Test a mapping with sample payload       |
 
 ## JSLT Expressions
 
@@ -92,9 +95,9 @@ selecting, and transforming JSON data without code.
 
 IDP-Core can integrate and expose custom JSLT functions, using Java, for common webhook transformations. For example:
 
-| Function        | Usage                           | Description                                   | Example                                                   |
-| --------------- | ------------------------------- | --------------------------------------------- | --------------------------------------------------------- |
-| `base64-decode` | `base64-decode(.payload_data)`  | Decode Base64-encoded strings in the payload  | `base64-decode("SGVsbG8gV29ybGQ=")` → `"Hello World"`     |
+| Function        | Usage                          | Description                                  | Example                                               |
+|-----------------|--------------------------------|----------------------------------------------|-------------------------------------------------------|
+| `base64-decode` | `base64-decode(.payload_data)` | Decode Base64-encoded strings in the payload | `base64-decode("SGVsbG8gV29ybGQ=")` → `"Hello World"` |
 
 #### JSLT Expression Examples
 

@@ -134,8 +134,8 @@ After syntactic checks pass, the domain service validates the entity against its
   template does not exist.
 - **Property value types** - Scalar values and array elements must conform to the property definition type
   (STRING, NUMBER, BOOLEAN).
-- **Property JSON values** - Arrays must contain values of one type. JSON objects and nested JSON values are stored
-  natively; property rules do not validate arbitrary nested object fields.
+- **Property JSON values** - A property can be a scalar or an array of scalars. Arrays must contain values of one type;
+  complex objects and nested JSON values are not valid property values.
 - **Property rules** - Values must satisfy the template's property rules (min/max length, format, regex, enum).
 - **Required properties** - All properties marked as required in the template must be present.
 - **Relation names** - Each provided relation must exist in the template relation definitions.
@@ -174,8 +174,8 @@ defined in the template) are present.
 ## Properties
 
 Properties contain the actual native JSON values. The database stores these
-values as JSONB, so clients must send strings, numbers, boolean, arrays, and
-objects as JSON values.
+values as JSONB, so clients must send strings, numbers, booleans, or arrays of
+these scalar values.
 
 ```json
 {
@@ -184,11 +184,7 @@ objects as JSON values.
     "issues_number": 137,
     "loc": 20000,
     "last_analysis_date": "2025-11-28...",
-    "quality_gates": ["reliability", "security"],
-    "ownership": {
-      "team": "platform",
-      "contacts": ["alice@example.com"]
-    }
+    "quality_gates": ["reliability", "security"]
   }
 }
 ```
@@ -198,9 +194,9 @@ objects as JSON values.
 The system validates values against the template's property rules:
 
 - Required properties must be present
-- Scalar types and array element types must match: STRING, NUMBER, or BOOLEAN
+- Properties must be scalars of type STRING, NUMBER, or BOOLEAN, or arrays containing values of one of these types
 - Enforcement rules apply to scalar values and each typed array element: min or max length, format, enum values
-- Nested object fields are stored as JSONB but do not have a nested schema in the current property rules
+- Complex objects and nested JSON values are not supported as property values
 
 ---
 
