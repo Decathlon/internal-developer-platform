@@ -157,12 +157,15 @@ same validation rules apply to every element.
 ```
 
 The platform validates every array element against the declared type and its
-rules. Mixed-type arrays are rejected. An empty array is valid when the
-property itself is optional; use the `required` flag to require a value.
+rules. Values that do not conform are rejected; for backward compatibility,
+numeric and boolean values may also use their accepted string representations.
+An empty array is valid; use the `required` flag to require the property.
 
-### Objects and nested JSON
+### Unsupported objects and nested JSON
 
-JSONB also allows objects and nested JSON structures to be stored directly:
+Property values support scalars and arrays of scalars. Objects and nested JSON
+structures are rejected by property validation because property definitions do
+not define a nested schema:
 
 ```json
 {
@@ -180,15 +183,12 @@ JSONB also allows objects and nested JSON structures to be stored directly:
 }
 ```
 
-Use an object when the structure belongs to the property itself. The current
-property rules validate scalar values and typed arrays; they do not define a
-nested schema for arbitrary object fields. Model independently addressable
-entities, such as users or principals, as [relations](relations.md) instead
-of embedding them in a property.
+Model independently addressable entities, such as users or principals, as
+[relations](relations.md) instead of embedding them in a property.
 
 > [!TIP]
-> JSONB stores the native JSON type. Do not send an array or object as a
-> string like JSON value such as `"[{\"id\":\"user1\"}]"`.
+> JSONB stores native scalar and array values. Do not send an array as a
+> string like JSON value such as `"[\"JAVA\",\"SPRING\"]"`.
 
 ---
 

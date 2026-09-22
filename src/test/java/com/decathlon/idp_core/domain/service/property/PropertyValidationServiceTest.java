@@ -85,6 +85,21 @@ class PropertyValidationServiceTest {
     }
 
     @Test
+    @DisplayName("Should reject objects and nested arrays")
+    void shouldRejectObjectsAndNestedArrays() {
+      var definition = propertyDefinition("values", PropertyType.STRING, null);
+
+      assertEquals(
+          List.of(
+              ValidationMessages.PROPERTY_TYPE_MISMATCH.formatted("values", PropertyType.STRING)),
+          service.validatePropertyValue(definition, Map.of("key", "value")));
+      assertEquals(
+          List.of(
+              ValidationMessages.PROPERTY_TYPE_MISMATCH.formatted("values", PropertyType.STRING)),
+          service.validatePropertyValue(definition, List.of(List.of("nested"))));
+    }
+
+    @Test
     @DisplayName("Should report violation when required property is present but blank")
     void shouldReportViolationWhenRequiredPropertyIsBlank() {
       var template = new EntityTemplate(UUID.randomUUID(), "system-template", "System", "desc",

@@ -35,7 +35,9 @@ import com.decathlon.idp_core.domain.constant.SearchConstraints;
 public class EntityControllerTest extends AbstractIntegrationTest {
 
   private static final String TEMPLATE_IDENTIFIER = "web-service";
+  private static final String ARRAY_TEMPLATE_IDENTIFIER = "web-api-complex";
   private static final String ENTITY_IDENTIFIER = "web-api-2";
+  private static final String ENTITY_IDENTIFIER_WITH_ARRAY_PROPERTY = "web-api-3";
   private static final String ENTITIES_BY_IDENTIFIER_PATH = "/api/v1/entities/{template-identifier}/{identifier}";
   private static final String ENTITIES_BY_TEMPLATE_IDENTIFIER_PATH = "/api/v1/entities/{template-identifier}";
   private static final String ENTITY_JSON_FILES_TEST_PATH = "integration_test/json/entity/v1/";
@@ -268,8 +270,8 @@ public class EntityControllerTest extends AbstractIntegrationTest {
     @WithMockUser
     void getEntities_200_containsOnJsonbArray(String query, int expectedCount) throws Exception {
       mockMvc
-          .perform(get(ENTITIES_BY_TEMPLATE_IDENTIFIER_PATH, TEMPLATE_IDENTIFIER).param("q", query)
-              .accept(APPLICATION_JSON))
+          .perform(get(ENTITIES_BY_TEMPLATE_IDENTIFIER_PATH, ARRAY_TEMPLATE_IDENTIFIER)
+              .param("q", query).accept(APPLICATION_JSON))
           .andExpect(status().isOk())
           .andExpect(jsonPath("$.content.length()").value(expectedCount));
     }
@@ -1315,8 +1317,8 @@ public class EntityControllerTest extends AbstractIntegrationTest {
               .accept(APPLICATION_JSON).with(csrf()).content("""
                   { "query": "web-api", "page": 0, "size": 20 }
                   """))
-          .andExpect(status().isOk()).andExpect(jsonPath("$.content.length()").value(2))
-          .andExpect(jsonPath("$.page.total_elements").value(2));
+          .andExpect(status().isOk()).andExpect(jsonPath("$.content.length()").value(3))
+          .andExpect(jsonPath("$.page.total_elements").value(3));
     }
 
     @Test
@@ -1328,8 +1330,8 @@ public class EntityControllerTest extends AbstractIntegrationTest {
               .accept(APPLICATION_JSON).with(csrf()).content("""
                   { "query": "Web API", "page": 0, "size": 20 }
                   """))
-          .andExpect(status().isOk()).andExpect(jsonPath("$.content.length()").value(2))
-          .andExpect(jsonPath("$.page.total_elements").value(2));
+          .andExpect(status().isOk()).andExpect(jsonPath("$.content.length()").value(3))
+          .andExpect(jsonPath("$.page.total_elements").value(3));
     }
 
     @Test
@@ -1341,9 +1343,10 @@ public class EntityControllerTest extends AbstractIntegrationTest {
               .accept(APPLICATION_JSON).with(csrf()).content("""
                   { "query": "JAVA", "page": 0, "size": 20 }
                   """))
-          .andExpect(status().isOk()).andExpect(jsonPath("$.content.length()").value(3))
+          .andExpect(status().isOk()).andExpect(jsonPath("$.content.length()").value(4))
           .andExpect(jsonPath("$.content[*].identifier", hasItem("web-api-1")))
           .andExpect(jsonPath("$.content[*].identifier", hasItem("web-api-2")))
+          .andExpect(jsonPath("$.content[*].identifier", hasItem("web-api-3")))
           .andExpect(jsonPath("$.content[*].identifier", hasItem("web-service-valid-1")));
     }
 

@@ -1,10 +1,13 @@
 package com.decathlon.idp_core.infrastructure.adapters.api.mapper.entity;
 
+import java.util.Collection;
+
 import com.decathlon.idp_core.domain.model.entity.Property;
 import com.decathlon.idp_core.domain.model.entity_template.PropertyDefinition;
 import com.decathlon.idp_core.domain.model.enums.PropertyType;
 
-/// Utility for converting property values to their typed representations.
+/// Utility for preserving property values in their JSON-compatible
+/// representations.
 ///
 /// **Purpose:** Centralized property type conversion logic used across multiple
 /// infrastructure mappers to ensure consistent type handling and reduce code
@@ -21,17 +24,17 @@ public final class PropertyValueConverter {
   /// Converts a property value to its typed representation based on the property
   /// definition.
   ///
-  /// **Type conversion strategy:**
-  /// - `NUMBER`: Attempts to parse as `Double`; falls back to string if invalid
-  /// - `BOOLEAN`: Parses using `Boolean.valueOf()`
-  /// - Other types: Returns the raw string value
+  /// Native JSON values are already correctly typed by Jackson and persistence.
+  /// Legacy scalar strings are converted only where the template still requires a
+  /// numeric or boolean value. Collections are returned unchanged so their shape
+  /// and element types cannot be collapsed into a scalar.
   ///
-  /// **Null safety:** If no definition is provided, returns the raw string value
-  /// as fallback for schema evolution tolerance.
+  /// **Null safety:** If no definition is provided, returns the raw value as a
+  /// fallback for schema evolution tolerance.
   ///
   /// @param property the property to convert
   /// @param definition the property definition for type information (may be null)
-  /// @return the typed value, or the raw string value if type conversion fails
+  /// @return the JSON-compatible value
   public static Object convert(Property property, PropertyDefinition definition) {
     Object value = property.value();
 
@@ -39,16 +42,28 @@ public final class PropertyValueConverter {
       return value;
     }
 
+    if (value.getClass().isArray() || value instanceof Collection) {
+      return value;
+    }
+
     PropertyType type = definition.type();
 
     if (PropertyType.NUMBER.equals(type)) {
+      if (value instanceof Number) {
+        return value;
+      }
       try {
         return Double.valueOf(value.toString());
       } catch (NumberFormatException _) {
         return value;
       }
     } else if (PropertyType.BOOLEAN.equals(type)) {
-      return Boolean.valueOf(value.toString());
+      if (value instanceof Boolean) {
+        return value;
+      }
+      if ("true".equalsIgnoreCase(value.toString()) || "false".equalsIgnoreCase(value.toString())) {
+        return Boolean.valueOf(value.toString());
+      }
     }
 
     return value;

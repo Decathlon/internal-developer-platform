@@ -1,42 +1,29 @@
--- Flyway migration script: Safely migrate value type to jsonB
--- Purpose: able to manage string list, and json compatible type on property.value without breaking data
+-- Flyway migration script: Safely migrate property values to JSONB
+-- Purpose: preserve legacy scalar text while enabling native JSON-compatible values.
 
--- 1. Create a new column with the JSONB type
-ALTER TABLE idp_core.property
-    ADD COLUMN value_jsonb JSONB;
+DROP INDEX IF EXISTS idx_property_value_trgm;
 
-ALTER TABLE idp_core.property_aud
-    ADD COLUMN value_jsonb JSONB;
+ALTER TABLE property
+ALTER COLUMN value TYPE JSONB USING to_jsonb(value),
+    ALTER COLUMN value SET NOT NULL;
 
--- 2. Migrate existing text data to the new JSONB column
--- The to_jsonb function safely wraps the existing text into a valid JSON string (e.g., 'test' becomes '"test"')
-UPDATE idp_core.property
-SET value_jsonb = to_jsonb(value);
-
-UPDATE idp_core.property_aud
-SET value_jsonb = CASE
-                      WHEN value IS NULL THEN NULL
-                      ELSE to_jsonb(value)
-    END;
-
--- 3. Drop the old trigger/index on the old column
-DROP INDEX IF EXISTS idp_core.idx_property_value_trgm;
-
--- 4. Drop the old text column
-ALTER TABLE idp_core.property
-DROP COLUMN value;
-
-ALTER TABLE idp_core.property_aud
-DROP COLUMN value;
-
--- 5. Rename the new JSONB column to the original name
-ALTER TABLE idp_core.property
-    RENAME COLUMN value_jsonb TO value;
-
-ALTER TABLE idp_core.property_aud
-    RENAME COLUMN value_jsonb TO value;
+ALTER TABLE property_aud
+ALTER COLUMN value TYPE JSONB USING to_jsonb(value);
 
 -- 6. Create the new GIN index optimized for JSONB on the new column
 CREATE INDEX idx_property_value_gin
-    ON idp_core.property
+    ON property
     USING GIN (value);
+
+CREATE OR REPLACE FUNCTION idp_jsonb_root_text(value JSONB)
+RETURNS TEXT
+LANGUAGE SQL
+IMMUTABLE
+STRICT
+AS $$
+SELECT value #>> '{}'
+$$;
+
+CREATE INDEX idx_property_value_trgm
+    ON property
+    USING GIN (idp_jsonb_root_text(value) public.gin_trgm_ops);

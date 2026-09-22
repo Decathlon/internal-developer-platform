@@ -11,6 +11,7 @@ import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import org.springframework.stereotype.Service;
 
@@ -40,10 +41,9 @@ public class PropertyValidationService {
 
   /**
    * Validates a concrete property value against its property definition. The
-   * value's runtime Java type is checked first against the expected
-   * [PropertyType] (STRING ⇒ {@link String}, NUMBER ⇒ {@link Number}, BOOLEAN ⇒
-   * {@link Boolean}). When the type matches, the value is normalized to a string
-   * and the type-specific rules are evaluated.
+   * value's runtime Java type is checked against the expected [PropertyType].
+   * Arrays are supported when every element is a scalar accepted by the same
+   * definition; nested objects and arrays are rejected.
    *
    * @param propertyDefinition
    *          property definition with expected type and optional rules
@@ -53,9 +53,16 @@ public class PropertyValidationService {
    */
   public List<String> validatePropertyValue(PropertyDefinition propertyDefinition,
       Object rawValue) {
+    if (rawValue instanceof Map<?, ?>) {
+      return List.of(
+          PROPERTY_TYPE_MISMATCH.formatted(propertyDefinition.name(), propertyDefinition.type()));
+    }
     if (rawValue instanceof Collection<?> values) {
       return values.stream()
-          .flatMap(value -> validateScalarPropertyValue(propertyDefinition, value).stream())
+          .flatMap(value -> value instanceof Collection<?> || value instanceof Map<?, ?>
+              ? Stream.of(PROPERTY_TYPE_MISMATCH.formatted(propertyDefinition.name(),
+                  propertyDefinition.type()))
+              : validateScalarPropertyValue(propertyDefinition, value).stream())
           .toList();
     }
     return validateScalarPropertyValue(propertyDefinition, rawValue);

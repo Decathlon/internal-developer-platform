@@ -21,7 +21,7 @@ import lombok.NoArgsConstructor;
 ///   [SearchOperator#CONTAINS], [SearchOperator#NOT_CONTAINS], [SearchOperator#STARTS_WITH],
 ///   [SearchOperator#ENDS_WITH], and `LOWER()` equality for [SearchOperator#EQ] / [SearchOperator#NEQ]
 /// - Numeric-comparison predicates (GT, GTE, LT, LTE) via explicit SQL `CAST(field AS NUMERIC)`
-///   so that VARCHAR property-value columns can be compared to numeric literals without
+///   so that JSONB property-value scalars can be compared to numeric literals without
 ///   PostgreSQL rejecting the query.
 ///
 /// **Why Hibernate-specific?** The codebase already targets PostgreSQL through Hibernate.
@@ -98,16 +98,10 @@ final class JpaPredicateBuilder {
     };
   }
 
-  /// Converts a JSONB value to its textual representation without the quotes
-  /// added around JSON string scalars.
-  ///
-  /// Casting JSONB to text preserves numbers, booleans, and arrays. Removing
-  /// only surrounding quotes keeps the existing scalar string semantics while
-  /// avoiding a JSON path extraction that would return NULL for an empty path.
+  /// Converts a JSONB root value to text while decoding JSON string escapes.
+  /// The expression is also used by the matching trigram index migration.
   static Expression<String> jsonbAsText(CriteriaBuilder cb, Expression<?> field) {
-    var hcb = (HibernateCriteriaBuilder) cb;
-    var textField = hcb.cast((org.hibernate.query.criteria.JpaExpression<?>) field, String.class);
-    return cb.function("btrim", String.class, textField, cb.literal("\""));
+    return cb.function("idp_jsonb_root_text", String.class, field);
   }
 
   /// Escapes SQL LIKE wildcards (`%` and `_`) in the given value so they are
