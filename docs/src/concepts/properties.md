@@ -8,7 +8,7 @@ has a type, optional validation rules, and can be required or optional.
 
 Property values are stored as PostgreSQL `JSONB`. This preserves the existing
 scalar values (`STRING`, `NUMBER`, and `BOOLEAN`) and supports native JSON
-arrays of scalars without requiring stringified JSON payloads.
+arrays of scalars.
 
 ## Overview
 
