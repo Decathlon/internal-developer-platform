@@ -448,7 +448,7 @@ Validates: `v1.2.3`, `1.0.0`
 ### 5. Keep JSON Types Native
 
 ```json
-// Bad - stringified JSON
+// Bad -JSON as String
 {"name": "members", "type": "STRING", "value": "[\"user1\", \"user2\"]"}
 
 // Good - native JSON array
