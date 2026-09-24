@@ -20,6 +20,8 @@ on:
 
 jobs:
   verify:
+    permissions:
+      contents: read
     name: Build and verify dev container
     runs-on: ubuntu-latest
     steps:
