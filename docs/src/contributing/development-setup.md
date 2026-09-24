@@ -61,7 +61,7 @@ certificate authorities, including local certificates for inspecting proxies.
 After startup, open <http://localhost:8084> for the API and
 <http://localhost:8000> for the documentation site. PostgreSQL is available on
 port `5437` with the local credentials used by the `local` Spring profile.
-Check the **Ports** panel for the actual forwarded addresses: vs code can
+Check the **Ports** panel for the actual forwarded addresses: VS Code can
 choose another host port when the requested port is occupied.
 
 On Windows, clone the repository from a WSL2 terminal and open it from that
@@ -132,9 +132,8 @@ running `start app` again. The helper never stops a manually launched process.
 
 Use `status all` and `logs app` or `logs docs` to investigate startup failures.
 For database failures, run `docker compose logs postgres`. Fix the reported
-problem, then restart the affected service. Service commands are backed by
-`supervisord`, which owns each process directly and never signals an
-unrelated process.
+problem, then restart the affected service. The helper launches and manages each
+service in its own process group.
 
 If a reload fails with unresolved generated mapper types after switching
 branches or importing the project, stop the app, rebuild its generated
@@ -193,7 +192,8 @@ git remote add upstream https://github.com/Decathlon/internal-developer-platform
 
 For your development setup, you can refer to the getting started documentation here: [getting started](../getting-started/index.md)
 
-Configure the app.yml security credentials and secrets locally using environment variables or a local, untracked configuration file.
+Configure the `application.yml` security credentials and secrets locally using
+environment variables or a local, untracked configuration file.
 
 ### Pre-Commit Hooks (Optional)
 
