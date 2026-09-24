@@ -1,0 +1,56 @@
+{
+  "name": "Internal-Developer-Platform",
+  "initializeCommand": ["bash", ".devcontainer/scripts/export-host-ca-certs.sh"],
+  "build": {
+    "dockerfile": "Dockerfile",
+    "context": "."
+  },
+  "features": {
+    "ghcr.io/devcontainers/features/docker-in-docker:4.1.1": {
+      "moby": false,
+      "dockerDashComposeVersion": "v2"
+    },
+    "ghcr.io/devcontainers/features/github-cli:1.1.2": {},
+    "ghcr.io/va-h/devcontainers-features/uv:1.1.4": {}
+  },
+  "remoteUser": "vscode",
+  "updateRemoteUserUID": true,
+  "containerEnv": {
+    "UV_NATIVE_TLS": "true"
+  },
+  "hostRequirements": {
+    "cpus": 4,
+    "memory": "8gb"
+  },
+  "mounts": [
+    "source=idp-core-m2,target=/home/vscode/.m2,type=volume",
+    "source=idp-core-dind,target=/var/lib/docker,type=volume"
+  ],
+  "customizations": {
+    "vscode": {
+      "extensions": ["vscjava.vscode-java-pack"],
+      "settings": {
+        "java.autobuild.enabled": true
+      }
+    }
+  },
+  "forwardPorts": [8084, 8000, 5437],
+  "portsAttributes": {
+    "8084": {
+      "label": "Spring Boot"
+    },
+    "8000": {
+      "label": "Documentation",
+      "onAutoForward": "openPreview"
+    },
+    "5437": {
+      "label": "PostgreSQL",
+      "onAutoForward": "silent"
+    }
+  },
+  "otherPortsAttributes": {
+    "onAutoForward": "ignore"
+  },
+  "postCreateCommand": "bash .devcontainer/post-create.sh",
+  "postStartCommand": "bash .devcontainer/post-start.sh"
+}
