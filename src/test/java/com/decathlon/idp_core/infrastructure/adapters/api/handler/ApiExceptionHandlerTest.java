@@ -13,7 +13,6 @@ import jakarta.validation.ConstraintViolation;
 import jakarta.validation.ConstraintViolationException;
 
 import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.context.MessageSourceResolvable;
 import org.springframework.core.MethodParameter;
@@ -81,6 +80,16 @@ class ApiExceptionHandlerTest {
     exceptionHandler = constructor.newInstance();
   }
 
+  /**
+   * Creates a mocked {@link WebRequest} with a stubbed description, matching the
+   * framework's non-null contract for {@code getDescription(boolean)}.
+   */
+  private static WebRequest mockWebRequest() {
+    WebRequest request = mock(WebRequest.class);
+    when(request.getDescription(false)).thenReturn("uri=/api/v1/test");
+    return request;
+  }
+
   @Test
   void shouldHandleEntityTemplateNotFoundException() {
     ProblemDetail body = exceptionHandler
@@ -130,7 +139,7 @@ class ApiExceptionHandlerTest {
     MethodArgumentNotValidException ex = new MethodArgumentNotValidException(methodParameter,
         bindingResult);
     ProblemDetail body = (ProblemDetail) exceptionHandler.handleMethodArgumentNotValid(ex,
-        new HttpHeaders(), HttpStatus.BAD_REQUEST, mock(WebRequest.class)).getBody();
+        new HttpHeaders(), HttpStatus.BAD_REQUEST, mockWebRequest()).getBody();
     assertProblemDetail(body, HttpStatus.BAD_REQUEST, "Field is required", "BAD_REQUEST");
   }
 
@@ -142,7 +151,7 @@ class ApiExceptionHandlerTest {
     doReturn(List.of(error)).when(ex).getAllErrors();
 
     ResponseEntity<Object> response = exceptionHandler.handleHandlerMethodValidationException(ex,
-        new HttpHeaders(), HttpStatus.INTERNAL_SERVER_ERROR, mock(WebRequest.class));
+        new HttpHeaders(), HttpStatus.INTERNAL_SERVER_ERROR, mockWebRequest());
     ProblemDetail body = (ProblemDetail) response.getBody();
 
     assertEquals(HttpStatus.BAD_REQUEST, response.getStatusCode());
@@ -171,7 +180,7 @@ class ApiExceptionHandlerTest {
           }
         });
     ProblemDetail body = (ProblemDetail) exceptionHandler.handleHttpMessageNotReadable(ex,
-        new HttpHeaders(), HttpStatus.BAD_REQUEST, mock(WebRequest.class)).getBody();
+        new HttpHeaders(), HttpStatus.BAD_REQUEST, mockWebRequest()).getBody();
 
     assertProblemDetail(body, HttpStatus.BAD_REQUEST,
         "Invalid value 'INVALID_TYPE' for property 'type'", "BAD_REQUEST");
@@ -211,7 +220,7 @@ class ApiExceptionHandlerTest {
   void shouldHandleMissingPathVariableViaFrameworkOverride() {
     ProblemDetail body = (ProblemDetail) exceptionHandler.handleMissingPathVariable(
         mock(org.springframework.web.bind.MissingPathVariableException.class), new HttpHeaders(),
-        HttpStatus.BAD_REQUEST, mock(WebRequest.class)).getBody();
+        HttpStatus.BAD_REQUEST, mockWebRequest()).getBody();
     assertNotNull(body);
     assertEquals(HttpStatus.BAD_REQUEST.value(), body.getStatus());
     assertEquals("BAD_REQUEST", body.getProperties().get("error"));
@@ -483,7 +492,7 @@ class ApiExceptionHandlerTest {
   void shouldHandleNoHandlerFoundExceptionViaFrameworkOverride() {
     ProblemDetail body = (ProblemDetail) exceptionHandler.handleNoHandlerFoundException(
         mock(org.springframework.web.servlet.NoHandlerFoundException.class), new HttpHeaders(),
-        HttpStatus.NOT_FOUND, mock(WebRequest.class)).getBody();
+        HttpStatus.NOT_FOUND, mockWebRequest()).getBody();
     assertProblemDetail(body, HttpStatus.NOT_FOUND,
         "Malformed request URL or missing path variable.", "NOT_FOUND");
   }
@@ -504,7 +513,7 @@ class ApiExceptionHandlerTest {
         });
 
     ProblemDetail body = (ProblemDetail) exceptionHandler.handleHttpMessageNotReadable(ex,
-        new HttpHeaders(), HttpStatus.BAD_REQUEST, mock(WebRequest.class)).getBody();
+        new HttpHeaders(), HttpStatus.BAD_REQUEST, mockWebRequest()).getBody();
 
     assertProblemDetail(body, HttpStatus.BAD_REQUEST, "Invalid request body format", "BAD_REQUEST");
   }

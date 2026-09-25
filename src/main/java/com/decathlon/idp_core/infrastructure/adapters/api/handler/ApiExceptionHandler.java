@@ -74,6 +74,10 @@ import tools.jackson.databind.exc.MismatchedInputException;
 @RestControllerAdvice
 public class ApiExceptionHandler extends ResponseEntityExceptionHandler {
 
+  private static final String PROPERTY_ERROR = "error";
+  private static final String PROPERTY_ERROR_DESCRIPTION = "error_description";
+  private static final String PROPERTY_TIMESTAMP = "timestamp";
+
   /**
    * Prevents direct instantiation because Spring manages this exception handler.
    */
@@ -564,16 +568,16 @@ public class ApiExceptionHandler extends ResponseEntityExceptionHandler {
   private void enrichProblemDetail(ProblemDetail problemDetail, HttpStatusCode statusCode,
       WebRequest request) {
     Map<String, Object> properties = problemDetail.getProperties();
-    if (properties == null || !properties.containsKey("error")) {
+    if (properties == null || !properties.containsKey(PROPERTY_ERROR)) {
       HttpStatus status = HttpStatus.resolve(statusCode.value());
-      problemDetail.setProperty("error",
+      problemDetail.setProperty(PROPERTY_ERROR,
           status != null ? status.name() : Integer.toString(statusCode.value()));
     }
-    if (properties == null || !properties.containsKey("error_description")) {
-      problemDetail.setProperty("error_description", problemDetail.getDetail());
+    if (properties == null || !properties.containsKey(PROPERTY_ERROR_DESCRIPTION)) {
+      problemDetail.setProperty(PROPERTY_ERROR_DESCRIPTION, problemDetail.getDetail());
     }
-    if (properties == null || !properties.containsKey("timestamp")) {
-      problemDetail.setProperty("timestamp", Instant.now());
+    if (properties == null || !properties.containsKey(PROPERTY_TIMESTAMP)) {
+      problemDetail.setProperty(PROPERTY_TIMESTAMP, Instant.now());
     }
     if (problemDetail.getInstance() == null
         && request instanceof ServletWebRequest servletRequest) {
@@ -589,13 +593,13 @@ public class ApiExceptionHandler extends ResponseEntityExceptionHandler {
     ProblemDetail problemDetail = ProblemDetail.forStatus(status);
     problemDetail.setTitle(status.getReasonPhrase());
     problemDetail.setDetail(detail);
-    if (request != null && request.getDescription(false) != null) {
+    if (request != null) {
       problemDetail
           .setInstance(java.net.URI.create(request.getDescription(false).replace("uri=", "")));
     }
-    problemDetail.setProperty("error", status.name());
-    problemDetail.setProperty("error_description", detail);
-    problemDetail.setProperty("timestamp", Instant.now());
+    problemDetail.setProperty(PROPERTY_ERROR, status.name());
+    problemDetail.setProperty(PROPERTY_ERROR_DESCRIPTION, detail);
+    problemDetail.setProperty(PROPERTY_TIMESTAMP, Instant.now());
     return problemDetail;
   }
 }
