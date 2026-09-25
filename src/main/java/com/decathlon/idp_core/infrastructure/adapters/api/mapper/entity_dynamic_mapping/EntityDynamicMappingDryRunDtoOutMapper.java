@@ -36,7 +36,7 @@ public class EntityDynamicMappingDryRunDtoOutMapper {
   }
 
   private DryRunEntityDto toEntityDto(Entity entity) {
-    Map<String, String> properties = new HashMap<>();
+    Map<String, Object> properties = new HashMap<>();
     if (entity.properties() != null) {
       for (Property prop : entity.properties()) {
         properties.put(prop.name(), prop.value());

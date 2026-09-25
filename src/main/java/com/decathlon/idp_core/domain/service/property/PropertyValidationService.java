@@ -4,12 +4,14 @@ import static com.decathlon.idp_core.domain.constant.ValidationMessages.*;
 
 import java.math.BigDecimal;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import org.springframework.stereotype.Service;
 
@@ -39,10 +41,9 @@ public class PropertyValidationService {
 
   /**
    * Validates a concrete property value against its property definition. The
-   * value's runtime Java type is checked first against the expected
-   * [PropertyType] (STRING ⇒ {@link String}, NUMBER ⇒ {@link Number}, BOOLEAN ⇒
-   * {@link Boolean}). When the type matches, the value is normalized to a string
-   * and the type-specific rules are evaluated.
+   * value's runtime Java type is checked against the expected [PropertyType].
+   * Arrays are supported when every element is a scalar accepted by the same
+   * definition; nested objects and arrays are rejected.
    *
    * @param propertyDefinition
    *          property definition with expected type and optional rules
@@ -51,6 +52,23 @@ public class PropertyValidationService {
    * @return list of violations for this value; empty when valid
    */
   public List<String> validatePropertyValue(PropertyDefinition propertyDefinition,
+      Object rawValue) {
+    if (rawValue instanceof Map<?, ?>) {
+      return List.of(
+          PROPERTY_TYPE_MISMATCH.formatted(propertyDefinition.name(), propertyDefinition.type()));
+    }
+    if (rawValue instanceof Collection<?> values) {
+      return values.stream()
+          .flatMap(value -> value instanceof Collection<?> || value instanceof Map<?, ?>
+              ? Stream.of(PROPERTY_TYPE_MISMATCH.formatted(propertyDefinition.name(),
+                  propertyDefinition.type()))
+              : validateScalarPropertyValue(propertyDefinition, value).stream())
+          .toList();
+    }
+    return validateScalarPropertyValue(propertyDefinition, rawValue);
+  }
+
+  private List<String> validateScalarPropertyValue(PropertyDefinition propertyDefinition,
       Object rawValue) {
     return switch (propertyDefinition.type()) {
       case STRING -> validateStringPropertyValue(propertyDefinition.name(), rawValue,
@@ -97,7 +115,7 @@ public class PropertyValidationService {
     for (PropertyDefinition definition : definitions) {
       Property property = propertiesByName.get(definition.name());
       boolean missing = property == null || property.value() == null
-          || (property.value().isBlank());
+          || (property.value().toString().isBlank());
 
       if (missing) {
         if (definition.required()) {

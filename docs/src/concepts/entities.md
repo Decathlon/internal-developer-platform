@@ -44,8 +44,9 @@ Here's an entity instantiated from the `web-service` template:
   "name": "my-web-service",
   "template_identifier": "web-service",
   "properties": {
-    "port": "8080",
-    "environment": "dev"
+    "port": 8080,
+    "environment": "dev",
+    "supported_languages": ["JAVA", "KOTLIN"]
   },
   "relations": {
     "depends-on": [
@@ -68,7 +69,7 @@ Here's an entity instantiated from the `web-service` template:
 | `identifier`          | String   | Unique identifier within the template scope  |
 | `name`                | String   | Human-readable name                          |
 | `template_identifier` | String   | The Entity Template this entity instantiates |
-| `properties`          | Object   | Key-value pairs of property data             |
+| `properties`          | Object   | Key-value pairs of native JSON property data |
 | `relations`           | Object   | Links to other entities (grouped by name)    |
 
 ---
@@ -91,8 +92,9 @@ POST /api/v1/entities/{templateIdentifier}
   "name": "my-web-service",
   "identifier": "my-web-service",
   "properties": {
-    "port": "8080",
-    "environment": "dev"
+    "port": 8080,
+    "environment": "dev",
+    "supported_languages": ["JAVA", "KOTLIN"]
   },
   "relations": [
     {
@@ -130,7 +132,10 @@ After syntactic checks pass, the domain service validates the entity against its
 
 - **Template existence** - The template identifier must match an existing template. Returns `404 Not Found` if the
   template does not exist.
-- **Property value types** - Values must conform to the property definition type (STRING, NUMBER, BOOLEAN).
+- **Property value types** - Scalar values and array elements must conform to the property definition type
+  (STRING, NUMBER, BOOLEAN).
+- **Property JSON values** - A property can be a scalar or an array of scalars. Arrays must contain values of one type;
+  complex objects and nested JSON values are not valid property values.
 - **Property rules** - Values must satisfy the template's property rules (min/max length, format, regex, enum).
 - **Required properties** - All properties marked as required in the template must be present.
 - **Relation names** - Each provided relation must exist in the template relation definitions.
@@ -168,7 +173,9 @@ defined in the template) are present.
 
 ## Properties
 
-Properties contain the actual data values. The structure follows the template's property definitions:
+Properties contain the actual native JSON values. The database stores these
+values as JSONB, so clients must send string, number, boolean, or arrays of
+these scalar values.
 
 ```json
 {
@@ -176,7 +183,8 @@ Properties contain the actual data values. The structure follows the template's 
     "project_name": "My Backend Project",
     "issues_number": 137,
     "loc": 20000,
-    "last_analysis_date": "2025-11-28..."
+    "last_analysis_date": "2025-11-28...",
+    "quality_gates": ["reliability", "security"]
   }
 }
 ```
@@ -186,8 +194,9 @@ Properties contain the actual data values. The structure follows the template's 
 The system validates values against the template's property rules:
 
 - Required properties must be present
-- Types must match: STRING, NUMBER, or BOOLEAN
-- Enforcement rules apply: min or max length, format, enum values
+- Properties must be scalars of type STRING, NUMBER, or BOOLEAN, or arrays containing values of one of these types
+- Enforcement rules apply to scalar values and each typed array element: min or max length, format, enum values
+- Complex objects and nested JSON values are not supported as property values
 
 ---
 
@@ -304,7 +313,7 @@ The request body has a similar shape and validation rules as `POST /api/v1/entit
   "properties": {
     "applicationName": "catalog-api",
     "ownerEmail": "owner@example.com",
-    "port": "8080",
+    "port": 8080,
     "environment": "DEV",
     "version": "1.2.3",
     "teamName": "platform-team",
@@ -333,7 +342,7 @@ curl -X PUT http://localhost:8084/api/v1/entities/web-service/my-web-service \
     "properties": {
       "applicationName": "catalog-api",
       "ownerEmail": "owner@example.com",
-      "port": "8080",
+      "port": 8080,
       "environment": "DEV",
       "version": "1.2.3",
       "teamName": "platform-team",
@@ -353,7 +362,7 @@ curl -X PUT http://localhost:8084/api/v1/entities/web-service/my-web-service \
   "properties": {
     "applicationName": "catalog-api",
     "ownerEmail": "owner@example.com",
-    "port": "8080",
+    "port": 8080,
     "environment": "DEV",
     "version": "1.2.3",
     "teamName": "platform-team",

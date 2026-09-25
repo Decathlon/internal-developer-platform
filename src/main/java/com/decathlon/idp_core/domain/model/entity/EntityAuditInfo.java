@@ -58,9 +58,8 @@ public record EntityAuditInfo(Number revisionNumber, Instant revisionDate, Strin
   /// @param id unique UUID identifier of the property
   /// @param name name of the property matching a PropertyDefinition in the entity
   /// template
-  /// @param value the value of the property as a string (preserves JSON-typed
-  /// values as strings)
-  public record PropertySnapshot(UUID id, String name, String value) {
+  /// @param value the native JSON value of the property at this revision
+  public record PropertySnapshot(UUID id, String name, Object value) {
   }
 
   /// Snapshot of a relation's state at a specific point in time during entity
