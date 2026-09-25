@@ -4,6 +4,7 @@ import static org.hamcrest.Matchers.containsInAnyOrder;
 import static org.hamcrest.Matchers.hasItem;
 import static org.hamcrest.Matchers.hasSize;
 import static org.springframework.http.MediaType.APPLICATION_JSON;
+import static org.springframework.http.MediaType.APPLICATION_PROBLEM_JSON;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -70,8 +71,16 @@ public class EntityControllerTest extends AbstractIntegrationTest {
     @DisplayName("Should return 404 when template does not exist")
     @WithMockUser
     void getEntities_paginated_404_when_non_existent_template() throws Exception {
-      mockMvc.perform(get(ENTITIES_BY_TEMPLATE_IDENTIFIER_PATH, "non-existent-template-identifier")
-          .accept(APPLICATION_JSON)).andExpect(status().isNotFound());
+      mockMvc
+          .perform(get(ENTITIES_BY_TEMPLATE_IDENTIFIER_PATH, "non-existent-template-identifier")
+              .accept(APPLICATION_JSON))
+          .andExpect(status().isNotFound())
+          .andExpect(content().contentType(APPLICATION_PROBLEM_JSON))
+          .andExpect(jsonPath("$.status").value(404))
+          .andExpect(jsonPath("$.title").value("Not Found"))
+          .andExpect(jsonPath("$.error").value("NOT_FOUND"))
+          .andExpect(jsonPath("$.error_description").exists())
+          .andExpect(jsonPath("$.timestamp").exists());
     }
 
     @Test
@@ -195,8 +204,14 @@ public class EntityControllerTest extends AbstractIntegrationTest {
       mockMvc
           .perform(get(ENTITIES_BY_TEMPLATE_IDENTIFIER_PATH, TEMPLATE_IDENTIFIER)
               .param("q", "noOperator").accept(APPLICATION_JSON))
-          .andExpect(status().isBadRequest()).andExpect(jsonPath("$.error_description")
-              .value("Invalid query format, expected field:operator:value"));
+          .andExpect(status().isBadRequest())
+          .andExpect(content().contentType(APPLICATION_PROBLEM_JSON))
+          .andExpect(jsonPath("$.status").value(400))
+          .andExpect(jsonPath("$.title").value("Bad Request"))
+          .andExpect(jsonPath("$.error").value("BAD_REQUEST"))
+          .andExpect(jsonPath("$.error_description")
+              .value("Invalid query format, expected field:operator:value"))
+          .andExpect(jsonPath("$.timestamp").exists());
     }
 
     @Test

@@ -3,6 +3,7 @@ package com.decathlon.idp_core.infrastructure.adapters.api.controller;
 import static com.decathlon.idp_core.domain.constant.ValidationMessages.*;
 import static org.hamcrest.Matchers.containsString;
 import static org.springframework.http.MediaType.APPLICATION_JSON;
+import static org.springframework.http.MediaType.APPLICATION_PROBLEM_JSON;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
@@ -1390,7 +1391,7 @@ class EntityDynamicMappingControllerTest extends AbstractIntegrationTest {
           .perform(MockMvcRequestBuilders.post(MAPPING_PATH + "/dry-run")
               .contentType(APPLICATION_JSON).accept(APPLICATION_JSON).with(csrf()).content(payload))
           .andExpect(status().isUnprocessableContent())
-          .andExpect(content().contentType(APPLICATION_JSON))
+          .andExpect(content().contentType(APPLICATION_PROBLEM_JSON))
           .andExpect(jsonPath("$.error").value("UNPROCESSABLE_CONTENT"))
           .andExpect(jsonPath("$.error_description")
               .value(containsString("Expression evaluation failed")));

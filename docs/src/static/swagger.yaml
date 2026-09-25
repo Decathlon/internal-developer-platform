@@ -53,7 +53,7 @@ paths:
           content:
             "*/*":
               schema:
-                "$ref": "#/components/schemas/ErrorResponse"
+                "$ref": "#/components/schemas/ProblemDetail"
     put:
       tags:
       - Inbound Webhook Management
@@ -80,24 +80,24 @@ paths:
             "*/*":
               schema:
                 "$ref": "#/components/schemas/InboundWebhookDtoOut"
-        '400':
-          description: Invalid request payload
-          content:
-            "*/*":
-              schema:
-                "$ref": "#/components/schemas/ErrorResponse"
         '404':
           description: Webhook connector not found with the provided identifier
           content:
             "*/*":
               schema:
-                "$ref": "#/components/schemas/ErrorResponse"
+                "$ref": "#/components/schemas/ProblemDetail"
+        '400':
+          description: Invalid request payload
+          content:
+            "*/*":
+              schema:
+                "$ref": "#/components/schemas/ProblemDetail"
         '409':
           description: Webhook connector name already exists
           content:
             "*/*":
               schema:
-                "$ref": "#/components/schemas/ErrorResponse"
+                "$ref": "#/components/schemas/ProblemDetail"
     delete:
       tags:
       - Inbound Webhook Management
@@ -118,7 +118,7 @@ paths:
           content:
             "*/*":
               schema:
-                "$ref": "#/components/schemas/ErrorResponse"
+                "$ref": "#/components/schemas/ProblemDetail"
   "/api/v1/entity_dynamic_mappings/{identifier}":
     get:
       tags:
@@ -144,7 +144,7 @@ paths:
           content:
             "*/*":
               schema:
-                "$ref": "#/components/schemas/ErrorResponse"
+                "$ref": "#/components/schemas/ProblemDetail"
     put:
       tags:
       - Entity dynamic mapping
@@ -171,25 +171,25 @@ paths:
             "*/*":
               schema:
                 "$ref": "#/components/schemas/EntityDynamicMappingDtoOut"
+        '404':
+          description: Entity dynamic mapping not found with the provided identifier
+          content:
+            "*/*":
+              schema:
+                "$ref": "#/components/schemas/ProblemDetail"
         '400':
           description: Entity template identifier is mandatory or target entity template
             not found
           content:
             "*/*":
               schema:
-                "$ref": "#/components/schemas/ErrorResponse"
-        '404':
-          description: Entity dynamic mapping not found with the provided identifier
-          content:
-            "*/*":
-              schema:
-                "$ref": "#/components/schemas/ErrorResponse"
+                "$ref": "#/components/schemas/ProblemDetail"
         '409':
           description: Target entity template not found or identifier already exists
           content:
             "*/*":
               schema:
-                "$ref": "#/components/schemas/ErrorResponse"
+                "$ref": "#/components/schemas/ProblemDetail"
     delete:
       tags:
       - Entity dynamic mapping
@@ -210,7 +210,7 @@ paths:
           content:
             "*/*":
               schema:
-                "$ref": "#/components/schemas/ErrorResponse"
+                "$ref": "#/components/schemas/ProblemDetail"
   "/api/v1/entity-templates/{identifier}":
     get:
       tags:
@@ -236,7 +236,7 @@ paths:
           content:
             "*/*":
               schema:
-                "$ref": "#/components/schemas/ErrorResponse"
+                "$ref": "#/components/schemas/ProblemDetail"
     put:
       tags:
       - Entities Templates Management
@@ -268,7 +268,7 @@ paths:
           content:
             "*/*":
               schema:
-                "$ref": "#/components/schemas/ErrorResponse"
+                "$ref": "#/components/schemas/ProblemDetail"
     delete:
       tags:
       - Entities Templates Management
@@ -289,13 +289,13 @@ paths:
           content:
             "*/*":
               schema:
-                "$ref": "#/components/schemas/ErrorResponse"
+                "$ref": "#/components/schemas/ProblemDetail"
         '404':
           description: Template not found with the provided identifier
           content:
             "*/*":
               schema:
-                "$ref": "#/components/schemas/ErrorResponse"
+                "$ref": "#/components/schemas/ProblemDetail"
   "/api/v1/entities/{templateIdentifier}/{entityIdentifier}":
     get:
       tags:
@@ -348,7 +348,7 @@ paths:
           content:
             "*/*":
               schema:
-                "$ref": "#/components/schemas/ErrorResponse"
+                "$ref": "#/components/schemas/ProblemDetail"
     put:
       tags:
       - Entities Management
@@ -386,7 +386,7 @@ paths:
           content:
             "*/*":
               schema:
-                "$ref": "#/components/schemas/ErrorResponse"
+                "$ref": "#/components/schemas/ProblemDetail"
         '401':
           description: Unauthorized - Missing or invalid token
         '403':
@@ -396,13 +396,13 @@ paths:
           content:
             "*/*":
               schema:
-                "$ref": "#/components/schemas/ErrorResponse"
+                "$ref": "#/components/schemas/ProblemDetail"
         '500':
           description: Unexpected server-side failure
           content:
             "*/*":
               schema:
-                "$ref": "#/components/schemas/ErrorResponse"
+                "$ref": "#/components/schemas/ProblemDetail"
     delete:
       tags:
       - Entities Management
@@ -432,7 +432,7 @@ paths:
           content:
             "*/*":
               schema:
-                "$ref": "#/components/schemas/ErrorResponse"
+                "$ref": "#/components/schemas/ProblemDetail"
         '401':
           description: Unauthorized - Missing or invalid token
         '403':
@@ -442,19 +442,19 @@ paths:
           content:
             "*/*":
               schema:
-                "$ref": "#/components/schemas/ErrorResponse"
+                "$ref": "#/components/schemas/ProblemDetail"
         '409':
           description: Target entity has required relations
           content:
             "*/*":
               schema:
-                "$ref": "#/components/schemas/ErrorResponse"
+                "$ref": "#/components/schemas/ProblemDetail"
         '500':
           description: Unexpected server-side failure
           content:
             "*/*":
               schema:
-                "$ref": "#/components/schemas/ErrorResponse"
+                "$ref": "#/components/schemas/ProblemDetail"
   "/webhooks/{webhookIdentifier}":
     post:
       tags:
@@ -508,7 +508,7 @@ paths:
           content:
             "*/*":
               schema:
-                "$ref": "#/components/schemas/ErrorResponse"
+                "$ref": "#/components/schemas/ProblemDetail"
     post:
       tags:
       - Inbound Webhook Management
@@ -587,7 +587,7 @@ paths:
           content:
             "*/*":
               schema:
-                "$ref": "#/components/schemas/ErrorResponse"
+                "$ref": "#/components/schemas/ProblemDetail"
     post:
       tags:
       - Entity dynamic mapping
@@ -646,20 +646,20 @@ paths:
           content:
             "*/*":
               schema:
-                "$ref": "#/components/schemas/ErrorResponse"
+                "$ref": "#/components/schemas/ProblemDetail"
         '404':
           description: Entity template not found with the provided identifier
           content:
             "*/*":
               schema:
-                "$ref": "#/components/schemas/ErrorResponse"
+                "$ref": "#/components/schemas/ProblemDetail"
         '422':
           description: Mapping validation, template validation or expression evaluation
             error
           content:
             "*/*":
               schema:
-                "$ref": "#/components/schemas/ErrorResponse"
+                "$ref": "#/components/schemas/ProblemDetail"
   "/api/v1/entity-templates":
     get:
       tags:
@@ -705,7 +705,7 @@ paths:
           content:
             "*/*":
               schema:
-                "$ref": "#/components/schemas/ErrorResponse"
+                "$ref": "#/components/schemas/ProblemDetail"
     post:
       tags:
       - Entities Templates Management
@@ -730,7 +730,7 @@ paths:
           content:
             "*/*":
               schema:
-                "$ref": "#/components/schemas/ErrorResponse"
+                "$ref": "#/components/schemas/ProblemDetail"
   "/api/v1/entities/{templateIdentifier}":
     get:
       tags:
@@ -768,7 +768,7 @@ paths:
           more details in the API documentation. Example: `name:idp` for entities
           with names containing ''idp''.
 
-          '
+'
         required: false
         content:
           "*/*":
@@ -795,7 +795,7 @@ paths:
           content:
             "*/*":
               schema:
-                "$ref": "#/components/schemas/ErrorResponse"
+                "$ref": "#/components/schemas/ProblemDetail"
     post:
       tags:
       - Entities Management
@@ -827,29 +827,29 @@ paths:
           content:
             "*/*":
               schema:
-                "$ref": "#/components/schemas/ErrorResponse"
+                "$ref": "#/components/schemas/ProblemDetail"
         '401':
           description: Unauthorized - Missing or invalid token
         '403':
           description: Insufficient rights
-        '404':
-          description: Template not found with the provided identifier
-          content:
-            "*/*":
-              schema:
-                "$ref": "#/components/schemas/ErrorResponse"
         '409':
           description: Entity already exists in this template
           content:
             "*/*":
               schema:
-                "$ref": "#/components/schemas/ErrorResponse"
+                "$ref": "#/components/schemas/ProblemDetail"
+        '404':
+          description: Template not found with the provided identifier
+          content:
+            "*/*":
+              schema:
+                "$ref": "#/components/schemas/ProblemDetail"
         '500':
           description: Unexpected server-side failure
           content:
             "*/*":
               schema:
-                "$ref": "#/components/schemas/ErrorResponse"
+                "$ref": "#/components/schemas/ProblemDetail"
   "/api/v1/entities/search":
     post:
       tags:
@@ -877,7 +877,7 @@ paths:
           content:
             "*/*":
               schema:
-                "$ref": "#/components/schemas/ErrorResponse"
+                "$ref": "#/components/schemas/ProblemDetail"
   "/api/v1/entities/{templateIdentifier}/{entityIdentifier}/graph":
     get:
       tags:
@@ -960,7 +960,7 @@ paths:
           content:
             "*/*":
               schema:
-                "$ref": "#/components/schemas/ErrorResponse"
+                "$ref": "#/components/schemas/ProblemDetail"
   "/api/v1/audit/entities/{templateIdentifier}/{entityIdentifier}":
     get:
       tags:
@@ -996,7 +996,7 @@ paths:
           content:
             "*/*":
               schema:
-                "$ref": "#/components/schemas/ErrorResponse"
+                "$ref": "#/components/schemas/ProblemDetail"
         '401':
           description: Unauthorized - Missing or invalid token
         '403':
@@ -1007,13 +1007,13 @@ paths:
           content:
             "*/*":
               schema:
-                "$ref": "#/components/schemas/ErrorResponse"
+                "$ref": "#/components/schemas/ProblemDetail"
         '500':
           description: Unexpected server-side failure
           content:
             "*/*":
               schema:
-                "$ref": "#/components/schemas/ErrorResponse"
+                "$ref": "#/components/schemas/ProblemDetail"
   "/actuator":
     get:
       tags:
@@ -1170,13 +1170,25 @@ components:
           type: array
           items:
             type: string
-    ErrorResponse:
+    ProblemDetail:
       type: object
       properties:
-        error:
+        type:
           type: string
-        error_description:
+          format: uri
+        title:
           type: string
+        status:
+          type: integer
+          format: int32
+        detail:
+          type: string
+        instance:
+          type: string
+          format: uri
+        properties:
+          type: object
+          additionalProperties: {}
     EntityDynamicMappingRelationDtoIn:
       type: object
       properties:
@@ -1841,11 +1853,11 @@ components:
           type: boolean
         sort:
           "$ref": "#/components/schemas/SortObject"
-        first:
-          type: boolean
         numberOfElements:
           type: integer
           format: int32
+        first:
+          type: boolean
         size:
           type: integer
           format: int32
@@ -1901,11 +1913,11 @@ components:
           type: boolean
         sort:
           "$ref": "#/components/schemas/SortObject"
-        first:
-          type: boolean
         numberOfElements:
           type: integer
           format: int32
+        first:
+          type: boolean
         size:
           type: integer
           format: int32
@@ -1934,11 +1946,11 @@ components:
           type: boolean
         sort:
           "$ref": "#/components/schemas/SortObject"
-        first:
-          type: boolean
         numberOfElements:
           type: integer
           format: int32
+        first:
+          type: boolean
         size:
           type: integer
           format: int32
@@ -1967,11 +1979,11 @@ components:
           type: boolean
         sort:
           "$ref": "#/components/schemas/SortObject"
-        first:
-          type: boolean
         numberOfElements:
           type: integer
           format: int32
+        first:
+          type: boolean
         size:
           type: integer
           format: int32
@@ -2124,7 +2136,7 @@ components:
       name: clientId
       flows:
         clientCredentials:
-          tokenUrl: https://example.com/as/token.oauth2
+          tokenUrl: http://localhost:9999/mock/token
     bearer:
       type: http
       description: bearer authentication
