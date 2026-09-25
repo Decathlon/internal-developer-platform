@@ -57,7 +57,7 @@ logging:
 camel:
   component:
     platform-http:
-      engine: "servlet"
+      engine: "#autowired"
 
 management:
   tracing:
