@@ -28,8 +28,8 @@
     <mapstruct.version>1.6.3</mapstruct.version>
     <archunit.version>1.5.0</archunit.version>
     <netty.version>4.2.18.Final</netty.version>
-    <spring-security.version>7.1.0</spring-security.version>
-    <spring-framework.version>7.0.8</spring-framework.version>
+    <spring-security.version>7.1.1</spring-security.version>
+    <spring-framework.version>7.0.9</spring-framework.version>
     <postgresql.version>42.7.12</postgresql.version>
     <nimbus-jose-jwt.version>10.9.1</nimbus-jose-jwt.version>
     <test.groups/>
@@ -74,9 +74,9 @@
         <artifactId>tomcat-embed-el</artifactId>
       </dependency>
       <dependency>
-        <groupId>tools.jackson.core</groupId>
+        <groupId>com.fasterxml.jackson.core</groupId>
         <artifactId>jackson-databind</artifactId>
-        <version>3.2.2</version>
+        <version>2.22.3</version>
       </dependency>
       <dependency>
         <groupId>org.apache.camel.springboot</groupId>

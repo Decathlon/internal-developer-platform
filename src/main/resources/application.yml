@@ -174,7 +174,7 @@ management:
 camel:
   component:
     platform-http:
-      engine: "servlet"
+      engine: "#autowired"
       # Never expose the health "details" map (e.g. database product name/version,
       # validation query, disk space paths). Only UP/DOWN status is shown.
       show-details: never
