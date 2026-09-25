@@ -6,6 +6,7 @@ import org.springframework.stereotype.Component;
 
 import com.decathlon.idp_core.domain.exception.entity.EntityNotFoundException;
 import com.decathlon.idp_core.domain.model.entity.Entity;
+import com.decathlon.idp_core.domain.model.entity.EntityPatch;
 import com.decathlon.idp_core.domain.model.entity_mapping.EntityDynamicMapping;
 import com.decathlon.idp_core.domain.model.inbound_connectors.webhook.WebhookConnector;
 import com.decathlon.idp_core.domain.port.MappingEnginePort;
@@ -82,7 +83,8 @@ public class IngestionProcessor {
     if (entityService.entityExists(entity.templateIdentifier(), entity.identifier())) {
       log.debug("Patching entity {} for template: {}", entity.identifier(),
           entity.templateIdentifier());
-      entityService.patchEntity(entity.templateIdentifier(), entity.identifier(), entity);
+      entityService.patchEntity(entity.templateIdentifier(), entity.identifier(),
+          EntityPatch.fromEntity(entity));
     } else {
       log.debug("Creating entity {} for template: {}", entity.identifier(),
           entity.templateIdentifier());
@@ -98,14 +100,13 @@ public class IngestionProcessor {
   ///
   /// @param entity the entity to Update properties for
   private void handleUpdateProperties(Entity entity) {
-    Entity propertiesOnlyEntity = new Entity(entity.id(), entity.templateIdentifier(),
-        entity.name(), entity.identifier(), entity.properties(), List.of());
+    EntityPatch propertiesPatch = new EntityPatch(entity.name(), entity.properties(), List.of());
 
     if (entityService.entityExists(entity.templateIdentifier(), entity.identifier())) {
-      entityService.patchEntity(entity.templateIdentifier(), entity.identifier(),
-          propertiesOnlyEntity);
+      entityService.patchEntity(entity.templateIdentifier(), entity.identifier(), propertiesPatch);
     } else {
-      entityService.createEntity(propertiesOnlyEntity);
+      entityService.createEntity(new Entity(null, entity.templateIdentifier(), entity.name(),
+          entity.identifier(), entity.properties(), List.of()));
     }
   }
 
@@ -121,11 +122,9 @@ public class IngestionProcessor {
       throw new EntityNotFoundException(entity.templateIdentifier(), entity.identifier());
     }
     // Strip properties before invoking entity service
-    Entity relationsOnlyEntity = new Entity(null, entity.templateIdentifier(), null,
-        entity.identifier(), List.of(), entity.relations());
+    EntityPatch relationsPatch = new EntityPatch(null, List.of(), entity.relations());
 
-    entityService.patchEntity(entity.templateIdentifier(), entity.identifier(),
-        relationsOnlyEntity);
+    entityService.patchEntity(entity.templateIdentifier(), entity.identifier(), relationsPatch);
 
   }
 

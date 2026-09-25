@@ -138,7 +138,8 @@ INSERT INTO entity_template (id, identifier, name, description) VALUES
 ('550e8400-e29b-41d4-a716-446655440079', 'monitoring-service', 'Monitoring Service', 'Template for monitoring and observability services'),
 ('550e8400-e29b-41d4-a716-446655440080', 'team', 'Team', 'Template for team entities'),
 ('550e8400-e29b-41d4-a716-446655440081', 'support', 'Support', 'Template for support entities with required team relation'),
-('550e8400-e29b-41d4-a716-446655440082', 'web-audited', 'Web audited', 'Template for validation of audit modifications');
+('550e8400-e29b-41d4-a716-446655440082', 'web-audited', 'Web audited', 'Template for validation of audit modifications'),
+('550e8400-e29b-41d4-a716-446655440083', 'patch-test', 'Patch Test', 'Template for partial update tests');
 
 -- Link web-service template (comprehensive web API)
 INSERT INTO entity_template_properties_definitions (entity_template_id, properties_definitions_id) VALUES
@@ -328,4 +329,10 @@ INSERT INTO entity_template_properties_definitions (entity_template_id, properti
 ('550e8400-e29b-41d4-a716-446655440082', '550e8400-e29b-41d4-a716-446655440023'); -- version
 
 INSERT INTO entity_template_relations_definitions (entity_template_id, relations_definitions_id) VALUES
-('550e8400-e29b-41d4-a716-446655440081', '550e8400-e29b-41d4-a716-446655440066'); -- required_team
+('550e8400-e29b-41d4-a716-446655440081', '550e8400-e29b-41d4-a716-446655440066'), -- required_team
+('550e8400-e29b-41d4-a716-446655440083', '550e8400-e29b-41d4-a716-446655440067'); -- api-link
+
+-- Link patch-test template (minimal properties for partial update tests)
+INSERT INTO entity_template_properties_definitions (entity_template_id, properties_definitions_id) VALUES
+('550e8400-e29b-41d4-a716-446655440083', '550e8400-e29b-41d4-a716-446655440020'), -- applicationName
+('550e8400-e29b-41d4-a716-446655440083', '550e8400-e29b-41d4-a716-446655440026'); -- port
