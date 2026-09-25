@@ -8,7 +8,7 @@ SELECT gen_random_uuid(),
     WHERE NOT EXISTS (SELECT 1 FROM idp_core.entity_template WHERE identifier = 'principal');
 
 INSERT INTO idp_core.property_rules (id, format, enum_values)
-SELECT gen_random_uuid(), 'ENUM', ARRAY['HUMAN', 'SERVICE_ACCOUNT']
+SELECT gen_random_uuid(), NULL, ARRAY['HUMAN', 'SERVICE_ACCOUNT']
 WHERE NOT EXISTS (SELECT 1 FROM idp_core.property_rules WHERE enum_values = ARRAY['HUMAN', 'SERVICE_ACCOUNT']);
 
 INSERT INTO idp_core.property_rules (id, format)
