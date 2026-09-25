@@ -32,6 +32,7 @@
     <spring-framework.version>7.0.9</spring-framework.version>
     <postgresql.version>42.7.12</postgresql.version>
     <nimbus-jose-jwt.version>10.9.1</nimbus-jose-jwt.version>
+    <tomcat.version>11.0.26</tomcat.version>
     <test.groups/>
     <test.excludedGroups>security</test.excludedGroups>
   </properties>
