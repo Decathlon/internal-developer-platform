@@ -119,7 +119,7 @@ class EntityDynamicMappingControllerTest extends AbstractIntegrationTest {
       mockMvc.perform(get(MAPPING_PATH).accept(APPLICATION_JSON)).andExpect(status().isOk())
           .andExpect(content().contentType(APPLICATION_JSON))
           .andExpect(jsonPath("$.content").isArray())
-          .andExpect(jsonPath("$.page.total_elements").value(1))
+          .andExpect(jsonPath("$.page.total_elements").value(2))
           .andExpect(jsonPath("$.content[0].identifier").value("microservice-mapping"))
           .andExpect(jsonPath("$.content[0].entity.relations[0].name").value("dependencies"))
           .andExpect(jsonPath("$.content[0].entity.relations[0].target_entity_identifiers[0]")
