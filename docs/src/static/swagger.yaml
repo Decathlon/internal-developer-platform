@@ -774,6 +774,18 @@ paths:
           "*/*":
             schema:
               type: string
+      - name: include_relations
+        in: query
+        description: When true, each returned entity includes its resolved relations
+          (outbound and inbound), at the cost of an additional per-item relation
+          lookup. Defaults to false, returning properties only for lower latency
+          on large/paginated result sets.
+        required: false
+        content:
+          "*/*":
+            schema:
+              type: boolean
+              default: 'false'
       - name: sort
         in: query
         description: 'Sorting criteria in the format: property(,asc|desc). Defaults

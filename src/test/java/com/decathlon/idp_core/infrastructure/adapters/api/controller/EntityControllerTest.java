@@ -140,7 +140,7 @@ public class EntityControllerTest extends AbstractIntegrationTest {
     void getEntities_200_withFilter(String query) throws Exception {
       MvcResult mvcResult = mockMvc
           .perform(get(ENTITIES_BY_TEMPLATE_IDENTIFIER_PATH, TEMPLATE_IDENTIFIER).param("q", query)
-              .accept(APPLICATION_JSON).with(csrf()))
+              .param("include_relations", "true").accept(APPLICATION_JSON).with(csrf()))
           .andExpect(status().isOk()).andReturn();
       JSONAssert.assertEquals(
           getJsonTestFileContent(
@@ -165,7 +165,7 @@ public class EntityControllerTest extends AbstractIntegrationTest {
       MvcResult mvcResult = mockMvc
           .perform(get(ENTITIES_BY_TEMPLATE_IDENTIFIER_PATH, "microservice")
               .param("q", "relations_as_target.api-link.identifier=web-api-1")
-              .accept(APPLICATION_JSON).with(csrf()))
+              .param("include_relations", "true").accept(APPLICATION_JSON).with(csrf()))
           .andExpect(status().isOk()).andReturn();
       JSONAssert.assertEquals(
           getJsonTestFileContent(
@@ -179,8 +179,8 @@ public class EntityControllerTest extends AbstractIntegrationTest {
     void getEntities_200_relationsAsTargetNameContains() throws Exception {
       MvcResult mvcResult = mockMvc
           .perform(get(ENTITIES_BY_TEMPLATE_IDENTIFIER_PATH, "microservice")
-              .param("q", "relations_as_target.api-link.name:Web API").accept(APPLICATION_JSON)
-              .with(csrf()))
+              .param("q", "relations_as_target.api-link.name:Web API")
+              .param("include_relations", "true").accept(APPLICATION_JSON).with(csrf()))
           .andExpect(status().isOk()).andReturn();
       JSONAssert.assertEquals(
           getJsonTestFileContent(
