@@ -1,651 +1,531 @@
 package com.decathlon.idp_core.infrastructure.adapters.api.handler;
 
 import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 import java.lang.reflect.Constructor;
+import java.util.List;
 import java.util.Set;
-import java.util.stream.Stream;
 
 import jakarta.validation.ConstraintViolation;
 import jakarta.validation.ConstraintViolationException;
 
 import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.DisplayName;
-import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.Arguments;
-import org.junit.jupiter.params.provider.MethodSource;
+import org.springframework.context.MessageSourceResolvable;
 import org.springframework.core.MethodParameter;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpInputMessage;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.ProblemDetail;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
+import org.springframework.mock.web.MockHttpServletRequest;
 import org.springframework.validation.BeanPropertyBindingResult;
 import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
+import org.springframework.web.bind.MissingServletRequestParameterException;
+import org.springframework.web.context.request.ServletWebRequest;
+import org.springframework.web.context.request.WebRequest;
+import org.springframework.web.method.annotation.ExceptionHandlerMethodResolver;
+import org.springframework.web.method.annotation.HandlerMethodValidationException;
 
 import com.decathlon.idp_core.domain.exception.entity.EntityAlreadyExistsException;
+import com.decathlon.idp_core.domain.exception.entity.EntityDeletionBlockedException;
+import com.decathlon.idp_core.domain.exception.entity.EntityNotFoundException;
 import com.decathlon.idp_core.domain.exception.entity.EntityValidationException;
+import com.decathlon.idp_core.domain.exception.entity_dynamic_mapping.EntityDynamicMappingAlreadyExistsException;
+import com.decathlon.idp_core.domain.exception.entity_dynamic_mapping.EntityDynamicMappingAlreadyInUseException;
 import com.decathlon.idp_core.domain.exception.entity_dynamic_mapping.EntityDynamicMappingConfigurationException;
 import com.decathlon.idp_core.domain.exception.entity_dynamic_mapping.EntityDynamicMappingHasNoPropertiesException;
+import com.decathlon.idp_core.domain.exception.entity_dynamic_mapping.EntityDynamicMappingHasNoRelationsException;
+import com.decathlon.idp_core.domain.exception.entity_dynamic_mapping.EntityDynamicMappingJsltErrorException;
+import com.decathlon.idp_core.domain.exception.entity_dynamic_mapping.EntityDynamicMappingNotFoundException;
+import com.decathlon.idp_core.domain.exception.entity_dynamic_mapping.ExpressionEvaluationFailedException;
 import com.decathlon.idp_core.domain.exception.entity_template.EntityTemplateAlreadyExistsException;
+import com.decathlon.idp_core.domain.exception.entity_template.EntityTemplateIdentifierCannotChangeException;
+import com.decathlon.idp_core.domain.exception.entity_template.EntityTemplateIsRelationTargetException;
+import com.decathlon.idp_core.domain.exception.entity_template.EntityTemplateNameAlreadyExistsException;
 import com.decathlon.idp_core.domain.exception.entity_template.EntityTemplateNotFoundException;
+import com.decathlon.idp_core.domain.exception.entity_template.EntityTemplateUsedByDynamicMappingException;
+import com.decathlon.idp_core.domain.exception.entity_template.PropertyDefinitionRulesConflictException;
+import com.decathlon.idp_core.domain.exception.entity_template.PropertyNameAlreadyExistsException;
 import com.decathlon.idp_core.domain.exception.entity_template.PropertyNameNotFoundEntityTemplatePropertiesException;
+import com.decathlon.idp_core.domain.exception.entity_template.PropertyTypeChangeException;
+import com.decathlon.idp_core.domain.exception.entity_template.RelationCannotTargetItselfException;
+import com.decathlon.idp_core.domain.exception.entity_template.RelationNameAlreadyExistsException;
 import com.decathlon.idp_core.domain.exception.entity_template.RelationNameNotFoundEntityTemplateRelationsException;
+import com.decathlon.idp_core.domain.exception.entity_template.RelationTargetTemplateChangeException;
+import com.decathlon.idp_core.domain.exception.entity_template.TargetTemplateNotFoundException;
+import com.decathlon.idp_core.domain.exception.filter.InvalidFilterDslException;
+import com.decathlon.idp_core.domain.exception.search.InvalidSearchQueryException;
+import com.decathlon.idp_core.domain.exception.webhook.WebhookAuthenticationException;
+import com.decathlon.idp_core.domain.exception.webhook.WebhookConnectorAlreadyExistException;
+import com.decathlon.idp_core.domain.exception.webhook.WebhookConnectorNotFoundException;
+import com.decathlon.idp_core.domain.exception.webhook.WebhookConnectorTitleAlreadyExistsException;
 import com.decathlon.idp_core.domain.exception.webhook.WebhookSecurityConfigurationException;
 import com.decathlon.idp_core.infrastructure.adapters.common.model.ErrorResponse;
 
-/// Comprehensive unit tests for [ApiExceptionHandler].
-///
-/// Tests all exception handler methods and utility functions to ensure proper
-/// error handling and response formatting across the API layer.
-@DisplayName("ApiExceptionHandler Tests")
 class ApiExceptionHandlerTest {
 
   private ApiExceptionHandler exceptionHandler;
 
   @BeforeEach
   void setUp() throws Exception {
-    // Use reflection to create instance since constructor is private
     Constructor<ApiExceptionHandler> constructor = ApiExceptionHandler.class
         .getDeclaredConstructor();
     constructor.setAccessible(true);
     exceptionHandler = constructor.newInstance();
   }
 
-  @Nested
-  @DisplayName("Domain Exception Handling")
-  class DomainExceptionTests {
-
-    /// Tests the handling of [EntityTemplateNotFoundException] by the
-    /// [ApiExceptionHandler].
-    ///
-    /// **This test verifies that:**
-    /// - EntityTemplateNotFoundException is properly caught and handled
-    /// - HTTP 404 Not Found status is returned
-    /// - Error response contains the correct error status and description
-    /// - Original exception message is preserved in the response
-    @Test
-    @DisplayName("Should handle EntityTemplateNotFoundException with 404 status")
-    void shouldHandleEntityTemplateNotFoundException() {
-      // Given
-      String errorMessage = "Template with ID 'test-id' not found";
-      EntityTemplateNotFoundException exception = new EntityTemplateNotFoundException(errorMessage);
-
-      // When
-      ResponseEntity<ErrorResponse> response = exceptionHandler
-          .handleTemplateNotFoundException(exception);
-
-      // Then
-      assertNotNull(response);
-      assertEquals(HttpStatus.NOT_FOUND, response.getStatusCode());
-      ErrorResponse body = response.getBody();
-      assertNotNull(body);
-      assertEquals(HttpStatus.NOT_FOUND.name(), body.getError());
-      assertEquals(errorMessage, body.getErrorDescription());
-    }
-
-    /// Tests the handling of [EntityTemplateAlreadyExistsException] by the
-    /// [ApiExceptionHandler].
-    ///
-    /// **This test verifies that:**
-    /// - EntityTemplateAlreadyExistsException is properly caught and handled
-    /// - HTTP 409 Conflict status is returned
-    /// - Error response contains the correct error status and formatted description
-    /// - Exception message is properly formatted with validation constants
-    @Test
-    @DisplayName("Should handle EntityTemplateAlreadyExistsException with 409 status")
-    void shouldHandleEntityTemplateAlreadyExistsException() {
-      // Given
-      String identifier = "duplicate-id";
-      EntityTemplateAlreadyExistsException exception = new EntityTemplateAlreadyExistsException(
-          identifier);
-      String expectedMessage = "An Entity Template already exists with the same identifier:duplicate-id";
-
-      // When
-      ResponseEntity<ErrorResponse> response = exceptionHandler
-          .handleEntityTemplateAlreadyExistsException(exception);
-
-      // Then
-      assertNotNull(response);
-      assertEquals(HttpStatus.CONFLICT, response.getStatusCode());
-      ErrorResponse body = response.getBody();
-      assertNotNull(body);
-      assertEquals(HttpStatus.CONFLICT.name(), body.getError());
-      assertEquals(expectedMessage, body.getErrorDescription());
-    }
-
-    /// Tests the handling of [EntityAlreadyExistsException] by the
-    /// [ApiExceptionHandler].
-    ///
-    /// **This test verifies that:**
-    /// - EntityAlreadyExistsException is properly caught and handled
-    /// - HTTP 409 Conflict status is returned
-    /// - Error response contains the original domain exception message
-    @Test
-    @DisplayName("Should handle EntityAlreadyExistsException with 409 status")
-    void shouldHandleEntityAlreadyExistsException() {
-      // Given
-      EntityAlreadyExistsException exception = new EntityAlreadyExistsException("my-web-service",
-          "api-gateway");
-
-      // When
-      ResponseEntity<ErrorResponse> response = exceptionHandler
-          .handleEntityAlreadyExistsException(exception);
-
-      // Then
-      assertNotNull(response);
-      assertEquals(HttpStatus.CONFLICT, response.getStatusCode());
-      ErrorResponse body = response.getBody();
-      assertNotNull(body);
-      assertEquals(HttpStatus.CONFLICT.name(), body.getError());
-      assertEquals(exception.getMessage(), body.getErrorDescription());
-    }
-
-    @Test
-    @DisplayName("Should handle EntityValidationException with 400 status")
-    void shouldHandleEntityValidationException() {
-      EntityValidationException exception = new EntityValidationException(
-          java.util.List.of("Invalid property"));
-
-      ResponseEntity<ErrorResponse> response = exceptionHandler
-          .handleEntityValidationException(exception);
-
-      assertNotNull(response);
-      assertEquals(HttpStatus.BAD_REQUEST, response.getStatusCode());
-      ErrorResponse body = response.getBody();
-      assertNotNull(body);
-      assertEquals(HttpStatus.BAD_REQUEST.name(), body.getError());
-      assertEquals(exception.getMessage(), body.getErrorDescription());
-    }
-
-    @Nested
-    @DisplayName("Validation Exception Handling")
-    class ValidationExceptionTests {
-
-      @Test
-      @DisplayName("Should handle EntityDynamicMappingConfigurationException with 400 status")
-      void shouldHandleEntityDynamicMappingConfigurationException() {
-        String details = "Syntax Error in 'properties.deployment_id': Parse error";
-        EntityDynamicMappingConfigurationException exception = new EntityDynamicMappingConfigurationException(
-            details);
-
-        ResponseEntity<ErrorResponse> response = exceptionHandler
-            .handleEntityDynamicMappingConfigurationException(exception);
-
-        assertNotNull(response);
-        assertEquals(HttpStatus.BAD_REQUEST, response.getStatusCode());
-        ErrorResponse body = response.getBody();
-        assertNotNull(body);
-        assertEquals(HttpStatus.BAD_REQUEST.name(), body.getError());
-        assertEquals(details, body.getErrorDescription());
-      }
-
-      @Test
-      @DisplayName("Should handle PropertyNameNotFoundEntityTemplatePropertiesException with 400 status")
-      void shouldHandlePropertyNameNotFoundEntityTemplatePropertiesException() {
-        String details = "Property name additionalProp3 not found in entity entityTemplateIdentifier properties";
-        PropertyNameNotFoundEntityTemplatePropertiesException exception = new PropertyNameNotFoundEntityTemplatePropertiesException(
-            details);
-
-        ResponseEntity<ErrorResponse> response = exceptionHandler
-            .handlePropertyNameNotFoundEntityTemplatePropertiesException(exception);
-
-        assertNotNull(response);
-        assertEquals(HttpStatus.UNPROCESSABLE_CONTENT, response.getStatusCode());
-        ErrorResponse body = response.getBody();
-        assertNotNull(body);
-        assertEquals(HttpStatus.UNPROCESSABLE_CONTENT.name(), body.getError());
-        assertEquals(details, body.getErrorDescription());
-      }
-
-      @Test
-      @DisplayName("Should handle RelationNameNotFoundEntityTemplateRelationsException with 400 status")
-      void shouldHandleRelationNameNotFoundEntityTemplateRelationsException() {
-        // Given
-        String details = "Relation name github_repository not found in entity entityTemplateIdentifier relations";
-        RelationNameNotFoundEntityTemplateRelationsException exception = new RelationNameNotFoundEntityTemplateRelationsException(
-            details);
-
-        // When
-        ResponseEntity<ErrorResponse> response = exceptionHandler
-            .handleRelationNameNotFoundEntityTemplateRelationsException(exception);
-
-        // Then
-        assertNotNull(response);
-        assertEquals(HttpStatus.UNPROCESSABLE_CONTENT, response.getStatusCode());
-        ErrorResponse body = response.getBody();
-        assertNotNull(body);
-        assertEquals(HttpStatus.UNPROCESSABLE_CONTENT.name(), body.getError());
-        assertEquals(details, body.getErrorDescription());
-      }
-
-      @Test
-      @DisplayName("Should handle EntityDynamicMappingHasNoPropertiesException with 400 status")
-      void shouldHandleEntityDynamicMappingHasNoPropertiesException() {
-        String details = "The mapping defines properties but the target entityTemplateIdentifier has no property definitions";
-        EntityDynamicMappingHasNoPropertiesException exception = new EntityDynamicMappingHasNoPropertiesException(
-            details);
-
-        ResponseEntity<ErrorResponse> response = exceptionHandler
-            .handleEntityDynamicMappingHasNoPropertiesException(exception);
-
-        assertNotNull(response);
-        assertEquals(HttpStatus.UNPROCESSABLE_CONTENT, response.getStatusCode());
-        ErrorResponse body = response.getBody();
-        assertNotNull(body);
-        assertEquals(HttpStatus.UNPROCESSABLE_CONTENT.name(), body.getError());
-        assertEquals(details, body.getErrorDescription());
-      }
-
-      @Test
-      @DisplayName("Should handle WebhookSecurityConfigurationException with 400 status")
-      void shouldHandleWebhookSecurityConfigurationException() {
-        String details = "Webhook security type is mandatory";
-        WebhookSecurityConfigurationException exception = new WebhookSecurityConfigurationException(
-            details);
-
-        ResponseEntity<ErrorResponse> response = exceptionHandler
-            .handleWebhookSecurityConfigurationException(exception);
-
-        assertNotNull(response);
-        assertEquals(HttpStatus.BAD_REQUEST, response.getStatusCode());
-        ErrorResponse body = response.getBody();
-        assertNotNull(body);
-        assertEquals(HttpStatus.BAD_REQUEST.name(), body.getError());
-        assertEquals(details, body.getErrorDescription());
-      }
-
-      /// Tests the handling of [ConstraintViolationException] with a single
-      /// validation violation.
-      ///
-      /// **This test verifies that:**
-      /// - ConstraintViolationException is properly caught and handled
-      /// - HTTP 400 Bad Request status is returned
-      /// - Single violation message is correctly extracted and returned
-      /// - Error response format matches expected structure
-      @Test
-      @DisplayName("Should handle ConstraintViolationException with single violation")
-      void shouldHandleConstraintViolationExceptionSingleViolation() {
-        // Given
-        ConstraintViolation<Object> violation = createMockConstraintViolation(
-            "Field must not be null");
-        Set<ConstraintViolation<Object>> violations = Set.of(violation);
-        ConstraintViolationException exception = new ConstraintViolationException(
-            "Validation failed", violations);
-
-        // When
-        ResponseEntity<ErrorResponse> response = exceptionHandler
-            .handleConstraintViolationException(exception);
-
-        // Then
-        assertNotNull(response);
-        assertEquals(HttpStatus.BAD_REQUEST, response.getStatusCode());
-        ErrorResponse body = response.getBody();
-        assertNotNull(body);
-        assertEquals(HttpStatus.BAD_REQUEST.name(), body.getError());
-        assertEquals("Field must not be null", body.getErrorDescription());
-      }
-
-      /// Tests the handling of [ConstraintViolationException] with multiple
-      /// validation violations.
-      ///
-      /// **This test verifies that:**
-      /// - ConstraintViolationException with multiple violations is properly handled
-      /// - HTTP 400 Bad Request status is returned
-      /// - All violation messages are concatenated with comma separation
-      /// - Error response contains all validation error messages
-      @Test
-      @DisplayName("Should handle ConstraintViolationException with multiple violations")
-      void shouldHandleConstraintViolationExceptionMultipleViolations() {
-        // Given
-        ConstraintViolation<Object> violation1 = createMockConstraintViolation(
-            "Field1 must not be null");
-        ConstraintViolation<Object> violation2 = createMockConstraintViolation(
-            "Field2 must not be blank");
-        Set<ConstraintViolation<Object>> violations = Set.of(violation1, violation2);
-        ConstraintViolationException exception = new ConstraintViolationException(
-            "Validation failed", violations);
-
-        // When
-        ResponseEntity<ErrorResponse> response = exceptionHandler
-            .handleConstraintViolationException(exception);
-
-        // Then
-        assertNotNull(response);
-        assertEquals(HttpStatus.BAD_REQUEST, response.getStatusCode());
-        ErrorResponse body = response.getBody();
-        assertNotNull(body);
-        assertEquals(HttpStatus.BAD_REQUEST.name(), body.getError());
-
-        String errorDescription = body.getErrorDescription();
-        assertTrue(errorDescription.contains("Field1 must not be null"));
-        assertTrue(errorDescription.contains("Field2 must not be blank"));
-        assertTrue(errorDescription.contains(", "));
-      }
-
-      /// Tests the handling of [MethodArgumentNotValidException] with field
-      /// validation errors.
-      ///
-      /// **This test verifies that:**
-      /// - MethodArgumentNotValidException is properly caught and handled
-      /// - HTTP 400 Bad Request status is returned
-      /// - Field error messages from binding result are extracted and concatenated
-      /// - All field validation errors are included in the response with comma
-      /// separation
-      ///
-      /// @throws Exception if reflection fails during test setup
-      @Test
-      @DisplayName("Should handle MethodArgumentNotValidException with field errors")
-      void shouldHandleMethodArgumentNotValidException() throws Exception {
-        // Given
-        Object target = new Object();
-        BeanPropertyBindingResult bindingResult = new BeanPropertyBindingResult(target,
-            "testObject");
-        bindingResult.addError(new FieldError("testObject", "field1", "Field1 is required"));
-        bindingResult.addError(new FieldError("testObject", "field2", "Field2 must be valid"));
-
-        // Create a proper MethodParameter mock with required methods
-        MethodParameter methodParameter = mock(MethodParameter.class);
-        when(methodParameter.getExecutable()).thenReturn(this.getClass().getMethod("testMethod"));
-
-        MethodArgumentNotValidException exception = new MethodArgumentNotValidException(
-            methodParameter, bindingResult);
-
-        // When
-        ResponseEntity<ErrorResponse> response = exceptionHandler
-            .handleMethodArgumentNotValidException(exception);
-
-        // Then
-        assertNotNull(response);
-        assertEquals(HttpStatus.BAD_REQUEST, response.getStatusCode());
-        ErrorResponse body = response.getBody();
-        assertNotNull(body);
-        assertEquals(HttpStatus.BAD_REQUEST.name(), body.getError());
-        String errorDescription = body.getErrorDescription();
-        assertTrue(errorDescription.contains("Field1 is required"));
-        assertTrue(errorDescription.contains("Field2 must be valid"));
-        assertTrue(errorDescription.contains(", "));
-      }
-
-      // Helper method for mocking
-      public void testMethod() {
-        // Empty method for testing purposes
-      }
-
-      @SuppressWarnings("unchecked")
-      private ConstraintViolation<Object> createMockConstraintViolation(String message) {
-        ConstraintViolation<Object> violation = mock(ConstraintViolation.class);
-        when(violation.getMessage()).thenReturn(message);
-        return violation;
-      }
-    }
-
-    /// Tests the handling of [ConstraintViolationException] with multiple
-    /// validation violations.
-    ///
-    /// **This test verifies that:**
-    /// - ConstraintViolationException with multiple violations is properly handled
-    /// - HTTP 400 Bad Request status is returned
-    /// - All violation messages are concatenated with comma separation
-    /// - Error response contains all validation error messages
-    @Test
-    @DisplayName("Should handle ConstraintViolationException with multiple violations")
-    void shouldHandleConstraintViolationExceptionMultipleViolations() {
-      // Given
-      ConstraintViolation<Object> violation1 = createMockConstraintViolation(
-          "Field1 must not be null");
-      ConstraintViolation<Object> violation2 = createMockConstraintViolation(
-          "Field2 must not be blank");
-      Set<ConstraintViolation<Object>> violations = Set.of(violation1, violation2);
-      ConstraintViolationException exception = new ConstraintViolationException("Validation failed",
-          violations);
-
-      // When
-      ResponseEntity<ErrorResponse> response = exceptionHandler
-          .handleConstraintViolationException(exception);
-
-      // Then
-      assertNotNull(response);
-      assertEquals(HttpStatus.BAD_REQUEST, response.getStatusCode());
-      ErrorResponse body = response.getBody();
-      assertNotNull(body);
-      assertEquals(HttpStatus.BAD_REQUEST.name(), body.getError());
-
-      String errorDescription = body.getErrorDescription();
-      assertTrue(errorDescription.contains("Field1 must not be null"));
-      assertTrue(errorDescription.contains("Field2 must not be blank"));
-      assertTrue(errorDescription.contains(", "));
-    }
-
-    /// Tests the handling of [MethodArgumentNotValidException] with field
-    /// validation errors.
-    ///
-    /// **This test verifies that:**
-    /// - MethodArgumentNotValidException is properly caught and handled
-    /// - HTTP 400 Bad Request status is returned
-    /// - Field error messages from binding result are extracted and concatenated
-    /// - All field validation errors are included in the response with comma
-    /// separation
-    ///
-    /// @throws Exception if reflection fails during test setup
-    @Test
-    @DisplayName("Should handle MethodArgumentNotValidException with field errors")
-    void shouldHandleMethodArgumentNotValidException() throws Exception {
-      // Given
-      Object target = new Object();
-      BeanPropertyBindingResult bindingResult = new BeanPropertyBindingResult(target, "testObject");
-      bindingResult.addError(new FieldError("testObject", "field1", "Field1 is required"));
-      bindingResult.addError(new FieldError("testObject", "field2", "Field2 must be valid"));
-
-      // Create a proper MethodParameter mock with required methods
-      MethodParameter methodParameter = mock(MethodParameter.class);
-      when(methodParameter.getExecutable()).thenReturn(this.getClass().getMethod("testMethod"));
-
-      MethodArgumentNotValidException exception = new MethodArgumentNotValidException(
-          methodParameter, bindingResult);
-
-      // When
-      ResponseEntity<ErrorResponse> response = exceptionHandler
-          .handleMethodArgumentNotValidException(exception);
-
-      // Then
-      assertNotNull(response);
-      assertEquals(HttpStatus.BAD_REQUEST, response.getStatusCode());
-      ErrorResponse body = response.getBody();
-      assertNotNull(body);
-      assertEquals(HttpStatus.BAD_REQUEST.name(), body.getError());
-      String errorDescription = body.getErrorDescription();
-      assertTrue(errorDescription.contains("Field1 is required"));
-      assertTrue(errorDescription.contains("Field2 must be valid"));
-      assertTrue(errorDescription.contains(", "));
-    }
-
-    // Helper method for mocking
-    public void testMethod() {
-      // Empty method for testing purposes
-    }
-
-    @SuppressWarnings("unchecked")
-    private ConstraintViolation<Object> createMockConstraintViolation(String message) {
-      ConstraintViolation<Object> violation = mock(ConstraintViolation.class);
-      when(violation.getMessage()).thenReturn(message);
-      return violation;
-    }
+  /**
+   * Creates a mocked {@link WebRequest} with a stubbed description, matching the
+   * framework's non-null contract for {@code getDescription(boolean)}.
+   */
+  private static WebRequest mockWebRequest() {
+    WebRequest request = mock(WebRequest.class);
+    when(request.getDescription(false)).thenReturn("uri=/api/v1/test");
+    return request;
   }
 
-  @Nested
-  @DisplayName("HTTP Message Exception Handling")
-  class HttpMessageExceptionTests {
-
-    /// Provides test data for [HttpMessageNotReadableException] scenarios. Each
-    /// argument contains: input message and expected error description.
-    static Stream<Arguments> httpMessageNotReadableExceptionTestData() {
-      return Stream.of(
-          Arguments.of("Required request body is missing: public ResponseEntity",
-              "Request body is required"),
-          Arguments.of("JSON parse error: Unexpected character",
-              "Invalid JSON format in request body"),
-          Arguments.of(
-              "Cannot deserialize value of type `PropertyType` from String \"INVALID_TYPE\": not one of the values accepted for Enum class",
-              "Invalid value 'INVALID_TYPE' for property 'type'"),
-          Arguments.of(
-              "Cannot deserialize value of type `PropertyFormat` from String \"INVALID_FORMAT\": not one of the values accepted for Enum class",
-              "Invalid value 'INVALID_FORMAT' for property 'format'"),
-          Arguments.of(
-              "Cannot deserialize value of type `UnknownEnum` from String \"VALUE\": not one of the values accepted for Enum class",
-              "Invalid enum value in request body"),
-          Arguments.of("Cannot deserialize value of type `com.example.SomeType`: some other error",
-              "Invalid type: expected SomeType"),
-          Arguments.of("Something completely unexpected happened", "Invalid request body format"),
-          Arguments.of(
-              "Cannot deserialize value of type `PropertyType`: not one of the values accepted for Enum class",
-              "Invalid value for property 'type'"));
-    }
-
-    /// Tests the handling of [HttpMessageNotReadableException] when exception
-    /// message is null.
-    ///
-    /// **This test verifies that:**
-    /// - HttpMessageNotReadableException with null message is properly handled
-    /// - HTTP 400 Bad Request status is returned
-    /// - Default error message is provided when original message is null
-    /// - Graceful handling of edge case scenarios
-    @Test
-    @DisplayName("Should handle HttpMessageNotReadableException with null message")
-    void shouldHandleHttpMessageNotReadableExceptionWithNullMessage() {
-      // Given
-      HttpMessageNotReadableException exception = mock(HttpMessageNotReadableException.class);
-      when(exception.getMessage()).thenReturn(null);
-
-      // When
-      ResponseEntity<ErrorResponse> response = exceptionHandler
-          .handleHttpMessageNotReadableException(exception);
-
-      // Then
-      assertNotNull(response);
-      assertEquals(HttpStatus.BAD_REQUEST, response.getStatusCode());
-      ErrorResponse body = response.getBody();
-      assertNotNull(body);
-      assertEquals(HttpStatus.BAD_REQUEST.name(), body.getError());
-      assertEquals("Invalid request body format", body.getErrorDescription());
-    }
-
-    /// Parameterized test for handling [HttpMessageNotReadableException] with
-    /// various error scenarios.
-    ///
-    /// **This test verifies that different types of HttpMessageNotReadableException
-    /// are properly parsed and converted to user-friendly error messages:**
-    /// - Missing request body errors → "Request body is required"
-    /// - JSON parse errors → "Invalid JSON format in request body"
-    /// - PropertyType enum deserialization errors → Specific property and value
-    /// information
-    /// - Unknown enum deserialization errors → Generic enum error message
-    ///
-    /// **Each test case validates that:**
-    /// - HTTP 400 Bad Request status is returned
-    /// - Original complex error message is parsed and simplified
-    /// - User-friendly error description is provided
-    /// - Error response structure is consistent
-    ///
-    /// @param originalMessage the original exception message to be
-    /// processed
-    /// @param expectedErrorDescription the expected user-friendly error description
-    @ParameterizedTest
-    @MethodSource("httpMessageNotReadableExceptionTestData")
-    @DisplayName("Should handle HttpMessageNotReadableException with various error types")
-    void shouldHandleHttpMessageNotReadableExceptionWithVariousErrorTypes(String originalMessage,
-        String expectedErrorDescription) {
-      // Given
-      HttpMessageNotReadableException exception = mock(HttpMessageNotReadableException.class);
-      when(exception.getMessage()).thenReturn(originalMessage);
-
-      // When
-      ResponseEntity<ErrorResponse> response = exceptionHandler
-          .handleHttpMessageNotReadableException(exception);
-
-      // Then
-      assertNotNull(response);
-      assertEquals(HttpStatus.BAD_REQUEST, response.getStatusCode());
-      ErrorResponse body = response.getBody();
-      assertNotNull(body);
-      assertEquals(HttpStatus.BAD_REQUEST.name(), body.getError());
-      assertEquals(expectedErrorDescription, body.getErrorDescription());
-    }
+  @Test
+  void shouldHandleEntityTemplateNotFoundException() {
+    ProblemDetail body = exceptionHandler
+        .handleTemplateNotFoundException(new EntityTemplateNotFoundException("missing"));
+    assertProblemDetail(body, HttpStatus.NOT_FOUND, "missing", "NOT_FOUND");
   }
 
-  @Nested
-  @DisplayName("Generic Exception Handling")
-  class GenericExceptionTests {
-
-    /// Tests the handling of generic Exception as a fallback mechanism.
-    ///
-    /// **This test verifies that:**
-    /// - Unexpected exceptions are caught by the generic handler
-    /// - HTTP 500 Internal Server Error status is returned
-    /// - Generic error message is provided to avoid exposing internal details
-    /// - Exception is properly logged for debugging purposes
-    @Test
-    @DisplayName("Should handle generic Exception with 500 status")
-    void shouldHandleGenericException() {
-      // Given
-      Exception exception = new RuntimeException("Unexpected error");
-
-      // When
-      ResponseEntity<ErrorResponse> response = exceptionHandler.handleGenericException(exception);
-
-      // Then
-      assertNotNull(response);
-      assertEquals(HttpStatus.INTERNAL_SERVER_ERROR, response.getStatusCode());
-      ErrorResponse body = response.getBody();
-      assertNotNull(body);
-      assertEquals(HttpStatus.INTERNAL_SERVER_ERROR.name(), body.getError());
-      assertEquals("An unexpected error occurred. Please try again later.",
-          body.getErrorDescription());
-    }
+  @Test
+  void shouldHandleEntityTemplateAlreadyExistsException() {
+    ProblemDetail body = exceptionHandler.handleEntityTemplateAlreadyExistsException(
+        new EntityTemplateAlreadyExistsException("duplicate-id"));
+    assertProblemDetail(body, HttpStatus.CONFLICT,
+        "An Entity Template already exists with the same identifier:duplicate-id", "CONFLICT");
   }
 
-  @Nested
-  @DisplayName("ErrorResponse Class Tests")
-  class ErrorResponseTests {
+  @Test
+  void shouldHandleEntityAlreadyExistsException() {
+    ProblemDetail body = exceptionHandler
+        .handleEntityAlreadyExistsException(new EntityAlreadyExistsException("a", "b"));
+    assertProblemDetail(body, HttpStatus.CONFLICT,
+        "Entity with name 'b' already exists for template 'a'", "CONFLICT");
+  }
 
-    /// Tests the creation of [ErrorResponse] using the all-arguments constructor.
-    ///
-    /// **This test verifies that:**
-    /// - ErrorResponse can be instantiated with HttpStatus and description
-    /// - All fields are properly initialized with provided values
-    /// - Getter methods return the expected values
-    /// - Object is successfully created and accessible
-    @Test
-    @DisplayName("Should create ErrorResponse with all args constructor")
-    void shouldCreateErrorResponseWithAllArgsConstructor() {
-      // Given
-      HttpStatus status = HttpStatus.BAD_REQUEST;
-      String description = "Test error message";
+  @Test
+  void shouldHandleEntityValidationException() {
+    ProblemDetail body = exceptionHandler.handleEntityValidationException(
+        new EntityValidationException(java.util.List.of("Invalid property")));
+    assertProblemDetail(body, HttpStatus.BAD_REQUEST, "Entity validation failed: Invalid property",
+        "BAD_REQUEST");
+  }
 
-      // When
-      ErrorResponse errorResponse = new ErrorResponse(status.name(), description);
+  @Test
+  void shouldHandleConstraintViolationException() {
+    ConstraintViolation<Object> violation = mock(ConstraintViolation.class);
+    when(violation.getMessage()).thenReturn("Field must not be null");
+    ProblemDetail body = exceptionHandler.handleConstraintViolationException(
+        new ConstraintViolationException("failed", Set.of(violation)));
+    assertProblemDetail(body, HttpStatus.BAD_REQUEST, "Field must not be null", "BAD_REQUEST");
+  }
 
-      // Then
-      assertNotNull(errorResponse);
-      assertEquals(status.name(), errorResponse.getError());
-      assertEquals(description, errorResponse.getErrorDescription());
-    }
+  @Test
+  void shouldHandleMethodArgumentNotValidViaFrameworkOverride() throws Exception {
+    BeanPropertyBindingResult bindingResult = new BeanPropertyBindingResult(new Object(), "obj");
+    bindingResult.addError(new FieldError("obj", "field", "Field is required"));
+    MethodParameter methodParameter = new MethodParameter(
+        ApiExceptionHandlerTest.class.getDeclaredMethod("setUp"), -1);
+    MethodArgumentNotValidException ex = new MethodArgumentNotValidException(methodParameter,
+        bindingResult);
+    ProblemDetail body = (ProblemDetail) exceptionHandler.handleMethodArgumentNotValid(ex,
+        new HttpHeaders(), HttpStatus.BAD_REQUEST, mockWebRequest()).getBody();
+    assertProblemDetail(body, HttpStatus.BAD_REQUEST, "Field is required", "BAD_REQUEST");
+  }
 
-    /// Tests the creation of [ErrorResponse] using the no-arguments constructor.
-    ///
-    /// **This test verifies that:**
-    /// - ErrorResponse can be instantiated without parameters
-    /// - Object is successfully created with default/null field values
-    /// - Constructor works with `@NoArgsConstructor(force = true)` annotation
-    /// - Provides flexibility for frameworks requiring default constructors
-    @Test
-    @DisplayName("Should create ErrorResponse with no args constructor")
-    void shouldCreateErrorResponseWithNoArgsConstructor() {
-      ErrorResponse errorResponse = new ErrorResponse();
-      assertNotNull(errorResponse);
-    }
+  @Test
+  void shouldHandleHandlerMethodValidationViaFrameworkOverride() {
+    HandlerMethodValidationException ex = mock(HandlerMethodValidationException.class);
+    MessageSourceResolvable error = mock(MessageSourceResolvable.class);
+    when(error.getDefaultMessage()).thenReturn("Parameter is invalid");
+    doReturn(List.of(error)).when(ex).getAllErrors();
+
+    ResponseEntity<Object> response = exceptionHandler.handleHandlerMethodValidationException(ex,
+        new HttpHeaders(), HttpStatus.INTERNAL_SERVER_ERROR, mockWebRequest());
+    ProblemDetail body = (ProblemDetail) response.getBody();
+
+    assertEquals(HttpStatus.BAD_REQUEST, response.getStatusCode());
+    assertProblemDetail(body, HttpStatus.BAD_REQUEST, "Parameter is invalid", "BAD_REQUEST");
+  }
+
+  @Test
+  void shouldDeclareUnambiguousExceptionHandlerMappings() {
+    assertDoesNotThrow(() -> new ExceptionHandlerMethodResolver(ApiExceptionHandler.class));
+  }
+
+  @Test
+  void shouldConvertUnreadableMessageToSafeError() {
+    HttpMessageNotReadableException ex = new HttpMessageNotReadableException(
+        "Cannot deserialize value of type `PropertyType` from String \"INVALID_TYPE\": "
+            + "not one of the values accepted for Enum class",
+        new HttpInputMessage() {
+          @Override
+          public HttpHeaders getHeaders() {
+            return new HttpHeaders();
+          }
+
+          @Override
+          public java.io.InputStream getBody() {
+            return java.io.InputStream.nullInputStream();
+          }
+        });
+    ProblemDetail body = (ProblemDetail) exceptionHandler.handleHttpMessageNotReadable(ex,
+        new HttpHeaders(), HttpStatus.BAD_REQUEST, mockWebRequest()).getBody();
+
+    assertProblemDetail(body, HttpStatus.BAD_REQUEST,
+        "Invalid value 'INVALID_TYPE' for property 'type'", "BAD_REQUEST");
+  }
+
+  @Test
+  void shouldHandleGenericExceptionWithoutExposingInternalDetails() {
+    ResponseEntity<ErrorResponse> response = exceptionHandler
+        .handleGenericException(new RuntimeException("Sensitive internal details"));
+
+    assertEquals(HttpStatus.INTERNAL_SERVER_ERROR, response.getStatusCode());
+    assertNotNull(response.getBody());
+    assertEquals("INTERNAL_SERVER_ERROR", response.getBody().getError());
+    assertEquals("An unexpected error occurred. Please try again later.",
+        response.getBody().getErrorDescription());
+  }
+
+  @Test
+  void shouldNormalizeInheritedFrameworkProblemDetails() throws Exception {
+    MockHttpServletRequest servletRequest = new MockHttpServletRequest();
+    servletRequest.setRequestURI("/api/v1/test");
+    ServletWebRequest webRequest = new ServletWebRequest(servletRequest);
+
+    ResponseEntity<Object> response = exceptionHandler.handleException(
+        new MissingServletRequestParameterException("page", "integer"), webRequest);
+    ProblemDetail body = (ProblemDetail) response.getBody();
+
+    assertNotNull(body);
+    assertEquals(HttpStatus.BAD_REQUEST, response.getStatusCode());
+    assertEquals("BAD_REQUEST", body.getProperties().get("error"));
+    assertEquals(body.getDetail(), body.getProperties().get("error_description"));
+    assertNotNull(body.getProperties().get("timestamp"));
+    assertEquals("/api/v1/test", body.getInstance().toString());
+  }
+
+  @Test
+  void shouldHandleMissingPathVariableViaFrameworkOverride() {
+    ProblemDetail body = (ProblemDetail) exceptionHandler.handleMissingPathVariable(
+        mock(org.springframework.web.bind.MissingPathVariableException.class), new HttpHeaders(),
+        HttpStatus.BAD_REQUEST, mockWebRequest()).getBody();
+    assertNotNull(body);
+    assertEquals(HttpStatus.BAD_REQUEST.value(), body.getStatus());
+    assertEquals("BAD_REQUEST", body.getProperties().get("error"));
+  }
+
+  @Test
+  void shouldSetInstanceWhenWebRequestIsPresent() {
+    ServletWebRequest request = mock(ServletWebRequest.class);
+    when(request.getDescription(false)).thenReturn("uri=/api/v1/test");
+    ProblemDetail body = (ProblemDetail) exceptionHandler.handleMissingPathVariable(
+        mock(org.springframework.web.bind.MissingPathVariableException.class), new HttpHeaders(),
+        HttpStatus.BAD_REQUEST, request).getBody();
+
+    assertNotNull(body);
+    assertNotNull(body.getInstance());
+    assertEquals("/api/v1/test", body.getInstance().toString());
+  }
+
+  @Test
+  void shouldHandleInvalidFilterDslException() {
+    ProblemDetail body = exceptionHandler
+        .handleInvalidFilterDslException(new InvalidFilterDslException("bad filter"));
+    assertProblemDetail(body, HttpStatus.BAD_REQUEST, "bad filter", "BAD_REQUEST");
+  }
+
+  @Test
+  void shouldHandleInvalidSearchQueryException() {
+    ProblemDetail body = exceptionHandler
+        .handleInvalidSearchQueryException(new InvalidSearchQueryException("bad query"));
+    assertProblemDetail(body, HttpStatus.BAD_REQUEST, "bad query", "BAD_REQUEST");
+  }
+
+  @Test
+  void shouldHandleEntityTemplateNameAlreadyExistsException() {
+    ProblemDetail body = exceptionHandler.handleEntityTemplateNameAlreadyExistsException(
+        new EntityTemplateNameAlreadyExistsException("duplicate-name"));
+    assertEquals(HttpStatus.CONFLICT.value(), body.getStatus());
+    assertEquals("CONFLICT", body.getProperties().get("error"));
+  }
+
+  @Test
+  void shouldHandleEntityTemplateIdentifierCannotChangeException() {
+    ProblemDetail body = exceptionHandler.handleEntityTemplateIdentifierCannotChangeException(
+        new EntityTemplateIdentifierCannotChangeException("template-id"));
+    assertEquals(HttpStatus.BAD_REQUEST.value(), body.getStatus());
+    assertEquals("BAD_REQUEST", body.getProperties().get("error"));
+  }
+
+  @Test
+  void shouldHandleWrongPropertyRulesException() {
+    ProblemDetail body = exceptionHandler.handleWrongPropertyRulesException(
+        new PropertyDefinitionRulesConflictException("property-test", "STRING", "not allowed"));
+    assertEquals(HttpStatus.BAD_REQUEST.value(), body.getStatus());
+    assertEquals("BAD_REQUEST", body.getProperties().get("error"));
+  }
+
+  @Test
+  void shouldHandlePropertyNameAlreadyExistsException() {
+    ProblemDetail body = exceptionHandler.handlePropertyNameAlreadyExistsException(
+        new PropertyNameAlreadyExistsException("property-test"));
+    assertEquals(HttpStatus.BAD_REQUEST.value(), body.getStatus());
+    assertEquals("BAD_REQUEST", body.getProperties().get("error"));
+  }
+
+  @Test
+  void shouldHandleRelationNameAlreadyExistsException() {
+    ProblemDetail body = exceptionHandler.handleRelationNameAlreadyExistsException(
+        new RelationNameAlreadyExistsException("belongsto"));
+    assertEquals(HttpStatus.BAD_REQUEST.value(), body.getStatus());
+    assertEquals("BAD_REQUEST", body.getProperties().get("error"));
+  }
+
+  @Test
+  void shouldHandleTargetTemplateNotFoundException() {
+    ProblemDetail body = exceptionHandler
+        .handleTargetTemplateNotFoundException(new TargetTemplateNotFoundException("non-existent"));
+    assertEquals(HttpStatus.BAD_REQUEST.value(), body.getStatus());
+    assertEquals("BAD_REQUEST", body.getProperties().get("error"));
+  }
+
+  @Test
+  void shouldHandleEntityTemplateIsRelationTargetException() {
+    ProblemDetail body = exceptionHandler.handleEntityTemplateIsRelationTargetException(
+        new EntityTemplateIsRelationTargetException("microservice"));
+    assertEquals(HttpStatus.BAD_REQUEST.value(), body.getStatus());
+    assertEquals("BAD_REQUEST", body.getProperties().get("error"));
+  }
+
+  @Test
+  void shouldHandleTypeChangeException() {
+    ProblemDetail body = exceptionHandler
+        .handleTypeChangeException(new PropertyTypeChangeException("name", "STRING", "NUMBER"));
+    assertEquals(HttpStatus.BAD_REQUEST.value(), body.getStatus());
+    assertEquals("BAD_REQUEST", body.getProperties().get("error"));
+  }
+
+  @Test
+  void shouldHandleRelationTargetTemplateChangeException() {
+    ProblemDetail body = exceptionHandler.handleRelationTargetTemplateChangeException(
+        new RelationTargetTemplateChangeException("dependencies", "service", "service-modified"));
+    assertEquals(HttpStatus.BAD_REQUEST.value(), body.getStatus());
+    assertEquals("BAD_REQUEST", body.getProperties().get("error"));
+  }
+
+  @Test
+  void shouldHandleRelationCannotTargetItselfException() {
+    ProblemDetail body = exceptionHandler.handleRelationCannotTargetItselfException(
+        new RelationCannotTargetItselfException("circular", "self-ref-template"));
+    assertEquals(HttpStatus.BAD_REQUEST.value(), body.getStatus());
+    assertEquals("BAD_REQUEST", body.getProperties().get("error"));
+  }
+
+  @Test
+  void shouldHandleEntityDynamicMappingConfigurationException() {
+    ProblemDetail body = exceptionHandler.handleEntityDynamicMappingConfigurationException(
+        new EntityDynamicMappingConfigurationException("invalid configuration"));
+    assertProblemDetail(body, HttpStatus.BAD_REQUEST, "invalid configuration", "BAD_REQUEST");
+  }
+
+  @Test
+  void shouldHandleExpressionEvaluationFailedException() {
+    ProblemDetail body = exceptionHandler.handleExpressionEvaluationFailedException(
+        new ExpressionEvaluationFailedException(".foo", "syntax error", null));
+    assertEquals(HttpStatus.UNPROCESSABLE_CONTENT.value(), body.getStatus());
+    assertEquals("UNPROCESSABLE_CONTENT", body.getProperties().get("error"));
+  }
+
+  @Test
+  void shouldHandleEntityDynamicMappingJsltErrorException() {
+    ProblemDetail body = exceptionHandler.handleEntityDynamicMappingJsltErrorException(
+        new EntityDynamicMappingJsltErrorException("jslt failed"));
+    assertProblemDetail(body, HttpStatus.UNPROCESSABLE_CONTENT, "jslt failed",
+        "UNPROCESSABLE_CONTENT");
+  }
+
+  @Test
+  void shouldHandlePropertyNameNotFoundEntityTemplatePropertiesException() {
+    ProblemDetail body = exceptionHandler
+        .handlePropertyNameNotFoundEntityTemplatePropertiesException(
+            new PropertyNameNotFoundEntityTemplatePropertiesException("unknown property"));
+    assertProblemDetail(body, HttpStatus.UNPROCESSABLE_CONTENT, "unknown property",
+        "UNPROCESSABLE_CONTENT");
+  }
+
+  @Test
+  void shouldHandleRelationNameNotFoundEntityTemplateRelationsException() {
+    ProblemDetail body = exceptionHandler
+        .handleRelationNameNotFoundEntityTemplateRelationsException(
+            new RelationNameNotFoundEntityTemplateRelationsException("unknown relation"));
+    assertProblemDetail(body, HttpStatus.UNPROCESSABLE_CONTENT, "unknown relation",
+        "UNPROCESSABLE_CONTENT");
+  }
+
+  @Test
+  void shouldHandleEntityDynamicMappingHasNoPropertiesException() {
+    ProblemDetail body = exceptionHandler.handleEntityDynamicMappingHasNoPropertiesException(
+        new EntityDynamicMappingHasNoPropertiesException("missing properties"));
+    assertProblemDetail(body, HttpStatus.UNPROCESSABLE_CONTENT, "missing properties",
+        "UNPROCESSABLE_CONTENT");
+  }
+
+  @Test
+  void shouldHandleEntityDynamicMappingHasNoRelationsException() {
+    ProblemDetail body = exceptionHandler.handleEntityDynamicMappingHasNoRelationsException(
+        new EntityDynamicMappingHasNoRelationsException("missing relations"));
+    assertProblemDetail(body, HttpStatus.UNPROCESSABLE_CONTENT, "missing relations",
+        "UNPROCESSABLE_CONTENT");
+  }
+
+  @Test
+  void shouldHandleWebhookSecurityConfigurationException() {
+    ProblemDetail body = exceptionHandler.handleWebhookSecurityConfigurationException(
+        new WebhookSecurityConfigurationException("invalid security"));
+    assertProblemDetail(body, HttpStatus.BAD_REQUEST, "invalid security", "BAD_REQUEST");
+  }
+
+  @Test
+  void shouldHandleEntityNotFoundException() {
+    ProblemDetail body = exceptionHandler
+        .handleEntityNotFoundException(new EntityNotFoundException("template", "entity-id"));
+    assertEquals(HttpStatus.NOT_FOUND.value(), body.getStatus());
+    assertEquals("NOT_FOUND", body.getProperties().get("error"));
+  }
+
+  @Test
+  void shouldHandleEntityDeletionBlockedException() {
+    ProblemDetail body = exceptionHandler.handleEntityDeletionBlockedException(
+        new EntityDeletionBlockedException("template", "entity-id", List.of("child-id")));
+    assertEquals(HttpStatus.CONFLICT.value(), body.getStatus());
+    assertEquals("CONFLICT", body.getProperties().get("error"));
+  }
+
+  @Test
+  void shouldHandleWebhookAuthenticationException() {
+    ProblemDetail body = exceptionHandler.handleWebhookAuthenticationException(
+        new WebhookAuthenticationException("invalid signature"));
+    assertProblemDetail(body, HttpStatus.UNAUTHORIZED, "invalid signature", "UNAUTHORIZED");
+  }
+
+  @Test
+  void shouldHandleWebhookConnectorNotFoundException() {
+    ProblemDetail body = exceptionHandler.handleWebhookConnectorNotFoundException(
+        new WebhookConnectorNotFoundException("connector-id"));
+    assertEquals(HttpStatus.NOT_FOUND.value(), body.getStatus());
+    assertEquals("NOT_FOUND", body.getProperties().get("error"));
+  }
+
+  @Test
+  void shouldHandleEntityDynamicMappingNotFoundException() {
+    ProblemDetail body = exceptionHandler.handleEntityDynamicMappingNotFoundException(
+        new EntityDynamicMappingNotFoundException("mapping-id"));
+    assertEquals(HttpStatus.NOT_FOUND.value(), body.getStatus());
+    assertEquals("NOT_FOUND", body.getProperties().get("error"));
+  }
+
+  @Test
+  void shouldHandleEntityDynamicMappingAlreadyExistsException() {
+    ProblemDetail body = exceptionHandler.handleEntityDynamicMappingAlreadyExistsException(
+        new EntityDynamicMappingAlreadyExistsException("mapping-id"));
+    assertEquals(HttpStatus.CONFLICT.value(), body.getStatus());
+    assertEquals("CONFLICT", body.getProperties().get("error"));
+  }
+
+  @Test
+  void shouldHandleEntityDynamicMappingAlreadyInUseException() {
+    ProblemDetail body = exceptionHandler.handleEntityDynamicMappingAlreadyInUseException(
+        new EntityDynamicMappingAlreadyInUseException(List.of("mapping-id")));
+    assertEquals(HttpStatus.CONFLICT.value(), body.getStatus());
+    assertEquals("CONFLICT", body.getProperties().get("error"));
+  }
+
+  @Test
+  void shouldHandleWebhookConnectorAlreadyExistException() {
+    ProblemDetail body = exceptionHandler.handleWebhookConnectorAlreadyExistException(
+        new WebhookConnectorAlreadyExistException("connector-id"));
+    assertEquals(HttpStatus.CONFLICT.value(), body.getStatus());
+    assertEquals("CONFLICT", body.getProperties().get("error"));
+  }
+
+  @Test
+  void shouldHandleTemplateAlreadyMappedInWebhookConfiguration() {
+    ProblemDetail body = exceptionHandler.handleTemplateAlreadyMappedInWebhookConfiguration(
+        new EntityTemplateUsedByDynamicMappingException("template in use"));
+    assertProblemDetail(body, HttpStatus.CONFLICT, "template in use", "CONFLICT");
+  }
+
+  @Test
+  void shouldHandleWebhookConnectorTitleAlreadyExistsException() {
+    ProblemDetail body = exceptionHandler.handleWebhookConnectorTitleAlreadyExistsException(
+        new WebhookConnectorTitleAlreadyExistsException("connector-name"));
+    assertEquals(HttpStatus.CONFLICT.value(), body.getStatus());
+    assertEquals("CONFLICT", body.getProperties().get("error"));
+  }
+
+  @Test
+  void shouldHandleDataIntegrityViolationException() {
+    Throwable rootCause = new RuntimeException("constraint violation");
+    org.springframework.dao.DataIntegrityViolationException ex = mock(
+        org.springframework.dao.DataIntegrityViolationException.class);
+    when(ex.getMostSpecificCause()).thenReturn(rootCause);
+
+    ProblemDetail body = exceptionHandler.handleDataIntegrityViolationException(ex);
+
+    assertProblemDetail(body, HttpStatus.CONFLICT,
+        "The request conflicts with the current state of the resource", "CONFLICT");
+  }
+
+  @Test
+  void shouldHandleNoHandlerFoundExceptionViaFrameworkOverride() {
+    ProblemDetail body = (ProblemDetail) exceptionHandler.handleNoHandlerFoundException(
+        mock(org.springframework.web.servlet.NoHandlerFoundException.class), new HttpHeaders(),
+        HttpStatus.NOT_FOUND, mockWebRequest()).getBody();
+    assertProblemDetail(body, HttpStatus.NOT_FOUND,
+        "Malformed request URL or missing path variable.", "NOT_FOUND");
+  }
+
+  @Test
+  void shouldReturnEmptyMessageWhenHttpMessageNotReadableCauseIsNull() {
+    HttpMessageNotReadableException ex = new HttpMessageNotReadableException("Invalid JSON format",
+        new HttpInputMessage() {
+          @Override
+          public HttpHeaders getHeaders() {
+            return new HttpHeaders();
+          }
+
+          @Override
+          public java.io.InputStream getBody() {
+            return java.io.InputStream.nullInputStream();
+          }
+        });
+
+    ProblemDetail body = (ProblemDetail) exceptionHandler.handleHttpMessageNotReadable(ex,
+        new HttpHeaders(), HttpStatus.BAD_REQUEST, mockWebRequest()).getBody();
+
+    assertProblemDetail(body, HttpStatus.BAD_REQUEST, "Invalid request body format", "BAD_REQUEST");
+  }
+
+  private static void assertProblemDetail(ProblemDetail body, HttpStatus status, String detail,
+      String error) {
+    assertNotNull(body);
+    assertEquals(status.value(), body.getStatus());
+    assertEquals(status.getReasonPhrase(), body.getTitle());
+    assertEquals(detail, body.getDetail());
+    assertEquals(error, body.getProperties().get("error"));
+    assertEquals(detail, body.getProperties().get("error_description"));
+    assertNotNull(body.getProperties().get("timestamp"));
   }
 }
