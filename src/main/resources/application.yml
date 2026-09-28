@@ -97,7 +97,7 @@ spring:
           batch_versioned_data: true
 
 springdoc:
-    # Will expose the health endpoint in the OpenAPI spec.
+  # Will expose the health endpoint in the OpenAPI spec.
   show-actuator: true
   swagger-ui:
     # Sorts API tags alphabetically in the Swagger UI.
@@ -160,6 +160,13 @@ app:
         # Simplified list binding. Overriding via env var requires a comma-separated string:
         # export APP_SECURITY_AUTHENTICATION_JIT_PROVISIONING_EXCLUDED_PATHS="/,/actuator/**,/swagger-ui/**,/swagger-ui.html,/v3/api-docs/**"
       jit-provisioning-excluded-paths: /,/actuator/**,/swagger-ui/**,/swagger-ui.html,/v3/api-docs/**
+
+idp:
+  security:
+    webhook:
+      # Comma-separated allow-list for trusted JWKS hosts.
+      # Example: ALLOWED_JWKS_HOSTS=github.com,auth.decathlon.com
+      allowed-jwks-hosts: ${ALLOWED_JWKS_HOSTS:}
 
 logging:
   level:
