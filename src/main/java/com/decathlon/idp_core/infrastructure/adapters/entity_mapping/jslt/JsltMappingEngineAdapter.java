@@ -119,7 +119,7 @@ public class JsltMappingEngineAdapter implements MappingEnginePort {
     JsonNode valueNode = jsltEvaluator.resolveExpression(entry.getValue(), currentNode,
         rootPayload);
     if (valueNode != null && !valueNode.isNull() && !valueNode.isMissingNode()) {
-      String value = valueNode.isTextual() ? valueNode.asText() : valueNode.toString();
+      Object value = objectMapper.convertValue(valueNode, Object.class);
       return new Property(null, entry.getKey(), value);
     }
     return null;

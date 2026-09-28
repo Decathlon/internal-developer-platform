@@ -16,6 +16,11 @@ creation, updates, and deletion. This information is essential for:
 - **Debugging and Root Cause Analysis** - Trace issues back to their origins
 - **Historical Reconstruction** - Restore object state at any point in time
 
+Property snapshots preserve the native JSON value stored at the time of the
+revision. A snapshot can therefore contain a string, number, boolean, array,
+object, or nested JSON structure. Arrays and objects are not serialized into a
+secondary string representation in the audit response.
+
 Example audit flow for entity lifecycle:
 
 ```mermaid

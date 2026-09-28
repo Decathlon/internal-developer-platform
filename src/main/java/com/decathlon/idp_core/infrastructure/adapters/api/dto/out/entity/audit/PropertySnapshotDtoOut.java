@@ -22,5 +22,5 @@ public class PropertySnapshotDtoOut {
   private String name;
 
   @Schema(description = "Value of the property at this revision", example = "My service description")
-  private String value;
+  private Object value;
 }

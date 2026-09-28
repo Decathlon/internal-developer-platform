@@ -30,7 +30,7 @@ public record EntityDynamicMappingDryRunDtoOut(
       @Schema(description = SCHEMA_DRY_RUN_TEMPLATE_IDENTIFIER) String templateIdentifier,
       @Schema(description = SCHEMA_DRY_RUN_ENTITY_NAME) String name,
       @Schema(description = SCHEMA_DRY_RUN_ENTITY_IDENTIFIER) String identifier,
-      @Schema(description = SCHEMA_DRY_RUN_PROPERTIES) Map<String, String> properties,
+      @Schema(description = SCHEMA_DRY_RUN_PROPERTIES) Map<String, Object> properties,
       @Schema(description = SCHEMA_DRY_RUN_RELATIONS) List<DryRunRelationDto> relations) {
   }
 

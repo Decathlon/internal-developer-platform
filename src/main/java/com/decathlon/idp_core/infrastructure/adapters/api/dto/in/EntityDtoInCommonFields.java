@@ -45,7 +45,7 @@ public class EntityDtoInCommonFields {
   private String name;
 
   @Schema(description = FIELD_ENTITY_PROPERTIES, example = "{\"port\": \"8080\", \"environment\": \"dev\"}")
-  private Map<String, String> properties;
+  private Map<String, Object> properties;
 
   @Valid
   @Schema(description = FIELD_ENTITY_RELATIONS)

@@ -16,12 +16,12 @@ import com.decathlon.idp_core.infrastructure.adapters.api.dto.in.EntityUpdateDto
 ///
 /// **Infrastructure mapping responsibilities:**
 /// - Request DTO-to-domain conversion for entity creation operations
-/// - Type-safe property mapping with string value normalization
+/// - Type-safe property mapping while preserving native JSON values
 /// - Relationship mapping with template identifier injection
 /// - Defensive handling of null collections and properties
 ///
 /// **Mapping considerations:**
-/// - All property values normalized to strings for consistent domain handling
+/// - Property values retain their JSON-compatible scalar or array shape
 /// - Target template identifiers resolved from API context rather than request body
 /// - Empty collections preferred over null to prevent downstream null checks
 ///

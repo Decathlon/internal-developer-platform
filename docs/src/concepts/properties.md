@@ -3,14 +3,19 @@ title: Properties
 description: Define data fields with Property Definitions and validation rules
 ---
 
-Properties define the **data fields** that entities must contain. Each property needs a type, optional validation rules, and can be required or optional.
+Properties define the **data fields** that entities can contain. Each property
+has a type, optional validation rules, and can be required or optional.
+
+Property values are stored as PostgreSQL `JSONB`. This preserves the existing
+scalar values (`STRING`, `NUMBER`, and `BOOLEAN`) and supports native JSON
+arrays of scalars.
 
 ## Overview
 
 A Property Definition specifies:
 
 - **Name** - Internal identifier for the property
-- **Type** - Data type (STRING, NUMBER, BOOLEAN)
+- **Type** - Scalar type, or element type when the value is an array (STRING, NUMBER, BOOLEAN)
 - **Required** - Whether the property must have a value
 - **Rules** - Validation constraints such as format, length, range, or enum values
 
@@ -125,6 +130,66 @@ True/false values. Use for flags and binary states.
 }
 ```
 
+### Arrays
+
+You can store an array whose elements share the property's declared type. The
+same validation rules apply to every element.
+
+```json
+{
+  "name": "supported_languages",
+  "type": "STRING",
+  "required": false,
+  "rules": {
+    "enum_values": ["JAVA", "PYTHON", "GO"]
+  }
+}
+```
+
+```json
+{
+  "properties": {
+    "supported_languages": ["JAVA", "PYTHON"],
+    "retry_delays": [1, 5, 30],
+    "feature_flags": [true, false]
+  }
+}
+```
+
+The platform validates every array element against the declared type and its
+rules. Values that do not conform are rejected; for backward compatibility,
+numeric and boolean values may also use their accepted string representations.
+An empty array is valid; use the `required` flag to require the property.
+
+### Unsupported objects and nested JSON
+
+Property values support scalars and arrays of scalars. Objects and nested JSON
+structures are rejected by property validation because property definitions do
+not define a nested schema:
+
+```json
+{
+  "properties": {
+    "ownership": {
+      "team": "platform",
+      "contacts": [
+        {
+          "name": "Alice",
+          "email": "alice@example.com"
+        }
+      ]
+    }
+  }
+}
+```
+
+Model independently addressable entities, such as users or principals, as
+[relations](relations.md) instead of embedding them in a property.
+
+> [!TIP]
+> JSONB stores native scalar and array values. Do not send an array as a
+> string like JSON value such as `"[\"JAVA\",\"SPRING\"]"`.
+
 ---
 
 ## Property Rules
@@ -229,13 +294,13 @@ Validates: `v1.2.3`, `1.0.0`
 
 | Rule | Applies To | Description | Example |
 | ------ | ------------ | ------------- | --------- |
-| `format` | STRING | Predefined format validation | `"format": "EMAIL"` |
-| `enum_values` | STRING | Allowed values list | `"enum_values": ["a", "b"]` |
-| `regex` | STRING | Custom regex pattern | `"regex": "^[A-Z]+$"` |
-| `min_length` | STRING | Minimum character length | `"min_length": 1` |
-| `max_length` | STRING | Maximum character length | `"max_length": 255` |
-| `min_value` | NUMBER | Minimum numeric value | `"min_value": 0` |
-| `max_value` | NUMBER | Maximum numeric value | `"max_value": 100` |
+| `format` | STRING | Predefined format validation for a scalar or each string array element | `"format": "EMAIL"` |
+| `enum_values` | STRING | Allowed values for a scalar or each string array element | `"enum_values": ["a", "b"]` |
+| `regex` | STRING | Custom regex for a scalar or each string array element | `"regex": "^[A-Z]+$"` |
+| `min_length` | STRING | Minimum character length for a scalar or each string array element | `"min_length": 1` |
+| `max_length` | STRING | Maximum character length for a scalar or each string array element | `"max_length": 255` |
+| `min_value` | NUMBER | Minimum numeric value for a scalar or each number array element | `"min_value": 0` |
+| `max_value` | NUMBER | Maximum numeric value for a scalar or each number array element | `"max_value": 100` |
 
 ---
 
@@ -380,7 +445,17 @@ Validates: `v1.2.3`, `1.0.0`
 {"name": "status", "type": "STRING", "rules": {"enum_values": ["active", "inactive"]}}
 ```
 
-### 5. Be Careful with Required
+### 5. Keep JSON Types Native
+
+```json
+// Bad -JSON as String
+{"name": "members", "type": "STRING", "value": "[\"user1\", \"user2\"]"}
+
+// Good - native JSON array
+{"name": "members", "type": "STRING", "value": ["user1", "user2"]}
+```
+
+### 6. Be Careful with Required
 
 Only mark properties as required if they truly are:
 

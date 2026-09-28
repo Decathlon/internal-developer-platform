@@ -30,5 +30,5 @@ public record Property(UUID id,
 
     @NotBlank(message = PROPERTY_NAME_MANDATORY) String name,
 
-    String value) {
+    Object value) {
 }

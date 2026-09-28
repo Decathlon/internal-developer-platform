@@ -291,9 +291,9 @@ public class EntityService {
     if (existing.size() != request.size())
       return true;
 
-    Map<String, String> existingMap = existing.stream()
+    Map<String, Object> existingMap = existing.stream()
         .collect(Collectors.toMap(Property::name, Property::value, (_, v2) -> v2));
-    Map<String, String> incomingMap = request.stream()
+    Map<String, Object> incomingMap = request.stream()
         .collect(Collectors.toMap(Property::name, Property::value, (_, v2) -> v2));
 
     return !existingMap.equals(incomingMap);

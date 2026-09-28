@@ -103,7 +103,8 @@ public final class EntitySearchSpecification {
       var subRoot = sub.from(EntityJpaEntity.class);
       var propJoin = subRoot.join("properties");
       sub.select(cb.literal(1)).where(cb.equal(subRoot.get("id"), root.get("id")),
-          ((HibernateCriteriaBuilder) cb).ilike(propJoin.get("value").as(String.class), pattern,
+          ((HibernateCriteriaBuilder) cb).ilike(
+              JpaPredicateBuilder.jsonbAsText(cb, propJoin.get("value")), pattern,
               JpaPredicateBuilder.LIKE_ESCAPE_CHAR));
       return cb.exists(sub);
     };
@@ -164,7 +165,8 @@ public final class EntitySearchSpecification {
       var propJoin = subRoot.join("properties");
       sub.select(cb.literal(1)).where(cb.equal(subRoot.get("id"), root.get("id")),
           cb.equal(propJoin.get(NAME), propertyName),
-          buildPredicate(cb, propJoin.get("value"), c.operation(), c.value()));
+          buildPredicate(cb, JpaPredicateBuilder.jsonbAsText(cb, propJoin.get("value")),
+              c.operation(), c.value()));
       return cb.exists(sub);
     };
   }

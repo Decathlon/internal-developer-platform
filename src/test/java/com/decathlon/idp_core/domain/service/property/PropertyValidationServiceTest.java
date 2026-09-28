@@ -1,6 +1,8 @@
 package com.decathlon.idp_core.domain.service.property;
 
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
@@ -18,6 +20,8 @@ import org.junit.jupiter.params.provider.MethodSource;
 import org.junit.jupiter.params.provider.ValueSource;
 
 import com.decathlon.idp_core.domain.constant.ValidationMessages;
+import com.decathlon.idp_core.domain.exception.entity_dynamic_mapping.EntityDynamicMappingHasNoPropertiesException;
+import com.decathlon.idp_core.domain.exception.entity_template.PropertyNameNotFoundEntityTemplatePropertiesException;
 import com.decathlon.idp_core.domain.model.entity.Property;
 import com.decathlon.idp_core.domain.model.entity_template.EntityTemplate;
 import com.decathlon.idp_core.domain.model.entity_template.PropertyDefinition;
@@ -49,6 +53,54 @@ class PropertyValidationServiceTest {
 
       verify(violations).add(ValidationMessages.PROPERTY_REQUIRED_MISSING, "owner",
           "system-template");
+    }
+
+    @Test
+    @DisplayName("Should validate every element of a STRING array")
+    void shouldValidateStringArrayElements() {
+      var definition = propertyDefinition("languages", PropertyType.STRING, null);
+
+      var violations = service.validatePropertyValue(definition, List.of("JAVA", "KOTLIN"));
+
+      assertEquals(List.of(), violations);
+    }
+
+    @Test
+    @DisplayName("Should validate every element of a NUMBER array")
+    void shouldValidateNumberArrayElements() {
+      var definition = propertyDefinition("ports", PropertyType.NUMBER, null);
+
+      var violations = service.validatePropertyValue(definition, List.of(8080, "9090"));
+
+      assertEquals(List.of(), violations);
+    }
+
+    @Test
+    @DisplayName("Should reject an invalid element in a BOOLEAN array")
+    void shouldRejectInvalidBooleanArrayElement() {
+      var definition = propertyDefinition("flags", PropertyType.BOOLEAN, null);
+
+      var violations = service.validatePropertyValue(definition, List.of(true, "not-a-boolean"));
+
+      assertEquals(
+          List.of(
+              ValidationMessages.PROPERTY_TYPE_MISMATCH.formatted("flags", PropertyType.BOOLEAN)),
+          violations);
+    }
+
+    @Test
+    @DisplayName("Should reject objects and nested arrays")
+    void shouldRejectObjectsAndNestedArrays() {
+      var definition = propertyDefinition("values", PropertyType.STRING, null);
+
+      assertEquals(
+          List.of(
+              ValidationMessages.PROPERTY_TYPE_MISMATCH.formatted("values", PropertyType.STRING)),
+          service.validatePropertyValue(definition, Map.of("key", "value")));
+      assertEquals(
+          List.of(
+              ValidationMessages.PROPERTY_TYPE_MISMATCH.formatted("values", PropertyType.STRING)),
+          service.validatePropertyValue(definition, List.of(List.of("nested"))));
     }
 
     @Test
@@ -133,6 +185,88 @@ class PropertyValidationServiceTest {
           Map.of("port", property), violations);
 
       verifyNoInteractions(violations);
+    }
+
+    @Test
+    @DisplayName("Should treat a property with a null value as missing")
+    void shouldTreatNullValueAsMissing() {
+      var template = template("system-template");
+      var definition = propertyDefinition("owner", PropertyType.STRING, null);
+      var property = new Property(UUID.randomUUID(), "owner", null);
+      var violations = mock(Violations.class);
+
+      service.validatePropertiesAgainstTemplate(template, List.of(definition),
+          Map.of("owner", property), violations);
+
+      verify(violations).add(ValidationMessages.PROPERTY_REQUIRED_MISSING, "owner",
+          "system-template");
+    }
+
+    @Test
+    @DisplayName("Should skip optional property with a null value")
+    void shouldSkipOptionalNullValue() {
+      var template = template("system-template");
+      var definition = new PropertyDefinition(UUID.randomUUID(), "description", "Description",
+          PropertyType.STRING, false, null);
+      var property = new Property(UUID.randomUUID(), "description", null);
+      var violations = mock(Violations.class);
+
+      service.validatePropertiesAgainstTemplate(template, List.of(definition),
+          Map.of("description", property), violations);
+
+      verifyNoInteractions(violations);
+    }
+  }
+
+  @Nested
+  @DisplayName("Mapping property validation")
+  class MappingPropertyValidationTests {
+
+    @Test
+    void shouldAcceptNullOrEmptyMappedPropertyNames() {
+      var template = template("system-template");
+
+      assertDoesNotThrow(() -> service.validateMappingPropertiesAgainstTemplate(template, null));
+      assertDoesNotThrow(
+          () -> service.validateMappingPropertiesAgainstTemplate(template, List.of()));
+    }
+
+    @Test
+    void shouldRejectMappedPropertyNameNotDefinedInTemplate() {
+
+      var template = templateWithDefinitions("system-template",
+          propertyDefinition("owner", PropertyType.STRING, null));
+      var mappedProperties = List.of("unknown");
+
+      assertThrows(PropertyNameNotFoundEntityTemplatePropertiesException.class,
+          () -> service.validateMappingPropertiesAgainstTemplate(template, mappedProperties));
+
+    }
+
+    @Test
+    void shouldAcceptMappedOptionalProperties() {
+      var template = templateWithDefinitions("system-template", new PropertyDefinition(
+          UUID.randomUUID(), "description", "Description", PropertyType.STRING, false, null));
+
+      assertDoesNotThrow(
+          () -> service.validateMappingPropertiesAgainstTemplate(template, List.of("description")));
+    }
+
+    @Test
+    void shouldRejectWhenRequiredPropertyIsNotMapped() {
+      var template = templateWithDefinitions("system-template",
+          propertyDefinition("owner", PropertyType.STRING, null));
+
+      assertThrows(EntityDynamicMappingHasNoPropertiesException.class,
+          () -> service.validateMappingPropertiesAgainstTemplate(template, List.of()));
+    }
+
+    @Test
+    void shouldTreatNullDefinitionsAndMappedNamesAsEmpty() {
+      var template = new EntityTemplate(UUID.randomUUID(), "system-template", "System", "desc",
+          null, List.of());
+
+      assertDoesNotThrow(() -> service.validateMappingPropertiesAgainstTemplate(template, null));
     }
   }
 
@@ -504,5 +638,16 @@ class PropertyValidationServiceTest {
   private PropertyDefinition propertyDefinition(String name, PropertyType type,
       PropertyRules rules) {
     return new PropertyDefinition(null, name, "description", type, true, rules);
+  }
+
+  private static EntityTemplate template(String identifier) {
+    return new EntityTemplate(UUID.randomUUID(), identifier, "System", "desc", List.of(),
+        List.of());
+  }
+
+  private static EntityTemplate templateWithDefinitions(String identifier,
+      PropertyDefinition... definitions) {
+    return new EntityTemplate(UUID.randomUUID(), identifier, "System", "desc", List.of(definitions),
+        List.of());
   }
 }
