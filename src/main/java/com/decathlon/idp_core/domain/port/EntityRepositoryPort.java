@@ -79,6 +79,9 @@ public interface EntityRepositoryPort {
 
   void deleteByTemplateIdentifierAndIdentifier(String templateIdentifier, String entityIdentifier);
 
+  List<Entity> findAllByTemplateIdentifierAndIdentifierIn(String templateIdentifier,
+      List<String> identifiers);
+
   /// Deletes all entities that belong to the given template.
   ///
   /// **Business contract:** Called as part of the template cascade-delete flow
