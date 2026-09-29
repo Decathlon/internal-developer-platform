@@ -29,6 +29,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.decathlon.idp_core.domain.model.entity.EntityAuditInfo;
 import com.decathlon.idp_core.domain.service.entity.EntityAuditService;
+import com.decathlon.idp_core.infrastructure.adapters.api.auth.AuthorizedResource;
 import com.decathlon.idp_core.infrastructure.adapters.api.dto.out.entity.audit.EntityAuditDtoOut;
 import com.decathlon.idp_core.infrastructure.adapters.api.mapper.entity.EntityAuditDtoOutMapper;
 import com.decathlon.idp_core.infrastructure.adapters.common.model.ErrorResponse;
@@ -53,6 +54,7 @@ import lombok.RequiredArgsConstructor;
 /// keeping the other controller focused on CRUD operations. This follows the Single
 /// Responsibility Principle.
 @RestController
+@AuthorizedResource("audit")
 @RequestMapping("/api/v1/audit/")
 @Tag(name = "Audit", description = "Operations related to audit history")
 @Validated

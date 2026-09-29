@@ -51,7 +51,8 @@ class GlobalAuthorizationFilterTest {
       GlobalAuthorizationService.class);
   private final PrincipalInfo principal = new PrincipalInfo("platform-user", PrincipalKind.HUMAN,
       "Platform User", Map.of(), List.of());
-  private final AuthorizationRequestFactory requestFactory = new AuthorizationRequestFactory();
+  private final AuthorizationRequestFactory requestFactory = new AuthorizationRequestFactory(
+      TestHandlerMappings.controllers());
   private GlobalAuthorizationFilter filter;
   private Authentication authentication;
 

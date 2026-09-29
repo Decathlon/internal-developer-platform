@@ -1,11 +1,17 @@
 package com.decathlon.idp_core.infrastructure.adapters.api.auth;
 
-import java.util.Arrays;
+import java.util.Map;
 import java.util.Optional;
 
 import jakarta.servlet.http.HttpServletRequest;
 
+import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.context.annotation.Lazy;
+import org.springframework.core.annotation.AnnotatedElementUtils;
 import org.springframework.stereotype.Component;
+import org.springframework.web.method.HandlerMethod;
+import org.springframework.web.servlet.HandlerExecutionChain;
+import org.springframework.web.servlet.HandlerMapping;
 
 import com.decathlon.idp_core.domain.model.authorization.AuthorizationAction;
 import com.decathlon.idp_core.domain.model.authorization.AuthorizationRequest;
@@ -13,24 +19,60 @@ import com.decathlon.idp_core.domain.model.authorization.AuthorizationResource;
 import com.decathlon.idp_core.domain.model.entity.Entity;
 import com.decathlon.idp_core.domain.model.principal.PrincipalInfo;
 
+import lombok.extern.slf4j.Slf4j;
+
 /// Maps servlet requests to the framework-independent authorization context.
+///
+/// The resource is read from [AuthorizedResource] on the handler resolved by Spring MVC and
+/// its identifiers from the matched URI template variables, so no URL is parsed manually.
+@Slf4j
 @Component
 public class AuthorizationRequestFactory {
 
-  private static final String ENTITY_SEARCH_PATH = "/api/v1/entities/search";
-  private static final String ENTITY_DYNAMIC_MAPPING_DRY_RUN_PATH = "/api/v1/entity_dynamic_mappings/dry-run";
+  private static final String UNKNOWN_RESOURCE = "unknown";
+  private static final String TEMPLATE_IDENTIFIER = "templateIdentifier";
+  private static final String ENTITY_IDENTIFIER = "entityIdentifier";
+  private static final String IDENTIFIER = "identifier";
+
+  private final HandlerMapping handlerMapping;
+
+  /// Creates a factory backed by the MVC handler mapping.
+  ///
+  /// @param handlerMapping the mapping used to resolve the controller method of a
+  /// request
+  public AuthorizationRequestFactory(
+      @Lazy @Qualifier("requestMappingHandlerMapping") HandlerMapping handlerMapping) {
+    this.handlerMapping = handlerMapping;
+  }
 
   /// Creates an authorization request from the principal and HTTP request.
   public AuthorizationRequest create(HttpServletRequest request, PrincipalInfo principal,
       Optional<Entity> principalEntity) {
-    String path = normalizedPath(request);
+    Optional<HandlerMethod> handler = resolveHandler(request);
+    boolean readOnly = handler.map(this::isReadOnly).orElse(false);
     return new AuthorizationRequest(principal, principalEntity,
-        resolveAction(request.getMethod(), path), resolveResource(path));
+        resolveAction(request.getMethod(), readOnly), resolveResource(request, handler));
   }
 
-  private AuthorizationAction resolveAction(String method, String path) {
-    if ("POST".equals(method)
-        && (ENTITY_SEARCH_PATH.equals(path) || ENTITY_DYNAMIC_MAPPING_DRY_RUN_PATH.equals(path))) {
+  private Optional<HandlerMethod> resolveHandler(HttpServletRequest request) {
+    try {
+      return Optional.ofNullable(handlerMapping.getHandler(request))
+          .map(HandlerExecutionChain::getHandler).filter(HandlerMethod.class::isInstance)
+          .map(HandlerMethod.class::cast);
+    } catch (Exception exception) {
+      log.warn("Unable to resolve handler for {} {}", request.getMethod(), request.getRequestURI(),
+          exception);
+      return Optional.empty();
+    }
+  }
+
+  private boolean isReadOnly(HandlerMethod handler) {
+    AuthorizedResource annotation = handler.getMethodAnnotation(AuthorizedResource.class);
+    return annotation != null && annotation.readOnly();
+  }
+
+  private AuthorizationAction resolveAction(String method, boolean readOnly) {
+    if ("POST".equals(method) && readOnly) {
       return AuthorizationAction.READ;
     }
 
@@ -43,56 +85,30 @@ public class AuthorizationRequestFactory {
     };
   }
 
-  private AuthorizationResource resolveResource(String path) {
-    if (ENTITY_SEARCH_PATH.equals(path)) {
-      return new AuthorizationResource("entity_search", Optional.empty(), Optional.empty());
-    }
-    if (ENTITY_DYNAMIC_MAPPING_DRY_RUN_PATH.equals(path)) {
-      return new AuthorizationResource("entity_dynamic_mapping_dry_run", Optional.empty(),
-          Optional.empty());
-    }
-
-    String[] segments = Arrays.stream(path.split("/")).filter(segment -> !segment.isBlank())
-        .toArray(String[]::new);
-    if (segments.length < 3 || !"api".equals(segments[0]) || !"v1".equals(segments[1])) {
-      return new AuthorizationResource("unknown", Optional.empty(), Optional.empty());
-    }
-
-    String resourceRoot = segments[2];
-    if ("entities".equals(resourceRoot)) {
-      return entityResource(segments);
-    }
-
-    if ("inbound_webhooks".equals(resourceRoot)) {
-      return new AuthorizationResource(AuthorizationResource.INBOUND_WEBHOOK_CONFIGURATION,
-          identifierAt(segments, 3), Optional.empty());
-    }
-
-    String type = switch (resourceRoot) {
-      case "entity-templates" -> "entity_template";
-      case "entity_dynamic_mappings" -> "entity_dynamic_mapping";
-      case "audit" -> "audit";
-      default -> "catalog_resource";
-    };
-    return new AuthorizationResource(type, identifierAt(segments, 3), Optional.empty());
+  private AuthorizationResource resolveResource(HttpServletRequest request,
+      Optional<HandlerMethod> handler) {
+    String type = handler.flatMap(this::resourceType).orElse(UNKNOWN_RESOURCE);
+    Map<String, String> variables = pathVariables(request);
+    Optional<String> identifier = Optional.ofNullable(variables.get(ENTITY_IDENTIFIER))
+        .or(() -> Optional.ofNullable(variables.get(IDENTIFIER)));
+    return new AuthorizationResource(type, identifier,
+        Optional.ofNullable(variables.get(TEMPLATE_IDENTIFIER)));
   }
 
-  private AuthorizationResource entityResource(String[] segments) {
-    if (segments.length >= 5) {
-      return new AuthorizationResource("entity", Optional.of(segments[4]),
-          Optional.of(segments[3]));
+  private Optional<String> resourceType(HandlerMethod handler) {
+    AuthorizedResource onMethod = handler.getMethodAnnotation(AuthorizedResource.class);
+    if (onMethod != null && !onMethod.value().isBlank()) {
+      return Optional.of(onMethod.value());
     }
-    return new AuthorizationResource("entity", Optional.empty(), identifierAt(segments, 3));
+    return Optional
+        .ofNullable(AnnotatedElementUtils.findMergedAnnotation(handler.getBeanType(),
+            AuthorizedResource.class))
+        .map(AuthorizedResource::value).filter(value -> !value.isBlank());
   }
 
-  private Optional<String> identifierAt(String[] segments, int index) {
-    return segments.length > index ? Optional.of(segments[index]) : Optional.empty();
-  }
-
-  private String normalizedPath(HttpServletRequest request) {
-    String requestUri = request.getRequestURI();
-    String contextPath = request.getContextPath();
-    String path = requestUri.substring(contextPath.length());
-    return path.endsWith("/") && path.length() > 1 ? path.substring(0, path.length() - 1) : path;
+  @SuppressWarnings("unchecked")
+  private Map<String, String> pathVariables(HttpServletRequest request) {
+    Object variables = request.getAttribute(HandlerMapping.URI_TEMPLATE_VARIABLES_ATTRIBUTE);
+    return variables instanceof Map<?, ?> map ? (Map<String, String>) map : Map.of();
   }
 }

@@ -16,7 +16,8 @@ import com.decathlon.idp_core.domain.model.principal.PrincipalKind;
 
 class AuthorizationRequestFactoryTest {
 
-  private final AuthorizationRequestFactory factory = new AuthorizationRequestFactory();
+  private final AuthorizationRequestFactory factory = new AuthorizationRequestFactory(
+      TestHandlerMappings.controllers());
   private final PrincipalInfo principal = new PrincipalInfo("subject-123", PrincipalKind.HUMAN,
       "User", Map.of(), List.of());
 
@@ -53,6 +54,32 @@ class AuthorizationRequestFactoryTest {
     assertThat(authorizationRequest.resource().type()).isEqualTo("entity");
     assertThat(authorizationRequest.resource().identifier()).contains("user-123");
     assertThat(authorizationRequest.resource().parentIdentifier()).contains("principal");
+  }
+
+  @Test
+  void shouldMapAuditPathVariablesByName() {
+    var authorizationRequest = create("GET", "/api/v1/audit/entities/principal/user-123");
+
+    assertThat(authorizationRequest.resource().type()).isEqualTo("audit");
+    assertThat(authorizationRequest.resource().identifier()).contains("user-123");
+    assertThat(authorizationRequest.resource().parentIdentifier()).contains("principal");
+  }
+
+  @Test
+  void shouldMapTemplateIdentifier() {
+    var authorizationRequest = create("PUT", "/api/v1/entity-templates/service");
+
+    assertThat(authorizationRequest.action()).isEqualTo(AuthorizationAction.UPDATE);
+    assertThat(authorizationRequest.resource().type()).isEqualTo("entity_template");
+    assertThat(authorizationRequest.resource().identifier()).contains("service");
+  }
+
+  @Test
+  void shouldUseUnknownResourceWhenNoHandlerMatches() {
+    var authorizationRequest = create("GET", "/actuator/health");
+
+    assertThat(authorizationRequest.action()).isEqualTo(AuthorizationAction.READ);
+    assertThat(authorizationRequest.resource().type()).isEqualTo("unknown");
   }
 
   @Test
