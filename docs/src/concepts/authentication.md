@@ -206,12 +206,12 @@ when dealing with custom claims or missing data.
 The extraction strategy doesn't just rename claims; it applies specific fallback rules if a mapped claim is missing from
 the token:
 
-| Principal field    | Mapping key          | Fallback when the mapped claim is absent |
-|--------------------|----------------------|------------------------------------------|
+| Principal field    | Mapping key                  | Fallback when the mapped claim is absent        |
+|--------------------|------------------------------|-------------------------------------------------|
 | `identifier`       | `principal-identifier-claim` | Request is rejected; the identifier is required |
-| `name`             | `name`               | `preferred_username`, then `identifier` |
-| `attributes.email` | `email`              | Attribute omitted                        |
-| `groups`           | `groups`             | Empty list                               |
+| `name`             | `name`                       | `preferred_username`, then `identifier`         |
+| `attributes.email` | `email`                      | Attribute omitted                               |
+| `groups`           | `groups`                     | Empty list                                      |
 
 ### Example: UUID Identifier and Subject as Display Name
 
@@ -249,7 +249,7 @@ For a token classified as human, the extracted `PrincipalInfo` contains:
 
 > [!WARNING]
 > Changing the identifier mapping can provision a separate catalog principal.
-> Choose a stable claim before onboarding. IDP-Core does not automatically rename,
+> Choose a stable claim. IDP-Core does not automatically rename,
 > merge, or look up previously provisioned principals when this setting changes.
 
 ## Service Account Detection
@@ -458,7 +458,7 @@ unimplemented mode is configured. Use `GLOBAL` until those modes are implemented
 The `app.security.authentication.api-key` chain is currently only a conditional security-chain placeholder; it does
 not validate an API-key credential or establish a service-account principal. Do not enable it as an authentication
 mechanism until that authenticator is implemented. Inbound webhook delivery uses the separate connector-level security
-validators described in [Webhook Security](webhooks.md#security-strategies).
+validation described in [Webhook Security](webhooks.md#security-strategies).
 
 ### Enabling API Key Authentication
 
