@@ -186,6 +186,17 @@ class InboundWebhookManagementControllerTest extends AbstractIntegrationTest {
     }
 
     @Test
+    @WithMockUser(username = "standard-human-webhook-creator")
+    @DisplayName("Should forbid standard humans from creating webhook configurations")
+    void postWebhook_403_for_standard_human() throws Exception {
+      mockMvc
+          .perform(MockMvcRequestBuilders.post(WEBHOOK_PATH).contentType(APPLICATION_JSON)
+              .accept(APPLICATION_JSON).with(csrf())
+              .content(getJsonTestFileContent(JSON_PATH + "postWebhook_201.json")))
+          .andExpect(status().isForbidden());
+    }
+
+    @Test
     @WithMockUser
     @DisplayName("Should create connector and return 201")
     void postWebhook_201() throws Exception {

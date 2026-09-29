@@ -30,9 +30,12 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 
 import com.decathlon.idp_core.domain.exception.authorization.PrincipalNotAuthorizedException;
+import com.decathlon.idp_core.domain.model.authorization.AuthorizationAction;
 import com.decathlon.idp_core.domain.model.authorization.AuthorizationMode;
 import com.decathlon.idp_core.domain.model.authorization.AuthorizationPolicy;
 import com.decathlon.idp_core.domain.model.authorization.AuthorizationRequest;
+import com.decathlon.idp_core.domain.model.authorization.AuthorizationResource;
+import com.decathlon.idp_core.domain.model.entity.Entity;
 import com.decathlon.idp_core.domain.model.principal.PrincipalInfo;
 import com.decathlon.idp_core.domain.model.principal.PrincipalKind;
 import com.decathlon.idp_core.domain.service.authorization.GlobalAuthorizationService;
@@ -48,6 +51,7 @@ class GlobalAuthorizationFilterTest {
       GlobalAuthorizationService.class);
   private final PrincipalInfo principal = new PrincipalInfo("platform-user", PrincipalKind.HUMAN,
       "Platform User", Map.of(), List.of());
+  private final AuthorizationRequestFactory requestFactory = new AuthorizationRequestFactory();
   private GlobalAuthorizationFilter filter;
   private Authentication authentication;
 
@@ -55,7 +59,7 @@ class GlobalAuthorizationFilterTest {
   void setUp() {
     var policy = new AuthorizationPolicy(AuthorizationMode.GLOBAL, Set.of());
     filter = new GlobalAuthorizationFilter(principalExtractor, provisioningService,
-        authorizationService, policy);
+        authorizationService, policy, requestFactory);
     authentication = mock(Authentication.class);
     when(authentication.isAuthenticated()).thenReturn(true);
     SecurityContextHolder.getContext().setAuthentication(authentication);
@@ -81,8 +85,55 @@ class GlobalAuthorizationFilterTest {
 
     var requestCaptor = org.mockito.ArgumentCaptor.forClass(AuthorizationRequest.class);
     verify(authorizationService).authorize(requestCaptor.capture(), any(AuthorizationPolicy.class));
-    assertThat(requestCaptor.getValue().readOperation()).isTrue();
+    assertThat(requestCaptor.getValue().action()).isEqualTo(AuthorizationAction.READ);
     assertThat(response.getStatus()).isEqualTo(200);
+  }
+
+  @Test
+  void shouldClassifyPostEntitySearchAsRead() throws ServletException, IOException {
+    var request = new MockHttpServletRequest("POST", "/api/v1/entities/search");
+    var response = new MockHttpServletResponse();
+
+    filter.doFilter(request, response, (req, res) -> {
+    });
+
+    var requestCaptor = org.mockito.ArgumentCaptor.forClass(AuthorizationRequest.class);
+    verify(authorizationService).authorize(requestCaptor.capture(), any(AuthorizationPolicy.class));
+    assertThat(requestCaptor.getValue().action()).isEqualTo(AuthorizationAction.READ);
+  }
+
+  @Test
+  void shouldClassifyWebhookCreationAsPlatformAdminOnlyResource()
+      throws ServletException, IOException {
+    var request = new MockHttpServletRequest("POST", "/api/v1/inbound_webhooks");
+    var response = new MockHttpServletResponse();
+
+    filter.doFilter(request, response, (req, res) -> {
+    });
+
+    var requestCaptor = org.mockito.ArgumentCaptor.forClass(AuthorizationRequest.class);
+    verify(authorizationService).authorize(requestCaptor.capture(), any(AuthorizationPolicy.class));
+    assertThat(requestCaptor.getValue().action()).isEqualTo(AuthorizationAction.CREATE);
+    assertThat(requestCaptor.getValue().resource().type())
+        .isEqualTo(AuthorizationResource.INBOUND_WEBHOOK_CONFIGURATION);
+  }
+
+  @Test
+  void shouldReusePrincipalResolvedByJitProvisioning() throws ServletException, IOException {
+    Entity principalEntity = new Entity(null, "principal", "Platform User", "platform-user",
+        List.of(), List.of());
+    var request = new MockHttpServletRequest("GET", "/api/v1/entities");
+    request.setAttribute(ProvisionedPrincipalContext.REQUEST_ATTRIBUTE,
+        new ProvisionedPrincipalContext(principal, Optional.of(principalEntity)));
+
+    filter.doFilter(request, new MockHttpServletResponse(), (req, res) -> {
+    });
+
+    verify(principalExtractor, never()).extractPrincipalInfo(any());
+    verify(provisioningService, never()).getPrincipal(any());
+    var requestCaptor = org.mockito.ArgumentCaptor.forClass(AuthorizationRequest.class);
+    verify(authorizationService).authorize(requestCaptor.capture(), any(AuthorizationPolicy.class));
+    assertThat(requestCaptor.getValue().principalEntity()).contains(principalEntity);
   }
 
   @Test

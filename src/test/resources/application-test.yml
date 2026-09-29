@@ -29,8 +29,6 @@ spring:
 # Added App Security configuration
 app:
   security:
-    roles:
-      baseline-role: "*"
     authentication:
       jwt:
         enabled: true

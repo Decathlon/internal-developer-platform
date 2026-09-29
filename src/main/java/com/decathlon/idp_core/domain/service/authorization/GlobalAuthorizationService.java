@@ -3,9 +3,11 @@ package com.decathlon.idp_core.domain.service.authorization;
 import org.springframework.stereotype.Service;
 
 import com.decathlon.idp_core.domain.exception.authorization.PrincipalNotAuthorizedException;
+import com.decathlon.idp_core.domain.model.authorization.AuthorizationAction;
 import com.decathlon.idp_core.domain.model.authorization.AuthorizationMode;
 import com.decathlon.idp_core.domain.model.authorization.AuthorizationPolicy;
 import com.decathlon.idp_core.domain.model.authorization.AuthorizationRequest;
+import com.decathlon.idp_core.domain.model.authorization.AuthorizationResource;
 import com.decathlon.idp_core.domain.model.entity.Entity;
 import com.decathlon.idp_core.domain.model.principal.PrincipalKind;
 
@@ -24,7 +26,8 @@ public class GlobalAuthorizationService {
   /// @throws PrincipalNotAuthorizedException when the request is not permitted
   public void authorize(AuthorizationRequest request, AuthorizationPolicy policy) {
     String identifier = request.principal().identifier();
-    if (policy.mode() != AuthorizationMode.GLOBAL) {
+    if (policy.mode() != AuthorizationMode.GLOBAL
+        || request.action() == AuthorizationAction.UNSUPPORTED) {
       throw new PrincipalNotAuthorizedException(identifier);
     }
 
@@ -36,15 +39,21 @@ public class GlobalAuthorizationService {
       return;
     }
 
-    if (request.principal().kind() == PrincipalKind.SERVICE_ACCOUNT) {
+    if (request.principal().kind() == PrincipalKind.SERVICE_ACCOUNT
+        && !isPlatformAdminOnlyCreation(request)) {
       return;
     }
 
-    if (request.readOperation()) {
+    if (request.action() == AuthorizationAction.READ) {
       return;
     }
 
     throw new PrincipalNotAuthorizedException(identifier);
+  }
+
+  private boolean isPlatformAdminOnlyCreation(AuthorizationRequest request) {
+    return request.action() == AuthorizationAction.CREATE
+        && AuthorizationResource.INBOUND_WEBHOOK_CONFIGURATION.equals(request.resource().type());
   }
 
   private boolean isCatalogAdministrator(Entity principalEntity) {

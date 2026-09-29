@@ -2,7 +2,11 @@ package com.decathlon.idp_core.infrastructure.adapters.api.auth;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+
+import java.util.List;
+import java.util.Map;
 
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -12,19 +16,21 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.authority.AuthorityUtils;
 import org.springframework.security.core.context.SecurityContext;
 import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.security.oauth2.core.oidc.user.OidcUser;
-import org.springframework.security.oauth2.core.user.OAuth2User;
-import org.springframework.security.oauth2.jwt.Jwt;
-import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationToken;
+
+import com.decathlon.idp_core.domain.model.principal.PrincipalInfo;
+import com.decathlon.idp_core.domain.model.principal.PrincipalKind;
+import com.decathlon.idp_core.infrastructure.adapters.api.principal.PrincipalExtractor;
 
 class UnifiedUserProviderTest {
 
   private UnifiedUserProvider unifiedUserProvider;
   private SecurityContext securityContext;
+  private PrincipalExtractor principalExtractor;
 
   @BeforeEach
   void setUp() {
-    unifiedUserProvider = new UnifiedUserProvider();
+    principalExtractor = mock(PrincipalExtractor.class);
+    unifiedUserProvider = new UnifiedUserProvider(principalExtractor);
     securityContext = mock(SecurityContext.class);
     SecurityContextHolder.setContext(securityContext);
   }
@@ -63,84 +69,15 @@ class UnifiedUserProviderTest {
   }
 
   @Test
-  void shouldReturnSubjectWhenJwtAuthentication() {
-    JwtAuthenticationToken jwtAuth = mock(JwtAuthenticationToken.class);
-    Jwt jwt = mock(Jwt.class);
-
-    when(jwtAuth.isAuthenticated()).thenReturn(true);
-    when(jwtAuth.getToken()).thenReturn(jwt);
-    when(jwt.getSubject()).thenReturn("jwt-user-id");
-    when(securityContext.getAuthentication()).thenReturn(jwtAuth);
-
-    assertThat(unifiedUserProvider.getAuthId()).isEqualTo("jwt-user-id");
-  }
-
-  @Test
-  void shouldReturnSubjectWhenOidcUser() {
-    Authentication auth = mock(Authentication.class);
-    OidcUser oidcUser = mock(OidcUser.class);
-
-    when(auth.isAuthenticated()).thenReturn(true);
-    when(auth.getPrincipal()).thenReturn(oidcUser);
-    when(oidcUser.getSubject()).thenReturn("oidc-user-id");
-    when(securityContext.getAuthentication()).thenReturn(auth);
-
-    assertThat(unifiedUserProvider.getAuthId()).isEqualTo("oidc-user-id");
-  }
-
-  @Test
-  void shouldReturnSubAttributeWhenOAuth2User() {
-    Authentication auth = mock(Authentication.class);
-    OAuth2User oauth2User = mock(OAuth2User.class);
-
-    when(auth.isAuthenticated()).thenReturn(true);
-    when(auth.getPrincipal()).thenReturn(oauth2User);
-    when(oauth2User.getAttribute("sub")).thenReturn("oauth2-sub-id");
-    when(securityContext.getAuthentication()).thenReturn(auth);
-
-    assertThat(unifiedUserProvider.getAuthId()).isEqualTo("oauth2-sub-id");
-  }
-
-  @Test
-  void shouldReturnIdAttributeWhenOAuth2UserHasNoSub() {
-    Authentication auth = mock(Authentication.class);
-    OAuth2User oauth2User = mock(OAuth2User.class);
-
-    when(auth.isAuthenticated()).thenReturn(true);
-    when(auth.getPrincipal()).thenReturn(oauth2User);
-    when(oauth2User.getAttribute("sub")).thenReturn(null);
-    when(oauth2User.getAttribute("id")).thenReturn("oauth2-id-attribute");
-    when(securityContext.getAuthentication()).thenReturn(auth);
-
-    assertThat(unifiedUserProvider.getAuthId()).isEqualTo("oauth2-id-attribute");
-  }
-
-  @Test
-  void shouldReturnFallbackNameWhenOAuth2UserHasNoSubOrId() {
-    Authentication auth = mock(Authentication.class);
-    OAuth2User oauth2User = mock(OAuth2User.class);
-
-    when(auth.isAuthenticated()).thenReturn(true);
-    when(auth.getName()).thenReturn("fallback-oauth2-name");
-    when(auth.getPrincipal()).thenReturn(oauth2User);
-    when(oauth2User.getAttribute("sub")).thenReturn(null);
-    when(oauth2User.getAttribute("id")).thenReturn(null);
-    when(securityContext.getAuthentication()).thenReturn(auth);
-
-    assertThat(unifiedUserProvider.getAuthId()).isEqualTo("fallback-oauth2-name");
-  }
-
-  @Test
-  void shouldReturnNameForBasicOrOtherAuthentication() {
+  void shouldReturnIdentifierExtractedForAuthenticatedPrincipal() {
     Authentication auth = mock(Authentication.class);
 
     when(auth.isAuthenticated()).thenReturn(true);
-    when(auth.getName()).thenReturn("basic-auth-user");
-    when(auth.getPrincipal()).thenReturn("Standard String Principal"); // N'est ni OAuth2User ni
-                                                                       // OidcUser
     when(securityContext.getAuthentication()).thenReturn(auth);
+    when(principalExtractor.extractPrincipalInfo(auth)).thenReturn(principal("stable-id"));
 
-    assertThat(unifiedUserProvider.getAuthId()).isEqualTo("basic-auth-user");
+    assertThat(unifiedUserProvider.getAuthId()).isEqualTo("stable-id");
+    verify(principalExtractor).extractPrincipalInfo(auth);
   }
 
   @Test
@@ -152,5 +89,9 @@ class UnifiedUserProviderTest {
     when(securityContext.getAuthentication()).thenReturn(auth);
 
     assertThat(unifiedUserProvider.getName()).isEqualTo("expected-user-name");
+  }
+
+  private PrincipalInfo principal(String identifier) {
+    return new PrincipalInfo(identifier, PrincipalKind.HUMAN, identifier, Map.of(), List.of());
   }
 }

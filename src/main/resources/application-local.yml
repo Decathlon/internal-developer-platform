@@ -48,8 +48,8 @@ app:
         enabled: true
       mock:
         enabled: false
+      principal-identifier-claim: id
       user-claim-mappings:
-        sub: id
         preferred_username: login
         name: name
         email: email

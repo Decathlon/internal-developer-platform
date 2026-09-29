@@ -1,6 +1,7 @@
 package com.decathlon.idp_core;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -14,7 +15,6 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.mock.web.MockHttpServletRequest;
-import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationConverter;
 import org.springframework.web.cors.CorsConfiguration;
@@ -22,7 +22,6 @@ import org.springframework.web.cors.CorsConfigurationSource;
 
 import com.decathlon.idp_core.infrastructure.adapters.api.configuration.CorsProperties;
 import com.decathlon.idp_core.infrastructure.adapters.api.configuration.SecurityConfiguration;
-import com.decathlon.idp_core.infrastructure.adapters.api.configuration.SecurityRoleProperties;
 
 @ExtendWith(MockitoExtension.class)
 class SecurityConfigurationTest {
@@ -30,30 +29,22 @@ class SecurityConfigurationTest {
   @Mock
   private CorsProperties corsProperties;
 
-  @Mock
-  private SecurityRoleProperties securityRoleProperties;
-
   @InjectMocks
   private SecurityConfiguration securityConfiguration;
 
   @Test
-  void jwtAuthenticationConverter_shouldAssignBaselineRole() {
-    // Arrange
-    when(securityRoleProperties.baselineRole()).thenReturn("ROLE_SUPER_ADMIN");
-
+  void jwtAuthenticationConverter_shouldNotAssignUniversalBaselineAuthority() {
     Jwt jwt = Jwt.withTokenValue("mock-jwt-token").header("alg", "none").claim("sub", "user-id-123")
-        .build();
+        .claim("scope", "read write").build();
 
-    // Act
     JwtAuthenticationConverter converter = securityConfiguration.jwtAuthenticationConverter();
     var authenticationToken = converter.convert(jwt);
 
-    // Assert
     assertNotNull(authenticationToken, "Authentication token should not be null");
-    assertTrue(
-        authenticationToken.getAuthorities()
-            .contains(new SimpleGrantedAuthority("ROLE_SUPER_ADMIN")),
-        "The configured baseline role must be assigned to the principal");
+    assertTrue(authenticationToken.getAuthorities().stream()
+        .anyMatch(authority -> authority.getAuthority().equals("SCOPE_read")));
+    assertFalse(authenticationToken.getAuthorities().stream()
+        .anyMatch(authority -> authority.getAuthority().equals("*")));
   }
 
   @Test

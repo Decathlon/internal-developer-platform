@@ -18,6 +18,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 
 import com.decathlon.idp_core.domain.model.entity.Entity;
 import com.decathlon.idp_core.domain.model.entity.Property;
+import com.decathlon.idp_core.domain.model.entity.Relation;
 import com.decathlon.idp_core.domain.model.principal.PrincipalInfo;
 import com.decathlon.idp_core.domain.model.principal.PrincipalKind;
 import com.decathlon.idp_core.domain.port.EntityRepositoryPort;
