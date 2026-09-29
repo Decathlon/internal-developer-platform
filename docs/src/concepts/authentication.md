@@ -9,7 +9,7 @@ custom authentication methods.
 
 ## Architecture Overview
 
-The authentication system consists of four main components working together:
+The authentication system consists of five main components working together:
 
 ```mermaid
 graph LR
@@ -17,14 +17,16 @@ graph LR
     B --> C["Authentication Filter<br/>JWT/API Key/Mock"]
     C --> D["PrincipalExtractor<br/>Strategy Pattern"]
     D --> E["JitProvisioningFilter<br/>Auto-Provisioning"]
-    E --> F["Domain Service<br/>Authorization"]
-    F --> G["Controller<br/>Business Logic"]
+  E --> F["GlobalAuthorizationFilter<br/>Global Policy"]
+  F --> G["Domain Service<br/>Authorization"]
+  G --> H["Controller<br/>Business Logic"]
 ```
 
 - **Security Filter Chain**: Routes requests through configured authentication mechanisms in order
 - **Authentication Filters**: Extract credentials (JWT tokens, API keys, etc.) and create `Authentication` objects
 - **Principal Extractor**: Converts authentication tokens into domain `PrincipalInfo` objects
 - **JIT Provisioning Filter**: Automatically creates principals in the database on first authentication
+- **Global Authorization Filter**: Enforces the global authorization policy in JWT and mock chains
 - **Domain Services**: Enforce business rules and authorization checks
 
 ## Filter Chain Architecture
@@ -95,7 +97,8 @@ When JWT authentication is enabled, only these two pieces of information are
 mandatory:
 
 - spring.security.oauth2.resourceserver.jwt.jwk-set-uri required for signature validation.
-- A valid JWT signature and standard sub claim, sub is effectively required for JIT provisioning because it is the final identifier fallback.
+- A valid JWT signature and standard sub claim, sub is effectively required for JIT provisioning because it is the final
+  identifier fallback.
 
 When `app.security.authentication.jwt.enabled` is `false`, the JWT decoder and
 JWT filter chain are not created, so `OAUTH_JWK_URI` is not required. Swagger
@@ -323,8 +326,8 @@ If none of these conditions is met, the token is classified as a `HUMAN_USER`.
 - Will be deprecated in future versions
 
 > [!WARNING]
-> Migrate from legacy to strict mode is really encouraged for the systems meeting the prerequisites. Legacy mode is only recommended for existing systems
-that cannot immediately reconfigure their Identity Provider configuration.
+> Migrate from legacy to strict mode is really encouraged for the systems meeting the prerequisites. Legacy mode is only
+recommended for existing systems
 
 ## Principal Extraction
 
@@ -403,6 +406,33 @@ app:
 > [!IMPORTANT]
 > Keep the JIT excluded paths in sync with the `PublicFilterChainConfig` permission mechanism. If you add a public path
 to one, add it to both.
+
+## Global Authorization
+
+The JWT and mock filter chains apply a global authorization policy after JIT provisioning. The API key chain does not
+use this policy. In `GLOBAL` mode, the service evaluates requests in this order:
+
+| Order | Condition                                                            | Result          |
+|-------|----------------------------------------------------------------------|-----------------|
+| 1     | The principal identifier matches a configured break-glass identifier | Allow           |
+| 2     | The principal catalog entity has `is_admin: true`                    | Allow           |
+| 3     | The principal is a `SERVICE_ACCOUNT`                                 | Allow           |
+| 4     | The request uses `GET`, `HEAD`, or `OPTIONS`                         | Allow           |
+| 5     | None of the conditions above match                                   | Return HTTP 403 |
+
+The principal identifier uses `preferred_username` when available and falls back to the JWT `sub` claim. Configure one
+or both break-glass identifiers as environment variables:
+
+```yaml
+app:
+  security:
+    authorization:
+      mode: GLOBAL
+      global-principal-identifiers: ${IDP_SUPER_ADMIN_UUID:},${IDP_PLATFORM_ADMIN_UUID:}
+```
+
+The `RBAC` and `CATALOG` modes are reserved for future authorization policies. Requests fail closed when either
+unimplemented mode is configured. Use `GLOBAL` until those modes are implemented.
 
 ## API Key Authentication
 

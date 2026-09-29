@@ -118,6 +118,10 @@ app:
   # Base URL of this service, used to build self-referencing links.
   idp-core-prefix-url: ${IDP_CORE_PREFIX_URL}
   security:
+    authorization:
+      mode: GLOBAL
+      # Comma-separated break-glass identifiers; each value may be supplied independently.
+      global-principal-identifiers: ${IDP_SUPER_ADMIN_UUID:},${IDP_PLATFORM_ADMIN_UUID:}
     roles:
       # Baseline role assigned to all authenticated principals during V1 phase.
       baseline-role: ${APP_SECURITY_ROLES_BASELINE_ROLE:*}

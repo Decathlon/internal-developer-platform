@@ -31,6 +31,7 @@ import org.springframework.security.web.authentication.AnonymousAuthenticationFi
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import com.decathlon.idp_core.domain.exception.mock.MockSecurityConfigurationException;
+import com.decathlon.idp_core.infrastructure.adapters.api.auth.GlobalAuthorizationFilter;
 import com.decathlon.idp_core.infrastructure.adapters.api.auth.JitProvisioningFilter;
 
 /// Local mock security configuration that mirrors OAuth2/JWT behavior for local development.
@@ -51,9 +52,12 @@ import com.decathlon.idp_core.infrastructure.adapters.api.auth.JitProvisioningFi
 public class MockFilterChainConfig {
 
   private final JitProvisioningFilter jitProvisioningFilter;
+  private final GlobalAuthorizationFilter globalAuthorizationFilter;
 
-  public MockFilterChainConfig(JitProvisioningFilter jitProvisioningFilter) {
+  public MockFilterChainConfig(JitProvisioningFilter jitProvisioningFilter,
+      GlobalAuthorizationFilter globalAuthorizationFilter) {
     this.jitProvisioningFilter = jitProvisioningFilter;
+    this.globalAuthorizationFilter = globalAuthorizationFilter;
   }
 
   /// Security filter chain for local mocking with JWT-like behavior.
@@ -82,7 +86,9 @@ public class MockFilterChainConfig {
           .addFilterBefore(new MockJwtAuthenticationFilter(), AnonymousAuthenticationFilter.class)
           // 2. Trigger JIT provisioning based on the fake token (tests production
           // behavior locally)
-          .addFilterAfter(jitProvisioningFilter, MockJwtAuthenticationFilter.class);
+          .addFilterAfter(jitProvisioningFilter, MockJwtAuthenticationFilter.class)
+          // 3. Apply the global authorization policy after the principal is provisioned
+          .addFilterAfter(globalAuthorizationFilter, JitProvisioningFilter.class);
 
     } catch (Exception e) {
       throw new MockSecurityConfigurationException("Failed to configure mock security filter chain",
