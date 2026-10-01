@@ -1,9 +1,9 @@
 ---
 title: Features
-description: Explore the Internal Developer Platform features - Data Integration, Scorecards, Dashboards, Self-Service Actions, and AI Integration
+description: Explore IDP-Core features, including data integration, audit history, graphs, scorecards, and self-service actions
 ---
 
-The Internal Developer Platform provides a comprehensive set of features to build your Internal Developer Platform. This section covers current capabilities and the roadmap for future development.
+IDP-Core provides features for integrating data, tracking changes, and building your Internal Developer Platform. This section covers available capabilities and planned features.
 
 ## Feature Overview
 
@@ -13,9 +13,11 @@ The Internal Developer Platform provides a comprehensive set of features to buil
 
     ---
 
-    Connect to any data source through Webhooks, Kafka, or Pub/Sub. Map incoming data to entities using JSLT expressions.
+    Connect external systems and map incoming data to entities.
 
     **Status:** 🕐 Doing
+
+    **Details:** [Webhooks](webhooks.md) · [Entity Dynamic Mappings](entity-dynamic-mapping.md)
 
 - 🕸️ **[Graph](graph.md)**
 
@@ -23,7 +25,15 @@ The Internal Developer Platform provides a comprehensive set of features to buil
 
     Visualize entity relationships and dependencies as interactive graphs.
 
-    **Status:** 🕐 Done
+    **Status:** ✅ Available
+
+- 📜 **[Audit](audit.md)**
+
+    ---
+
+    Track entity changes with revision history and user attribution.
+
+    **Status:** ✅ Available
 
 - 📈 **[Scorecards](scorecards.md)**
 
