@@ -118,13 +118,19 @@ app:
   # Base URL of this service, used to build self-referencing links.
   idp-core-prefix-url: ${IDP_CORE_PREFIX_URL}
   security:
-    roles:
-      # Baseline role assigned to all authenticated principals during V1 phase.
-      baseline-role: ${APP_SECURITY_ROLES_BASELINE_ROLE:*}
+    authorization:
+      mode: GLOBAL
+      # Comma-separated immutable principal identifiers for emergency access, even before JIT provisioning.
+      global-principal-identifiers: ${IDP_SUPER_ADMIN_IDENTIFIER:},${IDP_PLATFORM_ADMIN_IDENTIFIER:}
+      # Optional human-access gate; when set, the named principal property must be true.
+      required-principal-property: ${IDP_REQUIRED_PRINCIPAL_PROPERTY:}
 
     # Authentication configuration - externalized for multi-IdP support
     # See docs/src/concepts/authentication.md for comprehensive documentation
     authentication:
+      # Human identity claim used as the catalog principal identifier.
+      principal-identifier-claim: ${IDP_PRINCIPAL_IDENTIFIER_CLAIM:sub}
+
       jwt:
         enabled: true
       api-key:
@@ -135,7 +141,6 @@ app:
       # JWT claim mappings for different Identity Providers (Auth0, Keycloak, Azure AD, etc.)
       # See docs/src/concepts/authentication.md - JWT Claim Mappings section
       user-claim-mappings:
-        sub: sub
         preferred_username: preferred_username
         name: name
         email: email

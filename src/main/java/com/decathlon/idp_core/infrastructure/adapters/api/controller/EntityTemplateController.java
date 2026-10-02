@@ -46,6 +46,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.decathlon.idp_core.domain.model.entity_template.EntityTemplate;
 import com.decathlon.idp_core.domain.service.entity_template.EntityTemplateService;
+import com.decathlon.idp_core.infrastructure.adapters.api.auth.AuthorizedResource;
 import com.decathlon.idp_core.infrastructure.adapters.api.configuration.SwaggerConfiguration.TemplatePageResponse;
 import com.decathlon.idp_core.infrastructure.adapters.api.dto.in.EntityTemplateCreateDtoIn;
 import com.decathlon.idp_core.infrastructure.adapters.api.dto.in.EntityTemplateUpdateDtoIn;
@@ -81,6 +82,7 @@ import lombok.RequiredArgsConstructor;
 /// paginated listing, identifier-based lookup, creation with uniqueness validation,
 /// updates with conflict resolution, and safe deletion with referential checks.
 @RestController
+@AuthorizedResource("entity_template")
 @RequiredArgsConstructor
 @RequestMapping("/api/v1/entity-templates")
 @Tag(name = "Entities Templates Management", description = "Operations related to entity template management")

@@ -9,7 +9,7 @@ custom authentication methods.
 
 ## Architecture Overview
 
-The authentication system consists of four main components working together:
+The authentication system consists of five main components working together:
 
 ```mermaid
 graph LR
@@ -17,14 +17,16 @@ graph LR
     B --> C["Authentication Filter<br/>JWT/API Key/Mock"]
     C --> D["PrincipalExtractor<br/>Strategy Pattern"]
     D --> E["JitProvisioningFilter<br/>Auto-Provisioning"]
-    E --> F["Domain Service<br/>Authorization"]
-    F --> G["Controller<br/>Business Logic"]
+    E --> F["GlobalAuthorizationFilter<br/>Global Policy"]
+    F --> G["Domain Service<br/>Authorization"]
+    G --> H["Controller<br/>Business Logic"]
 ```
 
 - **Security Filter Chain**: Routes requests through configured authentication mechanisms in order
 - **Authentication Filters**: Extract credentials (JWT tokens, API keys, etc.) and create `Authentication` objects
 - **Principal Extractor**: Converts authentication tokens into domain `PrincipalInfo` objects
 - **JIT Provisioning Filter**: Automatically creates principals in the database on first authentication
+- **Global Authorization Filter**: Enforces the global authorization policy in JWT, mock, and OAuth2 login chains
 - **Domain Services**: Enforce business rules and authorization checks
 
 ## Filter Chain Architecture
@@ -88,14 +90,30 @@ The JWT chain provides OAuth2 resource server authentication:
 Different Identity Providers (IdPs) use different claim names in their JWT tokens for the same semantic meaning. The
 claim mapping system allows you to configure these differences without code changes.
 
+### Principal Identifier Claim
+
+Set `app.security.authentication.principal-identifier-claim` to the claim whose non-empty value uniquely identifies a
+human principal. The default is `sub`. The application uses this setting for JWT, OAuth2, and OIDC human principals.
+Set `IDP_PRINCIPAL_IDENTIFIER_CLAIM` in the environment to override the default. The value does not need to use UUID
+syntax, but it must be stable and unique for each person.
+
+```yaml
+app:
+  security:
+    authentication:
+      principal-identifier-claim: ${IDP_PRINCIPAL_IDENTIFIER_CLAIM:sub}
+```
+
+Service accounts use their mapped `client_id`, then `azp`, and finally `sub`; this human identifier setting does not
+change service-account identification.
+
 ### Optional Claim Mapping Configuration
 
 Configure claim mappings in `application.yml` under `app.security.authentication.user-claim-mappings`:
-When JWT authentication is enabled, only these two pieces of information are
-mandatory:
+When JWT authentication is enabled, these values are mandatory:
 
 - spring.security.oauth2.resourceserver.jwt.jwk-set-uri required for signature validation.
-- A valid JWT signature and standard sub claim, sub is effectively required for JIT provisioning because it is the final identifier fallback.
+- A valid JWT signature and the configured principal identifier claim in human tokens.
 
 When `app.security.authentication.jwt.enabled` is `false`, the JWT decoder and
 JWT filter chain are not created, so `OAUTH_JWK_URI` is not required. Swagger
@@ -108,7 +126,6 @@ app:
   security:
     authentication:
       user-claim-mappings:
-        sub: "sub"                      # Unique user identifier - Mandatory
         preferred_username: "preferred_username"  # Human-readable username
         name: "name"                    # Display name
         email: "email"                  # Email address
@@ -129,7 +146,6 @@ app:
   security:
     authentication:
       user-claim-mappings:
-        sub: "sub"
         preferred_username: "preferred_username"
         name: "name"
         email: "email"
@@ -149,7 +165,6 @@ app:
   security:
     authentication:
       user-claim-mappings:
-        sub: "sub"
         preferred_username: "preferred_username"
         name: "name"
         email: "email"
@@ -167,8 +182,8 @@ app:
 app:
   security:
     authentication:
+      principal-identifier-claim: "oid"
       user-claim-mappings:
-        sub: "oid"                  # Object ID in Azure
         preferred_username: "unique_name"
         name: "name"
         email: "email"
@@ -191,20 +206,12 @@ when dealing with custom claims or missing data.
 The extraction strategy doesn't just rename claims; it applies specific fallback rules if a mapped claim is missing from
 the token:
 
-| Principal field    | Mapping key          | Fallback when the mapped claim is absent |
-|--------------------|----------------------|------------------------------------------|
-| `identifier`       | `preferred_username` | Original JWT `sub`                       |
-| `name`             | `name`               | Extracted `identifier`                   |
-| `attributes.email` | `email`              | Attribute omitted                        |
-| `groups`           | `groups`             | Empty list                               |
-
-> [!WARNING]
-> The current JWT extraction strategy ignores the `sub` mapping and reads the
-> original JWT subject directly. Setting `sub: uuid` alone does not select
-> `uuid` as the principal identifier. Use `preferred_username: uuid` for human
-> principals to select that claim with the current implementation.
-> Service accounts use different rules: mapped `client_id`, then mapped `azp`,
-> then the original JWT `sub`.
+| Principal field    | Mapping key                  | Fallback when the mapped claim is absent        |
+|--------------------|------------------------------|-------------------------------------------------|
+| `identifier`       | `principal-identifier-claim` | Request is rejected; the identifier is required |
+| `name`             | `name`                       | `preferred_username`, then `identifier`         |
+| `attributes.email` | `email`                      | Attribute omitted                               |
+| `groups`           | `groups`                     | Empty list                                      |
 
 ### Example: UUID Identifier and Subject as Display Name
 
@@ -226,8 +233,8 @@ configure:
 app:
   security:
     authentication:
+      principal-identifier-claim: uuid
       user-claim-mappings:
-        preferred_username: uuid
         name: sub
         email: email
 ```
@@ -242,7 +249,8 @@ For a token classified as human, the extracted `PrincipalInfo` contains:
 
 > [!WARNING]
 > Changing the identifier mapping can provision a separate catalog principal.
-> Plan how to handle existing principals and their references before changing it.
+> Choose a stable claim. IDP-Core does not automatically rename,
+> merge, or look up previously provisioned principals when this setting changes.
 
 ## Service Account Detection
 
@@ -323,8 +331,8 @@ If none of these conditions is met, the token is classified as a `HUMAN_USER`.
 - Will be deprecated in future versions
 
 > [!WARNING]
-> Migrate from legacy to strict mode is really encouraged for the systems meeting the prerequisites. Legacy mode is only recommended for existing systems
-that cannot immediately reconfigure their Identity Provider configuration.
+> Migrate from legacy to strict mode is really encouraged for the systems meeting the prerequisites. Legacy mode is only
+recommended for existing systems
 
 ## Principal Extraction
 
@@ -404,10 +412,74 @@ app:
 > Keep the JIT excluded paths in sync with the `PublicFilterChainConfig` permission mechanism. If you add a public path
 to one, add it to both.
 
+## Global Authorization
+
+The JWT, mock, and OAuth2 login API chains apply the global authorization policy after JIT provisioning. The dedicated
+webhook ingestion chain remains separate and continues to use the security configured on each webhook connector.
+
+In `GLOBAL` mode, a break-glass identifier or a principal entity with `is_admin: true` has full CRUD access. Other
+principals follow this matrix:
+
+| Principal                                        | Access                                            |
+|--------------------------------------------------|---------------------------------------------------|
+| Platform admin (`is_admin: true` or break-glass) | CRUD on catalog and webhook configurations        |
+| Service account                                  | CRUD except principal writes and webhook creation |
+| Human (gate disabled or property true)           | Read-only                                         |
+| Human (configured property missing or false)     | No protected API access                           |
+
+The policy classifies `GET`, `HEAD`, and `OPTIONS` as reads. It also treats `POST /api/v1/entities/search` and
+`POST /api/v1/entity_dynamic_mappings/dry-run` as reads. Unsupported HTTP methods are denied. Only platform
+administrators can create inbound webhook configurations at `POST /api/v1/inbound_webhooks`; service accounts retain
+the remaining global CRUD behavior except writes to principal records and the `principal` template. This prevents
+service accounts from granting administrator access by changing principal data. This rule applies to configuration
+management, not to webhook delivery requests. When configured, a human must have the named principal property set to
+`true` to access any protected API endpoint, including read endpoints. If the property name is unset, this additional
+check is disabled and the normal `GLOBAL` policy applies. When configured, missing or false properties deny access.
+Catalog admins and break-glass identities bypass this check; service accounts use their separate access rules.
+
+For example, set `IDP_REQUIRED_PRINCIPAL_PROPERTY=is_idp_user` to require that property. A trusted ingestion webhook
+can populate or update it on principal entities; configure connector mappings so only an authoritative source can set
+it. JIT does not derive the property from token claims, and it does not overwrite existing principal data. Before
+enabling the gate, add the configured optional Boolean property to the `principal` template so the ingestion mapping
+can validate and store it.
+
+Human principals use the value of `principal-identifier-claim`. Service accounts use `client_id`, falling back to `azp`
+and then `sub`. Break-glass values must match the resulting principal identifiers exactly and are checked even when
+JIT provisioning did not create a catalog entity. Use an immutable, globally unique identifier, such as a UUID claim;
+the current allow-list is identifier-based and does not scope entries by issuer. Configure one or both root identifiers
+through environment variables:
+
+```yaml
+app:
+  security:
+    authorization:
+      mode: GLOBAL
+      global-principal-identifiers: ${IDP_SUPER_ADMIN_IDENTIFIER:},${IDP_PLATFORM_ADMIN_IDENTIFIER:}
+      required-principal-property: ${IDP_REQUIRED_PRINCIPAL_PROPERTY:}
+```
+
+IDP-Core provisions each principal directly under the configured identifier. It does not retain username aliases or
+automatically migrate historical principal identifiers.
+
+JIT provisions new principals with `is_admin: false` and ignores `is_admin` and `kind` among extracted attributes.
+An authorized administrator or a trusted ingestion webhook can update `is_admin`; do not map an untrusted identity
+claim to this property. Normal service-account API requests cannot write principal records, while the connector-
+authenticated webhook ingestion chain remains separate. Restrict its mappings to authoritative sources because
+`is_admin` grants platform-wide CRUD access. Entity-template permission or ownership settings are intentionally ignored
+in this phase. The former `baseline-role: "*"` assignment has been removed; JWT authorities do not grant platform
+permissions.
+
+The authorization request already identifies a principal, action, and resource. The next stage can add configurable
+access profiles and resource/action permissions, with profile names stored as data.
+The full rights matrix can then move to catalog entities and relations without changing the request shape. Until that
+policy is implemented, the `RBAC` and `ABAC` modes fail closed; use `GLOBAL`.
+
 ## API Key Authentication
 
-For webhook receivers and service-to-service calls that don't use OAuth2, IDP-Core supports simple API key
-authentication.
+The `app.security.authentication.api-key` chain is currently only a conditional security-chain placeholder; it does
+not validate an API-key credential or establish a service-account principal. Do not enable it as an authentication
+mechanism until that authenticator is implemented. Inbound webhook delivery uses the separate connector-level security
+validation described in [Webhook Security](webhooks.md#security-strategies).
 
 ### Enabling API Key Authentication
 
@@ -488,8 +560,8 @@ app:
         enabled: true
       mock:
         enabled: false
+      principal-identifier-claim: id
       user-claim-mappings:
-        sub: id
         preferred_username: login
         name: name
         email: email

@@ -4,7 +4,6 @@ import static com.decathlon.idp_core.infrastructure.adapters.api.principal.strat
 import static com.decathlon.idp_core.infrastructure.adapters.api.principal.strategies.PrincipalStrategiesConstants.GROUPS;
 import static com.decathlon.idp_core.infrastructure.adapters.api.principal.strategies.PrincipalStrategiesConstants.NAME;
 import static com.decathlon.idp_core.infrastructure.adapters.api.principal.strategies.PrincipalStrategiesConstants.PREFERRED_USERNAME;
-import static com.decathlon.idp_core.infrastructure.adapters.api.principal.strategies.PrincipalStrategiesConstants.SUB;
 
 import java.util.HashMap;
 import java.util.List;
@@ -63,18 +62,21 @@ public class OAuth2UserPrincipalExtractionStrategy implements PrincipalExtractio
     Map<String, String> claimMappings = authProperties.userClaimMappings();
 
     // Standard OAuth2 user extraction using dynamic claims
-    String subClaim = claimMappings.getOrDefault(SUB, SUB);
-    String sub = Optional.ofNullable(oauth2User.getAttribute(subClaim)).map(String::valueOf)
-        .orElse(oauth2User.getName());
+    String identifierClaim = authProperties.principalIdentifierClaim();
+    String identifier = Optional.ofNullable(oauth2User.getAttribute(identifierClaim))
+        .map(String::valueOf).filter(value -> !value.isBlank())
+        .orElseThrow(() -> new IllegalArgumentException(
+            "OAuth2 principal identifier claim '" + identifierClaim + "' is required"));
 
     String preferredUsernameClaim = claimMappings.getOrDefault(PREFERRED_USERNAME,
         PREFERRED_USERNAME);
-    String identifier = Optional.ofNullable(oauth2User.getAttribute(preferredUsernameClaim))
-        .map(String::valueOf).filter(value -> !value.isBlank()).orElse(sub);
+    Optional<String> preferredUsername = Optional
+        .ofNullable(oauth2User.getAttribute(preferredUsernameClaim)).map(String::valueOf)
+        .filter(value -> !value.isBlank());
 
     String nameClaim = claimMappings.getOrDefault(NAME, NAME);
     String name = Optional.ofNullable(oauth2User.getAttribute(nameClaim)).map(String::valueOf)
-        .filter(value -> !value.isBlank()).orElse(identifier);
+        .filter(value -> !value.isBlank()).or(() -> preferredUsername).orElse(identifier);
 
     Map<String, String> attributes = new HashMap<>();
     String emailClaim = claimMappings.getOrDefault(EMAIL, EMAIL);
@@ -94,11 +96,15 @@ public class OAuth2UserPrincipalExtractionStrategy implements PrincipalExtractio
   /// is accurately extracted from OIDC claims, which are standardized across
   /// compliant identity providers.
   private PrincipalInfo extractFromOidcUser(OidcUser oidcUser) {
-    String sub = oidcUser.getSubject();
-    String identifier = Optional.ofNullable(oidcUser.getPreferredUsername()).orElse(sub);
+    String identifierClaim = authProperties.principalIdentifierClaim();
+    String identifier = Optional.ofNullable(oidcUser.getAttribute(identifierClaim))
+        .map(String::valueOf).filter(value -> !value.isBlank())
+        .orElseThrow(() -> new IllegalArgumentException(
+            "OIDC principal identifier claim '" + identifierClaim + "' is required"));
 
     String name = Optional.ofNullable(oidcUser.getFullName())
-        .or(() -> Optional.ofNullable(oidcUser.getGivenName())).orElse(identifier);
+        .or(() -> Optional.ofNullable(oidcUser.getGivenName()))
+        .or(() -> Optional.ofNullable(oidcUser.getPreferredUsername())).orElse(identifier);
 
     Map<String, String> attributes = new HashMap<>();
     Optional.ofNullable(oidcUser.getEmail()).map(String::valueOf)

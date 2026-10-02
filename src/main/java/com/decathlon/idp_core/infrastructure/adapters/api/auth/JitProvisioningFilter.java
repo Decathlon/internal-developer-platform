@@ -1,6 +1,7 @@
 package com.decathlon.idp_core.infrastructure.adapters.api.auth;
 
 import java.io.IOException;
+import java.util.Optional;
 
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
@@ -15,6 +16,7 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 import org.springframework.web.util.pattern.PathPatternParser;
 
+import com.decathlon.idp_core.domain.model.entity.Entity;
 import com.decathlon.idp_core.domain.model.principal.PrincipalInfo;
 import com.decathlon.idp_core.domain.service.principal.PrincipalProvisioningService;
 import com.decathlon.idp_core.infrastructure.adapters.api.configuration.AuthenticationProperties;
@@ -63,16 +65,18 @@ public class JitProvisioningFilter extends OncePerRequestFilter {
 
     if (authentication != null && authentication.isAuthenticated()
         && !isAnonymous(authentication)) {
-      provisionPrincipalSafely(authentication);
+      provisionPrincipalSafely(request, authentication);
     }
 
     filterChain.doFilter(request, response);
   }
 
-  private void provisionPrincipalSafely(Authentication authentication) {
+  private void provisionPrincipalSafely(HttpServletRequest request, Authentication authentication) {
     try {
       PrincipalInfo principalInfo = principalExtractor.extractPrincipalInfo(authentication);
-      provisioningService.provisionPrincipal(principalInfo);
+      Entity principalEntity = provisioningService.provisionPrincipal(principalInfo);
+      request.setAttribute(ProvisionedPrincipalContext.REQUEST_ATTRIBUTE,
+          new ProvisionedPrincipalContext(principalInfo, Optional.of(principalEntity)));
 
       log.debug("JIT provisioning successful for principal: {} (kind: {})",
           principalInfo.identifier(), principalInfo.kind());

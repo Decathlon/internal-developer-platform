@@ -10,6 +10,7 @@ import static com.decathlon.idp_core.infrastructure.adapters.api.principal.strat
 import static com.decathlon.idp_core.infrastructure.adapters.api.principal.strategies.PrincipalStrategiesConstants.ORIGIN;
 import static com.decathlon.idp_core.infrastructure.adapters.api.principal.strategies.PrincipalStrategiesConstants.PREFERRED_USERNAME;
 import static com.decathlon.idp_core.infrastructure.adapters.api.principal.strategies.PrincipalStrategiesConstants.SERVICE_NAME;
+import static com.decathlon.idp_core.infrastructure.adapters.api.principal.strategies.PrincipalStrategiesConstants.SUB;
 import static org.springframework.security.oauth2.core.oidc.IdTokenClaimNames.AZP;
 
 import java.util.HashMap;
@@ -169,15 +170,25 @@ public class JwtPrincipalExtractionStrategy implements PrincipalExtractionStrate
   private PrincipalInfo extractHumanFromJwt(String sub, Map<String, Object> claims) {
     Map<String, String> claimMappings = authProperties.userClaimMappings();
 
-    // Try to extract preferred username, fallback to sub
+    String identifierClaim = authProperties.principalIdentifierClaim();
+    Object identifierValue = claims.get(identifierClaim);
+    if (identifierValue == null && SUB.equals(identifierClaim)) {
+      identifierValue = sub;
+    }
+    String identifier = Optional.ofNullable(identifierValue).map(Object::toString)
+        .filter(value -> !value.isBlank()).orElseThrow(() -> new IllegalArgumentException(
+            "JWT principal identifier claim '" + identifierClaim + "' is required"));
+
     String preferredUsernameClaim = claimMappings.get(PREFERRED_USERNAME);
-    String identifier = Optional.ofNullable(preferredUsernameClaim)
-        .flatMap(c -> Optional.ofNullable(claims.get(c))).map(Object::toString).orElse(sub);
+    Optional<String> preferredUsername = Optional.ofNullable(preferredUsernameClaim)
+        .flatMap(claim -> Optional.ofNullable(claims.get(claim))).map(Object::toString)
+        .filter(value -> !value.isBlank());
 
     // Try to extract name, fallback to identifier
     String nameClaim = claimMappings.get(NAME);
     String name = Optional.ofNullable(nameClaim).flatMap(c -> Optional.ofNullable(claims.get(c)))
-        .map(Object::toString).orElse(identifier);
+        .map(Object::toString).filter(value -> !value.isBlank()).or(() -> preferredUsername)
+        .orElse(identifier);
 
     Map<String, String> attributes = new HashMap<>();
 

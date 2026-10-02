@@ -14,6 +14,7 @@ import com.decathlon.idp_core.domain.model.entity_mapping.DryRunResult;
 import com.decathlon.idp_core.domain.model.entity_mapping.EntityDynamicMapping;
 import com.decathlon.idp_core.domain.service.entity_dynamic_mapping.EntityDynamicMappingDryRunService;
 import com.decathlon.idp_core.domain.service.entity_dynamic_mapping.EntityDynamicMappingService;
+import com.decathlon.idp_core.infrastructure.adapters.api.auth.AuthorizedResource;
 import com.decathlon.idp_core.infrastructure.adapters.api.configuration.SwaggerConfiguration;
 import com.decathlon.idp_core.infrastructure.adapters.api.dto.in.EntityDynamicMappingCreateDtoIn;
 import com.decathlon.idp_core.infrastructure.adapters.api.dto.in.EntityDynamicMappingDryRunDtoIn;
@@ -35,6 +36,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 
 @RestController
+@AuthorizedResource("entity_dynamic_mapping")
 @RequiredArgsConstructor
 @RequestMapping("/api/v1/entity_dynamic_mappings")
 @Tag(name = "Entity dynamic mapping", description = "Operations related to entity dynamic mapping management")
@@ -126,6 +128,7 @@ public class EntityDynamicMappingController {
   @ApiResponse(responseCode = UNPROCESSABLE_CONTENT_CODE, description = RESPONSE_ENTITY_DYNAMIC_MAPPING_DRY_RUN_VALIDATION_ERROR, content = {
       @Content(schema = @Schema(implementation = ErrorResponse.class))})
   @PostMapping("/dry-run")
+  @AuthorizedResource(value = "entity_dynamic_mapping_dry_run", readOnly = true)
   @ResponseStatus(OK)
   public EntityDynamicMappingDryRunDtoOut executeDryRun(
       @Valid @RequestBody EntityDynamicMappingDryRunDtoIn dryRunRequest) {

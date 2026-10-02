@@ -10,6 +10,7 @@ import static org.mockito.Mockito.when;
 
 import java.io.IOException;
 import java.util.List;
+import java.util.Optional;
 
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
@@ -30,6 +31,7 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.authority.AuthorityUtils;
 import org.springframework.security.core.context.SecurityContextHolder;
 
+import com.decathlon.idp_core.domain.model.entity.Entity;
 import com.decathlon.idp_core.domain.model.principal.PrincipalInfo;
 import com.decathlon.idp_core.domain.model.principal.PrincipalKind;
 import com.decathlon.idp_core.domain.service.principal.PrincipalProvisioningService;
@@ -82,6 +84,9 @@ class JitProvisioningFilterTest {
     when(principalInfo.identifier()).thenReturn("user-123");
     when(principalInfo.kind()).thenReturn(PrincipalKind.valueOf("HUMAN"));
     when(principalExtractor.extractPrincipalInfo(auth)).thenReturn(principalInfo);
+    Entity principalEntity = new Entity(null, "principal", "User", "user-123", List.of(),
+        List.of());
+    when(provisioningService.provisionPrincipal(principalInfo)).thenReturn(principalEntity);
 
     // Act
     jitProvisioningFilter.doFilterInternal(request, response, filterChain);
@@ -89,6 +94,8 @@ class JitProvisioningFilterTest {
     // Assert
     verify(principalExtractor).extractPrincipalInfo(auth);
     verify(provisioningService).provisionPrincipal(principalInfo);
+    verify(request).setAttribute(ProvisionedPrincipalContext.REQUEST_ATTRIBUTE,
+        new ProvisionedPrincipalContext(principalInfo, Optional.of(principalEntity)));
     verify(filterChain).doFilter(request, response);
   }
 

@@ -1,24 +1,23 @@
 package com.decathlon.idp_core.infrastructure.adapters.api.auth;
 
-import java.util.Optional;
-
 import org.springframework.security.authentication.AnonymousAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.security.oauth2.core.oidc.user.OidcUser;
-import org.springframework.security.oauth2.core.user.OAuth2User;
-import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationToken;
 import org.springframework.stereotype.Component;
+
+import com.decathlon.idp_core.infrastructure.adapters.api.principal.PrincipalExtractor;
+
+import lombok.RequiredArgsConstructor;
 
 /// UnifiedUserProvider is a Spring component that implements the UserIdentityProvider interface to provide a consistent way
 /// to retrieve the authenticated user's identity across different authentication mechanisms (JWT, OAuth2, OpenID).
-/// It checks the current security context for the authentication type and extracts the user ID accordingly:
-/// - For JWT authentication, it retrieves the subject (sub) claim from the JWT token.
-/// - For OAuth2 authentication, it first checks if the user is an OIDC user to
-/// retrieve the subject, otherwise it looks for a "sub" or "id" attribute in the OAuth2 user attributes, falling back to the authentication name if neither is found.
-/// - For basic authentication, it simply returns the authentication name.
+/// The shared principal extractor keeps audit identities aligned with the identifiers used for provisioning
+/// and authorization.
 @Component
+@RequiredArgsConstructor
 public class UnifiedUserProvider implements UserIdentityProvider {
+
+  private final PrincipalExtractor principalExtractor;
 
   @Override
   public String getAuthId() {
@@ -29,25 +28,7 @@ public class UnifiedUserProvider implements UserIdentityProvider {
       return "UNKNOWN";
     }
 
-    // Jwt Case
-    if (authentication instanceof JwtAuthenticationToken jwtToken) {
-      return jwtToken.getToken().getSubject();
-    }
-
-    // OAuth2 and OpenId case
-    if (authentication.getPrincipal()instanceof OAuth2User oauth2Token) {
-
-      if (oauth2Token instanceof OidcUser oidcUser) {
-        return oidcUser.getSubject();
-      }
-
-      return Optional.ofNullable(oauth2Token.getAttribute("sub")).map(Object::toString)
-          .orElseGet(() -> Optional.ofNullable(oauth2Token.getAttribute("id")).map(Object::toString)
-              .orElse(authentication.getName()));
-    }
-
-    // Basic Auth case
-    return authentication.getName();
+    return principalExtractor.extractPrincipalInfo(authentication).identifier();
   }
 
   @Override

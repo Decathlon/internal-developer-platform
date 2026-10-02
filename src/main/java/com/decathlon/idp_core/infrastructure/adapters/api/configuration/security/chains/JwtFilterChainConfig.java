@@ -11,6 +11,7 @@ import org.springframework.security.oauth2.server.resource.authentication.JwtAut
 import org.springframework.security.oauth2.server.resource.web.authentication.BearerTokenAuthenticationFilter;
 import org.springframework.security.web.SecurityFilterChain;
 
+import com.decathlon.idp_core.infrastructure.adapters.api.auth.GlobalAuthorizationFilter;
 import com.decathlon.idp_core.infrastructure.adapters.api.auth.JitProvisioningFilter;
 
 @Configuration
@@ -18,11 +19,14 @@ import com.decathlon.idp_core.infrastructure.adapters.api.auth.JitProvisioningFi
 public class JwtFilterChainConfig {
 
   private final JitProvisioningFilter jitProvisioningFilter;
+  private final GlobalAuthorizationFilter globalAuthorizationFilter;
   private final JwtAuthenticationConverter jwtAuthenticationConverter;
 
   public JwtFilterChainConfig(JitProvisioningFilter jitProvisioningFilter,
+      GlobalAuthorizationFilter globalAuthorizationFilter,
       JwtAuthenticationConverter jwtAuthenticationConverter) {
     this.jitProvisioningFilter = jitProvisioningFilter;
+    this.globalAuthorizationFilter = globalAuthorizationFilter;
     this.jwtAuthenticationConverter = jwtAuthenticationConverter;
   }
 
@@ -34,7 +38,8 @@ public class JwtFilterChainConfig {
         .cors(withDefaults())
         .oauth2ResourceServer(
             oauth2 -> oauth2.jwt(jwt -> jwt.jwtAuthenticationConverter(jwtAuthenticationConverter)))
-        .addFilterAfter(jitProvisioningFilter, BearerTokenAuthenticationFilter.class);
+        .addFilterAfter(jitProvisioningFilter, BearerTokenAuthenticationFilter.class)
+        .addFilterAfter(globalAuthorizationFilter, JitProvisioningFilter.class);
 
     return http.build();
   }
