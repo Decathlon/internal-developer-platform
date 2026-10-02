@@ -470,7 +470,7 @@ in this phase. The former `baseline-role: "*"` assignment has been removed; JWT 
 permissions.
 
 The authorization request already identifies a principal, action, and resource. The next stage can add configurable
-access profiles and resource/action permissions, with profile names stored as data rather than hardcoded role names.
+access profiles and resource/action permissions, with profile names stored as data.
 The full rights matrix can then move to catalog entities and relations without changing the request shape. Until that
 policy is implemented, the `RBAC` and `ABAC` modes fail closed; use `GLOBAL`.
 
