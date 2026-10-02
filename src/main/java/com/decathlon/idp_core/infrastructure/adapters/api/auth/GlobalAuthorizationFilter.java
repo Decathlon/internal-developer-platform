@@ -81,7 +81,7 @@ public class GlobalAuthorizationFilter extends OncePerRequestFilter {
 
     try {
       authorizationService.authorize(authorizationRequest, authorizationPolicy);
-    } catch (PrincipalNotAuthorizedException principalException) {
+    } catch (PrincipalNotAuthorizedException _) {
       log.warn("Authorization denied for principal {} on {} {}", principal.identifier(),
           request.getMethod(), request.getRequestURI());
       response.sendError(HttpServletResponse.SC_FORBIDDEN);

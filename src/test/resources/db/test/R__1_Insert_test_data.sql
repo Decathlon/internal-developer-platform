@@ -95,7 +95,8 @@ INSERT INTO property_definition (id, name, description, type, required, rules_id
 -- Principal properties
 ('550e8400-e29b-41d4-a716-446655440045', 'kind', 'Kind of principal', 'STRING', true, '550e8400-e29b-41d4-a716-446655440016'),
 ('550e8400-e29b-41d4-a716-446655440046', 'email', 'Email address (for HUMAN principals)', 'STRING', false, '550e8400-e29b-41d4-a716-446655440015'),
-('550e8400-e29b-41d4-a716-446655440047', 'is_admin', 'is_admin', 'BOOLEAN', false, NULL);
+('550e8400-e29b-41d4-a716-446655440047', 'is_admin', 'is_admin', 'BOOLEAN', false, NULL),
+('550e8400-e29b-41d4-a716-446655440048', 'is_idp_user', 'is idp user', 'BOOLEAN', false, NULL);
 
 -- Insert diverse relation definitions
 INSERT INTO relation_definition (id, name, target_template_identifier, required, to_many) VALUES
@@ -154,7 +155,8 @@ INSERT INTO entity_template (id, identifier, name, description) VALUES
 INSERT INTO entity_template_properties_definitions (entity_template_id, properties_definitions_id) VALUES
 ('550e8400-e29b-41d4-a716-446655440062', '550e8400-e29b-41d4-a716-446655440045'), -- kind
 ('550e8400-e29b-41d4-a716-446655440062', '550e8400-e29b-41d4-a716-446655440046'), -- email
-('550e8400-e29b-41d4-a716-446655440062', '550e8400-e29b-41d4-a716-446655440047'); -- is_admin
+('550e8400-e29b-41d4-a716-446655440062', '550e8400-e29b-41d4-a716-446655440047'), -- is_admin
+('550e8400-e29b-41d4-a716-446655440062', '550e8400-e29b-41d4-a716-446655440048'); -- is_idp_user
 
 -- Link web-service template (comprehensive web API)
 INSERT INTO entity_template_properties_definitions (entity_template_id, properties_definitions_id) VALUES

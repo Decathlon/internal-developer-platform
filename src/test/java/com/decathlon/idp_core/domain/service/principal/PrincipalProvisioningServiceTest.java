@@ -18,7 +18,6 @@ import org.mockito.junit.jupiter.MockitoExtension;
 
 import com.decathlon.idp_core.domain.model.entity.Entity;
 import com.decathlon.idp_core.domain.model.entity.Property;
-import com.decathlon.idp_core.domain.model.entity.Relation;
 import com.decathlon.idp_core.domain.model.principal.PrincipalInfo;
 import com.decathlon.idp_core.domain.model.principal.PrincipalKind;
 import com.decathlon.idp_core.domain.port.EntityRepositoryPort;
@@ -114,6 +113,26 @@ class PrincipalProvisioningServiceTest {
         "origin");
     assertThat(savedEntity.properties()).extracting(Property::value).contains("SERVICE_ACCOUNT",
         "github-connector", "github");
+  }
+
+  @Test
+  void shouldProvisionPrincipalWithAdminDisabledRegardlessOfAttributes() {
+    PrincipalInfo principalInfo = new PrincipalInfo("alice", PrincipalKind.HUMAN, "Alice Dupont",
+        Map.of("is_admin", "true", "kind", "SERVICE_ACCOUNT"), List.of());
+    when(entityRepository.findByTemplateIdentifierAndIdentifier("principal", "alice"))
+        .thenReturn(Optional.empty());
+    when(entityRepository.save(any(Entity.class)))
+        .thenAnswer(invocation -> invocation.getArgument(0));
+
+    provisioningService.provisionPrincipal(principalInfo);
+
+    ArgumentCaptor<Entity> entityCaptor = ArgumentCaptor.forClass(Entity.class);
+    verify(entityRepository).save(entityCaptor.capture());
+    List<Property> properties = entityCaptor.getValue().properties();
+    assertThat(properties).filteredOn(property -> property.name().equals("is_admin"))
+        .extracting(Property::value).containsExactly("false");
+    assertThat(properties).filteredOn(property -> property.name().equals("kind"))
+        .extracting(Property::value).containsExactly("HUMAN");
   }
 
   @Test

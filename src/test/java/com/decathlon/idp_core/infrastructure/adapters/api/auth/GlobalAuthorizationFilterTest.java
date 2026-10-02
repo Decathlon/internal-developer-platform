@@ -58,7 +58,7 @@ class GlobalAuthorizationFilterTest {
 
   @BeforeEach
   void setUp() {
-    var policy = new AuthorizationPolicy(AuthorizationMode.GLOBAL, Set.of());
+    var policy = new AuthorizationPolicy(AuthorizationMode.GLOBAL, Set.of(), Optional.empty());
     filter = new GlobalAuthorizationFilter(principalExtractor, provisioningService,
         authorizationService, policy, requestFactory);
     authentication = mock(Authentication.class);

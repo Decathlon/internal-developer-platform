@@ -120,8 +120,10 @@ app:
   security:
     authorization:
       mode: GLOBAL
-      # Comma-separated principal identifiers for emergency platform access.
+      # Comma-separated immutable principal identifiers for emergency access, even before JIT provisioning.
       global-principal-identifiers: ${IDP_SUPER_ADMIN_IDENTIFIER:},${IDP_PLATFORM_ADMIN_IDENTIFIER:}
+      # Optional human-access gate; when set, the named principal property must be true.
+      required-principal-property: ${IDP_REQUIRED_PRINCIPAL_PROPERTY:}
 
     # Authentication configuration - externalized for multi-IdP support
     # See docs/src/concepts/authentication.md for comprehensive documentation

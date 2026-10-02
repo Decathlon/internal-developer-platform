@@ -1,5 +1,6 @@
 package com.decathlon.idp_core.infrastructure.adapters.api.configuration;
 
+import java.util.Optional;
 import java.util.Set;
 
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
@@ -35,6 +36,7 @@ public class AuthorizationConfiguration {
   @Bean
   public AuthorizationPolicy authorizationPolicy(AuthorizationProperties properties) {
     return new AuthorizationPolicy(properties.mode(),
-        Set.copyOf(properties.globalPrincipalIdentifiers()));
+        Set.copyOf(properties.globalPrincipalIdentifiers()),
+        Optional.ofNullable(properties.requiredPrincipalProperty()));
   }
 }

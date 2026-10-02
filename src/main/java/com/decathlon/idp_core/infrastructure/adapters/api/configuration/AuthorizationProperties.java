@@ -9,7 +9,7 @@ import com.decathlon.idp_core.domain.model.authorization.AuthorizationMode;
 /// Authorization settings bound from `app.security.authorization`.
 @ConfigurationProperties(prefix = "app.security.authorization")
 public record AuthorizationProperties(AuthorizationMode mode,
-    List<String> globalPrincipalIdentifiers) {
+    List<String> globalPrincipalIdentifiers, String requiredPrincipalProperty) {
 
   public AuthorizationProperties {
     mode = mode != null ? mode : AuthorizationMode.GLOBAL;
@@ -18,5 +18,7 @@ public record AuthorizationProperties(AuthorizationMode mode,
             .filter(identifier -> identifier != null && !identifier.isBlank()).map(String::trim)
             .toList()
         : List.of();
+    requiredPrincipalProperty = requiredPrincipalProperty == null
+        || requiredPrincipalProperty.isBlank() ? null : requiredPrincipalProperty.trim();
   }
 }

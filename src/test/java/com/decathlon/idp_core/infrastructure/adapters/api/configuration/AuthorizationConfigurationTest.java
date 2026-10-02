@@ -19,16 +19,17 @@ class AuthorizationConfigurationTest {
 
   @Test
   void shouldBridgeConfiguredAuthorizationPropertiesIntoDomainPolicy() {
-    contextRunner
-        .withPropertyValues("app.security.authorization.mode=GLOBAL",
-            "app.security.authorization.global-principal-identifiers=super-admin, platform-admin")
-        .run(context -> {
+    contextRunner.withPropertyValues("app.security.authorization.mode=GLOBAL",
+        "app.security.authorization.global-principal-identifiers=super-admin, platform-admin",
+        "app.security.authorization.required-principal-property=eligible").run(context -> {
           assertThat(context).hasSingleBean(AuthorizationProperties.class)
               .hasSingleBean(AuthorizationPolicy.class);
           assertThat(context.getBean(AuthorizationPolicy.class).mode())
               .isEqualTo(AuthorizationMode.GLOBAL);
           assertThat(context.getBean(AuthorizationPolicy.class).globalPrincipalIdentifiers())
               .containsExactlyInAnyOrder("super-admin", "platform-admin");
+          assertThat(context.getBean(AuthorizationPolicy.class).requiredPrincipalProperty())
+              .contains("eligible");
           assertThat(
               context.getBean("globalAuthorizationFilterRegistration", FilterRegistrationBean.class)
                   .isEnabled()).isFalse();
@@ -36,8 +37,13 @@ class AuthorizationConfigurationTest {
   }
 
   @Test
-  void shouldDefaultToGlobalModeWhenModeIsNotConfigured() {
-    contextRunner.run(context -> assertThat(context.getBean(AuthorizationPolicy.class).mode())
-        .isEqualTo(AuthorizationMode.GLOBAL));
+  void shouldDefaultAuthorizationSettingsWhenNotConfigured() {
+    contextRunner.withPropertyValues("app.security.authorization.required-principal-property=")
+        .run(context -> {
+          assertThat(context.getBean(AuthorizationPolicy.class).mode())
+              .isEqualTo(AuthorizationMode.GLOBAL);
+          assertThat(context.getBean(AuthorizationPolicy.class).requiredPrincipalProperty())
+              .isEmpty();
+        });
   }
 }

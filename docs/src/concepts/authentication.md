@@ -420,20 +420,34 @@ webhook ingestion chain remains separate and continues to use the security confi
 In `GLOBAL` mode, a break-glass identifier or a principal entity with `is_admin: true` has full CRUD access. Other
 principals follow this matrix:
 
-| Principal                                                | Access                                                 |
-|----------------------------------------------------------|--------------------------------------------------------|
-| Platform administrator (`is_admin: true` or break-glass) | CRUD on catalog resources and webhook configurations   |
-| `SERVICE_ACCOUNT`                                        | CRUD, except creating an inbound webhook configuration |
-| Standard human                                           | Read-only                                              |
+| Principal                                        | Access                                            |
+|--------------------------------------------------|---------------------------------------------------|
+| Platform admin (`is_admin: true` or break-glass) | CRUD on catalog and webhook configurations        |
+| Service account                                  | CRUD except principal writes and webhook creation |
+| Human (gate disabled or property true)           | Read-only                                         |
+| Human (configured property missing or false)     | No protected API access                           |
 
 The policy classifies `GET`, `HEAD`, and `OPTIONS` as reads. It also treats `POST /api/v1/entities/search` and
 `POST /api/v1/entity_dynamic_mappings/dry-run` as reads. Unsupported HTTP methods are denied. Only platform
 administrators can create inbound webhook configurations at `POST /api/v1/inbound_webhooks`; service accounts retain
-the remaining global CRUD behavior. This rule applies to configuration management, not to webhook delivery requests.
+the remaining global CRUD behavior except writes to principal records and the `principal` template. This prevents
+service accounts from granting administrator access by changing principal data. This rule applies to configuration
+management, not to webhook delivery requests. When configured, a human must have the named principal property set to
+`true` to access any protected API endpoint, including read endpoints. If the property name is unset, this additional
+check is disabled and the normal `GLOBAL` policy applies. When configured, missing or false properties deny access.
+Catalog admins and break-glass identities bypass this check; service accounts use their separate access rules.
+
+For example, set `IDP_REQUIRED_PRINCIPAL_PROPERTY=is_idp_user` to require that property. A trusted ingestion webhook
+can populate or update it on principal entities; configure connector mappings so only an authoritative source can set
+it. JIT does not derive the property from token claims, and it does not overwrite existing principal data. Before
+enabling the gate, add the configured optional Boolean property to the `principal` template so the ingestion mapping
+can validate and store it.
 
 Human principals use the value of `principal-identifier-claim`. Service accounts use `client_id`, falling back to `azp`
-and then `sub`. Break-glass values must match the resulting principal identifiers exactly. Configure one or both root
-identifiers through environment variables:
+and then `sub`. Break-glass values must match the resulting principal identifiers exactly and are checked even when
+JIT provisioning did not create a catalog entity. Use an immutable, globally unique identifier, such as a UUID claim;
+the current allow-list is identifier-based and does not scope entries by issuer. Configure one or both root identifiers
+through environment variables:
 
 ```yaml
 app:
@@ -441,17 +455,24 @@ app:
     authorization:
       mode: GLOBAL
       global-principal-identifiers: ${IDP_SUPER_ADMIN_IDENTIFIER:},${IDP_PLATFORM_ADMIN_IDENTIFIER:}
+      required-principal-property: ${IDP_REQUIRED_PRINCIPAL_PROPERTY:}
 ```
 
 IDP-Core provisions each principal directly under the configured identifier. It does not retain username aliases or
 automatically migrate historical principal identifiers.
 
-The `is_admin` property on the principal entity grants platform-wide CRUD access. Entity-template permission or
-ownership settings are intentionally ignored in this phase. The former `baseline-role: "*"` assignment has been
-removed; authorities from JWT scopes do not grant platform permissions.
+JIT provisions new principals with `is_admin: false` and ignores `is_admin` and `kind` among extracted attributes.
+An authorized administrator or a trusted ingestion webhook can update `is_admin`; do not map an untrusted identity
+claim to this property. Normal service-account API requests cannot write principal records, while the connector-
+authenticated webhook ingestion chain remains separate. Restrict its mappings to authoritative sources because
+`is_admin` grants platform-wide CRUD access. Entity-template permission or ownership settings are intentionally ignored
+in this phase. The former `baseline-role: "*"` assignment has been removed; JWT authorities do not grant platform
+permissions.
 
-The `RBAC` and `ABAC` modes are reserved for future authorization policies. Requests fail closed when either
-unimplemented mode is configured. Use `GLOBAL` until those modes are implemented.
+The authorization request already identifies a principal, action, and resource. The next stage can add configurable
+access profiles and resource/action permissions, with profile names stored as data rather than hardcoded role names.
+The full rights matrix can then move to catalog entities and relations without changing the request shape. Until that
+policy is implemented, the `RBAC` and `ABAC` modes fail closed; use `GLOBAL`.
 
 ## API Key Authentication
 
