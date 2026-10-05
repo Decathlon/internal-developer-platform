@@ -11,6 +11,7 @@ import com.decathlon.idp_core.domain.model.inbound_connectors.webhook.WebhookCon
 import com.decathlon.idp_core.domain.port.MappingEnginePort;
 import com.decathlon.idp_core.domain.service.entity.EntityService;
 
+import io.opentelemetry.api.trace.Span;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
@@ -36,11 +37,12 @@ public class IngestionProcessor {
   /// @param webhookConnectorConfiguration the connector with mapping definitions
   /// @param payload the raw JSON payload from the webhook
   public void ingest(String payload, WebhookConnector webhookConnectorConfiguration) {
-    log.info("Starting ingestion for webhook connector: {}",
-        webhookConnectorConfiguration.identifier());
+    String connectorIdentifier = webhookConnectorConfiguration.identifier();
+    Span.current().setAttribute("idp.webhook.identifier", connectorIdentifier);
+
+    log.info("Starting ingestion for webhook connector: {}", connectorIdentifier);
     webhookConnectorConfiguration.mappings().forEach(mapping -> applyMapping(payload, mapping));
-    log.info("Completed ingestion for webhook connector: {}",
-        webhookConnectorConfiguration.identifier());
+    log.info("Completed ingestion for webhook connector: {}", connectorIdentifier);
   }
 
   /// Applies a single mapping to the payload and persists the resulting entity.
@@ -51,24 +53,30 @@ public class IngestionProcessor {
   /// @param mapping the mapping definition to apply
   private void applyMapping(String payload, EntityDynamicMapping mapping) {
     log.debug("Applying mapping for template: {} with action: {}", mapping.identifier(), mapping.action());
-    Entity entity = mappingEngine.mapToEntity(payload, mapping);
+    try {
+      Entity entity = mappingEngine.mapToEntity(payload, mapping);
 
-    if (entity == null) {
-      log.debug("Mapping filter excluded payload for template: {}",
-          mapping.entityTemplateIdentifier());
-      return;
+      if (entity == null) {
+        Span.current().setAttribute("idp.webhook.mapping.result", "FILTERED");
+        log.debug("Mapping filter excluded payload for template: {}",
+            mapping.entityTemplateIdentifier());
+        return;
+      }
+      switch (mapping.action()) {
+        case UPDATE_ENTITY -> handleUpdate(entity);
+        case UPDATE_PROPERTIES -> handleUpdateProperties(entity);
+        case UPDATE_RELATIONS -> handleUpdateRelations(entity);
+        case DELETE_ENTITY -> handleDelete(entity);
+        case null, default -> log.warn("Unsupported or null mapping action: {}", mapping.action());
+      }
+
+      Span.current().setAttribute("idp.webhook.mapping.result", "SUCCESS");
+      log.info("Successfully processed action {} for entity: {} under template: {}",
+          mapping.action(), entity.identifier(), entity.templateIdentifier());
+    } catch (RuntimeException exception) {
+      Span.current().setAttribute("idp.webhook.mapping.result", "ERROR");
+      throw exception;
     }
-
-    switch (mapping.action()) {
-      case UPDATE_ENTITY -> handleUpdate(entity);
-      case UPDATE_PROPERTIES -> handleUpdateProperties(entity);
-      case UPDATE_RELATIONS -> handleUpdateRelations(entity);
-      case DELETE_ENTITY -> handleDelete(entity);
-      case null, default -> log.warn("Unsupported or null mapping action: {}", mapping.action());
-    }
-
-    log.info("Successfully processed action {} for entity: {} under template: {}",
-        mapping.action(), entity.identifier(), entity.templateIdentifier());
   }
 
   /// Handles the Update action for an entity.

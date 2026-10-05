@@ -180,17 +180,25 @@ logging:
 management:
   tracing:
     # Tracing is disabled by default and only enabled via environment variables (OTEL_TRACING_ENABLED).
-    enabled: false
+    enabled: ${OTEL_TRACING_ENABLED:true}
     sampling:
       probability: 1.0  # 100% des traces
 
   otlp:
-    tracing:
-      endpoint: ${OPEN_TELEMETRY_URL:""}
-      headers:
-        swagger:
-          enabled: ${APP_SECURITY_SWAGGER_ENABLED:true}
-        authorization: ${OPEN_TELEMETRY_TOKEN:""}
+    traces:
+      export:
+        url: ${OTEL_EXPORTER_OTLP_ENDPOINT}
+        protocol: ${OTEL_EXPORTER_OTLP_PROTOCOL:http/protobuf}
+    metrics:
+      export:
+        url: ${OTEL_EXPORTER_OTLP_ENDPOINT}
+        protocol: ${OTEL_EXPORTER_OTLP_PROTOCOL:http/protobuf}
+  opentelemetry:
+    resource-attributes:
+      deployment.environment: ${OTEL_ENV}
+      service.namespace: ${OTEL_SERVICE_NAMESPACE}
+      X-Datadog-Org: ${ORG}
+      X-Backend: ${BACKEND}
 
   endpoints:
     web:
@@ -221,22 +229,7 @@ management:
       # Avoids leaking internal infrastructure info to unauthenticated callers.
       show-details: when_authorized
 
+
 camel:
-  component:
-    platform-http:
-      engine: "servlet"
-      # Never expose the health "details" map (e.g. database product name/version,
-      # validation query, disk space paths). Only UP/DOWN status is shown.
-      show-details: never
-      # Still surface per-component status (e.g. db: UP/DOWN) so direct
-      # dependencies can be checked, without leaking their details.
-      show-components: always
-  health:
-    diskspace:
-      # DiskSpace is not a direct dependency and its free/threshold values
-      # are not relevant to consumers checking service health.
-      enabled: false
-    ssl:
-      # SSL certificate/chain info is internal infrastructure detail and
-      # must not be exposed via actuator.
-      enabled: false
+  opentelemetry:
+    enabled: true
