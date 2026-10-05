@@ -7,6 +7,10 @@ description: Understand Dynamic mappings and JSLT expressions.
 
 A mapping targets one Entity Template and describes how to derive entity fields from the incoming JSON payload with a JSLT filter and entity projections.
 
+Only catalog administrators can create or update mappings that target the protected `principal` template. This
+restriction prevents an ingestion mapping from changing principal privileges. Webhook deliveries that use an already
+authorized mapping continue to run through the configured connector security strategy.
+
 ## Entity Dynamic Mapping Fields
 
 | Field                        | Required | Description                                                                                                          |

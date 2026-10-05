@@ -155,12 +155,9 @@ app:
       # See docs/src/concepts/authentication.md - Service Account Detection section
       service-account-detection:
         enabled: true
-        mode: legacy
+        mode: strict
         definitive-claim-name: token_type
         definitive-claim-value: m2m
-        # Simplified list binding. Overriding via env var requires a comma-separated string:
-        # export APP_SECURITY_AUTHENTICATION_SERVICE_ACCOUNT_DETECTION_LEGACY_FALLBACK_CLAIMS="grant_type,service_name,client_id"
-        legacy-fallback-claims: grant_type,service_name,client_id
         # JIT Provisioning excluded paths
         # Simplified list binding. Overriding via env var requires a comma-separated string:
         # export APP_SECURITY_AUTHENTICATION_JIT_PROVISIONING_EXCLUDED_PATHS="/,/actuator/**,/swagger-ui/**,/swagger-ui.html,/v3/api-docs/**"

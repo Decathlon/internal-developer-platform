@@ -38,6 +38,7 @@ import com.decathlon.idp_core.domain.exception.entity_template.EntityTemplateNot
 import com.decathlon.idp_core.domain.exception.entity_template.PropertyNameNotFoundEntityTemplatePropertiesException;
 import com.decathlon.idp_core.domain.exception.entity_template.RelationNameNotFoundEntityTemplateRelationsException;
 import com.decathlon.idp_core.domain.exception.webhook.WebhookSecurityConfigurationException;
+import com.decathlon.idp_core.infrastructure.adapters.api.exception.MissingPrincipalIdentifierException;
 import com.decathlon.idp_core.infrastructure.adapters.common.model.ErrorResponse;
 
 /// Comprehensive unit tests for [ApiExceptionHandler].
@@ -71,6 +72,18 @@ class ApiExceptionHandlerTest {
 
       assertEquals(HttpStatus.FORBIDDEN, response.getStatusCode());
       assertEquals(HttpStatus.FORBIDDEN.name(), response.getBody().getError());
+      assertEquals(exception.getMessage(), response.getBody().getErrorDescription());
+    }
+
+    @Test
+    void shouldHandleMissingPrincipalIdentifierAsUnauthorized() {
+      var exception = new MissingPrincipalIdentifierException("id");
+
+      ResponseEntity<ErrorResponse> response = exceptionHandler
+          .handleMissingPrincipalIdentifierException(exception);
+
+      assertEquals(HttpStatus.UNAUTHORIZED, response.getStatusCode());
+      assertEquals(HttpStatus.UNAUTHORIZED.name(), response.getBody().getError());
       assertEquals(exception.getMessage(), response.getBody().getErrorDescription());
     }
 

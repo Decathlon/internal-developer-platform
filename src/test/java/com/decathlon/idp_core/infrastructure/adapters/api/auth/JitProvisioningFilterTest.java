@@ -26,6 +26,7 @@ import org.junit.jupiter.params.provider.ValueSource;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.http.HttpStatus;
 import org.springframework.security.authentication.AnonymousAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.authority.AuthorityUtils;
@@ -36,6 +37,8 @@ import com.decathlon.idp_core.domain.model.principal.PrincipalInfo;
 import com.decathlon.idp_core.domain.model.principal.PrincipalKind;
 import com.decathlon.idp_core.domain.service.principal.PrincipalProvisioningService;
 import com.decathlon.idp_core.infrastructure.adapters.api.configuration.AuthenticationProperties;
+import com.decathlon.idp_core.infrastructure.adapters.api.exception.MissingPrincipalIdentifierException;
+import com.decathlon.idp_core.infrastructure.adapters.api.handler.ApiErrorResponseWriter;
 import com.decathlon.idp_core.infrastructure.adapters.api.principal.PrincipalExtractor;
 
 @ExtendWith(MockitoExtension.class)
@@ -49,6 +52,9 @@ class JitProvisioningFilterTest {
 
   @Mock
   private AuthenticationProperties authProperties;
+
+  @Mock
+  private ApiErrorResponseWriter errorResponseWriter;
 
   @Mock
   private HttpServletRequest request;
@@ -164,6 +170,41 @@ class JitProvisioningFilterTest {
     jitProvisioningFilter.doFilterInternal(request, response, filterChain);
 
     verify(filterChain).doFilter(request, response);
+  }
+
+  @Test
+  void doFilterInternal_whenIdentifierClaimIsMissing_rejectsAuthentication()
+      throws ServletException, IOException {
+    Authentication auth = mock(Authentication.class);
+    when(auth.isAuthenticated()).thenReturn(true);
+    SecurityContextHolder.getContext().setAuthentication(auth);
+    when(principalExtractor.extractPrincipalInfo(auth))
+        .thenThrow(new MissingPrincipalIdentifierException("id"));
+
+    jitProvisioningFilter.doFilterInternal(request, response, filterChain);
+
+    verify(errorResponseWriter).write(response, HttpStatus.UNAUTHORIZED,
+        "Required principal identifier claim 'id' is missing or blank");
+    verify(filterChain, never()).doFilter(any(), any());
+    verify(provisioningService, never()).provisionPrincipal(any());
+  }
+
+  @Test
+  void doFilterInternal_whenOtherPrincipalExtractionFailureOccurs_propagatesIt()
+      throws ServletException, IOException {
+    Authentication auth = mock(Authentication.class);
+    when(auth.isAuthenticated()).thenReturn(true);
+    SecurityContextHolder.getContext().setAuthentication(auth);
+    when(principalExtractor.extractPrincipalInfo(auth))
+        .thenThrow(new IllegalStateException("Unexpected extraction failure"));
+
+    org.assertj.core.api.Assertions
+        .assertThatThrownBy(
+            () -> jitProvisioningFilter.doFilterInternal(request, response, filterChain))
+        .isInstanceOf(IllegalStateException.class).hasMessage("Unexpected extraction failure");
+
+    verify(errorResponseWriter, never()).write(any(), any(), any());
+    verify(filterChain, never()).doFilter(any(), any());
   }
 
   @ParameterizedTest

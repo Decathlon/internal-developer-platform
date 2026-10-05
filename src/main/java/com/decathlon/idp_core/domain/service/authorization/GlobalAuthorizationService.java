@@ -16,10 +16,11 @@ import com.decathlon.idp_core.domain.model.principal.PrincipalKind;
 public class GlobalAuthorizationService {
 
   private static final String IS_ADMIN_PROPERTY = "is_admin";
-  private static final String PRINCIPAL_TEMPLATE_IDENTIFIER = "principal";
+  private static final String PRINCIPAL_TEMPLATE_IDENTIFIER = AuthorizationResource.PRINCIPAL_TEMPLATE_IDENTIFIER;
   private static final String ENTITY_RESOURCE = "entity";
   private static final String PRINCIPAL_RESOURCE = "principal";
-  private static final String ENTITY_TEMPLATE_RESOURCE = "entity_template";
+  private static final String ENTITY_TEMPLATE_RESOURCE = AuthorizationResource.ENTITY_TEMPLATE;
+  private static final String ENTITY_DYNAMIC_MAPPING_RESOURCE = AuthorizationResource.ENTITY_DYNAMIC_MAPPING;
 
   /// Authorizes break-glass principals, catalog administrators, eligible
   /// service-account operations, and reads.
@@ -82,7 +83,11 @@ public class GlobalAuthorizationService {
         || (ENTITY_RESOURCE.equals(resource.type()) && resource.parentIdentifier()
             .filter(PRINCIPAL_TEMPLATE_IDENTIFIER::equals).isPresent())
         || (ENTITY_TEMPLATE_RESOURCE.equals(resource.type())
-            && resource.identifier().filter(PRINCIPAL_TEMPLATE_IDENTIFIER::equals).isPresent());
+            && resource.identifier().filter(PRINCIPAL_TEMPLATE_IDENTIFIER::equals).isPresent())
+        || ((ENTITY_DYNAMIC_MAPPING_RESOURCE.equals(resource.type())
+            || AuthorizationResource.INBOUND_WEBHOOK_CONFIGURATION.equals(resource.type()))
+            && resource.parentIdentifier().filter(PRINCIPAL_TEMPLATE_IDENTIFIER::equals)
+                .isPresent());
   }
 
   private boolean isCatalogAdministrator(Entity principalEntity) {

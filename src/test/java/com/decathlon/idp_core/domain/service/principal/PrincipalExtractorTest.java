@@ -28,6 +28,7 @@ import com.decathlon.idp_core.domain.model.principal.PrincipalInfo;
 import com.decathlon.idp_core.domain.model.principal.PrincipalKind;
 import com.decathlon.idp_core.infrastructure.adapters.api.configuration.AuthenticationProperties;
 import com.decathlon.idp_core.infrastructure.adapters.api.configuration.AuthenticationProperties.ServiceAccountDetection;
+import com.decathlon.idp_core.infrastructure.adapters.api.exception.MissingPrincipalIdentifierException;
 import com.decathlon.idp_core.infrastructure.adapters.api.principal.PrincipalExtractionStrategy;
 import com.decathlon.idp_core.infrastructure.adapters.api.principal.PrincipalExtractor;
 import com.decathlon.idp_core.infrastructure.adapters.api.principal.strategies.JwtPrincipalExtractionStrategy;
@@ -377,9 +378,9 @@ class PrincipalExtractorTest {
     }
 
     @Test
-    @DisplayName("Should detect service account with legacy mode - grant_type client_credentials")
-    void shouldDetectServiceAccountLegacyGrantType() {
-      // Given: JWT with grant_type=client_credentials (legacy mode enabled)
+    @DisplayName("Should require the definitive claim despite grant_type=client_credentials")
+    void shouldNotDetectServiceAccountFromGrantTypeAlone() {
+      // Given: JWT with grant_type=client_credentials but no definitive claim
       Map<String, Object> claims = new HashMap<>();
       claims.put("client_id", "my-service");
       claims.put("name", "My Service");
@@ -394,16 +395,16 @@ class PrincipalExtractorTest {
       // When: Extract principal
       PrincipalInfo principal = jwtStrategy.extract(auth);
 
-      // Then: Detected as service account
-      assertThat(principal.kind()).isEqualTo(PrincipalKind.SERVICE_ACCOUNT);
+      // Then: Classified as human because the definitive claim is absent
+      assertThat(principal.kind()).isEqualTo(PrincipalKind.HUMAN);
       assertThat(principal.identifier()).isEqualTo("my-service");
       assertThat(principal.name()).isEqualTo("My Service");
     }
 
     @Test
-    @DisplayName("Should detect service account with gty claim")
-    void shouldDetectServiceAccountWithGtyClaim() {
-      // Given: JWT with gty=client_credentials
+    @DisplayName("Should not detect service account from gty alone")
+    void shouldNotDetectServiceAccountFromGtyAlone() {
+      // Given: JWT with gty=client_credentials but no definitive claim
       Map<String, Object> claims = new HashMap<>();
       claims.put("client_id", "my-service");
       claims.put("gty", "client_credentials");
@@ -417,20 +418,19 @@ class PrincipalExtractorTest {
       // When: Extract principal
       PrincipalInfo principal = jwtStrategy.extract(auth);
 
-      // Then: Detected as service account
-      assertThat(principal.kind()).isEqualTo(PrincipalKind.SERVICE_ACCOUNT);
+      // Then: Classified as human because the definitive claim is absent
+      assertThat(principal.kind()).isEqualTo(PrincipalKind.HUMAN);
     }
 
     @Test
-    @DisplayName("Should detect service account with service_name claim")
-    void shouldDetectServiceAccountWithServiceNameClaim() {
-      // Given: JWT with service_name claim
+    @DisplayName("Should classify a token with service_name but no definitive claim as human")
+    void shouldTreatServiceNameWithoutDefinitiveClaimAsHuman() {
+      // Given: Human JWT with service_name but no definitive machine-account claim
       Map<String, Object> claims = new HashMap<>();
       claims.put("service_name", "my-service");
-      claims.put("client_id", "my-service");
 
       var jwtToken = mock(org.springframework.security.oauth2.jwt.Jwt.class);
-      when(jwtToken.getSubject()).thenReturn("my-service");
+      when(jwtToken.getSubject()).thenReturn("user-123");
       when(jwtToken.getClaims()).thenReturn(claims);
 
       var auth = new JwtAuthenticationToken(jwtToken);
@@ -438,14 +438,15 @@ class PrincipalExtractorTest {
       // When: Extract principal
       PrincipalInfo principal = jwtStrategy.extract(auth);
 
-      // Then: Detected as service account
-      assertThat(principal.kind()).isEqualTo(PrincipalKind.SERVICE_ACCOUNT);
+      // Then: Classified as human and keeps the human subject identifier
+      assertThat(principal.kind()).isEqualTo(PrincipalKind.HUMAN);
+      assertThat(principal.identifier()).isEqualTo("user-123");
     }
 
     @Test
-    @DisplayName("Should detect service account when sub equals client_id")
-    void shouldDetectServiceAccountWhenSubEqualsClientId() {
-      // Given: JWT where sub equals client_id
+    @DisplayName("Should not detect service account when sub equals client_id alone")
+    void shouldNotDetectServiceAccountWhenSubEqualsClientIdAlone() {
+      // Given: JWT where sub equals client_id but no definitive claim
       Map<String, Object> claims = new HashMap<>();
       claims.put("client_id", "my-service");
 
@@ -458,8 +459,8 @@ class PrincipalExtractorTest {
       // When: Extract principal
       PrincipalInfo principal = jwtStrategy.extract(auth);
 
-      // Then: Detected as service account
-      assertThat(principal.kind()).isEqualTo(PrincipalKind.SERVICE_ACCOUNT);
+      // Then: Classified as human because the definitive claim is absent
+      assertThat(principal.kind()).isEqualTo(PrincipalKind.HUMAN);
     }
 
     @Test
@@ -467,6 +468,7 @@ class PrincipalExtractorTest {
     void shouldExtractServiceAccountWithClientIdFallbackToAzp() {
       // Given: JWT with azp instead of client_id
       Map<String, Object> claims = new HashMap<>();
+      claims.put("token_type", "m2m");
       claims.put("azp", "authorized-party");
       claims.put("grant_type", "client_credentials");
 
@@ -489,6 +491,7 @@ class PrincipalExtractorTest {
     void shouldExtractServiceAccountWithServiceNameFallbackToName() {
       // Given: JWT with name instead of service_name
       Map<String, Object> claims = new HashMap<>();
+      claims.put("token_type", "m2m");
       claims.put("client_id", "my-service");
       claims.put("name", "My Service Name");
       claims.put("grant_type", "client_credentials");
@@ -511,6 +514,7 @@ class PrincipalExtractorTest {
     void shouldIncludeOriginInServiceAccountAttributes() {
       // Given: JWT with origin claim for service account
       Map<String, Object> claims = new HashMap<>();
+      claims.put("token_type", "m2m");
       claims.put("client_id", "my-service");
       claims.put("origin", "https://origin.example.com");
       claims.put("grant_type", "client_credentials");
@@ -533,6 +537,7 @@ class PrincipalExtractorTest {
     void shouldExtractServiceAccountGroups() {
       // Given: Service account JWT with groups
       Map<String, Object> claims = new HashMap<>();
+      claims.put("token_type", "m2m");
       claims.put("client_id", "my-service");
       claims.put("grant_type", "client_credentials");
       claims.put("groups", List.of("service-admins", "integrations"));
@@ -751,8 +756,8 @@ class PrincipalExtractorTest {
       when(auth.getPrincipal()).thenReturn(oauth2User);
 
       assertThatThrownBy(() -> oauth2Strategy.extract(auth))
-          .isInstanceOf(IllegalArgumentException.class)
-          .hasMessageContaining("principal identifier claim 'sub' is required");
+          .isInstanceOf(MissingPrincipalIdentifierException.class)
+          .hasMessageContaining("principal identifier claim 'sub' is missing or blank");
     }
 
     @Test

@@ -1,11 +1,8 @@
 package com.decathlon.idp_core.infrastructure.adapters.api.principal.strategies;
 
-import static com.decathlon.idp_core.infrastructure.adapters.api.principal.strategies.PrincipalStrategiesConstants.CLIENT_CREDENTIALS;
 import static com.decathlon.idp_core.infrastructure.adapters.api.principal.strategies.PrincipalStrategiesConstants.CLIENT_ID;
 import static com.decathlon.idp_core.infrastructure.adapters.api.principal.strategies.PrincipalStrategiesConstants.EMAIL;
-import static com.decathlon.idp_core.infrastructure.adapters.api.principal.strategies.PrincipalStrategiesConstants.GRANT_TYPE;
 import static com.decathlon.idp_core.infrastructure.adapters.api.principal.strategies.PrincipalStrategiesConstants.GROUPS;
-import static com.decathlon.idp_core.infrastructure.adapters.api.principal.strategies.PrincipalStrategiesConstants.GTY;
 import static com.decathlon.idp_core.infrastructure.adapters.api.principal.strategies.PrincipalStrategiesConstants.NAME;
 import static com.decathlon.idp_core.infrastructure.adapters.api.principal.strategies.PrincipalStrategiesConstants.ORIGIN;
 import static com.decathlon.idp_core.infrastructure.adapters.api.principal.strategies.PrincipalStrategiesConstants.PREFERRED_USERNAME;
@@ -25,6 +22,7 @@ import org.springframework.stereotype.Component;
 import com.decathlon.idp_core.domain.model.principal.PrincipalInfo;
 import com.decathlon.idp_core.domain.model.principal.PrincipalKind;
 import com.decathlon.idp_core.infrastructure.adapters.api.configuration.AuthenticationProperties;
+import com.decathlon.idp_core.infrastructure.adapters.api.exception.MissingPrincipalIdentifierException;
 import com.decathlon.idp_core.infrastructure.adapters.api.principal.PrincipalExtractionStrategy;
 
 @Component
@@ -47,7 +45,7 @@ public class JwtPrincipalExtractionStrategy implements PrincipalExtractionStrate
     var claims = jwtToken.getToken().getClaims();
     String sub = jwtToken.getToken().getSubject();
 
-    boolean isServiceAccount = detectServiceAccount(claims, sub);
+    boolean isServiceAccount = detectServiceAccount(claims);
 
     if (isServiceAccount) {
       return extractServiceAccountFromJwt(sub, claims);
@@ -55,29 +53,14 @@ public class JwtPrincipalExtractionStrategy implements PrincipalExtractionStrate
     return extractHumanFromJwt(sub, claims);
   }
 
-  /// Detects if the JWT token belongs to a service account (M2M) based on
-  /// configured strategy.
-  ///
-  /// **Strict Mode (Recommended):**
-  /// Checks for a single, definitive claim configured in
-  /// `app.security.authentication.service-account-detection.definitive-claim-name`.
-  /// Example: If configured to check `token_type=m2m`, returns true only if that
-  /// exact claim is present and has that value.
-  /// Benefits: Prevents false positives and security-critical misclassifications.
-  /// Risks: Requires IdP or API gateway to inject the definitive claim.
-  ///
-  /// **Legacy Mode (Backwards Compatibility):**
-  /// Falls back to loose OR conditions checking multiple optional claims.
-  /// Checks: `grant_type=client_credentials` OR `service_name` exists OR
-  /// `sub==client_id`
-  /// Benefits: Works without reconfiguration for existing deployments.
-  /// Risks: Prone to false positives (e.g., human user classified as M2M).
+  /// Detects if the JWT token belongs to a service account (M2M) using the
+  /// configured definitive claim. Fallback claims cannot establish a service
+  /// account because this classification bypasses human authorization checks.
   ///
   /// @param claims the JWT claims map
-  /// @param sub the subject claim value
   /// @return true if the token is identified as a service account, false
   /// otherwise
-  private boolean detectServiceAccount(Map<String, Object> claims, String sub) {
+  private boolean detectServiceAccount(Map<String, Object> claims) {
     AuthenticationProperties.ServiceAccountDetection config = authProperties
         .serviceAccountDetection();
 
@@ -85,12 +68,7 @@ public class JwtPrincipalExtractionStrategy implements PrincipalExtractionStrate
       return false;
     }
 
-    if ("strict".equalsIgnoreCase(config.mode())) {
-      return detectServiceAccountStrict(claims, config);
-    }
-
-    // Legacy mode (default for backwards compatibility)
-    return detectServiceAccountLegacy(claims, sub);
+    return detectServiceAccountStrict(claims, config);
   }
 
   /// Strict mode service account detection: checks for a single definitive claim.
@@ -109,64 +87,6 @@ public class JwtPrincipalExtractionStrategy implements PrincipalExtractionStrate
     return config.definitiveClaimValue().equals(claimValue.toString());
   }
 
-  /// Legacy mode service account detection: checks multiple claims with OR logic.
-  /// Fallback behavior for backwards compatibility.
-  ///
-  /// Checks:
-  /// 1. grant_type or gty = "client_credentials" (OAuth2 standard)
-  /// 2. service_name claim exists (Auth0 / custom IdP)
-  /// 3. sub equals client_id or azp (subject is the OAuth2 client itself)
-  ///
-  /// **Warning:** This logic is prone to false positives. Strongly recommend
-  /// upgrading
-  /// to strict mode for production deployments.
-  ///
-  /// @param claims the JWT claims map
-  /// @param sub the subject claim value
-  /// @return true if any legacy condition indicates M2M
-  private boolean detectServiceAccountLegacy(Map<String, Object> claims, String sub) {
-    AuthenticationProperties.ServiceAccountDetection config = authProperties
-        .serviceAccountDetection();
-
-    List<String> fallbackClaims = config.legacyFallbackClaims();
-
-    if (fallbackClaims.contains(GRANT_TYPE)) {
-      String grantTypeClaim = authProperties.userClaimMappings().get(GRANT_TYPE);
-      String gtyClaim = authProperties.userClaimMappings().get(GTY);
-
-      String grantType = Optional.ofNullable(claims.get(grantTypeClaim))
-          .or(() -> Optional.ofNullable(gtyClaim)
-              .flatMap(claim -> Optional.ofNullable(claims.get(claim))))
-          .map(Object::toString).orElse(null);
-
-      if (CLIENT_CREDENTIALS.equals(grantType)) {
-        return true;
-      }
-    }
-
-    if (fallbackClaims.contains(SERVICE_NAME)) {
-      String serviceNameClaim = authProperties.userClaimMappings().get(SERVICE_NAME);
-      if (serviceNameClaim != null && claims.containsKey(serviceNameClaim)) {
-        return true;
-      }
-    }
-
-    if (fallbackClaims.contains(CLIENT_ID)) {
-      String clientIdClaim = authProperties.userClaimMappings().get(CLIENT_ID);
-      String azpClaim = authProperties.userClaimMappings().get(AZP);
-
-      String clientId = Optional.ofNullable(clientIdClaim)
-          .flatMap(claim -> Optional.ofNullable(claims.get(claim)))
-          .or(() -> Optional.ofNullable(azpClaim)
-              .flatMap(claim -> Optional.ofNullable(claims.get(claim))))
-          .map(Object::toString).orElse(null);
-
-      return clientId != null && clientId.equals(sub);
-    }
-
-    return false;
-  }
-
   private PrincipalInfo extractHumanFromJwt(String sub, Map<String, Object> claims) {
     Map<String, String> claimMappings = authProperties.userClaimMappings();
 
@@ -176,8 +96,8 @@ public class JwtPrincipalExtractionStrategy implements PrincipalExtractionStrate
       identifierValue = sub;
     }
     String identifier = Optional.ofNullable(identifierValue).map(Object::toString)
-        .filter(value -> !value.isBlank()).orElseThrow(() -> new IllegalArgumentException(
-            "JWT principal identifier claim '" + identifierClaim + "' is required"));
+        .filter(value -> !value.isBlank())
+        .orElseThrow(() -> new MissingPrincipalIdentifierException(identifierClaim));
 
     String preferredUsernameClaim = claimMappings.get(PREFERRED_USERNAME);
     Optional<String> preferredUsername = Optional.ofNullable(preferredUsernameClaim)

@@ -5,17 +5,18 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Component;
 
+import com.decathlon.idp_core.domain.port.audit.AuditIdentityProviderPort;
 import com.decathlon.idp_core.infrastructure.adapters.api.principal.PrincipalExtractor;
 
 import lombok.RequiredArgsConstructor;
 
-/// UnifiedUserProvider is a Spring component that implements the UserIdentityProvider interface to provide a consistent way
+/// UnifiedUserProvider is a Spring component that implements the AuditIdentityProviderPort interface to provide a consistent way
 /// to retrieve the authenticated user's identity across different authentication mechanisms (JWT, OAuth2, OpenID).
 /// The shared principal extractor keeps audit identities aligned with the identifiers used for provisioning
 /// and authorization.
 @Component
 @RequiredArgsConstructor
-public class UnifiedUserProvider implements UserIdentityProvider {
+public class UnifiedUserProvider implements AuditIdentityProviderPort {
 
   private final PrincipalExtractor principalExtractor;
 

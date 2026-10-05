@@ -28,14 +28,14 @@ import com.decathlon.idp_core.infrastructure.adapters.api.principal.PrincipalExt
  * identifier for human principals. Service accounts continue to use their
  * client identifier.
  * <p>
- * <h2>Service Account Detection</h2> Service accounts (M2M tokens) can be
- * identified in multiple ways depending on the IdP:
+ * <h2>Service Account Detection</h2> Service accounts (M2M tokens) require one
+ * configured definitive claim:
  * <ul>
- * <li><strong>Strict Mode (Recommended):</strong> Single definitive claim
- * (e.g., {@code token_type=m2m}, {@code client_credentials})</li>
- * <li><strong>Legacy Mode:</strong> Multiple fallback claims (for backwards
- * compatibility with existing deployments)</li>
+ * <li>{@code token_type=m2m}</li>
+ * <li>{@code account_type=service}</li>
  * </ul>
+ * Legacy detection properties remain bindable for configuration compatibility
+ * but do not classify a token as a service account.
  *
  * @see SecurityConfiguration
  * @see PrincipalExtractor
@@ -66,16 +66,18 @@ public record AuthenticationProperties(
       // Enables or disables service account detection.
       boolean enabled,
 
-      // "strict" checks one claim; "legacy" checks the configured fallbacks.
+      // Retained for configuration compatibility; detection always requires the
+      // definitive claim.
       String mode,
 
-      // Claim checked in strict mode.
+      // Claim required to identify a service account.
       String definitiveClaimName,
 
-      // Value that identifies a service account in strict mode.
+      // Value that identifies a service account.
       String definitiveClaimValue,
 
-      // Claims checked as fallbacks in legacy mode.
+      // Retained for configuration compatibility; fallback claims do not classify
+      // service accounts.
       List<String> legacyFallbackClaims) {
   }
 }

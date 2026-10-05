@@ -196,12 +196,14 @@ app:
 ```
 
 When a JWT is received, the `PrincipalExtractor` uses these mappings to extract the actual claim values from the token,
-ensuring that regardless of IdP differences, your application always receives standardized `PrincipalInfo` objects.
+ensuring that regardless of IdP differences, your application always receives standardized `PrincipalInfo` objects. If
+the configured identifier claim is missing or blank, IDP-Core rejects the request with HTTP 401 and a standard JSON
+error response. Local mock authentication includes the configured identifier claim in its generated token.
 
 ### How Claim Mappings Work
 
-While the examples above cover standard configurations, understanding the extraction engine's fallback logic is crucial
-when dealing with custom claims or missing data.
+The extraction engine uses limited fallbacks for display data. It does not invent or fall back to an identifier because
+that value keys provisioning, audit records, and authorization.
 
 The extraction strategy doesn't just rename claims; it applies specific fallback rules if a mapped claim is missing from
 the token:
@@ -261,11 +263,11 @@ API clients, automation tools). Identifying them correctly is important for:
 - Audit logging and security monitoring
 - Rate limiting and quota management
 
-IDP-Core supports two detection modes:
+IDP-Core requires a configured definitive claim for service-account classification:
 
-### Strict Mode (Recommended)
+### Definitive Claim
 
-In strict mode, a single **definitive claim** unambiguously identifies M2M tokens:
+A single **definitive claim** unambiguously identifies M2M tokens:
 
 ```yaml
 app:
@@ -279,7 +281,8 @@ app:
 ```
 
 The system checks if the token contains `token_type=m2m`. If it does, the principal is classified as a
-`SERVICE_ACCOUNT`; otherwise, it's a `HUMAN_USER`.
+`SERVICE_ACCOUNT`; otherwise, it follows the human-principal path. The definitive claim is required even when the
+legacy `mode` value is configured.
 
 **Benefits:**
 
@@ -292,47 +295,16 @@ The system checks if the token contains `token_type=m2m`. If it does, the princi
 - Your IdP or API gateway must inject the definitive claim
 - May require custom configuration at the IdP level
 
-### Legacy Mode (Backwards Compatibility)
+### Legacy Configuration Compatibility
 
-In legacy mode, the system checks multiple optional claims with OR logic:
+Optional claims
+such as `service_name`, `client_id`, `azp`, `grant_type`, and `gty` do not
+establish a service account because this classification grants broader write
+access and bypasses the human access gate.
 
-```yaml
-app:
-  security:
-    authentication:
-      service-account-detection:
-        enabled: true
-        mode: "legacy"
-        legacy-fallback-claims:
-          - "grant_type"
-          - "service_name"
-          - "client_id"
-```
-
-In legacy mode, IDP-Core classifies a token as a `SERVICE_ACCOUNT` when **any** of
-the following conditions is true:
-
-- The claim mapped to `grant_type` or `gty` has the value
-  `client_credentials`.
-- The claim mapped to `service_name` is present.
-- The claim mapped to `client_id` or `azp` has the same value as `sub`.
-
-If none of these conditions is met, the token is classified as a `HUMAN_USER`.
-
-**Benefits:**
-
-- Works immediately without IdP reconfiguration
-- Maintains backwards compatibility with existing deployments
-
-**Drawbacks:**
-
-- Prone to false positives (for example, human user with `client_id` present)
-- Less secure - may misclassify humans as services
-- Will be deprecated in future versions
-
-> [!WARNING]
-> Migrate from legacy to strict mode is really encouraged for the systems meeting the prerequisites. Legacy mode is only
-recommended for existing systems
+IDP-Core still accepts the legacy `mode` and `legacy-fallback-claims`
+configuration fields so existing deployments can bind their configuration.
+These fields do not weaken the definitive-claim requirement.
 
 ## Principal Extraction
 

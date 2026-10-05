@@ -32,6 +32,7 @@ import com.decathlon.idp_core.domain.exception.filter.InvalidFilterDslException;
 import com.decathlon.idp_core.domain.exception.principal.PrincipalNotFoundException;
 import com.decathlon.idp_core.domain.exception.search.InvalidSearchQueryException;
 import com.decathlon.idp_core.domain.exception.webhook.*;
+import com.decathlon.idp_core.infrastructure.adapters.api.exception.MissingPrincipalIdentifierException;
 import com.decathlon.idp_core.infrastructure.adapters.common.model.ErrorResponse;
 
 import lombok.extern.slf4j.Slf4j;
@@ -61,6 +62,15 @@ import tools.jackson.databind.exc.MismatchedInputException;
 public class ApiExceptionHandler {
 
   private ApiExceptionHandler() {
+  }
+
+  /// Rejects authenticated principals that do not provide their configured
+  /// identifier claim.
+  @ExceptionHandler(MissingPrincipalIdentifierException.class)
+  public ResponseEntity<ErrorResponse> handleMissingPrincipalIdentifierException(
+      MissingPrincipalIdentifierException ex) {
+    log.warn("Authentication rejected: {}", ex.getMessage());
+    return createErrorResponse(HttpStatus.UNAUTHORIZED, ex.getMessage());
   }
 
   /// Handles domain exception when entity templates are not found.

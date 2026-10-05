@@ -40,7 +40,10 @@ import com.decathlon.idp_core.domain.model.principal.PrincipalInfo;
 import com.decathlon.idp_core.domain.model.principal.PrincipalKind;
 import com.decathlon.idp_core.domain.service.authorization.GlobalAuthorizationService;
 import com.decathlon.idp_core.domain.service.principal.PrincipalProvisioningService;
+import com.decathlon.idp_core.infrastructure.adapters.api.exception.MissingPrincipalIdentifierException;
+import com.decathlon.idp_core.infrastructure.adapters.api.handler.ApiErrorResponseWriter;
 import com.decathlon.idp_core.infrastructure.adapters.api.principal.PrincipalExtractor;
+import com.fasterxml.jackson.databind.ObjectMapper;
 
 class GlobalAuthorizationFilterTest {
 
@@ -53,6 +56,8 @@ class GlobalAuthorizationFilterTest {
       "Platform User", Map.of(), List.of());
   private final AuthorizationRequestFactory requestFactory = new AuthorizationRequestFactory(
       TestHandlerMappings.controllers());
+  private final ApiErrorResponseWriter errorResponseWriter = new ApiErrorResponseWriter(
+      new ObjectMapper());
   private GlobalAuthorizationFilter filter;
   private Authentication authentication;
 
@@ -60,7 +65,7 @@ class GlobalAuthorizationFilterTest {
   void setUp() {
     var policy = new AuthorizationPolicy(AuthorizationMode.GLOBAL, Set.of(), Optional.empty());
     filter = new GlobalAuthorizationFilter(principalExtractor, provisioningService,
-        authorizationService, policy, requestFactory);
+        authorizationService, policy, requestFactory, errorResponseWriter);
     authentication = mock(Authentication.class);
     when(authentication.isAuthenticated()).thenReturn(true);
     SecurityContextHolder.getContext().setAuthentication(authentication);
@@ -149,7 +154,27 @@ class GlobalAuthorizationFilterTest {
     filter.doFilter(request, response, chain);
 
     assertThat(response.getStatus()).isEqualTo(403);
+    assertThat(response.getContentType()).startsWith("application/json");
+    assertThat(response.getContentAsString()).contains("\"error\":\"FORBIDDEN\"",
+        "\"error_description\":\"Principal is not authorized to perform this operation\"");
     verify(chain, never()).doFilter(any(), any());
+  }
+
+  @Test
+  void shouldRejectMissingPrincipalIdentifierAsUnauthorized() throws ServletException, IOException {
+    var request = new MockHttpServletRequest("GET", "/api/v1/entities");
+    var response = new MockHttpServletResponse();
+    FilterChain chain = mock(FilterChain.class);
+    when(principalExtractor.extractPrincipalInfo(authentication))
+        .thenThrow(new MissingPrincipalIdentifierException("id"));
+
+    filter.doFilter(request, response, chain);
+
+    assertThat(response.getStatus()).isEqualTo(401);
+    assertThat(response.getContentAsString()).contains("\"error\":\"UNAUTHORIZED\"",
+        "\"error_description\":\"Required principal identifier claim 'id' is missing or blank\"");
+    verify(chain, never()).doFilter(any(), any());
+    verify(authorizationService, never()).authorize(any(), any());
   }
 
   @Test

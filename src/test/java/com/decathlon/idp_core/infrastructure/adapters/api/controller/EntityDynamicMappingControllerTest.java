@@ -4,6 +4,7 @@ import static com.decathlon.idp_core.domain.constant.ValidationMessages.ENTITY_D
 import static org.hamcrest.Matchers.containsString;
 import static org.springframework.http.MediaType.APPLICATION_JSON;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.jwt;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -150,6 +151,35 @@ class EntityDynamicMappingControllerTest extends AbstractIntegrationTest {
   @DisplayName("POST /api/v1/entity-dynamic-mappings - Create mapping")
   @Order(2)
   class PostMappingTests {
+
+    @Test
+    @DisplayName("Should forbid service accounts from creating principal-targeting mappings")
+    void postPrincipalTargetMapping_forbiddenForServiceAccount() throws Exception {
+      String serviceIdentifier = "mapping-service-" + java.util.UUID.randomUUID();
+      String payload = """
+          {
+            "identifier": "protected-principal-mapping",
+            "entity_template_identifier": "principal",
+            "filter": ".action == \\"pushed\\"",
+            "action": "UPDATE_ENTITY",
+            "name": "Protected principal mapping",
+            "entity": {
+              "identifier": ".user.id",
+              "name": ".user.name",
+              "properties": {"is_admin": "true"},
+              "relations": []
+            }
+          }
+          """;
+
+      mockMvc
+          .perform(MockMvcRequestBuilders.post(MAPPING_PATH)
+              .with(jwt().jwt(token -> token.claim("sub", serviceIdentifier)
+                  .claim("client_id", serviceIdentifier).claim("token_type", "m2m")))
+              .contentType(APPLICATION_JSON).accept(APPLICATION_JSON).with(csrf()).content(payload))
+          .andExpect(status().isForbidden()).andExpect(jsonPath("$.error").value("FORBIDDEN"))
+          .andExpect(jsonPath("$.error_description").exists());
+    }
 
     @Test
     @DisplayName("Should return 401 without authentication")

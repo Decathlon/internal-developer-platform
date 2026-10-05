@@ -6,6 +6,7 @@ import static org.hamcrest.Matchers.containsString;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.springframework.http.MediaType.APPLICATION_JSON;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.jwt;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -106,6 +107,17 @@ class EntityTemplateControllerTest extends AbstractIntegrationTest {
           .andExpect(status().isUnauthorized());
     }
 
+    @Test
+    @DisplayName("Should return standard 401 when the configured identifier claim is blank")
+    void getTemplates_401_whenPrincipalIdentifierClaimIsBlank() throws Exception {
+      mockMvc
+          .perform(get(ENTITY_TEMPLATE_PATH).with(jwt().jwt(token -> token.claim("sub", " ")))
+              .accept(APPLICATION_JSON))
+          .andExpect(status().isUnauthorized()).andExpect(jsonPath("$.error").value("UNAUTHORIZED"))
+          .andExpect(jsonPath("$.error_description")
+              .value(containsString("principal identifier claim 'sub'")));
+    }
+
     /// Tests the GET /api/v1/entity-templates/ endpoint with custom pagination
     /// parameters.
     /// This test verifies that:
@@ -181,6 +193,29 @@ class EntityTemplateControllerTest extends AbstractIntegrationTest {
               .content(getJsonTestFileContent(
                   ENTITY_TEMPLATE_JSON_TEST_PATH + "postEntityTemplate_201.json")))
           .andExpect(status().isCreated()).andReturn();
+    }
+
+    @Test
+    @DisplayName("Should forbid service accounts from creating the protected principal template")
+    void postPrincipalTemplate_forbiddenForServiceAccount() throws Exception {
+      String serviceIdentifier = "template-service-" + UUID.randomUUID();
+      String payload = """
+          {
+            "identifier": "principal",
+            "name": "Principal",
+            "description": "Protected identity template",
+            "properties_definitions": [],
+            "relations_definitions": []
+          }
+          """;
+
+      mockMvc
+          .perform(MockMvcRequestBuilders.post(ENTITY_TEMPLATE_PATH)
+              .with(jwt().jwt(token -> token.claim("sub", serviceIdentifier)
+                  .claim("client_id", serviceIdentifier).claim("token_type", "m2m")))
+              .contentType(APPLICATION_JSON).accept(APPLICATION_JSON).with(csrf()).content(payload))
+          .andExpect(status().isForbidden()).andExpect(jsonPath("$.error").value("FORBIDDEN"))
+          .andExpect(jsonPath("$.error_description").exists());
     }
 
     /// Tests the POST /api/v1/entity-templates endpoint without authentication.

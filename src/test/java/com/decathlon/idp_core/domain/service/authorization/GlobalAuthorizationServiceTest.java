@@ -101,9 +101,16 @@ class GlobalAuthorizationServiceTest {
   @Test
   void shouldRejectServiceAccountWritesToPrincipalRecordsAndTemplate() {
     List<AuthorizationResource> protectedResources = List.of(
-        new AuthorizationResource("entity", Optional.of("subject-123"), Optional.of("principal")),
+        new AuthorizationResource("entity", Optional.of("subject-123"),
+            Optional.of(AuthorizationResource.PRINCIPAL_TEMPLATE_IDENTIFIER)),
         new AuthorizationResource("principal", Optional.of("subject-123"), Optional.empty()),
-        new AuthorizationResource("entity_template", Optional.of("principal"), Optional.empty()));
+        new AuthorizationResource("entity_template",
+            Optional.of(AuthorizationResource.PRINCIPAL_TEMPLATE_IDENTIFIER), Optional.empty()),
+        new AuthorizationResource("entity_dynamic_mapping", Optional.of("principal-mapping"),
+            Optional.of(AuthorizationResource.PRINCIPAL_TEMPLATE_IDENTIFIER)),
+        new AuthorizationResource(AuthorizationResource.INBOUND_WEBHOOK_CONFIGURATION,
+            Optional.of("webhook"),
+            Optional.of(AuthorizationResource.PRINCIPAL_TEMPLATE_IDENTIFIER)));
 
     for (AuthorizationResource resource : protectedResources) {
       for (AuthorizationAction action : List.of(AuthorizationAction.CREATE,

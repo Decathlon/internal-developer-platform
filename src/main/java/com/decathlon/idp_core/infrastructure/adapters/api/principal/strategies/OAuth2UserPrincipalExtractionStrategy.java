@@ -18,6 +18,7 @@ import org.springframework.stereotype.Component;
 import com.decathlon.idp_core.domain.model.principal.PrincipalInfo;
 import com.decathlon.idp_core.domain.model.principal.PrincipalKind;
 import com.decathlon.idp_core.infrastructure.adapters.api.configuration.AuthenticationProperties;
+import com.decathlon.idp_core.infrastructure.adapters.api.exception.MissingPrincipalIdentifierException;
 import com.decathlon.idp_core.infrastructure.adapters.api.principal.PrincipalExtractionStrategy;
 
 /// Strategy for extracting principal information from OAuth2 and OpenID Connect (OIDC) users.
@@ -65,8 +66,7 @@ public class OAuth2UserPrincipalExtractionStrategy implements PrincipalExtractio
     String identifierClaim = authProperties.principalIdentifierClaim();
     String identifier = Optional.ofNullable(oauth2User.getAttribute(identifierClaim))
         .map(String::valueOf).filter(value -> !value.isBlank())
-        .orElseThrow(() -> new IllegalArgumentException(
-            "OAuth2 principal identifier claim '" + identifierClaim + "' is required"));
+        .orElseThrow(() -> new MissingPrincipalIdentifierException(identifierClaim));
 
     String preferredUsernameClaim = claimMappings.getOrDefault(PREFERRED_USERNAME,
         PREFERRED_USERNAME);
@@ -99,8 +99,7 @@ public class OAuth2UserPrincipalExtractionStrategy implements PrincipalExtractio
     String identifierClaim = authProperties.principalIdentifierClaim();
     String identifier = Optional.ofNullable(oidcUser.getAttribute(identifierClaim))
         .map(String::valueOf).filter(value -> !value.isBlank())
-        .orElseThrow(() -> new IllegalArgumentException(
-            "OIDC principal identifier claim '" + identifierClaim + "' is required"));
+        .orElseThrow(() -> new MissingPrincipalIdentifierException(identifierClaim));
 
     String name = Optional.ofNullable(oidcUser.getFullName())
         .or(() -> Optional.ofNullable(oidcUser.getGivenName()))

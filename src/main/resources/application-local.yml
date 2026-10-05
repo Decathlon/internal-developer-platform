@@ -48,7 +48,7 @@ app:
         enabled: true
       mock:
         enabled: false
-      principal-identifier-claim: id
+      principal-identifier-claim: ${IDP_PRINCIPAL_IDENTIFIER_CLAIM:sub}
       user-claim-mappings:
         preferred_username: login
         name: name
