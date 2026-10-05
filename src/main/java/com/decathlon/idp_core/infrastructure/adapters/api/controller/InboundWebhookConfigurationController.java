@@ -86,7 +86,18 @@ public class InboundWebhookConfigurationController {
       @Content(schema = @Schema(implementation = ErrorResponse.class))})
   @ResponseStatus(NO_CONTENT)
   @DeleteMapping("/{identifier}")
-  public void deleteWebhookConnector(@PathVariable String identifier) {
+  public void deleteWebhookConnector(@PathVariable String identifier,
+      HttpServletRequest request) {
+    var connector = webhookConnectorService.getWebhookConnector(identifier);
+    boolean principalTargetMapping = connector.mappings().stream()
+        .anyMatch(mapping -> AuthorizationResource.PRINCIPAL_TEMPLATE_IDENTIFIER
+            .equals(mapping.entityTemplateIdentifier()));
+    if (principalTargetMapping) {
+      requestAuthorizer.authorize(request, AuthorizationAction.DELETE,
+          new AuthorizationResource(AuthorizationResource.INBOUND_WEBHOOK_CONFIGURATION,
+              Optional.of(identifier),
+              Optional.of(AuthorizationResource.PRINCIPAL_TEMPLATE_IDENTIFIER)));
+    }
     webhookConnectorService.deleteWebhookConnector(identifier);
   }
 

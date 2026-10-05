@@ -93,7 +93,11 @@ public class EntityDynamicMappingController {
       @Content(schema = @Schema(implementation = ErrorResponse.class))})
   @ResponseStatus(NO_CONTENT)
   @DeleteMapping("/{identifier}")
-  public void deleteEntityDynamicMapping(@PathVariable String identifier) {
+  public void deleteEntityDynamicMapping(@PathVariable String identifier,
+      HttpServletRequest request) {
+    var mapping = dynamicMappingService.getEntityDynamicMapping(identifier);
+    authorizePrincipalMapping(request, AuthorizationAction.DELETE, identifier,
+        mapping.entityTemplateIdentifier());
     dynamicMappingService.deleteEntityDynamicMapping(identifier);
   }
 
@@ -125,8 +129,11 @@ public class EntityDynamicMappingController {
   public EntityDynamicMappingDtoOut updateEntityDynamicMapping(@PathVariable String identifier,
       @Valid @RequestBody EntityDynamicMappingUpdateDtoIn entityDynamicMappingDtoIn,
       HttpServletRequest request) {
+    var existingMapping = dynamicMappingService.getEntityDynamicMapping(identifier);
     authorizePrincipalMapping(request, AuthorizationAction.UPDATE, identifier,
-        entityDynamicMappingDtoIn.entityTemplateIdentifier());
+            existingMapping.entityTemplateIdentifier());
+    authorizePrincipalMapping(request, AuthorizationAction.UPDATE, identifier,
+            entityDynamicMappingDtoIn.entityTemplateIdentifier());
     return dynamicMappingMapper
         .fromEntityMappingToDto(dynamicMappingService.updateEntityDynamicMapping(identifier,
             dynamicMappingMapper.toDomainForUpdate(identifier, entityDynamicMappingDtoIn)));

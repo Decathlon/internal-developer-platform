@@ -53,6 +53,7 @@ import com.decathlon.idp_core.infrastructure.adapters.api.configuration.Authenti
 @ConditionalOnProperty(prefix = "app.security.authentication.mock", name = "enabled", havingValue = "true")
 public class MockFilterChainConfig {
 
+  public static final String LOCAL_DEVELOPER = "local-developer";
   private final JitProvisioningFilter jitProvisioningFilter;
   private final GlobalAuthorizationFilter globalAuthorizationFilter;
   private final AuthenticationProperties authenticationProperties;
@@ -161,8 +162,8 @@ public class MockFilterChainConfig {
       Map<String, Object> headers = Map.of("alg", "RS256", "typ", "JWT");
 
       Map<String, Object> claims = new HashMap<>();
-      claims.put("sub", "local-developer");
-      claims.put("preferred_username", "local-developer");
+      claims.put("sub", LOCAL_DEVELOPER);
+      claims.put("preferred_username", LOCAL_DEVELOPER);
       claims.put("name", "Local Developer");
       claims.put("client_id", "client-id");
       claims.put("scope", "auth read write");
@@ -170,7 +171,7 @@ public class MockFilterChainConfig {
       claims.put("exp", expiresAt.getEpochSecond());
       claims.put("email", "developer@local.dev");
       claims.put("user_id", "dev-user-001");
-      claims.put(principalIdentifierClaim, "local-developer");
+      claims.put(principalIdentifierClaim, LOCAL_DEVELOPER);
 
       return new Jwt("mock-token-value", now, expiresAt, headers, claims);
     }

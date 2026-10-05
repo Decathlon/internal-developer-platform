@@ -67,12 +67,10 @@ public class JitProvisioningFilter extends OncePerRequestFilter {
 
     Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
 
-    if (authentication != null && authentication.isAuthenticated()
-        && !isAnonymous(authentication)) {
-      if (!provisionPrincipalSafely(request, response, authentication)) {
-        return;
+      if (authentication != null && authentication.isAuthenticated()
+              && !isAnonymous(authentication) && !provisionPrincipalSafely(request, response, authentication)) {
+          return;
       }
-    }
 
     filterChain.doFilter(request, response);
   }
