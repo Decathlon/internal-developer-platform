@@ -131,9 +131,9 @@ public class EntityDynamicMappingController {
       HttpServletRequest request) {
     var existingMapping = dynamicMappingService.getEntityDynamicMapping(identifier);
     authorizePrincipalMapping(request, AuthorizationAction.UPDATE, identifier,
-            existingMapping.entityTemplateIdentifier());
+        existingMapping.entityTemplateIdentifier());
     authorizePrincipalMapping(request, AuthorizationAction.UPDATE, identifier,
-            entityDynamicMappingDtoIn.entityTemplateIdentifier());
+        entityDynamicMappingDtoIn.entityTemplateIdentifier());
     return dynamicMappingMapper
         .fromEntityMappingToDto(dynamicMappingService.updateEntityDynamicMapping(identifier,
             dynamicMappingMapper.toDomainForUpdate(identifier, entityDynamicMappingDtoIn)));

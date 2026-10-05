@@ -62,14 +62,13 @@ class EntityDynamicMappingDeletionAuthorizationTest {
 
   @Test
   void shouldAuthorizeResolvedPrincipalTargetBeforeDeletingMapping() {
-    when(dynamicMappingService.getEntityDynamicMapping("principal-mapping"))
-        .thenReturn(mapping("principal-mapping", AuthorizationResource.PRINCIPAL_TEMPLATE_IDENTIFIER));
+    when(dynamicMappingService.getEntityDynamicMapping("principal-mapping")).thenReturn(
+        mapping("principal-mapping", AuthorizationResource.PRINCIPAL_TEMPLATE_IDENTIFIER));
     doThrow(new PrincipalNotAuthorizedException("service-account")).when(requestAuthorizer)
         .authorize(eq(request), eq(AuthorizationAction.DELETE), any(AuthorizationResource.class));
 
-    assertThatThrownBy(
-        () -> controller.deleteEntityDynamicMapping("principal-mapping", request))
-            .isInstanceOf(PrincipalNotAuthorizedException.class);
+    assertThatThrownBy(() -> controller.deleteEntityDynamicMapping("principal-mapping", request))
+        .isInstanceOf(PrincipalNotAuthorizedException.class);
 
     verify(requestAuthorizer).authorize(eq(request), eq(AuthorizationAction.DELETE),
         argThat(resource -> resource.type().equals(AuthorizationResource.ENTITY_DYNAMIC_MAPPING)
@@ -91,8 +90,8 @@ class EntityDynamicMappingDeletionAuthorizationTest {
   }
 
   private EntityDynamicMapping mapping(String identifier, String targetTemplate) {
-    return new EntityDynamicMapping(UUID.randomUUID(), identifier, targetTemplate, ".action == 'update'",
-        MappingAction.UPDATE_ENTITY, "Mapping", null, ".entity.id", ".entity.name", Map.of(),
-        List.of());
+    return new EntityDynamicMapping(UUID.randomUUID(), identifier, targetTemplate,
+        ".action == 'update'", MappingAction.UPDATE_ENTITY, "Mapping", null, ".entity.id",
+        ".entity.name", Map.of(), List.of());
   }
 }

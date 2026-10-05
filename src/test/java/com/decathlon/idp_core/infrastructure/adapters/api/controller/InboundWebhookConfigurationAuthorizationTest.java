@@ -25,9 +25,9 @@ import com.decathlon.idp_core.domain.model.authorization.AuthorizationAction;
 import com.decathlon.idp_core.domain.model.authorization.AuthorizationResource;
 import com.decathlon.idp_core.domain.model.entity_mapping.EntityDynamicMapping;
 import com.decathlon.idp_core.domain.model.entity_mapping.MappingAction;
+import com.decathlon.idp_core.domain.model.enums.WebhookSecurityType;
 import com.decathlon.idp_core.domain.model.inbound_connectors.webhook.WebhookConnector;
 import com.decathlon.idp_core.domain.model.inbound_connectors.webhook.WebhookSecurity;
-import com.decathlon.idp_core.domain.model.enums.WebhookSecurityType;
 import com.decathlon.idp_core.domain.service.webhook.WebhookConnectorService;
 import com.decathlon.idp_core.infrastructure.adapters.api.auth.RequestAuthorizer;
 import com.decathlon.idp_core.infrastructure.adapters.api.dto.in.InboundWebhookSecurityContractDtoIn;
@@ -81,8 +81,7 @@ class InboundWebhookConfigurationAuthorizationTest {
 
   @Test
   void shouldAuthorizeResolvedPrincipalMappingsBeforeDeletingConnector() {
-    var mapping = mapping("principal-mapping",
-        AuthorizationResource.PRINCIPAL_TEMPLATE_IDENTIFIER);
+    var mapping = mapping("principal-mapping", AuthorizationResource.PRINCIPAL_TEMPLATE_IDENTIFIER);
     when(webhookConnectorService.getWebhookConnector("connector"))
         .thenReturn(connector("connector", List.of(mapping)));
     doThrow(new PrincipalNotAuthorizedException("service-account")).when(requestAuthorizer)
