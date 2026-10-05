@@ -15,6 +15,7 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import com.decathlon.idp_core.domain.model.entity.EntitySummary;
+import com.decathlon.idp_core.infrastructure.adapters.persistence.model.entity.EntityGraphJsonProjection;
 import com.decathlon.idp_core.infrastructure.adapters.persistence.model.entity.EntityJpaEntity;
 
 @Repository
@@ -301,4 +302,48 @@ public interface JpaEntityRepository
   /// @return list of entities belonging to the template
   List<EntityJpaEntity> findAllByTemplateIdentifier(String templateIdentifier);
 
+  @Query(value = """
+      SELECT
+          e.id AS id,
+          e.identifier AS identifier,
+          e.name AS name,
+          e.template_identifier AS templateIdentifier,
+
+          -- Aggregate EAV Properties into JSON Array
+          COALESCE(
+              (SELECT jsonb_agg(jsonb_build_object(
+                          'id', p.id,
+                          'name', p.name,
+                          'value', p.value
+                      ))
+               FROM idp_core.entity_properties ep
+               JOIN idp_core.property p ON p.id = ep.property_id
+               WHERE ep.entity_id = e.id), '[]'::jsonb
+          )::text AS propertiesJson,
+
+          -- Aggregate EAV Relations & Relation Target Entities into JSON Array
+          COALESCE(
+              (SELECT jsonb_agg(jsonb_build_object(
+                          'id', r.id,
+                          'name', r.name,
+                          'targetTemplateIdentifier', r.target_template_identifier,
+                          'targetEntities', (
+                              SELECT COALESCE(jsonb_agg(jsonb_build_object(
+                                  'targetEntityUuid', rte.target_entity_uuid,
+                                  'targetEntityIdentifier', rte.target_entity_identifier
+                              )), '[]'::jsonb)
+                              FROM idp_core.relation_target_entities rte
+                              WHERE rte.relation_id = r.id
+                          )
+                      ))
+               FROM idp_core.entity_relations er
+               JOIN idp_core.relation r ON r.id = er.relation_id
+               WHERE er.entity_id = e.id), '[]'::jsonb
+          )::text AS relationsJson
+
+      FROM idp_core.entity e
+      WHERE e.id IN :entityIds
+      """, nativeQuery = true)
+  List<EntityGraphJsonProjection> findEntityGraphDataByIds(
+      @Param("entityIds") Collection<UUID> entityIds);
 }

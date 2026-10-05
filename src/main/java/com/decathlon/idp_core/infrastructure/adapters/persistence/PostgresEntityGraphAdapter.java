@@ -3,21 +3,25 @@ package com.decathlon.idp_core.infrastructure.adapters.persistence;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.UUID;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.decathlon.idp_core.domain.model.entity.Entity;
+import com.decathlon.idp_core.domain.model.entity.Property;
+import com.decathlon.idp_core.domain.model.entity.Relation;
 import com.decathlon.idp_core.domain.model.entity_graph.EntityGraphTraversalMode;
 import com.decathlon.idp_core.domain.port.EntityGraphRepositoryPort;
-import com.decathlon.idp_core.infrastructure.adapters.persistence.mapper.EntityPersistenceMapper;
-import com.decathlon.idp_core.infrastructure.adapters.persistence.model.entity.EntityJpaEntity;
+import com.decathlon.idp_core.infrastructure.adapters.persistence.model.entity.EntityGraphJsonProjection;
 import com.decathlon.idp_core.infrastructure.adapters.persistence.repository.JpaEntityRepository;
+import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
 
 import lombok.RequiredArgsConstructor;
 
@@ -38,9 +42,7 @@ import lombok.RequiredArgsConstructor;
 public class PostgresEntityGraphAdapter implements EntityGraphRepositoryPort {
 
   private final JpaEntityRepository jpaEntityRepository;
-  private final EntityPersistenceMapper mapper;
-
-  private static final Logger log = LoggerFactory.getLogger(PostgresEntityGraphAdapter.class);
+  private final ObjectMapper objectMapper;
 
   /// Fetches a depth-limited entity relationship graph for one or more root
   /// entities.
@@ -83,59 +85,64 @@ public class PostgresEntityGraphAdapter implements EntityGraphRepositoryPort {
   /// @return immutable map of all discovered entities keyed by UUID; empty map if
   /// no
   /// entities found or if input is null/empty
-  @SuppressWarnings("null")
   @Override
   @Transactional(readOnly = true)
   public Map<UUID, Entity> findEntityGraph(Collection<UUID> rootIds, int depth,
       boolean includeProperties, EntityGraphTraversalMode mode) {
-
-    if (rootIds == null || rootIds.isEmpty()) {
-      log.debug("[EntityGraphAdapter] Empty root IDs provided, returning empty map");
+    List<UUID> discoveredIds = jpaEntityRepository.findEntityIdsInGraph(rootIds, depth,
+        mode.name());
+    if (discoveredIds.isEmpty()) {
       return Map.of();
     }
 
-    // Step 1: Collect all entity IDs in the graph via batch recursive CTE
-    // Works for both single and multiple roots
-    log.debug("Discovering entity graph: rootCount={}, depth={}, mode={}", rootIds.size(), depth,
-        mode);
-    long graphDiscoveryStartedAt = System.nanoTime();
-    List<UUID> graphIds = jpaEntityRepository.findEntityIdsInGraph(rootIds, depth, mode.name());
-    log.debug(
-        "Entity graph discovery completed: rootCount={}, discoveredEntityCount={}, durationMs={}",
-        rootIds.size(), graphIds == null ? 0 : graphIds.size(),
-        (System.nanoTime() - graphDiscoveryStartedAt) / 1_000_000);
-
-    if (graphIds == null || graphIds.isEmpty()) {
-      log.debug(
-          "[EntityGraphAdapter] No graph identifiers found for roots (null or empty), returning empty map");
-      return Map.of();
-    }
-
-    // Step 2: Extract unique identifiers for batch loading
-    List<UUID> uniqueEntityIds = graphIds.stream().distinct().toList();
-
-    // Step 3: Batch-load entities with relations, then optionally properties in a
-    // separate query.
-    // Properties are skipped when not requested to avoid the extra round-trip and
-    // keep payloads lean.
-    // The two-query split also avoids Hibernate's MultipleBagFetchException.
-    log.debug("Loading graph entities and relations: entityCount={}", uniqueEntityIds.size());
-    long relationLoadStartedAt = System.nanoTime();
-    List<EntityJpaEntity> jpaEntities = jpaEntityRepository
-        .findAllByIdinWithRelations(uniqueEntityIds);
-    log.debug("Graph entities and relations loaded: entityCount={}, durationMs={}",
-        jpaEntities.size(), (System.nanoTime() - relationLoadStartedAt) / 1_000_000);
-    if (includeProperties) {
-      log.debug("Loading graph entity properties: entityCount={}", uniqueEntityIds.size());
-      long propertyLoadStartedAt = System.nanoTime();
-      jpaEntityRepository.findAllByIdInWithProperties(uniqueEntityIds);
-      log.debug("Graph entity properties loaded: entityCount={}, durationMs={}",
-          uniqueEntityIds.size(), (System.nanoTime() - propertyLoadStartedAt) / 1_000_000);
-    }
-
-    // Step 4: Map to domain and key by UUID for O(1) lookup
-    return jpaEntities.stream().map(mapper::toDomain).filter(entity -> entity.id() != null)
+    List<EntityGraphJsonProjection> projections = jpaEntityRepository
+        .findEntityGraphDataByIds(discoveredIds);
+    return projections.stream().map(this::mapProjectionToDomain)
         .collect(Collectors.toMap(Entity::id, Function.identity()));
   }
 
+  private Entity mapProjectionToDomain(EntityGraphJsonProjection projection) {
+    try {
+      List<PropertyProjection> propertyProjections = objectMapper
+          .readValue(jsonOrEmptyArray(projection.getPropertiesJson()), new TypeReference<>() {
+          });
+      List<RelationProjection> relationProjections = objectMapper
+          .readValue(jsonOrEmptyArray(projection.getRelationsJson()), new TypeReference<>() {
+          });
+
+      List<Property> properties = propertyProjections.stream()
+          .map(property -> new Property(property.id(), property.name(), property.value())).toList();
+      List<Relation> relations = relationProjections.stream()
+          .map(relation -> new Relation(relation.id(), relation.name(),
+              relation.targetTemplateIdentifier(), relation.targetEntities().stream()
+                  .map(TargetProjection::targetEntityIdentifier).filter(Objects::nonNull).toList()))
+          .toList();
+
+      return new Entity(projection.getId(), projection.getTemplateIdentifier(),
+          projection.getName(), projection.getIdentifier(), properties, relations);
+    } catch (JsonProcessingException e) {
+      throw new IllegalStateException(
+          "Failed to parse JSONB payload for entity: " + projection.getId(), e);
+    }
+  }
+
+  private String jsonOrEmptyArray(String json) {
+    return json == null || json.isBlank() ? "[]" : json;
+  }
+
+  private record PropertyProjection(@JsonProperty("id") UUID id, @JsonProperty("name") String name,
+      @JsonProperty("value") String value) {
+  }
+
+  private record RelationProjection(@JsonProperty("id") UUID id, @JsonProperty("name") String name,
+      @JsonProperty("targetTemplateIdentifier") String targetTemplateIdentifier,
+      @JsonProperty("targetEntities") List<TargetProjection> targetEntities) {
+    private RelationProjection {
+      targetEntities = targetEntities != null ? targetEntities : List.of();
+    }
+  }
+
+  private record TargetProjection(@JsonProperty("targetEntityUuid") UUID targetEntityUuid,
+      @JsonProperty("targetEntityIdentifier") String targetEntityIdentifier) {
+  }
 }
