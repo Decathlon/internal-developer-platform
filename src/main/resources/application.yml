@@ -187,10 +187,19 @@ otel:
     exporter: none
   exporter:
     otlp:
-      endpoint: ${OTEL_EXPORTER_OTLP_ENDPOINT}
       protocol: ${OTEL_EXPORTER_OTLP_PROTOCOL:http/protobuf}
       headers:
-        Authorization: ${OTEL_EXPORTER_OTLP_AUTHORIZATION:}
+        Authorization: ${OTEL_EXPORTER_OTLP_AUTHORIZATION}
+      traces:
+        endpoint: ${OTEL_EXPORTER_OTLP_ENDPOINT}
+        protocol: ${OTEL_EXPORTER_OTLP_PROTOCOL:http/protobuf}
+        headers:
+          Authorization: ${OTEL_EXPORTER_OTLP_AUTHORIZATION}
+      metrics:
+        endpoint: ${OTEL_EXPORTER_OTLP_METRIC_ENDPOINT}
+        protocol: ${OTEL_EXPORTER_OTLP_PROTOCOL:http/protobuf}
+        headers:
+          Authorization: ${OTEL_EXPORTER_OTLP_AUTHORIZATION}
   resource:
     attributes:
       deployment.environment: ${OTEL_ENV}
