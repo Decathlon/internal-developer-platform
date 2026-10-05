@@ -1,5 +1,7 @@
 package com.decathlon.idp_core.domain.model.entity;
 
+import java.util.UUID;
+
 import lombok.Builder;
 
 /// Lightweight projection of an [Entity] for efficient summary views.
@@ -14,5 +16,5 @@ import lombok.Builder;
 /// - Relationship target references
 /// - Performance-optimized read operations where full entity data isn't required
 @Builder
-public record EntitySummary(String identifier, String name, String templateIdentifier) {
+public record EntitySummary(UUID id, String identifier, String name, String templateIdentifier) {
 }

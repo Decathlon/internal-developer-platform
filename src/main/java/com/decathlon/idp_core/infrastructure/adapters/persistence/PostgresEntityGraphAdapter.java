@@ -96,7 +96,14 @@ public class PostgresEntityGraphAdapter implements EntityGraphRepositoryPort {
 
     // Step 1: Collect all entity IDs in the graph via batch recursive CTE
     // Works for both single and multiple roots
+    log.debug("Discovering entity graph: rootCount={}, depth={}, mode={}", rootIds.size(), depth,
+        mode);
+    long graphDiscoveryStartedAt = System.nanoTime();
     List<UUID> graphIds = jpaEntityRepository.findEntityIdsInGraph(rootIds, depth, mode.name());
+    log.debug(
+        "Entity graph discovery completed: rootCount={}, discoveredEntityCount={}, durationMs={}",
+        rootIds.size(), graphIds == null ? 0 : graphIds.size(),
+        (System.nanoTime() - graphDiscoveryStartedAt) / 1_000_000);
 
     if (graphIds == null || graphIds.isEmpty()) {
       log.debug(
@@ -112,10 +119,18 @@ public class PostgresEntityGraphAdapter implements EntityGraphRepositoryPort {
     // Properties are skipped when not requested to avoid the extra round-trip and
     // keep payloads lean.
     // The two-query split also avoids Hibernate's MultipleBagFetchException.
+    log.debug("Loading graph entities and relations: entityCount={}", uniqueEntityIds.size());
+    long relationLoadStartedAt = System.nanoTime();
     List<EntityJpaEntity> jpaEntities = jpaEntityRepository
         .findAllByIdinWithRelations(uniqueEntityIds);
+    log.debug("Graph entities and relations loaded: entityCount={}, durationMs={}",
+        jpaEntities.size(), (System.nanoTime() - relationLoadStartedAt) / 1_000_000);
     if (includeProperties) {
+      log.debug("Loading graph entity properties: entityCount={}", uniqueEntityIds.size());
+      long propertyLoadStartedAt = System.nanoTime();
       jpaEntityRepository.findAllByIdInWithProperties(uniqueEntityIds);
+      log.debug("Graph entity properties loaded: entityCount={}, durationMs={}",
+          uniqueEntityIds.size(), (System.nanoTime() - propertyLoadStartedAt) / 1_000_000);
     }
 
     // Step 4: Map to domain and key by UUID for O(1) lookup

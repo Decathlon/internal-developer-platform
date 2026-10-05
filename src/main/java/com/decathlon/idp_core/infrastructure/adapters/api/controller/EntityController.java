@@ -103,6 +103,7 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 
 /// REST API adapter providing entity management endpoints.
 ///
@@ -117,6 +118,7 @@ import lombok.RequiredArgsConstructor;
 @Tag(name = "Entities Management", description = "Operations related to entity management")
 @Validated
 @RequiredArgsConstructor
+@Slf4j
 public class EntityController {
 
   private final EntityService entityService;
@@ -216,12 +218,21 @@ public class EntityController {
       @Min(value = RELATIONS_DEPTH_MIN, message = RELATIONS_DEPTH_MIN_MESSAGE) @Max(value = RELATIONS_DEPTH_MAX, message = RELATIONS_DEPTH_MAX_MESSAGE) @RequestParam(name = "relations_depth", required = false, defaultValue = "1") Integer relationsDepth,
       @RequestParam(name = "relations_to_display", required = false) Set<String> relationsToDisplay) {
 
-    EntityGraphNode entityGraphNode = entityGraphService.getEntityGraph(templateIdentifier,
-        entityIdentifier, relationsDepth, true,
-        relationsToDisplay == null ? Set.of() : relationsToDisplay, Set.of(),
-        EntityGraphTraversalMode.DIRECT_LINEAGE);
-    return entityDtoOutFromEntityNodeMapper.toDto(entityGraphNode, templateIdentifier,
-        relationsDepth);
+    log.debug(
+        "GET entity request: templateIdentifier={}, entityIdentifier={}, relationsDepth={}, relationsToDisplay={}",
+        templateIdentifier, entityIdentifier, relationsDepth, relationsToDisplay);
+    long startedAt = System.nanoTime();
+    try {
+      EntityGraphNode entityGraphNode = entityGraphService.getEntityGraph(templateIdentifier,
+          entityIdentifier, relationsDepth, true,
+          relationsToDisplay == null ? Set.of() : relationsToDisplay, Set.of(),
+          EntityGraphTraversalMode.DIRECT_LINEAGE);
+      return entityDtoOutFromEntityNodeMapper.toDto(entityGraphNode, templateIdentifier,
+          relationsDepth);
+    } finally {
+      log.debug("GET entity completed: templateIdentifier={}, entityIdentifier={}, durationMs={}",
+          templateIdentifier, entityIdentifier, (System.nanoTime() - startedAt) / 1_000_000);
+    }
   }
 
   /// Creates a new entity for the specified template with validation.

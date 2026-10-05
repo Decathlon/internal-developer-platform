@@ -23,7 +23,7 @@ public interface JpaEntityRepository
       JpaRepository<EntityJpaEntity, UUID>,
       JpaSpecificationExecutor<EntityJpaEntity> {
 
-  @Query("SELECT e.identifier AS identifier, e.name AS name, e.templateIdentifier AS templateIdentifier FROM EntityJpaEntity e WHERE e.identifier IN :identifiers")
+  @Query("SELECT e.id, e.identifier AS identifier, e.name AS name, e.templateIdentifier AS templateIdentifier FROM EntityJpaEntity e WHERE e.identifier IN :identifiers")
   List<EntitySummary> findByIdentifierIn(List<String> identifiers);
 
   /// Finds entity summaries by composite keys (templateIdentifier + identifier).
@@ -50,7 +50,7 @@ public interface JpaEntityRepository
   /// templateIdentifiers)
   /// @return list of entity summaries matching the composite keys
   @Query(value = """
-      SELECT e.identifier, e.name, e.template_identifier AS templateIdentifier
+      SELECT e.id, e.identifier, e.name, e.template_identifier AS templateIdentifier
       FROM idp_core.entity e
       JOIN unnest(:templateIdentifiers, :identifiers) AS k(template_identifier, identifier)
         ON e.template_identifier = k.template_identifier AND e.identifier = k.identifier
@@ -59,7 +59,7 @@ public interface JpaEntityRepository
       @Param("templateIdentifiers") String[] templateIdentifiers,
       @Param("identifiers") String[] identifiers);
 
-  @Query("SELECT e.identifier AS identifier, e.name AS name, e.templateIdentifier AS templateIdentifier FROM EntityJpaEntity e JOIN e.relations r WHERE r.id IN :relationIds")
+  @Query("SELECT e.id, e.identifier AS identifier, e.name AS name, e.templateIdentifier AS templateIdentifier FROM EntityJpaEntity e JOIN e.relations r WHERE r.id IN :relationIds")
   List<EntitySummary> findByRelationIdIn(List<UUID> relationIds);
 
   Optional<EntityJpaEntity> findByTemplateIdentifierAndIdentifier(String templateIdentifier,
@@ -232,58 +232,52 @@ public interface JpaEntityRepository
   /// empty list if no entities are reachable
   @Query(value = """
       WITH RECURSIVE entity_graph(id, depth, flow) AS (
-          -- 1. ANCHOR MEMBER: Initialize state tokens for multiple root entities
-          SELECT e.id, 0, 'OUTBOUND' AS flow
+          -- 1. ANCHOR MEMBERS (All non-recursive terms)
+          SELECT e.id, 0 AS depth, 'OUTBOUND' AS flow
           FROM idp_core.entity e
-          WHERE e.id IN :rootIds AND :mode IN ('DIRECT_LINEAGE', 'OUTBOUND_ONLY')
+          WHERE e.id IN :rootIds
+            AND :mode IN ('DIRECT_LINEAGE', 'OUTBOUND_ONLY')
 
-          UNION
+          UNION ALL
 
-          SELECT e.id, 0, 'INBOUND' AS flow
+          SELECT e.id, 0 AS depth, 'INBOUND' AS flow
           FROM idp_core.entity e
-          WHERE e.id IN :rootIds AND :mode = 'DIRECT_LINEAGE'
+          WHERE e.id IN :rootIds
+            AND :mode = 'DIRECT_LINEAGE'
 
-          UNION
+          UNION ALL
 
-          SELECT e.id, 0, 'ANY' AS flow
+          SELECT e.id, 0 AS depth, 'ANY' AS flow
           FROM idp_core.entity e
-          WHERE e.id IN :rootIds AND :mode = 'BIDIRECTIONAL'
+          WHERE e.id IN :rootIds
+            AND :mode = 'BIDIRECTIONAL'
 
-          UNION
+          UNION ALL
 
-          -- 2. RECURSIVE MEMBER: Propagate isolated pathways down the graph footprint
-          SELECT combined.id, eg.depth + 1, eg.flow
+          -- 2. SINGLE RECURSIVE MEMBER: Lateral traversal per frontier node
+          SELECT next_node.id, eg.depth + 1, eg.flow
           FROM entity_graph eg
-          JOIN (
-              -- Outbound Paths
-              SELECT er.entity_id AS source_id, rte.target_entity_uuid AS id, 'OUTBOUND' AS flow_match
+          CROSS JOIN LATERAL (
+              -- Outbound Traversal
+              SELECT rte.target_entity_uuid AS id
               FROM idp_core.entity_relations er
               JOIN idp_core.relation_target_entities rte ON rte.relation_id = er.relation_id
-              WHERE rte.target_entity_uuid IS NOT NULL
+              WHERE er.entity_id = eg.id
+                AND eg.flow IN ('OUTBOUND', 'ANY')
+                AND rte.target_entity_uuid IS NOT NULL
 
               UNION ALL
 
-              SELECT er.entity_id AS source_id, rte.target_entity_uuid AS id, 'ANY' AS flow_match
-              FROM idp_core.entity_relations er
-              JOIN idp_core.relation_target_entities rte ON rte.relation_id = er.relation_id
-              WHERE rte.target_entity_uuid IS NOT NULL
-
-              UNION ALL
-
-              -- Inbound Paths
-              SELECT rte.target_entity_uuid AS source_id, er.entity_id AS id, 'INBOUND' AS flow_match
+              -- Inbound Traversal
+              SELECT er.entity_id AS id
               FROM idp_core.relation_target_entities rte
               JOIN idp_core.entity_relations er ON er.relation_id = rte.relation_id
-
-              UNION ALL
-
-              SELECT rte.target_entity_uuid AS source_id, er.entity_id AS id, 'ANY' AS flow_match
-              FROM idp_core.relation_target_entities rte
-              JOIN idp_core.entity_relations er ON er.relation_id = rte.relation_id
-          ) combined ON combined.source_id = eg.id AND combined.flow_match = eg.flow
+              WHERE rte.target_entity_uuid = eg.id
+                AND eg.flow IN ('INBOUND', 'ANY')
+          ) next_node
           WHERE eg.depth < :depth
       )
-      -- 3. Return the clean deduplicated set of structural skeleton UUIDs
+      -- 3. Return clean deduplicated set of structural skeleton UUIDs
       SELECT DISTINCT id FROM entity_graph;
       """, nativeQuery = true)
   List<UUID> findEntityIdsInGraph(@Param("rootIds") Collection<UUID> rootIds,

@@ -14,7 +14,9 @@ import org.springframework.transaction.annotation.Transactional;
 import com.decathlon.idp_core.domain.exception.entity.EntityNotFoundException;
 import com.decathlon.idp_core.domain.exception.entity_template.EntityTemplateNotFoundException;
 import com.decathlon.idp_core.domain.model.entity.Entity;
+import com.decathlon.idp_core.domain.model.entity.EntityCompositeKey;
 import com.decathlon.idp_core.domain.model.entity.EntityFilter;
+import com.decathlon.idp_core.domain.model.entity.EntitySummary;
 import com.decathlon.idp_core.domain.model.entity_graph.EntityGraphNode;
 import com.decathlon.idp_core.domain.model.entity_graph.EntityGraphTraversalMode;
 import com.decathlon.idp_core.domain.port.EntityGraphRepositoryPort;
@@ -102,12 +104,16 @@ public class EntityGraphService {
 
     int effectiveDepth = Math.clamp(depth, 1, MAX_DEPTH);
 
-    entityTemplateValidationService.validateTemplateExists(templateIdentifier);
+    // entityTemplateValidationService.validateTemplateExists(templateIdentifier);
 
-    // 1. Resolve root entity
-    Entity rootEntity = entityRepositoryPort
-        .findByTemplateIdentifierAndIdentifier(templateIdentifier, entityIdentifier)
-        .orElseThrow(() -> new EntityNotFoundException(templateIdentifier, entityIdentifier));
+    EntitySummary rootEntity = entityRepositoryPort.findSummariesByCompositeKeys(
+        List.of(new EntityCompositeKey(templateIdentifier, entityIdentifier))).get(0);
+
+    // // 1. Resolve root entity
+    // Entity rootEntity = entityRepositoryPort
+    // .findByTemplateIdentifierAndIdentifier(templateIdentifier, entityIdentifier)
+    // .orElseThrow(() -> new EntityNotFoundException(templateIdentifier,
+    // entityIdentifier));
 
     // 2. Load the graph footprint via optimized DB calls
     Map<UUID, Entity> entityMap = entityGraphRepositoryPort.findEntityGraph(Set.of(rootEntity.id()),

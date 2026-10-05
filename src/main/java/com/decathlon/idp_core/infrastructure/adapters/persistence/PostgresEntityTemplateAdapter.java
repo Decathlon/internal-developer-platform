@@ -22,6 +22,7 @@ import com.decathlon.idp_core.infrastructure.adapters.persistence.model.entity_t
 import com.decathlon.idp_core.infrastructure.adapters.persistence.repository.JpaEntityTemplateRepository;
 
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 
 /// PostgreSQL persistence adapter implementing [EntityTemplateRepositoryPort].
 ///
@@ -38,6 +39,7 @@ import lombok.RequiredArgsConstructor;
 /// - Lazy loading configured appropriately for relationship navigation
 @Component
 @RequiredArgsConstructor
+@Slf4j
 public class PostgresEntityTemplateAdapter implements EntityTemplateRepositoryPort {
   /// - Entity graphs fetch properties and relations in single query
   /// - Bulk operations minimize database round trips
@@ -63,7 +65,11 @@ public class PostgresEntityTemplateAdapter implements EntityTemplateRepositoryPo
 
   @Override
   public boolean existsByIdentifier(String identifier) {
-    return jpaEntityTemplateRepository.existsByIdentifier(identifier);
+    long startedAt = System.nanoTime();
+    boolean exists = jpaEntityTemplateRepository.existsByIdentifier(identifier);
+    log.debug("Template existence query completed: identifier={}, found={}, durationMs={}",
+        identifier, exists, (System.nanoTime() - startedAt) / 1_000_000);
+    return exists;
   }
 
   @Override

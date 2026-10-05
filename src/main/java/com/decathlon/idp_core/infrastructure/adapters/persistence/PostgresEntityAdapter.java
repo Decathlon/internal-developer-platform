@@ -30,9 +30,11 @@ import com.decathlon.idp_core.infrastructure.adapters.persistence.specification.
 import com.decathlon.idp_core.infrastructure.adapters.persistence.specification.EntitySearchSpecification;
 
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 
 @Component
 @RequiredArgsConstructor
+@Slf4j
 public class PostgresEntityAdapter implements EntityRepositoryPort {
 
   private final JpaEntityRepository jpaEntityRepository;
@@ -61,8 +63,15 @@ public class PostgresEntityAdapter implements EntityRepositoryPort {
   @Override
   public Optional<Entity> findByTemplateIdentifierAndIdentifier(String templateIdentifier,
       String identifier) {
-    return jpaEntityRepository.findByTemplateIdentifierAndIdentifier(templateIdentifier, identifier)
+    long startedAt = System.nanoTime();
+    Optional<Entity> entity = jpaEntityRepository
+        .findByTemplateIdentifierAndIdentifier(templateIdentifier, identifier)
         .map(mapper::toDomain);
+    log.debug(
+        "Entity lookup completed: templateIdentifier={}, entityIdentifier={}, found={}, durationMs={}",
+        templateIdentifier, identifier, entity.isPresent(),
+        (System.nanoTime() - startedAt) / 1_000_000);
+    return entity;
   }
 
   @Override
