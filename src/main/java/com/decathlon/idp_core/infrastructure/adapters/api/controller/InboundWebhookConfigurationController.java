@@ -3,9 +3,6 @@ package com.decathlon.idp_core.infrastructure.adapters.api.controller;
 import static com.decathlon.idp_core.infrastructure.adapters.api.configuration.SwaggerDescription.*;
 import static org.springframework.http.HttpStatus.*;
 
-import java.util.Optional;
-
-import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 
 import org.springframework.data.domain.Page;
@@ -13,12 +10,10 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.web.bind.annotation.*;
 
-import com.decathlon.idp_core.domain.model.authorization.AuthorizationAction;
 import com.decathlon.idp_core.domain.model.authorization.AuthorizationResource;
 import com.decathlon.idp_core.domain.model.inbound_connectors.webhook.WebhookConnector;
 import com.decathlon.idp_core.domain.service.webhook.WebhookConnectorService;
 import com.decathlon.idp_core.infrastructure.adapters.api.auth.AuthorizedResource;
-import com.decathlon.idp_core.infrastructure.adapters.api.auth.RequestAuthorizer;
 import com.decathlon.idp_core.infrastructure.adapters.api.configuration.SwaggerConfiguration;
 import com.decathlon.idp_core.infrastructure.adapters.api.dto.in.InboundWebhookCreateDtoIn;
 import com.decathlon.idp_core.infrastructure.adapters.api.dto.in.InboundWebhookUpdateDtoIn;
@@ -45,7 +40,6 @@ public class InboundWebhookConfigurationController {
 
   private final WebhookConnectorService webhookConnectorService;
   private final InboundWebhookMapper inboundWebhookMapper;
-  private final RequestAuthorizer requestAuthorizer;
 
   /// Creates a new inbound webhook connector configuration.
   ///
@@ -86,17 +80,7 @@ public class InboundWebhookConfigurationController {
       @Content(schema = @Schema(implementation = ErrorResponse.class))})
   @ResponseStatus(NO_CONTENT)
   @DeleteMapping("/{identifier}")
-  public void deleteWebhookConnector(@PathVariable String identifier, HttpServletRequest request) {
-    var connector = webhookConnectorService.getWebhookConnector(identifier);
-    boolean principalTargetMapping = connector.mappings().stream()
-        .anyMatch(mapping -> AuthorizationResource.PRINCIPAL_TEMPLATE_IDENTIFIER
-            .equals(mapping.entityTemplateIdentifier()));
-    if (principalTargetMapping) {
-      requestAuthorizer.authorize(request, AuthorizationAction.DELETE,
-          new AuthorizationResource(AuthorizationResource.INBOUND_WEBHOOK_CONFIGURATION,
-              Optional.of(identifier),
-              Optional.of(AuthorizationResource.PRINCIPAL_TEMPLATE_IDENTIFIER)));
-    }
+  public void deleteWebhookConnector(@PathVariable String identifier) {
     webhookConnectorService.deleteWebhookConnector(identifier);
   }
 
@@ -124,18 +108,9 @@ public class InboundWebhookConfigurationController {
   @PutMapping("/{identifier}")
   @ResponseStatus(OK)
   public InboundWebhookDtoOut putWebhookConnector(@PathVariable String identifier,
-      @Valid @RequestBody InboundWebhookUpdateDtoIn request, HttpServletRequest httpRequest) {
+      @Valid @RequestBody InboundWebhookUpdateDtoIn request) {
     var resolvedMappings = webhookConnectorService
         .resolveAndValidateMappings(request.mappingIdentifiers());
-    boolean principalTargetMapping = resolvedMappings.stream()
-        .anyMatch(mapping -> AuthorizationResource.PRINCIPAL_TEMPLATE_IDENTIFIER
-            .equals(mapping.entityTemplateIdentifier()));
-    if (principalTargetMapping) {
-      requestAuthorizer.authorize(httpRequest, AuthorizationAction.UPDATE,
-          new AuthorizationResource(AuthorizationResource.INBOUND_WEBHOOK_CONFIGURATION,
-              Optional.of(identifier),
-              Optional.of(AuthorizationResource.PRINCIPAL_TEMPLATE_IDENTIFIER)));
-    }
     return inboundWebhookMapper
         .fromWebhookConnectorToDto(webhookConnectorService.updateWebhookConnector(identifier,
             inboundWebhookMapper.toDomainForUpdate(identifier, request, resolvedMappings)));

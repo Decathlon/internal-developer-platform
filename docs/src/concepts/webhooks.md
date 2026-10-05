@@ -72,10 +72,6 @@ It checks that:
 
 This validation keeps the connector configuration aligned with the current data model.
 
-Only catalog administrators can attach a mapping that targets the protected `principal` template to a connector.
-This applies to connector updates as well as mapping creation or updates. The restriction protects principal
-authorization data; it does not block trusted deliveries through connectors that already have authorized mappings.
-
 ## Security Strategies
 
 Each connector declares one security type. IDP-Core validates the configuration at creation time and validates requests
