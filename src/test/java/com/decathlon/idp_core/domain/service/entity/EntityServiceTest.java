@@ -113,7 +113,8 @@ class EntityServiceTest {
   @DisplayName("Should return entity summaries by composite keys")
   void shouldReturnEntitySummariesByCompositeKeys() {
     var compositeKeys = List.of(new EntityCompositeKey("web-service", "service-a"));
-    var summaries = List.of(new EntitySummary("service-a", "Service A", "web-service"));
+    var summaries = List
+        .of(new EntitySummary(UUID.randomUUID(), "service-a", "Service A", "web-service"));
     when(entityRepository.findSummariesByCompositeKeys(compositeKeys)).thenReturn(summaries);
 
     var result = entityService.getEntitiesSummariesByCompositeKeys(compositeKeys);
