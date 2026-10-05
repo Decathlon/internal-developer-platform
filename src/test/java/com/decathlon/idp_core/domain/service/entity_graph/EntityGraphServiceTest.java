@@ -27,6 +27,8 @@ import org.mockito.junit.jupiter.MockitoExtension;
 
 import com.decathlon.idp_core.domain.exception.entity.EntityNotFoundException;
 import com.decathlon.idp_core.domain.model.entity.Entity;
+import com.decathlon.idp_core.domain.model.entity.EntityCompositeKey;
+import com.decathlon.idp_core.domain.model.entity.EntitySummary;
 import com.decathlon.idp_core.domain.model.entity.Property;
 import com.decathlon.idp_core.domain.model.entity.Relation;
 import com.decathlon.idp_core.domain.model.entity_graph.EntityGraphNode;
@@ -71,6 +73,13 @@ class EntityGraphServiceTest {
 
   private static final String TEMPLATE = "web-service";
 
+  private void stubRootEntity(Entity entity) {
+    when(entityRepositoryPort.findSummariesByCompositeKeys(
+        List.of(new EntityCompositeKey(entity.templateIdentifier(), entity.identifier()))))
+            .thenReturn(List.of(new EntitySummary(entity.id(), entity.identifier(), entity.name(),
+                entity.templateIdentifier())));
+  }
+
   /// Helper to stub the graph repository port
   /// Builds a map from the provided entities and configures the mock to return it
   private void stubGraph(Entity... entities) {
@@ -96,8 +105,9 @@ class EntityGraphServiceTest {
     @Test
     @DisplayName("Should throw EntityNotFoundException when root entity does not exist")
     void shouldThrowWhenRootEntityNotFound() {
-      when(entityRepositoryPort.findByTemplateIdentifierAndIdentifier(TEMPLATE, "missing"))
-          .thenReturn(Optional.empty());
+      when(entityRepositoryPort
+          .findSummariesByCompositeKeys(List.of(new EntityCompositeKey(TEMPLATE, "missing"))))
+              .thenReturn(List.of());
 
       assertThatThrownBy(this::callGetEntityGraphForMissing)
           .isInstanceOf(EntityNotFoundException.class);
@@ -121,8 +131,7 @@ class EntityGraphServiceTest {
     @DisplayName("Should return leaf node when entity has no relations")
     void shouldReturnLeafNodeWhenNoRelations() {
       Entity api = entity(TEMPLATE, "api", "API Service");
-      when(entityRepositoryPort.findByTemplateIdentifierAndIdentifier(TEMPLATE, "api"))
-          .thenReturn(Optional.of(api));
+      stubRootEntity(api);
       stubGraph(api);
 
       EntityGraphNode result = entityGraphService.getEntityGraph(TEMPLATE, "api", 1, false,
@@ -147,8 +156,7 @@ class EntityGraphServiceTest {
           List.of(relation("uses-db", "database", "postgres")));
       Entity postgres = entity("database", "postgres", "Postgres DB");
 
-      when(entityRepositoryPort.findByTemplateIdentifierAndIdentifier(TEMPLATE, "api"))
-          .thenReturn(Optional.of(api));
+      stubRootEntity(api);
       stubGraph(api, postgres);
 
       EntityGraphNode result = entityGraphService.getEntityGraph(TEMPLATE, "api", 1, false,
@@ -166,8 +174,7 @@ class EntityGraphServiceTest {
       Entity api = entityWithRelations(TEMPLATE, "api", "API Service",
           List.of(relation("uses-db", "database", "missing-db")));
 
-      when(entityRepositoryPort.findByTemplateIdentifierAndIdentifier(TEMPLATE, "api"))
-          .thenReturn(Optional.of(api));
+      stubRootEntity(api);
       stubGraph(api);
 
       EntityGraphNode result = entityGraphService.getEntityGraph(TEMPLATE, "api", 1, false,
@@ -190,8 +197,7 @@ class EntityGraphServiceTest {
       Entity consumer = entityWithRelations(TEMPLATE, "consumer", "Consumer",
           List.of(relation("depends-on", TEMPLATE, "api")));
 
-      when(entityRepositoryPort.findByTemplateIdentifierAndIdentifier(TEMPLATE, "api"))
-          .thenReturn(Optional.of(api));
+      stubRootEntity(api);
       stubGraph(api, consumer);
 
       EntityGraphNode result = entityGraphService.getEntityGraph(TEMPLATE, "api", 1, false,
@@ -213,8 +219,7 @@ class EntityGraphServiceTest {
     @DisplayName("Should clamp depth below 1 to 1")
     void shouldClampDepthBelowOne() {
       Entity api = entity(TEMPLATE, "api", "API Service");
-      when(entityRepositoryPort.findByTemplateIdentifierAndIdentifier(TEMPLATE, "api"))
-          .thenReturn(Optional.of(api));
+      stubRootEntity(api);
       stubGraph(api);
 
       entityGraphService.getEntityGraph(TEMPLATE, "api", 0, false, Set.of(), Set.of(),
@@ -228,8 +233,7 @@ class EntityGraphServiceTest {
     @DisplayName("Should clamp depth above MAX_DEPTH to MAX_DEPTH")
     void shouldClampDepthAboveTen() {
       Entity api = entity(TEMPLATE, "api", "API Service");
-      when(entityRepositoryPort.findByTemplateIdentifierAndIdentifier(TEMPLATE, "api"))
-          .thenReturn(Optional.of(api));
+      stubRootEntity(api);
       stubGraph(api);
 
       entityGraphService.getEntityGraph(TEMPLATE, "api", 99, false, Set.of(), Set.of(),
@@ -253,8 +257,7 @@ class EntityGraphServiceTest {
       Entity postgres = entityWithRelations("database", "postgres", "Postgres DB",
           List.of(relation("runs-on", "infra", "server-1")));
 
-      when(entityRepositoryPort.findByTemplateIdentifierAndIdentifier(TEMPLATE, "api"))
-          .thenReturn(Optional.of(api));
+      stubRootEntity(api);
       // At depth=1, only api and postgres should be in the graph (server is beyond
       // depth limit)
       stubGraph(api, postgres);
@@ -287,8 +290,7 @@ class EntityGraphServiceTest {
       Entity postgres = entity("database", "postgres", "Postgres DB");
       Entity auth = entity(TEMPLATE, "auth", "Auth Service");
 
-      when(entityRepositoryPort.findByTemplateIdentifierAndIdentifier(TEMPLATE, "api"))
-          .thenReturn(Optional.of(api));
+      stubRootEntity(api);
       stubGraph(api, postgres, auth);
 
       EntityGraphNode result = entityGraphService.getEntityGraph(TEMPLATE, "api", 1, false,
@@ -314,8 +316,7 @@ class EntityGraphServiceTest {
       Entity b = entity(TEMPLATE, "b", "B");
       Entity c = entity(TEMPLATE, "c", "C");
 
-      when(entityRepositoryPort.findByTemplateIdentifierAndIdentifier(TEMPLATE, "a"))
-          .thenReturn(Optional.of(a));
+      stubRootEntity(a);
       stubGraph(a, b, c);
 
       EntityGraphNode result = entityGraphService.getEntityGraph(TEMPLATE, "a", 2, false,
@@ -333,8 +334,7 @@ class EntityGraphServiceTest {
       Entity b = entity(TEMPLATE, "b", "B");
       Entity c = entity(TEMPLATE, "c", "C");
 
-      when(entityRepositoryPort.findByTemplateIdentifierAndIdentifier(TEMPLATE, "a"))
-          .thenReturn(Optional.of(a));
+      stubRootEntity(a);
       stubGraph(a, b, c);
 
       EntityGraphNode result = entityGraphService.getEntityGraph(TEMPLATE, "a", 2, false, Set.of(),
@@ -354,8 +354,7 @@ class EntityGraphServiceTest {
       Entity unrelated = entityWithRelations(TEMPLATE, "unrelated", "Unrelated",
           List.of(relation("owns", TEMPLATE, "api")));
 
-      when(entityRepositoryPort.findByTemplateIdentifierAndIdentifier(TEMPLATE, "api"))
-          .thenReturn(Optional.of(api));
+      stubRootEntity(api);
       stubGraph(api, consumer, unrelated);
 
       EntityGraphNode result = entityGraphService.getEntityGraph(TEMPLATE, "api", 1, false,
@@ -385,8 +384,7 @@ class EntityGraphServiceTest {
       Entity api = entityWithProperties(TEMPLATE, "api", "API Service",
           List.of(propEnv, propOwner));
 
-      when(entityRepositoryPort.findByTemplateIdentifierAndIdentifier(TEMPLATE, "api"))
-          .thenReturn(Optional.of(api));
+      stubRootEntity(api);
       stubGraph(api);
 
       EntityGraphNode result = entityGraphService.getEntityGraph(TEMPLATE, "api", 1, true, Set.of(),
@@ -404,8 +402,7 @@ class EntityGraphServiceTest {
       Entity api = entityWithProperties(TEMPLATE, "api", "API Service",
           List.of(propEnv, propOwner));
 
-      when(entityRepositoryPort.findByTemplateIdentifierAndIdentifier(TEMPLATE, "api"))
-          .thenReturn(Optional.of(api));
+      stubRootEntity(api);
       stubGraph(api);
 
       EntityGraphNode result = entityGraphService.getEntityGraph(TEMPLATE, "api", 1, true, Set.of(),
@@ -420,8 +417,7 @@ class EntityGraphServiceTest {
       var propEnv = new Property(UUID.randomUUID(), "env", "prod");
       Entity api = entityWithProperties(TEMPLATE, "api", "API Service", List.of(propEnv));
 
-      when(entityRepositoryPort.findByTemplateIdentifierAndIdentifier(TEMPLATE, "api"))
-          .thenReturn(Optional.of(api));
+      stubRootEntity(api);
       stubGraph(api);
 
       EntityGraphNode result = entityGraphService.getEntityGraph(TEMPLATE, "api", 1, false,
@@ -446,8 +442,7 @@ class EntityGraphServiceTest {
       Entity b = entityWithRelations(TEMPLATE, "b", "B", List.of(relation("uses", TEMPLATE, "c")));
       Entity c = entity(TEMPLATE, "c", "C");
 
-      when(entityRepositoryPort.findByTemplateIdentifierAndIdentifier(TEMPLATE, "a"))
-          .thenReturn(Optional.of(a));
+      stubRootEntity(a);
       stubGraph(a, b, c);
 
       // Must complete instantly — any OOM or StackOverflow here means the guard is
@@ -466,8 +461,7 @@ class EntityGraphServiceTest {
       Entity a = entityWithRelations(TEMPLATE, "a", "A", List.of(relation("uses", TEMPLATE, "b")));
       Entity b = entityWithRelations(TEMPLATE, "b", "B", List.of(relation("uses", TEMPLATE, "a")));
 
-      when(entityRepositoryPort.findByTemplateIdentifierAndIdentifier(TEMPLATE, "a"))
-          .thenReturn(Optional.of(a));
+      stubRootEntity(a);
       stubGraph(a, b);
 
       EntityGraphNode result = entityGraphService.getEntityGraph(TEMPLATE, "a", 5, false, Set.of(),
@@ -501,8 +495,7 @@ class EntityGraphServiceTest {
       Entity consumer = entityWithRelations(TEMPLATE, "consumer", "Consumer",
           List.of(relation("depends-on", TEMPLATE, "api")));
 
-      when(entityRepositoryPort.findByTemplateIdentifierAndIdentifier(TEMPLATE, "api"))
-          .thenReturn(Optional.of(api));
+      stubRootEntity(api);
       stubGraph(api, postgres, consumer);
 
       EntityGraphNode result = entityGraphService.getEntityGraph(TEMPLATE, "api", 1, false,
@@ -529,8 +522,7 @@ class EntityGraphServiceTest {
       Entity consumer = entityWithRelations(TEMPLATE, "consumer", "Consumer",
           List.of(relation("depends-on", TEMPLATE, "api")));
 
-      when(entityRepositoryPort.findByTemplateIdentifierAndIdentifier(TEMPLATE, "api"))
-          .thenReturn(Optional.of(api));
+      stubRootEntity(api);
       stubGraph(api, postgres, consumer);
 
       EntityGraphNode result = entityGraphService.getEntityGraph(TEMPLATE, "api", 1, false,
@@ -557,8 +549,7 @@ class EntityGraphServiceTest {
       Entity backend = entityWithRelations(TEMPLATE, "backend", "Backend",
           List.of(relation("calls", TEMPLATE, "api")));
 
-      when(entityRepositoryPort.findByTemplateIdentifierAndIdentifier(TEMPLATE, "api"))
-          .thenReturn(Optional.of(api));
+      stubRootEntity(api);
       stubGraph(api, postgres, consumer, backend);
 
       EntityGraphNode result = entityGraphService.getEntityGraph(TEMPLATE, "api", 2, false,
@@ -589,8 +580,7 @@ class EntityGraphServiceTest {
     @DisplayName("Mode parameter should be passed to repository port")
     void modeShouldBePassedToRepositoryPort() {
       Entity api = entity(TEMPLATE, "api", "API Service");
-      when(entityRepositoryPort.findByTemplateIdentifierAndIdentifier(TEMPLATE, "api"))
-          .thenReturn(Optional.of(api));
+      stubRootEntity(api);
       stubGraph(api);
 
       entityGraphService.getEntityGraph(TEMPLATE, "api", 1, false, Set.of(), Set.of(),
@@ -621,8 +611,7 @@ class EntityGraphServiceTest {
       Entity backend = entityWithRelations(TEMPLATE, "backend", "Backend",
           List.of(relation("calls", TEMPLATE, "api")));
 
-      when(entityRepositoryPort.findByTemplateIdentifierAndIdentifier(TEMPLATE, "api"))
-          .thenReturn(Optional.of(api));
+      stubRootEntity(api);
       stubGraph(api, postgres, consumer, backend);
 
       EntityGraphNode result = entityGraphService.getEntityGraph(TEMPLATE, "api", 2, false,
@@ -649,8 +638,7 @@ class EntityGraphServiceTest {
           List.of(relation("uses-db", "database", "postgres")));
       Entity postgres = entity("database", "postgres", "Postgres DB");
 
-      when(entityRepositoryPort.findByTemplateIdentifierAndIdentifier(TEMPLATE, "frontend"))
-          .thenReturn(Optional.of(frontend));
+      stubRootEntity(frontend);
       stubGraph(frontend, api, postgres);
 
       EntityGraphNode result = entityGraphService.getEntityGraph(TEMPLATE, "frontend", 2, false,
@@ -676,8 +664,7 @@ class EntityGraphServiceTest {
       Entity consumer = entityWithRelations(TEMPLATE, "consumer", "Consumer",
           List.of(relation("depends-on", TEMPLATE, "api")));
 
-      when(entityRepositoryPort.findByTemplateIdentifierAndIdentifier(TEMPLATE, "api"))
-          .thenReturn(Optional.of(api));
+      stubRootEntity(api);
 
       // With BIDIRECTIONAL, consumer should be in the graph
       stubGraph(api, consumer);

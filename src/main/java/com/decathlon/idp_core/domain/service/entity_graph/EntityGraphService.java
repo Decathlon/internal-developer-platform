@@ -106,14 +106,11 @@ public class EntityGraphService {
 
     // entityTemplateValidationService.validateTemplateExists(templateIdentifier);
 
-    EntitySummary rootEntity = entityRepositoryPort.findSummariesByCompositeKeys(
-        List.of(new EntityCompositeKey(templateIdentifier, entityIdentifier))).get(0);
-
-    // // 1. Resolve root entity
-    // Entity rootEntity = entityRepositoryPort
-    // .findByTemplateIdentifierAndIdentifier(templateIdentifier, entityIdentifier)
-    // .orElseThrow(() -> new EntityNotFoundException(templateIdentifier,
-    // entityIdentifier));
+    EntitySummary rootEntity = entityRepositoryPort
+        .findSummariesByCompositeKeys(
+            List.of(new EntityCompositeKey(templateIdentifier, entityIdentifier)))
+        .stream().findFirst()
+        .orElseThrow(() -> new EntityNotFoundException(templateIdentifier, entityIdentifier));
 
     // 2. Load the graph footprint via optimized DB calls
     Map<UUID, Entity> entityMap = entityGraphRepositoryPort.findEntityGraph(Set.of(rootEntity.id()),
