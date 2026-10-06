@@ -218,7 +218,7 @@ public class EntityController {
       @Min(value = RELATIONS_DEPTH_MIN, message = RELATIONS_DEPTH_MIN_MESSAGE) @Max(value = RELATIONS_DEPTH_MAX, message = RELATIONS_DEPTH_MAX_MESSAGE) @RequestParam(name = "relations_depth", required = false, defaultValue = "1") Integer relationsDepth,
       @RequestParam(name = "relations_to_display", required = false) Set<String> relationsToDisplay) {
 
-    log.debug(
+    log.info(
         "GET entity request: templateIdentifier={}, entityIdentifier={}, relationsDepth={}, relationsToDisplay={}",
         templateIdentifier, entityIdentifier, relationsDepth, relationsToDisplay);
     long startedAt = System.nanoTime();
@@ -230,7 +230,7 @@ public class EntityController {
       return entityDtoOutFromEntityNodeMapper.toDto(entityGraphNode, templateIdentifier,
           relationsDepth);
     } finally {
-      log.debug("GET entity completed: templateIdentifier={}, entityIdentifier={}, durationMs={}",
+      log.info("GET entity completed: templateIdentifier={}, entityIdentifier={}, durationMs={}",
           templateIdentifier, entityIdentifier, (System.nanoTime() - startedAt) / 1_000_000);
     }
   }

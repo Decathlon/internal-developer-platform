@@ -101,17 +101,24 @@ public class PostgresEntityAdapter implements EntityRepositoryPort {
 
   @Override
   public List<EntitySummary> findSummariesByCompositeKeys(List<EntityCompositeKey> compositeKeys) {
-    if (compositeKeys == null || compositeKeys.isEmpty()) {
-      return List.of();
+    long startedAt = System.nanoTime();
+    int keyCount = compositeKeys == null ? 0 : compositeKeys.size();
+    try {
+      if (compositeKeys == null || compositeKeys.isEmpty()) {
+        return List.of();
+      }
+
+      // Split composite keys into parallel arrays for the native query
+      String[] templateIdentifiers = compositeKeys.stream()
+          .map(EntityCompositeKey::templateIdentifier).toArray(String[]::new);
+      String[] identifiers = compositeKeys.stream().map(EntityCompositeKey::identifier)
+          .toArray(String[]::new);
+
+      return jpaEntityRepository.findByCompositeKeys(templateIdentifiers, identifiers);
+    } finally {
+      log.info("Entity summaries lookup by composite keys completed: keyCount={}, durationMs={}",
+          keyCount, (System.nanoTime() - startedAt) / 1_000_000);
     }
-
-    // Split composite keys into parallel arrays for the native query
-    String[] templateIdentifiers = compositeKeys.stream()
-        .map(EntityCompositeKey::templateIdentifier).toArray(String[]::new);
-    String[] identifiers = compositeKeys.stream().map(EntityCompositeKey::identifier)
-        .toArray(String[]::new);
-
-    return jpaEntityRepository.findByCompositeKeys(templateIdentifiers, identifiers);
   }
 
   @Override

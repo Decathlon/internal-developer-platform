@@ -98,7 +98,7 @@ public class PostgresEntityGraphAdapter implements EntityGraphRepositoryPort {
       long discoveryStartedAt = System.nanoTime();
       List<UUID> discoveredIds = jpaEntityRepository.findEntityIdsInGraph(rootIds, depth,
           mode.name());
-      log.debug(
+      log.info(
           "Entity graph ID discovery completed: rootCount={}, discoveredEntityCount={}, "
               + "durationMs={}",
           rootIds.size(), discoveredIds.size(), elapsedMs(discoveryStartedAt));
@@ -109,17 +109,17 @@ public class PostgresEntityGraphAdapter implements EntityGraphRepositoryPort {
       long projectionFetchStartedAt = System.nanoTime();
       List<EntityGraphJsonProjection> projections = jpaEntityRepository
           .findEntityGraphDataByIds(discoveredIds);
-      log.debug("Entity graph projection fetch completed: entityCount={}, durationMs={}",
+      log.info("Entity graph projection fetch completed: entityCount={}, durationMs={}",
           projections.size(), elapsedMs(projectionFetchStartedAt));
 
       long mappingStartedAt = System.nanoTime();
       Map<UUID, Entity> entities = projections.stream().map(this::mapProjectionToDomain)
           .collect(Collectors.toMap(Entity::id, Function.identity()));
-      log.debug("Entity graph projection mapping completed: entityCount={}, durationMs={}",
+      log.info("Entity graph projection mapping completed: entityCount={}, durationMs={}",
           entities.size(), elapsedMs(mappingStartedAt));
       return entities;
     } finally {
-      log.debug("Entity graph load completed: rootCount={}, depth={}, mode={}, durationMs={}",
+      log.info("Entity graph load completed: rootCount={}, depth={}, mode={}, durationMs={}",
           rootIds == null ? 0 : rootIds.size(), depth, mode, elapsedMs(totalStartedAt));
     }
   }
