@@ -218,21 +218,12 @@ public class EntityController {
       @Min(value = RELATIONS_DEPTH_MIN, message = RELATIONS_DEPTH_MIN_MESSAGE) @Max(value = RELATIONS_DEPTH_MAX, message = RELATIONS_DEPTH_MAX_MESSAGE) @RequestParam(name = "relations_depth", required = false, defaultValue = "1") Integer relationsDepth,
       @RequestParam(name = "relations_to_display", required = false) Set<String> relationsToDisplay) {
 
-    log.info(
-        "GET entity request: templateIdentifier={}, entityIdentifier={}, relationsDepth={}, relationsToDisplay={}",
-        templateIdentifier, entityIdentifier, relationsDepth, relationsToDisplay);
-    long startedAt = System.nanoTime();
-    try {
-      EntityGraphNode entityGraphNode = entityGraphService.getEntityGraph(templateIdentifier,
-          entityIdentifier, relationsDepth, true,
-          relationsToDisplay == null ? Set.of() : relationsToDisplay, Set.of(),
-          EntityGraphTraversalMode.DIRECT_LINEAGE);
-      return entityDtoOutFromEntityNodeMapper.toDto(entityGraphNode, templateIdentifier,
-          relationsDepth);
-    } finally {
-      log.info("GET entity completed: templateIdentifier={}, entityIdentifier={}, durationMs={}",
-          templateIdentifier, entityIdentifier, (System.nanoTime() - startedAt) / 1_000_000);
-    }
+    EntityGraphNode entityGraphNode = entityGraphService.getEntityGraph(templateIdentifier,
+        entityIdentifier, relationsDepth, true,
+        relationsToDisplay == null ? Set.of() : relationsToDisplay, Set.of(),
+        EntityGraphTraversalMode.DIRECT_LINEAGE);
+    return entityDtoOutFromEntityNodeMapper.toDto(entityGraphNode, templateIdentifier,
+        relationsDepth);
   }
 
   /// Creates a new entity for the specified template with validation.

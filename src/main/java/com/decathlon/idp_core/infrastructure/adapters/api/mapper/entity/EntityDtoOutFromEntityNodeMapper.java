@@ -65,38 +65,14 @@ public class EntityDtoOutFromEntityNodeMapper {
   /// relationship collection
   /// @return a fully mapped, flat [EntityDtoOut] object
   public EntityDtoOut toDto(EntityGraphNode root, String entityTemplateIdentifier, int maxDepth) {
-    long startedAt = System.nanoTime();
-    try {
-      if (root == null) {
-        return null;
-      }
-
-      long templateLookupStartedAt = System.nanoTime();
-      EntityTemplate entityTemplate;
-      try {
-        entityTemplate = entityTemplateService
-            .getEntityTemplateByIdentifier(entityTemplateIdentifier);
-      } finally {
-        log.info("Entity graph template lookup completed: templateIdentifier={}, durationMs={}",
-            entityTemplateIdentifier, (System.nanoTime() - templateLookupStartedAt) / 1_000_000);
-      }
-
-      long mappingStartedAt = System.nanoTime();
-      try {
-        return toDto(root, entityTemplate, maxDepth);
-      } finally {
-        log.info(
-            "Entity graph DTO mapping completed: templateIdentifier={}, maxDepth={}, "
-                + "durationMs={}",
-            entityTemplateIdentifier, maxDepth, (System.nanoTime() - mappingStartedAt) / 1_000_000);
-      }
-    } finally {
-      log.info(
-          "Entity graph toDto completed: templateIdentifier={}, maxDepth={}, "
-              + "rootPresent={}, durationMs={}",
-          entityTemplateIdentifier, maxDepth, root != null,
-          (System.nanoTime() - startedAt) / 1_000_000);
+    if (root == null) {
+      return null;
     }
+
+    EntityTemplate entityTemplate = entityTemplateService
+        .getEntityTemplateByIdentifier(entityTemplateIdentifier);
+
+    return toDto(root, entityTemplate, maxDepth);
   }
 
   /// Internal orchestrator handling property conversions and initiating

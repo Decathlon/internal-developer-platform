@@ -65,11 +65,7 @@ public class PostgresEntityTemplateAdapter implements EntityTemplateRepositoryPo
 
   @Override
   public boolean existsByIdentifier(String identifier) {
-    long startedAt = System.nanoTime();
-    boolean exists = jpaEntityTemplateRepository.existsByIdentifier(identifier);
-    log.debug("Template existence query completed: identifier={}, found={}, durationMs={}",
-        identifier, exists, (System.nanoTime() - startedAt) / 1_000_000);
-    return exists;
+    return jpaEntityTemplateRepository.existsByIdentifier(identifier);
   }
 
   @Override

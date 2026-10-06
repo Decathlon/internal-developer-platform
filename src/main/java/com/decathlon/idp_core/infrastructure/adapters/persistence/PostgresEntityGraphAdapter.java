@@ -7,8 +7,6 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.UUID;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -43,8 +41,6 @@ public class PostgresEntityGraphAdapter implements EntityGraphRepositoryPort {
   private final JpaEntityRepository jpaEntityRepository;
   private final ObjectReader propertyReader;
   private final ObjectReader relationReader;
-
-  private static final Logger log = LoggerFactory.getLogger(PostgresEntityGraphAdapter.class);
 
   public PostgresEntityGraphAdapter(JpaEntityRepository jpaEntityRepository,
       ObjectMapper objectMapper) {
@@ -100,45 +96,22 @@ public class PostgresEntityGraphAdapter implements EntityGraphRepositoryPort {
   @Transactional(readOnly = true)
   public Map<UUID, Entity> findEntityGraph(Collection<UUID> rootIds, int depth,
       boolean includeProperties, EntityGraphTraversalMode mode) {
-    long totalStartedAt = System.nanoTime();
-    try {
-      long discoveryStartedAt = System.nanoTime();
-      List<UUID> discoveredIds = jpaEntityRepository.findEntityIdsInGraph(rootIds, depth,
-          mode.name());
-      log.info(
-          "Entity graph ID discovery completed: rootCount={}, discoveredEntityCount={}, "
-              + "durationMs={}",
-          rootIds.size(), discoveredIds.size(), elapsedMs(discoveryStartedAt));
-      if (discoveredIds.isEmpty()) {
-        return Map.of();
-      }
-
-      long projectionFetchStartedAt = System.nanoTime();
-      List<EntityGraphJsonProjection> projections = jpaEntityRepository
-          .findEntityGraphDataByIds(discoveredIds);
-      log.info("Entity graph projection fetch completed: entityCount={}, durationMs={}",
-          projections.size(), elapsedMs(projectionFetchStartedAt));
-
-      long mappingStartedAt = System.nanoTime();
-      Map<UUID, Entity> entities = HashMap.newHashMap(projections.size());
-      for (EntityGraphJsonProjection projection : projections) {
-        Entity entity = mapProjectionToDomain(projection);
-        if (entities.putIfAbsent(entity.id(), entity) != null) {
-          throw new IllegalStateException(
-              "Duplicate entity ID in graph projection: " + entity.id());
-        }
-      }
-      log.info("Entity graph projection mapping completed: entityCount={}, durationMs={}",
-          entities.size(), elapsedMs(mappingStartedAt));
-      return entities;
-    } finally {
-      log.info("Entity graph load completed: rootCount={}, depth={}, mode={}, durationMs={}",
-          rootIds == null ? 0 : rootIds.size(), depth, mode, elapsedMs(totalStartedAt));
+    List<UUID> discoveredIds = jpaEntityRepository.findEntityIdsInGraph(rootIds, depth,
+        mode.name());
+    if (discoveredIds.isEmpty()) {
+      return Map.of();
     }
-  }
 
-  private long elapsedMs(long startedAt) {
-    return (System.nanoTime() - startedAt) / 1_000_000;
+    List<EntityGraphJsonProjection> projections = jpaEntityRepository
+        .findEntityGraphDataByIds(discoveredIds);
+    Map<UUID, Entity> entities = HashMap.newHashMap(projections.size());
+    for (EntityGraphJsonProjection projection : projections) {
+      Entity entity = mapProjectionToDomain(projection);
+      if (entities.putIfAbsent(entity.id(), entity) != null) {
+        throw new IllegalStateException("Duplicate entity ID in graph projection: " + entity.id());
+      }
+    }
+    return entities;
   }
 
   private Entity mapProjectionToDomain(EntityGraphJsonProjection projection) {

@@ -63,15 +63,8 @@ public class PostgresEntityAdapter implements EntityRepositoryPort {
   @Override
   public Optional<Entity> findByTemplateIdentifierAndIdentifier(String templateIdentifier,
       String identifier) {
-    long startedAt = System.nanoTime();
-    Optional<Entity> entity = jpaEntityRepository
-        .findByTemplateIdentifierAndIdentifier(templateIdentifier, identifier)
+    return jpaEntityRepository.findByTemplateIdentifierAndIdentifier(templateIdentifier, identifier)
         .map(mapper::toDomain);
-    log.debug(
-        "Entity lookup completed: templateIdentifier={}, entityIdentifier={}, found={}, durationMs={}",
-        templateIdentifier, identifier, entity.isPresent(),
-        (System.nanoTime() - startedAt) / 1_000_000);
-    return entity;
   }
 
   @Override
@@ -101,24 +94,17 @@ public class PostgresEntityAdapter implements EntityRepositoryPort {
 
   @Override
   public List<EntitySummary> findSummariesByCompositeKeys(List<EntityCompositeKey> compositeKeys) {
-    long startedAt = System.nanoTime();
-    int keyCount = compositeKeys == null ? 0 : compositeKeys.size();
-    try {
-      if (compositeKeys == null || compositeKeys.isEmpty()) {
-        return List.of();
-      }
-
-      // Split composite keys into parallel arrays for the native query
-      String[] templateIdentifiers = compositeKeys.stream()
-          .map(EntityCompositeKey::templateIdentifier).toArray(String[]::new);
-      String[] identifiers = compositeKeys.stream().map(EntityCompositeKey::identifier)
-          .toArray(String[]::new);
-
-      return jpaEntityRepository.findByCompositeKeys(templateIdentifiers, identifiers);
-    } finally {
-      log.info("Entity summaries lookup by composite keys completed: keyCount={}, durationMs={}",
-          keyCount, (System.nanoTime() - startedAt) / 1_000_000);
+    if (compositeKeys == null || compositeKeys.isEmpty()) {
+      return List.of();
     }
+
+    // Split composite keys into parallel arrays for the native query
+    String[] templateIdentifiers = compositeKeys.stream()
+        .map(EntityCompositeKey::templateIdentifier).toArray(String[]::new);
+    String[] identifiers = compositeKeys.stream().map(EntityCompositeKey::identifier)
+        .toArray(String[]::new);
+
+    return jpaEntityRepository.findByCompositeKeys(templateIdentifiers, identifiers);
   }
 
   @Override

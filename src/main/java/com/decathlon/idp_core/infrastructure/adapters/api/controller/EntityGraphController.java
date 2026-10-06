@@ -18,8 +18,6 @@ import java.util.Set;
 
 import jakarta.validation.constraints.NotBlank;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -55,8 +53,6 @@ import lombok.RequiredArgsConstructor;
 @Tag(name = "Entity Graph", description = "Entity relationship graph operations")
 public class EntityGraphController {
 
-  private static final Logger log = LoggerFactory.getLogger(EntityGraphController.class);
-
   private final EntityGraphService entityGraphService;
 
   /// Retrieves the entity relationship graph as a flat nodes-and-edges structure.
@@ -89,30 +85,13 @@ public class EntityGraphController {
       @Parameter(description = PARAM_RELATIONS_DESCRIPTION) @RequestParam(required = false) List<String> relations,
       @Parameter(description = PARAM_PROPERTIES_DESCRIPTION) @RequestParam(required = false) List<String> properties) {
 
-    long totalStartedAt = System.nanoTime();
-    try {
-      // Convert the nullable lists to Sets for O(1) lookup; empty set means no filter
-      Set<String> relationFilter = relations != null ? Set.copyOf(relations) : Set.of();
-      Set<String> propertyFilter = properties != null ? Set.copyOf(properties) : Set.of();
+    // Convert the nullable lists to Sets for O(1) lookup; empty set means no filter
+    Set<String> relationFilter = relations != null ? Set.copyOf(relations) : Set.of();
+    Set<String> propertyFilter = properties != null ? Set.copyOf(properties) : Set.of();
 
-      long graphStartedAt = System.nanoTime();
-      EntityGraphNode graphNode = entityGraphService.getEntityGraph(templateIdentifier,
-          entityIdentifier, depth, includeData, relationFilter, propertyFilter, mode);
-      log.info("GET entity graph service completed: durationMs={}", elapsedMs(graphStartedAt));
-
-      long mappingStartedAt = System.nanoTime();
-      EntityGraphFlatDtoOut response = EntityGraphFlatDtoOutMapper.toFlatDto(graphNode);
-      log.info("GET entity graph response mapping completed: durationMs={}",
-          elapsedMs(mappingStartedAt));
-      return response;
-    } finally {
-      log.info("GET entity graph completed: templateIdentifier={}, entityIdentifier={}, "
-          + "durationMs={}", templateIdentifier, entityIdentifier, elapsedMs(totalStartedAt));
-    }
-  }
-
-  private long elapsedMs(long startedAt) {
-    return (System.nanoTime() - startedAt) / 1_000_000;
+    EntityGraphNode graphNode = entityGraphService.getEntityGraph(templateIdentifier,
+        entityIdentifier, depth, includeData, relationFilter, propertyFilter, mode);
+    return EntityGraphFlatDtoOutMapper.toFlatDto(graphNode);
   }
 
 }
