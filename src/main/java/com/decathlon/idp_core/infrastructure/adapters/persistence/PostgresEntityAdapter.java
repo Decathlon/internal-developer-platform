@@ -30,11 +30,9 @@ import com.decathlon.idp_core.infrastructure.adapters.persistence.specification.
 import com.decathlon.idp_core.infrastructure.adapters.persistence.specification.EntitySearchSpecification;
 
 import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
 
 @Component
 @RequiredArgsConstructor
-@Slf4j
 public class PostgresEntityAdapter implements EntityRepositoryPort {
 
   private final JpaEntityRepository jpaEntityRepository;

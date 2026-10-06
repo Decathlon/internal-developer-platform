@@ -103,7 +103,6 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
 
 /// REST API adapter providing entity management endpoints.
 ///
@@ -118,7 +117,6 @@ import lombok.extern.slf4j.Slf4j;
 @Tag(name = "Entities Management", description = "Operations related to entity management")
 @Validated
 @RequiredArgsConstructor
-@Slf4j
 public class EntityController {
 
   private final EntityService entityService;

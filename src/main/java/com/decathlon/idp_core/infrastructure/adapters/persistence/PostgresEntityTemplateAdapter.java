@@ -22,7 +22,6 @@ import com.decathlon.idp_core.infrastructure.adapters.persistence.model.entity_t
 import com.decathlon.idp_core.infrastructure.adapters.persistence.repository.JpaEntityTemplateRepository;
 
 import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
 
 /// PostgreSQL persistence adapter implementing [EntityTemplateRepositoryPort].
 ///
@@ -39,7 +38,6 @@ import lombok.extern.slf4j.Slf4j;
 /// - Lazy loading configured appropriately for relationship navigation
 @Component
 @RequiredArgsConstructor
-@Slf4j
 public class PostgresEntityTemplateAdapter implements EntityTemplateRepositoryPort {
   /// - Entity graphs fetch properties and relations in single query
   /// - Bulk operations minimize database round trips
