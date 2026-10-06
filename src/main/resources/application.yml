@@ -248,3 +248,9 @@ camel:
       # SSL certificate/chain info is internal infrastructure detail and
       # must not be exposed via actuator.
       enabled: false
+
+server:
+  compression:
+      enabled: true
+      mime-types: application/json,application/xml,text/html,text/xml,text/plain,application/x-ndjson
+      min-response-size: 1024
