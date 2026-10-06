@@ -1,12 +1,11 @@
 package com.decathlon.idp_core.infrastructure.adapters.persistence;
 
 import java.util.Collection;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.UUID;
-import java.util.function.Function;
-import java.util.stream.Collectors;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -24,8 +23,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
-
-import lombok.RequiredArgsConstructor;
+import com.fasterxml.jackson.databind.ObjectReader;
 
 /// Persistence adapter dedicated to entity relationship graph traversal.
 ///
@@ -40,13 +38,22 @@ import lombok.RequiredArgsConstructor;
 /// 3. One batch query to load properties separately
 ///    (avoids MultipleBagFetchException).
 @Component
-@RequiredArgsConstructor
 public class PostgresEntityGraphAdapter implements EntityGraphRepositoryPort {
 
   private final JpaEntityRepository jpaEntityRepository;
-  private final ObjectMapper objectMapper;
+  private final ObjectReader propertyReader;
+  private final ObjectReader relationReader;
 
   private static final Logger log = LoggerFactory.getLogger(PostgresEntityGraphAdapter.class);
+
+  public PostgresEntityGraphAdapter(JpaEntityRepository jpaEntityRepository,
+      ObjectMapper objectMapper) {
+    this.jpaEntityRepository = jpaEntityRepository;
+    this.propertyReader = objectMapper.readerFor(new TypeReference<List<PropertyProjection>>() {
+    });
+    this.relationReader = objectMapper.readerFor(new TypeReference<List<RelationProjection>>() {
+    });
+  }
 
   /// Fetches a depth-limited entity relationship graph for one or more root
   /// entities.
@@ -113,8 +120,14 @@ public class PostgresEntityGraphAdapter implements EntityGraphRepositoryPort {
           projections.size(), elapsedMs(projectionFetchStartedAt));
 
       long mappingStartedAt = System.nanoTime();
-      Map<UUID, Entity> entities = projections.stream().map(this::mapProjectionToDomain)
-          .collect(Collectors.toMap(Entity::id, Function.identity()));
+      Map<UUID, Entity> entities = HashMap.newHashMap(projections.size());
+      for (EntityGraphJsonProjection projection : projections) {
+        Entity entity = mapProjectionToDomain(projection);
+        if (entities.putIfAbsent(entity.id(), entity) != null) {
+          throw new IllegalStateException(
+              "Duplicate entity ID in graph projection: " + entity.id());
+        }
+      }
       log.info("Entity graph projection mapping completed: entityCount={}, durationMs={}",
           entities.size(), elapsedMs(mappingStartedAt));
       return entities;
@@ -130,20 +143,28 @@ public class PostgresEntityGraphAdapter implements EntityGraphRepositoryPort {
 
   private Entity mapProjectionToDomain(EntityGraphJsonProjection projection) {
     try {
-      List<PropertyProjection> propertyProjections = objectMapper
-          .readValue(jsonOrEmptyArray(projection.getPropertiesJson()), new TypeReference<>() {
-          });
-      List<RelationProjection> relationProjections = objectMapper
-          .readValue(jsonOrEmptyArray(projection.getRelationsJson()), new TypeReference<>() {
-          });
+      List<PropertyProjection> propertyProjections = propertyReader
+          .readValue(jsonOrEmptyArray(projection.getPropertiesJson()));
+      List<RelationProjection> relationProjections = relationReader
+          .readValue(jsonOrEmptyArray(projection.getRelationsJson()));
 
-      List<Property> properties = propertyProjections.stream()
-          .map(property -> new Property(property.id(), property.name(), property.value())).toList();
-      List<Relation> relations = relationProjections.stream()
-          .map(relation -> new Relation(relation.id(), relation.name(),
-              relation.targetTemplateIdentifier(), relation.targetEntities().stream()
-                  .map(TargetProjection::targetEntityIdentifier).filter(Objects::nonNull).toList()))
-          .toList();
+      List<Property> properties = new java.util.ArrayList<>(propertyProjections.size());
+      for (PropertyProjection property : propertyProjections) {
+        properties.add(new Property(property.id(), property.name(), property.value()));
+      }
+
+      List<Relation> relations = new java.util.ArrayList<>(relationProjections.size());
+      for (RelationProjection relation : relationProjections) {
+        List<String> targetIdentifiers = new java.util.ArrayList<>(
+            relation.targetEntities().size());
+        for (TargetProjection target : relation.targetEntities()) {
+          if (Objects.nonNull(target.targetEntityIdentifier())) {
+            targetIdentifiers.add(target.targetEntityIdentifier());
+          }
+        }
+        relations.add(new Relation(relation.id(), relation.name(),
+            relation.targetTemplateIdentifier(), targetIdentifiers));
+      }
 
       return new Entity(projection.getId(), projection.getTemplateIdentifier(),
           projection.getName(), projection.getIdentifier(), properties, relations);
