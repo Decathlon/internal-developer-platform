@@ -68,7 +68,6 @@ import lombok.RequiredArgsConstructor;
 public class EntityGraphService {
 
   private final EntityRepositoryPort entityRepositoryPort;
-  private final EntityTemplateValidationService entityTemplateValidationService;
   private final EntityService entityService;
   private final EntityGraphRepositoryPort entityGraphRepositoryPort;
   private final EntityGraphHelper entityGraphHelper;
@@ -103,8 +102,6 @@ public class EntityGraphService {
       EntityGraphTraversalMode mode) {
 
     int effectiveDepth = Math.clamp(depth, 1, MAX_DEPTH);
-
-    // entityTemplateValidationService.validateTemplateExists(templateIdentifier);
 
     EntitySummary rootEntity = entityRepositoryPort
         .findSummariesByCompositeKeys(
