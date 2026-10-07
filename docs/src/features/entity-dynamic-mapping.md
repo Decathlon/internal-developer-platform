@@ -5,7 +5,7 @@ description: Understand Dynamic mappings and JSLT expressions.
 
 ## Overview
 
-A mapping targets one Entity Template and describes how to derive entity fields from the incoming JSON payload with a JSLT filter and entity projections.
+A mapping targets one Entity Template and describes how to derive entity fields from the incoming JSON payload with a JSLT filter and entity projections. It is linked to a data integration configuration (Webhook, Kafka, etc) as it describes how to transform incoming payloads.
 
 ## Entity Dynamic Mapping Fields
 
@@ -34,6 +34,20 @@ A mapping targets one Entity Template and describes how to derive entity fields 
 | --------------------------- | -------- | -------------------------------------------------------- |
 | `name`                      | ✅       | Relation name from the Entity Template                   |
 | `target_entity_identifiers` | ✅       | Array of JSLT expressions to extract target identifiers  |
+
+> [!TIP]
+> To remove all target relations while preserving the entity, set `target_entity_identifiers` to `["null"]`.
+> Setting `[]` or `[""]` will not work.
+>
+> ```json
+> "relations": [
+>   {
+>     "name": "your-relation-name",
+>     "target_entity_identifiers": ["null"]
+>   }
+> ]
+> ```
+>
 
 ### Mapping Actions
 

@@ -496,4 +496,4 @@ Overlay health metrics onto graph nodes to quickly identify troubled components.
 
 - **[Data Integration](data-integration.md)** - Connect external systems and populate the graph with data
 - **[Entity Templates](../concepts/entity-templates.md)** - Define the types of entities in your graph
-- **[Audit Trail](../concepts/audit.md)** - Track changes to entities and relationships
+- **[Audit Trail](audit.md)** - Track changes to entities and relationships
