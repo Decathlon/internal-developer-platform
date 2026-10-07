@@ -20,6 +20,9 @@ import lombok.extern.slf4j.Slf4j;
 public class SecurityProcessor {
 
   private static final String WEBHOOK_AUTHENTICATION_FAILED_MESSAGE = "Webhook authentication failed";
+  private static final String SPAN_ATTRIBUTE_WEBHOOK_IDENTIFIER = "idp.webhook.identifier";
+  private static final String SPAN_ATTRIBUTE_SECURITY_RESULT = "idp.webhook.security.result";
+  private static final String RESULT_SUCCESS = "SUCCESS";
 
   private final List<WebhookSecurityStrategy> strategies;
 
@@ -30,11 +33,11 @@ public class SecurityProcessor {
   public void validate(Map<String, Object> headers, byte[] rawPayload,
       WebhookConnector webhookConnector) {
     String webhookIdentifier = webhookConnector.identifier();
-    Span.current().setAttribute("idp.webhook.identifier", webhookIdentifier);
+    Span.current().setAttribute(SPAN_ATTRIBUTE_WEBHOOK_IDENTIFIER, webhookIdentifier);
 
     WebhookSecurity security = webhookConnector.security();
     if (security == null || security.type() == WebhookSecurityType.NONE) {
-      Span.current().setAttribute("idp.webhook.security.result", "SUCCESS");
+      Span.current().setAttribute(SPAN_ATTRIBUTE_SECURITY_RESULT, RESULT_SUCCESS);
       return;
     }
 
@@ -50,11 +53,11 @@ public class SecurityProcessor {
       authenticator.validateRequest(headers, rawPayload == null ? new byte[0] : rawPayload,
           security.config());
 
-      Span.current().setAttribute("idp.webhook.security.result", "SUCCESS");
+      Span.current().setAttribute(SPAN_ATTRIBUTE_SECURITY_RESULT, RESULT_SUCCESS);
       log.debug("Webhook security validation passed for connector '{}' with strategy '{}'.",
           webhookIdentifier, security.type());
     } catch (RuntimeException exception) {
-      Span.current().setAttribute("idp.webhook.security.result", "REJECTED");
+      Span.current().setAttribute(SPAN_ATTRIBUTE_SECURITY_RESULT, "REJECTED");
       throw exception;
     }
   }

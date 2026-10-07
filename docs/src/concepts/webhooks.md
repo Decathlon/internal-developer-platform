@@ -83,7 +83,7 @@ again at runtime.
 | `STATIC_TOKEN` | `header_name`, `secret_alias`                     | Compares a header value with a secret loaded from the environment                                |
 | `BASIC_AUTH`   | `username`, `secret_alias`                        | Compares the `Authorization: Basic ...` header with the configured username and secret           |
 | `JWT_BEARER`   | `jwks_uri`, `client_id_field`, `client_id_values` | Validates the bearer token against a JWKS endpoint, then checks caller identity claim allow-list |
-| `NONE`         | none                                              | Skips authentication                                                                             |
+| `NONE`         | none (`config` is optional)                       | Skips authentication                                                                             |
 
 > [!IMPORTANT]
 > Security configuration keys accept `snake_case` and `camelCase` variants for the supported fields.
@@ -144,13 +144,25 @@ value in the connector configuration.
 }
 ```
 
+=== "NONE"
+
+```json
+{
+  "type": "NONE"
+}
+```
+
+For `NONE`, you can omit `config`, set it to `null`, or pass `{}`. Any non-empty `config` is rejected.
+
 ### JWT_BEARER Configuration Reference
 
 - `jwks_uri` (required): literal HTTPS URL used to validate JWT signatures.
-- `client_id_field` (required): claim name used to identify the caller. Allowed values are only `azp` or `email`.
+- `client_id_field` (required): name of the JWT claim that identifies the caller. Any non-empty claim name is accepted, for example `client_id`, `sub`, `azp`, `email`, or a custom claim. Existing configurations using `azp` or `email` keep working unchanged.
 - `client_id_values` (required): comma-separated allow-list of accepted claim values.
 - `expected_audience` (optional): comma-separated allow-list for the `aud` claim. If present, at least one JWT audience must match.
 - `allowed-jwks-hosts` (optional, environment-backed): comma-separated allow-list of trusted JWKS hosts under `idp.security.webhook`. Set `ALLOWED_JWKS_HOSTS` when you need to permit a specific issuer host explicitly.
+
+The caller must send the JWT in an `Authorization: Bearer <token>` header. If the claim named by `client_id_field` is missing from the token, the request is rejected with `401 Unauthorized`. If the claim value is not in `client_id_values`, the request is rejected with `403 Forbidden`.
 
 > [!WARNING]
 > `jwks_uri` must use a resolvable public HTTPS host. Local hosts, private networks, link-local addresses, and group-address destinations are rejected at connector creation.

@@ -20,6 +20,9 @@ import lombok.extern.slf4j.Slf4j;
 @RequiredArgsConstructor
 public class IngestionProcessor {
 
+  private static final String SPAN_ATTRIBUTE_WEBHOOK_IDENTIFIER = "idp.webhook.identifier";
+  private static final String SPAN_ATTRIBUTE_MAPPING_RESULT = "idp.webhook.mapping.result";
+
   private final MappingEnginePort mappingEngine;
   private final EntityService entityService;
 
@@ -38,7 +41,7 @@ public class IngestionProcessor {
   /// @param payload the raw JSON payload from the webhook
   public void ingest(String payload, WebhookConnector webhookConnectorConfiguration) {
     String connectorIdentifier = webhookConnectorConfiguration.identifier();
-    Span.current().setAttribute("idp.webhook.identifier", connectorIdentifier);
+    Span.current().setAttribute(SPAN_ATTRIBUTE_WEBHOOK_IDENTIFIER, connectorIdentifier);
 
     log.info("Starting ingestion for webhook connector: {}", connectorIdentifier);
     webhookConnectorConfiguration.mappings().forEach(mapping -> applyMapping(payload, mapping));
@@ -57,7 +60,7 @@ public class IngestionProcessor {
       Entity entity = mappingEngine.mapToEntity(payload, mapping);
 
       if (entity == null) {
-        Span.current().setAttribute("idp.webhook.mapping.result", "FILTERED");
+        Span.current().setAttribute(SPAN_ATTRIBUTE_MAPPING_RESULT, "FILTERED");
         log.debug("Mapping filter excluded payload for template: {}",
             mapping.entityTemplateIdentifier());
         return;
@@ -70,11 +73,11 @@ public class IngestionProcessor {
         case null, default -> log.warn("Unsupported or null mapping action: {}", mapping.action());
       }
 
-      Span.current().setAttribute("idp.webhook.mapping.result", "SUCCESS");
+      Span.current().setAttribute(SPAN_ATTRIBUTE_MAPPING_RESULT, "SUCCESS");
       log.info("Successfully processed action {} for entity: {} under template: {}",
           mapping.action(), entity.identifier(), entity.templateIdentifier());
     } catch (RuntimeException exception) {
-      Span.current().setAttribute("idp.webhook.mapping.result", "ERROR");
+      Span.current().setAttribute(SPAN_ATTRIBUTE_MAPPING_RESULT, "ERROR");
       throw exception;
     }
   }

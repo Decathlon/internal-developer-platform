@@ -224,11 +224,12 @@ ENTRYPOINT ["java", "-jar", "app.jar"]
 
 ### Observability
 
-| Variable                      | Description    | Default    |
-| ----------------------------- | -------------- | ---------- |
-| `OTEL_EXPORTER_OTLP_ENDPOINT` | OTLP endpoint  | -          |
-| `OTEL_SERVICE_NAME`           | Service name   | `idp-core` |
-| `LOG_LEVEL`                   | Root log level | `INFO`     |
+| Variable                      | Description                                         | Default    |
+| ----------------------------- | --------------------------------------------------- | ---------- |
+| `OTEL_TRACING_ENABLED`        | Enables OpenTelemetry tracing (`false` disables it) | `true`     |
+| `OTEL_EXPORTER_OTLP_ENDPOINT` | OTLP endpoint                                       | -          |
+| `OTEL_SERVICE_NAME`           | Service name                                        | `idp-core` |
+| `LOG_LEVEL`                   | Root log level                                      | `INFO`     |
 
 ---
 

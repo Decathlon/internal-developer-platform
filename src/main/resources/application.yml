@@ -179,7 +179,6 @@ logging:
 
 management:
   tracing:
-    # Tracing is disabled by default and only enabled via environment variables (OTEL_TRACING_ENABLED).
     enabled: ${OTEL_TRACING_ENABLED:true}
     sampling:
       probability: 1.0  # 100% des traces
@@ -187,18 +186,19 @@ management:
   otlp:
     traces:
       export:
-        url: ${OTEL_EXPORTER_OTLP_ENDPOINT}
+        url: ${OTEL_EXPORTER_OTLP_ENDPOINT:}
         protocol: ${OTEL_EXPORTER_OTLP_PROTOCOL:http/protobuf}
     metrics:
       export:
-        url: ${OTEL_EXPORTER_OTLP_ENDPOINT}
+        url: ${OTEL_EXPORTER_OTLP_ENDPOINT:}
         protocol: ${OTEL_EXPORTER_OTLP_PROTOCOL:http/protobuf}
   opentelemetry:
     resource-attributes:
-      deployment.environment: ${OTEL_ENV}
-      service.namespace: ${OTEL_SERVICE_NAMESPACE}
-      X-Datadog-Org: ${ORG}
-      X-Backend: ${BACKEND}
+      deployment.environment: ${OTEL_ENV:local}
+      service.namespace: ${OTEL_SERVICE_NAMESPACE:idp-core}
+      service.name: ${OTEL_SERVICE_NAME:idp-core}
+      X-Datadog-Org: ${ORG:}
+      X-Backend: ${BACKEND:}
 
   endpoints:
     web:
