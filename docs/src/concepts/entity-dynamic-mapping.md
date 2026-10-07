@@ -39,12 +39,12 @@ A mapping targets one Entity Template and describes how to derive entity fields 
 
 The `action` field determines how the resolved entity payload modifies the entity in IDP-Core:
 
-| Action              | Behaviour                                                                   |
-| ------------------  | ----------------------------------------------------------------------------|
-| `UPDATE_ENTITY`     | Creates the entity if absent, otherwise patches all fields                  |
-| `UPDATE_PROPERTIES` | Creates the entity if absent, otherwise patches name and properties only    |
-| `UPDATE_RELATIONS`  | Creates the entity if absent, otherwise patches relations only              |
-| `DELETE_ENTITY`     | Deletes the entity if it exists                                             |
+| Action              | Behaviour                                                                |
+| ------------------  |--------------------------------------------------------------------------|
+| `UPDATE_ENTITY`     | Creates the entity if absent, otherwise patches all fields               |
+| `UPDATE_PROPERTIES` | Creates the entity if absent, otherwise patches name and properties only |
+| `UPDATE_RELATIONS`  | Patches relations on an existing entity, fails if the entity is absent   |
+| `DELETE_ENTITY`     | Deletes the entity if it exists                                          |
 
 #### UPDATE_RELATIONS: Relation Normalization
 

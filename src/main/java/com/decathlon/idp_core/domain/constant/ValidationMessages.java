@@ -70,7 +70,7 @@ public class ValidationMessages {
   public static final String WEBHOOK_CONNECTOR_IDENTIFIER_MANDATORY = "Webhook Connector identifier is mandatory and cannot be blank";
   public static final String WEBHOOK_CONNECTOR_TITLE_ALREADY_EXIST = "Webhook Connector already exist with the same name";
   public static final String WEBHOOK_IDENTIFIER_NOT_FOUND = "Target webhook with identifier '%s' does not exist";
-  public static final String WEBHOOK_DISABLED_EXCEPTION_MESSAGE = "Webhook configuration is disabledWebhook connector '%s' is disabled and cannot process events";
+  public static final String WEBHOOK_DISABLED_EXCEPTION_MESSAGE = "Webhook connector '%s' is disabled and cannot process events";
   public static final String ENTITY_DYNAMIC_MAPPING_NOT_FOUND = "Entity dynamic mapping with identifier '%s' does not exist";
   public static final String ENTITY_DYNAMIC_MAPPING_ALREADY_EXISTS = "Entity dynamic mapping already exists with the same identifier '%s'";
   public static final String ENTITY_DYNAMIC_MAPPING_ALREADY_IN_USE = "Entity dynamic mapping already in use, please remove it from the associated webhook connector '%s' before deleting it";
@@ -80,6 +80,9 @@ public class ValidationMessages {
   public static final String ENTITY_ALREADY_EXISTS = "Entity with name '%s' already exists for template '%s'";
   public static final String ENTITY_VALIDATION_FAILED = "Entity validation failed: ";
   public static final String ENTITY_DELETION_BLOCKED = "Cannot delete entity '%s' (template: '%s') because it is referenced by required relations in the following entities: %s. Please update the relation definitions to make them optional or remove the required constraint before deleting this entity.";
+
+  // Principal provisioning validation messages
+  public static final String PRINCIPAL_CREATION_FAILED = "Failed to create principal with identifier '%s'. The principal provider is currently unavailable. The system will automatically retry provisioning on the next request.";
 
   // Helper method to construct rules incompatibility message
   public static String rulesAreIncompatible(String rule1, String rule2) {

@@ -7,6 +7,7 @@ import java.util.List;
 
 import org.springdoc.core.models.GroupedOpenApi;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Profile;
@@ -49,6 +50,7 @@ import io.swagger.v3.oas.models.servers.Server;
 
 @Configuration
 @Profile("!test")
+@ConditionalOnProperty(prefix = "app.security.swagger", name = "enabled", havingValue = "true", matchIfMissing = true)
 public class SwaggerConfiguration {
 
   public static final String AUTHENTICATION_SUFFIX = " authentication";
@@ -57,30 +59,43 @@ public class SwaggerConfiguration {
 
   private final String oauth2url;
   private final String idpCorePrefixUrl;
+  private final boolean jwtEnabled;
 
   public SwaggerConfiguration(
-      @Value("${spring.security.oauth2.client.provider.idp-core.token-uri}") String oauth2url,
-      @Value("${app.idp-core-prefix-url}") String idpCorePrefixUrl) {
+      @Value("${spring.security.oauth2.client.provider.idp-core.token-uri:}") String oauth2url,
+      @Value("${app.idp-core-prefix-url:http://localhost:8080}") String idpCorePrefixUrl,
+      @Value("${app.security.authentication.jwt.enabled:false}") boolean jwtEnabled) {
     this.oauth2url = oauth2url;
     this.idpCorePrefixUrl = idpCorePrefixUrl;
+    this.jwtEnabled = jwtEnabled;
   }
 
   @Bean
   public OpenAPI openAPI() {
     ModelConverters.getInstance().addConverter(new ModelResolver(Json.mapper()));
-    return new OpenAPI()
+    OpenAPI openApi = new OpenAPI()
         .info(new Info().title("Idp core API")
             .description("API dedicated to idp core functionalities").version("v1"))
-        .addServersItem(new Server().url(idpCorePrefixUrl))
-        .schemaRequirement(CLIENT_ID,
-            new SecurityScheme().description(CLIENT_ID + AUTHENTICATION_SUFFIX).name(CLIENT_ID)
-                .type(OAUTH2)
-                .flows(new OAuthFlows().clientCredentials(new OAuthFlow().tokenUrl(oauth2url))))
-        .addSecurityItem(new SecurityRequirement().addList(CLIENT_ID))
-        .schemaRequirement(BEARER,
-            new SecurityScheme().description(BEARER + AUTHENTICATION_SUFFIX).name(BEARER)
-                .scheme(BEARER).bearerFormat("JWT").type(HTTP))
-        .addSecurityItem(new SecurityRequirement().addList(BEARER));
+        .addServersItem(new Server().url(idpCorePrefixUrl));
+
+    if (!oauth2url.isBlank()) {
+      openApi
+          .schemaRequirement(CLIENT_ID,
+              new SecurityScheme().description(CLIENT_ID + AUTHENTICATION_SUFFIX).name(CLIENT_ID)
+                  .type(OAUTH2)
+                  .flows(new OAuthFlows().clientCredentials(new OAuthFlow().tokenUrl(oauth2url))))
+          .addSecurityItem(new SecurityRequirement().addList(CLIENT_ID));
+    }
+
+    if (jwtEnabled) {
+      openApi
+          .schemaRequirement(BEARER,
+              new SecurityScheme().description(BEARER + AUTHENTICATION_SUFFIX).name(BEARER)
+                  .scheme(BEARER).bearerFormat("JWT").type(HTTP))
+          .addSecurityItem(new SecurityRequirement().addList(BEARER));
+    }
+
+    return openApi;
   }
 
   @Bean

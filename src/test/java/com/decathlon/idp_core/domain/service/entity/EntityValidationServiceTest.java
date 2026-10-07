@@ -1,5 +1,6 @@
 package com.decathlon.idp_core.domain.service.entity;
 
+import static com.decathlon.idp_core.domain.constant.ValidationMessages.ENTITY_NAME_MANDATORY;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -261,6 +262,18 @@ class EntityValidationServiceTest {
           any(Violations.class));
       verify(relationValidationService).validateRelationsAgainstTemplate(eq(template),
           eq(entity.relations()), any(Violations.class));
+    }
+
+    @Test
+    @DisplayName("Should reject blank entity name during update validation")
+    void shouldRejectBlankEntityNameDuringUpdate() {
+      var template = buildTemplate();
+      var entity = buildEntity("web-service", "catalog-api", "   ");
+
+      var exception = assertThrows(EntityValidationException.class,
+          () -> entityValidationService.validateForUpdate(entity, template));
+
+      assertEquals(List.of(ENTITY_NAME_MANDATORY), exception.getViolations());
     }
 
     @Test
