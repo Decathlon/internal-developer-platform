@@ -9,20 +9,20 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 
-import com.decathlon.idp_core.infrastructure.adapters.api.auth.UserIdentityProvider;
+import com.decathlon.idp_core.domain.port.audit.AuditIdentityProviderPort;
 
 /// Unit tests for UserIdentityProviderHolder.
 /// Covers the static holder pattern used to bridge Spring-managed beans with Hibernate Envers.
 @DisplayName("UserIdentityProviderHolder Tests")
 class UserIdentityProviderHolderTest {
 
-  private UserIdentityProvider mockProvider;
+  private AuditIdentityProviderPort mockProvider;
 
   @BeforeEach
   void setUp() {
     // Reset the static holder before each test
     resetHolder();
-    mockProvider = mock(UserIdentityProvider.class);
+    mockProvider = mock(AuditIdentityProviderPort.class);
   }
 
   /// Helper to reset the static holder for test isolation
@@ -72,7 +72,7 @@ class UserIdentityProviderHolderTest {
     @DisplayName("Should use injected provider during initialization")
     void shouldUseInjectedProvider() {
       // Given
-      UserIdentityProvider customProvider = mock(UserIdentityProvider.class);
+      AuditIdentityProviderPort customProvider = mock(AuditIdentityProviderPort.class);
       var holder = new UserIdentityProviderHolder(customProvider);
 
       // When
@@ -95,8 +95,8 @@ class UserIdentityProviderHolderTest {
     @DisplayName("Should reinitialize with new provider")
     void shouldReinitializeWithNewProvider() {
       // Given
-      var provider1 = mock(UserIdentityProvider.class);
-      var provider2 = mock(UserIdentityProvider.class);
+      var provider1 = mock(AuditIdentityProviderPort.class);
+      var provider2 = mock(AuditIdentityProviderPort.class);
 
       var holder1 = new UserIdentityProviderHolder(provider1);
       holder1.init();
@@ -118,8 +118,8 @@ class UserIdentityProviderHolderTest {
     @DisplayName("Should handle concurrent initialization safely")
     void shouldHandleConcurrentInitializationSafely() throws InterruptedException {
       // Given
-      var provider1 = mock(UserIdentityProvider.class);
-      var provider2 = mock(UserIdentityProvider.class);
+      var provider1 = mock(AuditIdentityProviderPort.class);
+      var provider2 = mock(AuditIdentityProviderPort.class);
 
       var thread1Results = new java.util.concurrent.CountDownLatch(1);
       var thread2Results = new java.util.concurrent.CountDownLatch(1);
@@ -151,7 +151,7 @@ class UserIdentityProviderHolderTest {
     @DisplayName("Should allow concurrent reads after initialization")
     void shouldAllowConcurrentReadsAfterInitialization() throws InterruptedException {
       // Given
-      var provider = mock(UserIdentityProvider.class);
+      var provider = mock(AuditIdentityProviderPort.class);
       var holder = new UserIdentityProviderHolder(provider);
       holder.init();
 
@@ -164,7 +164,7 @@ class UserIdentityProviderHolderTest {
         new Thread(() -> {
           try {
             barrier.await();
-            UserIdentityProvider result = UserIdentityProviderHolder.getUserIdentityProvider();
+            AuditIdentityProviderPort result = UserIdentityProviderHolder.getUserIdentityProvider();
             assertThat(result).isEqualTo(provider);
           } catch (Exception e) {
             throw new RuntimeException(e);
@@ -192,7 +192,7 @@ class UserIdentityProviderHolderTest {
       holder.init();
 
       // When
-      UserIdentityProvider result = UserIdentityProviderHolder.getUserIdentityProvider();
+      AuditIdentityProviderPort result = UserIdentityProviderHolder.getUserIdentityProvider();
 
       // Then
       assertThat(result).isEqualTo(mockProvider);
@@ -206,9 +206,9 @@ class UserIdentityProviderHolderTest {
       holder.init();
 
       // When & Then
-      UserIdentityProvider result1 = UserIdentityProviderHolder.getUserIdentityProvider();
-      UserIdentityProvider result2 = UserIdentityProviderHolder.getUserIdentityProvider();
-      UserIdentityProvider result3 = UserIdentityProviderHolder.getUserIdentityProvider();
+      AuditIdentityProviderPort result1 = UserIdentityProviderHolder.getUserIdentityProvider();
+      AuditIdentityProviderPort result2 = UserIdentityProviderHolder.getUserIdentityProvider();
+      AuditIdentityProviderPort result3 = UserIdentityProviderHolder.getUserIdentityProvider();
 
       assertThat(result1).isEqualTo(result2).isEqualTo(result3).isEqualTo(mockProvider);
     }
@@ -217,12 +217,13 @@ class UserIdentityProviderHolderTest {
     @DisplayName("Should work as bridge for Hibernate Envers listeners")
     void shouldBridgeHibernateEnversAccess() {
       // Given
-      var provider = mock(UserIdentityProvider.class);
+      var provider = mock(AuditIdentityProviderPort.class);
       var holder = new UserIdentityProviderHolder(provider);
       holder.init();
 
       // When - Simulate Envers listener access (non-Spring context)
-      UserIdentityProvider enversProvider = UserIdentityProviderHolder.getUserIdentityProvider();
+      AuditIdentityProviderPort enversProvider = UserIdentityProviderHolder
+          .getUserIdentityProvider();
 
       // Then
       assertThat(enversProvider).isNotNull().isEqualTo(provider);
@@ -234,7 +235,7 @@ class UserIdentityProviderHolderTest {
   class ConstructorTests {
 
     @Test
-    @DisplayName("Should accept UserIdentityProvider in constructor")
+    @DisplayName("Should accept AuditIdentityProviderPort in constructor")
     void shouldAcceptProviderInConstructor() {
       // When
       UserIdentityProviderHolder holder = new UserIdentityProviderHolder(mockProvider);
@@ -302,7 +303,7 @@ class UserIdentityProviderHolderTest {
       holder.init();
 
       // Then - Simulates what Spring would do
-      UserIdentityProvider provider = UserIdentityProviderHolder.getUserIdentityProvider();
+      AuditIdentityProviderPort provider = UserIdentityProviderHolder.getUserIdentityProvider();
       assertThat(provider).isEqualTo(mockProvider);
     }
 
@@ -310,10 +311,10 @@ class UserIdentityProviderHolderTest {
     @DisplayName("Should enable Hibernate Envers listener to access provider")
     void shouldEnableHibernateEnversAccess() {
       // Given
-      var provider = mock(UserIdentityProvider.class);
+      var provider = mock(AuditIdentityProviderPort.class);
       var holder = new UserIdentityProviderHolder(provider);
       holder.init();
-      UserIdentityProvider enversAccessibleProvider = UserIdentityProviderHolder
+      AuditIdentityProviderPort enversAccessibleProvider = UserIdentityProviderHolder
           .getUserIdentityProvider();
 
       // Then
@@ -327,8 +328,8 @@ class UserIdentityProviderHolderTest {
       var holder = new UserIdentityProviderHolder(mockProvider);
       holder.init();
 
-      UserIdentityProvider access1 = UserIdentityProviderHolder.getUserIdentityProvider();
-      UserIdentityProvider access2 = UserIdentityProviderHolder.getUserIdentityProvider();
+      AuditIdentityProviderPort access1 = UserIdentityProviderHolder.getUserIdentityProvider();
+      AuditIdentityProviderPort access2 = UserIdentityProviderHolder.getUserIdentityProvider();
 
       assertThat(access1).isSameAs(access2).isEqualTo(mockProvider);
     }

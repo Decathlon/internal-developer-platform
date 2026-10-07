@@ -29,8 +29,6 @@ spring:
 # Added App Security configuration
 app:
   security:
-    roles:
-      baseline-role: "*"
     authentication:
       jwt:
         enabled: true
@@ -43,8 +41,7 @@ app:
         preferred_username: "preferred_username"
       service-account-detection:
         enabled: true
-        mode: "legacy"
-        legacy-fallback-claims: "grant_type,service_name,client_id"
+        mode: "strict"
       # ✅ Un-indented: Now properly binds to app.security.authentication.jit-provisioning-excluded-paths
       jit-provisioning-excluded-paths: "/,/actuator/**,/swagger-ui/**,/swagger-ui.html,/v3/api-docs/**"
   ingestion:

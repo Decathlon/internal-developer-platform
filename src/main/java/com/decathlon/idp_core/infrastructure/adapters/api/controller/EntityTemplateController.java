@@ -29,6 +29,9 @@ import static org.springframework.http.HttpStatus.CREATED;
 import static org.springframework.http.HttpStatus.NO_CONTENT;
 import static org.springframework.http.HttpStatus.OK;
 
+import java.util.Optional;
+
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 
 import org.springframework.data.domain.Page;
@@ -44,8 +47,12 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.decathlon.idp_core.domain.model.authorization.AuthorizationAction;
+import com.decathlon.idp_core.domain.model.authorization.AuthorizationResource;
 import com.decathlon.idp_core.domain.model.entity_template.EntityTemplate;
 import com.decathlon.idp_core.domain.service.entity_template.EntityTemplateService;
+import com.decathlon.idp_core.infrastructure.adapters.api.auth.AuthorizedResource;
+import com.decathlon.idp_core.infrastructure.adapters.api.auth.RequestAuthorizer;
 import com.decathlon.idp_core.infrastructure.adapters.api.configuration.SwaggerConfiguration.TemplatePageResponse;
 import com.decathlon.idp_core.infrastructure.adapters.api.dto.in.EntityTemplateCreateDtoIn;
 import com.decathlon.idp_core.infrastructure.adapters.api.dto.in.EntityTemplateUpdateDtoIn;
@@ -81,6 +88,7 @@ import lombok.RequiredArgsConstructor;
 /// paginated listing, identifier-based lookup, creation with uniqueness validation,
 /// updates with conflict resolution, and safe deletion with referential checks.
 @RestController
+@AuthorizedResource("entity_template")
 @RequiredArgsConstructor
 @RequestMapping("/api/v1/entity-templates")
 @Tag(name = "Entities Templates Management", description = "Operations related to entity template management")
@@ -88,6 +96,7 @@ public class EntityTemplateController {
 
   private final EntityTemplateService entityTemplateService;
   private final EntityTemplateMapper templateMapper;
+  private final RequestAuthorizer requestAuthorizer;
 
   /// Retrieves paginated entity templates for administrative interfaces.
   ///
@@ -141,7 +150,14 @@ public class EntityTemplateController {
   @PostMapping
   @ResponseStatus(CREATED)
   public EntityTemplateDtoOut createTemplate(
-      @Valid @RequestBody EntityTemplateCreateDtoIn entityTemplateCreateDtoIn) {
+      @Valid @RequestBody EntityTemplateCreateDtoIn entityTemplateCreateDtoIn,
+      HttpServletRequest request) {
+    if (AuthorizationResource.PRINCIPAL_TEMPLATE_IDENTIFIER
+        .equals(entityTemplateCreateDtoIn.getIdentifier())) {
+      requestAuthorizer.authorize(request, AuthorizationAction.CREATE,
+          new AuthorizationResource(AuthorizationResource.ENTITY_TEMPLATE,
+              Optional.of(entityTemplateCreateDtoIn.getIdentifier()), Optional.empty()));
+    }
     EntityTemplate entityTemplate = entityTemplateService
         .createEntityTemplate(templateMapper.fromDtoToEntityTemplate(entityTemplateCreateDtoIn));
     return templateMapper.fromEntityTemplatetoDto(entityTemplate);

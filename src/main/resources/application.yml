@@ -118,13 +118,19 @@ app:
   # Base URL of this service, used to build self-referencing links.
   idp-core-prefix-url: ${IDP_CORE_PREFIX_URL}
   security:
-    roles:
-      # Baseline role assigned to all authenticated principals during V1 phase.
-      baseline-role: ${APP_SECURITY_ROLES_BASELINE_ROLE:*}
+    authorization:
+      mode: GLOBAL
+      # Comma-separated immutable principal identifiers for emergency access, even before JIT provisioning.
+      global-principal-identifiers: ${IDP_SUPER_ADMIN_IDENTIFIER:},${IDP_PLATFORM_ADMIN_IDENTIFIER:}
+      # Optional human-access gate; when set, the named principal property must be true.
+      required-principal-property: ${IDP_REQUIRED_PRINCIPAL_PROPERTY:}
 
     # Authentication configuration - externalized for multi-IdP support
     # See docs/src/concepts/authentication.md for comprehensive documentation
     authentication:
+      # Human identity claim used as the catalog principal identifier.
+      principal-identifier-claim: ${IDP_PRINCIPAL_IDENTIFIER_CLAIM:sub}
+
       jwt:
         enabled: true
       api-key:
@@ -135,7 +141,6 @@ app:
       # JWT claim mappings for different Identity Providers (Auth0, Keycloak, Azure AD, etc.)
       # See docs/src/concepts/authentication.md - JWT Claim Mappings section
       user-claim-mappings:
-        sub: sub
         preferred_username: preferred_username
         name: name
         email: email
@@ -150,12 +155,9 @@ app:
       # See docs/src/concepts/authentication.md - Service Account Detection section
       service-account-detection:
         enabled: true
-        mode: legacy
+        mode: strict
         definitive-claim-name: token_type
         definitive-claim-value: m2m
-        # Simplified list binding. Overriding via env var requires a comma-separated string:
-        # export APP_SECURITY_AUTHENTICATION_SERVICE_ACCOUNT_DETECTION_LEGACY_FALLBACK_CLAIMS="grant_type,service_name,client_id"
-        legacy-fallback-claims: grant_type,service_name,client_id
         # JIT Provisioning excluded paths
         # Simplified list binding. Overriding via env var requires a comma-separated string:
         # export APP_SECURITY_AUTHENTICATION_JIT_PROVISIONING_EXCLUDED_PATHS="/,/actuator/**,/swagger-ui/**,/swagger-ui.html,/v3/api-docs/**"

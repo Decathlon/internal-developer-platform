@@ -1,12 +1,14 @@
 package com.decathlon.idp_core.infrastructure.adapters.api.auth;
 
 import java.io.IOException;
+import java.util.Optional;
 
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 
+import org.springframework.http.HttpStatus;
 import org.springframework.http.server.PathContainer;
 import org.springframework.lang.NonNull;
 import org.springframework.security.core.Authentication;
@@ -15,10 +17,13 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 import org.springframework.web.util.pattern.PathPatternParser;
 
+import com.decathlon.idp_core.domain.model.entity.Entity;
 import com.decathlon.idp_core.domain.model.principal.PrincipalInfo;
 import com.decathlon.idp_core.domain.service.principal.PrincipalProvisioningService;
 import com.decathlon.idp_core.infrastructure.adapters.api.configuration.AuthenticationProperties;
 import com.decathlon.idp_core.infrastructure.adapters.api.configuration.SecurityConfiguration;
+import com.decathlon.idp_core.infrastructure.adapters.api.exception.MissingPrincipalIdentifierException;
+import com.decathlon.idp_core.infrastructure.adapters.api.handler.ApiErrorResponseWriter;
 import com.decathlon.idp_core.infrastructure.adapters.api.principal.PrincipalExtractor;
 
 import lombok.RequiredArgsConstructor;
@@ -52,6 +57,7 @@ public class JitProvisioningFilter extends OncePerRequestFilter {
   private final PrincipalExtractor principalExtractor;
   private final PrincipalProvisioningService provisioningService;
   private final AuthenticationProperties authProperties;
+  private final ApiErrorResponseWriter errorResponseWriter;
   private final PathPatternParser patternParser = new PathPatternParser();
 
   @Override
@@ -61,25 +67,37 @@ public class JitProvisioningFilter extends OncePerRequestFilter {
 
     Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
 
-    if (authentication != null && authentication.isAuthenticated()
-        && !isAnonymous(authentication)) {
-      provisionPrincipalSafely(authentication);
+    if (authentication != null && authentication.isAuthenticated() && !isAnonymous(authentication)
+        && !provisionPrincipalSafely(request, response, authentication)) {
+      return;
     }
 
     filterChain.doFilter(request, response);
   }
 
-  private void provisionPrincipalSafely(Authentication authentication) {
+  private boolean provisionPrincipalSafely(HttpServletRequest request, HttpServletResponse response,
+      Authentication authentication) throws IOException {
+    PrincipalInfo principalInfo;
     try {
-      PrincipalInfo principalInfo = principalExtractor.extractPrincipalInfo(authentication);
-      provisioningService.provisionPrincipal(principalInfo);
+      principalInfo = principalExtractor.extractPrincipalInfo(authentication);
+    } catch (MissingPrincipalIdentifierException exception) {
+      log.warn("Authentication rejected: {}", exception.getMessage());
+      errorResponseWriter.write(response, HttpStatus.UNAUTHORIZED, exception.getMessage());
+      return false;
+    }
+
+    try {
+      Entity principalEntity = provisioningService.provisionPrincipal(principalInfo);
+      request.setAttribute(ProvisionedPrincipalContext.REQUEST_ATTRIBUTE,
+          new ProvisionedPrincipalContext(principalInfo, Optional.of(principalEntity)));
 
       log.debug("JIT provisioning successful for principal: {} (kind: {})",
           principalInfo.identifier(), principalInfo.kind());
+      return true;
     } catch (Exception e) {
-      // Log error but don't block the request - fail-open for availability
-      // The principal may not have a catalog entry, but can still authenticate
+      // Provisioning failures remain fail-open; extraction failures propagate.
       log.warn("JIT provisioning failed for authenticated principal: {}", e.getMessage(), e);
+      return true;
     }
   }
 

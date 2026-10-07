@@ -11,7 +11,6 @@ import java.util.stream.Collectors;
 import jakarta.validation.ConstraintViolation;
 import jakarta.validation.ConstraintViolationException;
 
-import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
@@ -22,6 +21,7 @@ import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.method.annotation.HandlerMethodValidationException;
 import org.springframework.web.servlet.NoHandlerFoundException;
 
+import com.decathlon.idp_core.domain.exception.authorization.PrincipalNotAuthorizedException;
 import com.decathlon.idp_core.domain.exception.entity.EntityAlreadyExistsException;
 import com.decathlon.idp_core.domain.exception.entity.EntityDeletionBlockedException;
 import com.decathlon.idp_core.domain.exception.entity.EntityNotFoundException;
@@ -32,6 +32,7 @@ import com.decathlon.idp_core.domain.exception.filter.InvalidFilterDslException;
 import com.decathlon.idp_core.domain.exception.principal.PrincipalNotFoundException;
 import com.decathlon.idp_core.domain.exception.search.InvalidSearchQueryException;
 import com.decathlon.idp_core.domain.exception.webhook.*;
+import com.decathlon.idp_core.infrastructure.adapters.api.exception.MissingPrincipalIdentifierException;
 import com.decathlon.idp_core.infrastructure.adapters.common.model.ErrorResponse;
 
 import lombok.extern.slf4j.Slf4j;
@@ -61,6 +62,15 @@ import tools.jackson.databind.exc.MismatchedInputException;
 public class ApiExceptionHandler {
 
   private ApiExceptionHandler() {
+  }
+
+  /// Rejects authenticated principals that do not provide their configured
+  /// identifier claim.
+  @ExceptionHandler(MissingPrincipalIdentifierException.class)
+  public ResponseEntity<ErrorResponse> handleMissingPrincipalIdentifierException(
+      MissingPrincipalIdentifierException ex) {
+    log.warn("Authentication rejected: {}", ex.getMessage());
+    return createErrorResponse(HttpStatus.UNAUTHORIZED, ex.getMessage());
   }
 
   /// Handles domain exception when entity templates are not found.
@@ -421,6 +431,17 @@ public class ApiExceptionHandler {
     log.warn("Principal not found: {}", ex.getMessage());
     ErrorResponse errorResponse = new ErrorResponse(NOT_FOUND.name(), ex.getMessage());
     return ResponseEntity.status(NOT_FOUND).body(errorResponse);
+  }
+
+  /// Handles domain exception when a principal is not authorized.
+  ///
+  /// **HTTP mapping:** Maps PrincipalNotAuthorizedException to HTTP 403
+  /// Forbidden.
+  @ExceptionHandler(PrincipalNotAuthorizedException.class)
+  public ResponseEntity<ErrorResponse> handlePrincipalNotAuthorizedException(
+      PrincipalNotAuthorizedException ex) {
+    log.warn("Principal not authorized: {}", ex.getMessage());
+    return createErrorResponse(HttpStatus.FORBIDDEN, ex.getMessage());
   }
 
   /// Handles Bean Validation constraint violations from domain model validation.
