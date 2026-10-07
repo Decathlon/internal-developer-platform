@@ -62,7 +62,7 @@ Start the PostgreSQL service using Docker Compose:
 ```bash
 git clone https://github.com/decathlon/internal-developer-platform.git
 cd internal-developer-platform
-docker-compose up -d
+docker compose up -d
 ```
 
 Build and run the Internal Developer Platform app:

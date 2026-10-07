@@ -1,9 +1,9 @@
 ---
 title: Core Concepts
-description: Understand the fundamental concepts of IDP-Core - Entity Templates, Entities, Properties, Relations, and Audit tracking
+description: Understand the fundamental concepts of IDP-Core - Entity Templates, Entities, Properties, and Relations
 ---
 
-IDP-Core sits at the center of a flexible, runtime-configurable data model. This section explains the fundamental concepts you need to understand, including entity management and comprehensive audit tracking.
+IDP-Core sits at the center of a flexible, runtime-configurable data model. This section explains the fundamental concepts you need to understand, including entity management and relationships.
 
 ## Overview
 
@@ -49,23 +49,11 @@ graph TB
 
   Connections between entities forming a knowledge graph.
 
-- 🌐 **[Webhooks](webhooks.md)**
-
-    ---
-
- Runtime-configurable connectors to push your data from external systems within your IDP. You can map any source in your data model in minutes.
-
 - 🔍 **[Filtering Entities](entity-filtering.md)**
 
     ---
 
     Query entities by attributes, property values, and relations using the filter DSL.
-
-- 📜 **[Audit](audit.md)**
-
-    ---
-
-    Track all changes over time with comprehensive revision history and user attribution.
 
 </div>
 
@@ -142,4 +130,5 @@ Dive deeper into each concept:
 - **[Entity Templates](entity-templates.md)** - Learn how to design your data model
 - **[Properties](properties.md)** - Understand property types and validation
 - **[Relations](relations.md)** - Connect your entities into a graph
-- **[Webhooks](webhooks.md)** - Configure inbound integrations and security strategies
+- **[Data Integration](../features/data-integration.md)** - Ingest and map data from external systems
+- **[Audit](../features/audit.md)** - Track changes to entities over time
