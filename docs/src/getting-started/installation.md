@@ -21,7 +21,7 @@ The recommended way to get started with the Internal Developer Platform is using
 2. **Start the PG database with Docker Compose**
 
     ```bash
-    docker-compose up -d
+    docker compose up -d
     ```
 
 3. **Run the Internal Developer Platform Application**

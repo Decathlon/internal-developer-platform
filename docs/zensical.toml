@@ -37,12 +37,17 @@ nav = [
         "concepts/entity-filtering.md"
     ]},
     "concepts/properties.md",
-    "concepts/relations.md",
-    "concepts/webhooks.md"
+    "concepts/relations.md"
   ]},
   { "Features" = [
     "features/index.md",
-    "features/data-integration.md",
+    "features/audit.md",
+    { "Data Integration" = [
+        "features/data-integration.md",
+        "features/entity-dynamic-mapping.md",
+        "features/webhooks.md"
+    ]},
+    "features/graph.md",
     "features/scorecards.md",
     "features/self-service-actions.md"
   ]},
@@ -54,7 +59,10 @@ nav = [
     "deployment/docker.md",
     "deployment/kubernetes.md",
     "deployment/observability.md",
-    "deployment/configuration.md"
+    { "Configuration Reference" = [
+        "deployment/configuration.md",
+        "concepts/authentication.md"
+    ]},
   ]},
   { "Contributing" = [
     "contributing/index.md",
@@ -69,11 +77,16 @@ nav = [
     ]},
     { "Architecture Decision Records" = [
         "contributing/adrs/index.md",
-        "contributing/adrs/0001-doc-site-engine.md"
+        "contributing/adrs/0001-doc-site-engine.md",
+        "contributing/adrs/0002-code-architecture-pattern.md",
+        "contributing/adrs/0003-data-ingestion-framework.md",
+        "contributing/adrs/0004-dynamic-mapping-dsl.md"
     ]},
     "contributing/development-setup.md",
+    "contributing/documentation.md",
     "contributing/pull-requests.md",
     "contributing/testing.md",
+    "contributing/owasp-zap-security.md",
     "contributing/ci-workflow.md",
   ]}
 ]
