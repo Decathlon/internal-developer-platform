@@ -80,16 +80,16 @@ This validation keeps the connector configuration aligned with the current data 
 Each connector declares one security type. IDP-Core validates the configuration at creation time and validates requests
 again at runtime.
 
-| Type           | Required configuration keys                       | Runtime behavior                                                                                 |
-|----------------|---------------------------------------------------|--------------------------------------------------------------------------------------------------|
-| `HMAC_SHA256`  | `header_name`, `secret_alias`, `prefix`           | Computes the SHA-256 HMAC of the raw body and compares it with the request header                |
-| `STATIC_TOKEN` | `header_name`, `secret_alias`                     | Compares a header value with a secret loaded from the environment                                |
-| `BASIC_AUTH`   | `username`, `secret_alias`                        | Compares the `Authorization: Basic ...` header with the configured username and secret           |
-| `JWT_BEARER`   | `jwks_uri`, `client_id_field`, `client_id_values` | Validates the bearer token against a JWKS endpoint, then checks caller identity claim allow-list |
-| `NONE`         | none (`config` is optional)                       | Skips authentication                                                                             |
+| Type             | Required configuration keys                         | Runtime behavior                                                                                 |
+|------------------|-----------------------------------------------------|--------------------------------------------------------------------------------------------------|
+| `HMAC_SHA256`    | `header_name`, `secret_alias`, `prefix`             | Computes the SHA-256 HMAC of the raw body and compares it with the request header                |
+| `STATIC_TOKEN`   | `header_name`, `secret_alias`                       | Compares a header value with a secret loaded from the environment                                |
+| `BASIC_AUTH`     | `username`, `secret_alias`                          | Compares the `Authorization: Basic ...` header with the configured username and secret           |
+| `JWT_BEARER`     | `jwks_uri`, `client_id_field`, `client_id_values`   | Validates the bearer token against a JWKS endpoint, then checks caller identity claim allow-list |
+| `NONE`           | none (`config` is optional)                         | Skips authentication                                                                             |
 
 > [!IMPORTANT]
-> Security configuration keys accept `snake_case` and `camelCase` variants for the supported fields.
+> Configuration keys accept `snake_case` and `camelCase` variants where supported. HMAC prefix uses the `prefix` key and has a default set to `sha256=`.
 > [!WARNING]
 > `secret_alias` must reference an environment variable alias in `UPPER_SNAKE_CASE`. It does not store the raw secret
 value in the connector configuration.
@@ -149,13 +149,13 @@ value in the connector configuration.
 
 === "NONE"
 
-```json
-{
-  "type": "NONE"
-}
-```
+    ```json
+    {
+      "type": "NONE"
+    }
+    ```
 
-For `NONE`, you can omit `config`, set it to `null`, or pass `{}`. Any non-empty `config` is rejected.
+    For `NONE`, you can omit `config`, set it to `null`, or pass `{}`. Any non-empty `config` is rejected.
 
 ### JWT_BEARER Configuration Reference
 
@@ -215,7 +215,7 @@ Use webhooks when an external system can push JSON events over HTTP and you want
 
 - Ingest updates without redeploying IDP-Core
 - Reuse one generic endpoint for multiple providers
-- Apply connector-specific authentication rulesadd
+- Apply connector-specific authentication rules
 - Map external payloads to your own Entity Templates at runtime
 
 ---

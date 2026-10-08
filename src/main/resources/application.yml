@@ -179,7 +179,7 @@ logging:
 
 management:
   tracing:
-    enabled: ${OTEL_TRACING_ENABLED:true}
+    enabled: ${OTEL_TRACING_ENABLED:false}
     sampling:
       probability: 1.0  # 100% des traces
 
@@ -192,6 +192,7 @@ management:
       export:
         url: ${OTEL_EXPORTER_OTLP_ENDPOINT:}
         protocol: ${OTEL_EXPORTER_OTLP_PROTOCOL:http/protobuf}
+        enabled: ${OTEL_METRICS_EXPORT_ENABLED:false}
   opentelemetry:
     resource-attributes:
       deployment.environment: ${OTEL_ENV:local}
