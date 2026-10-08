@@ -403,6 +403,60 @@ paths:
             "*/*":
               schema:
                 "$ref": "#/components/schemas/ErrorResponse"
+    patch:
+      tags:
+      - Entities Management
+      summary: Partially update an existing entity
+      description: Partially update an existing entity in the system with the provided information
+      operationId: patchEntity
+      parameters:
+      - name: templateIdentifier
+        in: path
+        required: true
+        schema:
+          type: string
+          minLength: 1
+      - name: entityIdentifier
+        in: path
+        required: true
+        schema:
+          type: string
+          minLength: 1
+      requestBody:
+        content:
+          application/json:
+            schema:
+              "$ref": "#/components/schemas/EntityPatchDtoIn"
+        required: true
+      responses:
+        '200':
+          description: Entity updated successfully
+          content:
+            "*/*":
+              schema:
+                "$ref": "#/components/schemas/EntityDtoOut"
+        '400':
+          description: Invalid entity data provided
+          content:
+            "*/*":
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
+        '401':
+          description: Unauthorized - Missing or invalid token
+        '403':
+          description: Insufficient rights
+        '404':
+          description: Entity not found with the provided identifier
+          content:
+            "*/*":
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
+        '500':
+          description: Unexpected server-side failure
+          content:
+            "*/*":
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
     delete:
       tags:
       - Entities Management
@@ -1513,6 +1567,24 @@ components:
             "$ref": "#/components/schemas/RelationDtoIn"
       required:
       - name
+    EntityPatchDtoIn:
+      type: object
+      description: Input DTO for partially updating an entity. Omitted fields remain unchanged.
+      properties:
+        name:
+          type: string
+          description: Name of the entity
+          example: my-web-service-updated
+        properties:
+          type: object
+          additionalProperties:
+            type: string
+          description: Properties to merge with the existing entity properties
+        relations:
+          type: array
+          description: Relations to merge with the existing entity relations
+          items:
+            "$ref": "#/components/schemas/RelationDtoIn"
     RelationDtoIn:
       type: object
       description: Input DTO for an entity relation instance
