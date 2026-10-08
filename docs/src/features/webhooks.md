@@ -17,7 +17,7 @@ A webhook connector combines three concerns:
 
 ```mermaid
 flowchart LR
-    S[External system] --> E[POST /webhooks/{configurationId}]
+    S[External system] --> E["POST /webhooks/{configurationId}"]
 E --> H[InboundWebhookHandler]
 H --> D[Security dispatcher]
 D --> C[WebhookConnector]
@@ -30,7 +30,7 @@ M --> T[Entity Template]
 A webhook connector is the runtime configuration stored by IDP-Core for one inbound integration.
 
 | Field                 | Type    | Description                                            |
-|-----------------------|---------|--------------------------------------------------------|
+| --------------------- | ------- | ------------------------------------------------------ |
 | `identifier`          | String  | Stable key used in the webhook URL and management APIs |
 | `name`                | String  | Human-readable name                                    |
 | `description`         | String  | Optional explanation of the connector purpose          |
@@ -46,7 +46,10 @@ A webhook connector is the runtime configuration stored by IDP-Core for one inbo
   "name": "GitHub repositories",
   "description": "Receives repository events from GitHub",
   "enabled": true,
-  "mapping_identifiers": ["github-repo-update-mapping", "github-repo-delete-mapping"],
+  "mapping_identifiers": [
+    "github-repo-update-mapping",
+    "github-repo-delete-mapping"
+  ],
   "security": {
     "type": "HMAC_SHA256",
     "config": {
@@ -206,20 +209,20 @@ You manage webhook connectors through the inbound webhook management API, which 
 This separation keeps configuration management under versioned API routes while the event ingestion endpoint stays
 simple for external systems.
 
-## When to Use Webhooks
+## When to use Webhooks
 
 Use webhooks when an external system can push JSON events over HTTP and you want to:
 
 - Ingest updates without redeploying IDP-Core
 - Reuse one generic endpoint for multiple providers
-- Apply connector-specific authentication rules
+- Apply connector-specific authentication rulesadd
 - Map external payloads to your own Entity Templates at runtime
 
 ---
 
 ## Next Steps
 
-- **[Entity Templates](entity-templates.md)** - Define the target structures that mappings reference
-- **[Entities](entities.md)** - Understand the records produced by successful ingestion
-- **[Relations](relations.md)** - Model links that webhook mappings can populate
+- **[Entity Templates](../concepts/entity-templates.md)** - Define the target structures that mappings reference
+- **[Entities](../concepts/entities.md)** - Understand the records produced by successful ingestion
+- **[Relations](../concepts/relations.md)** - Model links that webhook mappings can populate
 - **[Data Integration](../features/data-integration.md)** - Explore the broader ingestion roadmap
