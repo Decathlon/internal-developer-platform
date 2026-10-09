@@ -12,6 +12,7 @@ import com.decathlon.idp_core.domain.model.inbound_connectors.webhook.WebhookCon
 import com.decathlon.idp_core.domain.port.MappingEnginePort;
 import com.decathlon.idp_core.domain.service.entity.EntityService;
 
+import io.opentelemetry.api.trace.Span;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
@@ -19,6 +20,8 @@ import lombok.extern.slf4j.Slf4j;
 @Slf4j
 @RequiredArgsConstructor
 public class IngestionProcessor {
+
+  private static final String SPAN_ATTRIBUTE_WEBHOOK_IDENTIFIER = "idp.webhook.identifier";
 
   private final MappingEnginePort mappingEngine;
   private final EntityService entityService;
@@ -37,11 +40,12 @@ public class IngestionProcessor {
   /// @param webhookConnectorConfiguration the connector with mapping definitions
   /// @param payload the raw JSON payload from the webhook
   public void ingest(String payload, WebhookConnector webhookConnectorConfiguration) {
-    log.info("Starting ingestion for webhook connector: {}",
-        webhookConnectorConfiguration.identifier());
+    String connectorIdentifier = webhookConnectorConfiguration.identifier();
+    Span.current().setAttribute(SPAN_ATTRIBUTE_WEBHOOK_IDENTIFIER, connectorIdentifier);
+
+    log.info("Starting ingestion for webhook connector: {}", connectorIdentifier);
     webhookConnectorConfiguration.mappings().forEach(mapping -> applyMapping(payload, mapping));
-    log.info("Completed ingestion for webhook connector: {}",
-        webhookConnectorConfiguration.identifier());
+    log.info("Completed ingestion for webhook connector: {}", connectorIdentifier);
   }
 
   /// Applies a single mapping to the payload and persists the resulting entity.
@@ -59,7 +63,6 @@ public class IngestionProcessor {
           mapping.entityTemplateIdentifier());
       return;
     }
-
     switch (mapping.action()) {
       case UPDATE_ENTITY -> handleUpdate(entity);
       case UPDATE_PROPERTIES -> handleUpdateProperties(entity);

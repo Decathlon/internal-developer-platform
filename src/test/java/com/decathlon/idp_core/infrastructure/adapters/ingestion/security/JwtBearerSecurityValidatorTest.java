@@ -225,15 +225,29 @@ class JwtBearerSecurityValidatorTest {
     }
 
     @Test
-    @DisplayName("Should throw when client_id_field is neither azp nor email")
-    void shouldThrowWhenClientIdFieldIsUnsupported() {
+    @DisplayName("Should accept any non-empty claim name as client_id_field")
+    void shouldAcceptAnyNonEmptyClientIdField() {
+      JwtBearerSecurityValidator safeValidator = validatorWithPublicHostResolution();
+
+      for (String field : List.of("client_id", "sub", "azp", "email", "custom_tenant_id")) {
+        Map<String, String> config = Map.of("jwks_uri", "https://issuer/.well-known/jwks.json",
+            "client_id_field", field, "client_id_values", "expected@example.com");
+
+        assertThatCode(() -> safeValidator.validateConfiguration(config))
+            .doesNotThrowAnyException();
+      }
+    }
+
+    @Test
+    @DisplayName("Should throw when client_id_field is blank")
+    void shouldThrowWhenClientIdFieldIsBlank() {
       JwtBearerSecurityValidator safeValidator = validatorWithPublicHostResolution();
       Map<String, String> config = Map.of("jwks_uri", "https://issuer/.well-known/jwks.json",
-          "client_id_field", "sub", "client_id_values", "expected@example.com");
+          "client_id_field", " ", "client_id_values", "expected@example.com");
 
       assertThatThrownBy(() -> safeValidator.validateConfiguration(config)).isInstanceOf(
           com.decathlon.idp_core.domain.exception.webhook.WebhookSecurityConfigurationException.class)
-          .hasMessageContaining("azp").hasMessageContaining("email");
+          .hasMessageContaining("client_id_field");
     }
 
     @Test
@@ -392,6 +406,33 @@ class JwtBearerSecurityValidatorTest {
 
       assertThatCode(() -> validator.validateRequest(headers, new byte[0], config))
           .doesNotThrowAnyException();
+    }
+
+    @Test
+    @DisplayName("Should accept custom client_id claim when configured")
+    void shouldUseCustomClientIdClaim() {
+      when(jwtDecoderProvider.get("https://issuer/.well-known/jwks.json")).thenReturn(jwtDecoder);
+      Map<String, String> config = Map.of("jwks_uri", "https://issuer/.well-known/jwks.json",
+          "client_id_field", "client_id", "client_id_values", "app_abc123");
+      Map<String, Object> headers = Map.of("Authorization", "Bearer signed-token");
+      when(jwtDecoder.decode("signed-token")).thenReturn(jwtWithClaim("client_id", "app_abc123"));
+
+      assertThatCode(() -> validator.validateRequest(headers, new byte[0], config))
+          .doesNotThrowAnyException();
+    }
+
+    @Test
+    @DisplayName("Should return unauthorized when configured claim is missing in JWT")
+    void shouldReturnUnauthorizedWhenConfiguredClaimMissing() {
+      when(jwtDecoderProvider.get("https://issuer/.well-known/jwks.json")).thenReturn(jwtDecoder);
+      Map<String, String> config = Map.of("jwks_uri", "https://issuer/.well-known/jwks.json",
+          "client_id_field", "custom_tenant_id", "client_id_values", "tenant");
+      Map<String, Object> headers = Map.of("Authorization", "Bearer signed-token");
+      when(jwtDecoder.decode("signed-token")).thenReturn(jwtWithClaim("email", "a@b.c"));
+
+      assertThatThrownBy(() -> validator.validateRequest(headers, new byte[0], config))
+          .isInstanceOf(WebhookAuthUnauthorizedException.class)
+          .hasMessageContaining("custom_tenant_id");
     }
 
     @Test

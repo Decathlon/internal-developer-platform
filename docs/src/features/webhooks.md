@@ -80,20 +80,19 @@ This validation keeps the connector configuration aligned with the current data 
 Each connector declares one security type. IDP-Core validates the configuration at creation time and validates requests
 again at runtime.
 
-| Type           | Required configuration keys                       | Optional configuration keys     |
-| -------------- | ------------------------------------------------- | ------------------------------- |
-| `HMAC_SHA256`  | `header_name`, `secret_alias`                     | `prefix` (default is `sha256=`) |
-| `STATIC_TOKEN` | `header_name`, `secret_alias`                     | None                            |
-| `BASIC_AUTH`   | `username`, `secret_alias`                        | None                            |
-| `JWT_BEARER`   | `jwks_uri`, `client_id_field`, `client_id_values` | `expected_audience`             |
-| `NONE`         | None                                              | None                            |
+| Type             | Required configuration keys                         | Runtime behavior                                                                                 |
+|------------------|-----------------------------------------------------|--------------------------------------------------------------------------------------------------|
+| `HMAC_SHA256`    | `header_name`, `secret_alias`, `prefix`             | Computes the SHA-256 HMAC of the raw body and compares it with the request header                |
+| `STATIC_TOKEN`   | `header_name`, `secret_alias`                       | Compares a header value with a secret loaded from the environment                                |
+| `BASIC_AUTH`     | `username`, `secret_alias`                          | Compares the `Authorization: Basic ...` header with the configured username and secret           |
+| `JWT_BEARER`     | `jwks_uri`, `client_id_field`, `client_id_values`   | Validates the bearer token against a JWKS endpoint, then checks caller identity claim allow-list |
+| `NONE`           | none (`config` is optional)                         | Skips authentication                                                                             |
 
 > [!IMPORTANT]
 > Configuration keys accept `snake_case` and `camelCase` variants where supported. HMAC prefix uses the `prefix` key and has a default set to `sha256=`.
 > [!WARNING]
-> Secret aliases reference environment variables; they do not store the raw secret value in the connector configuration.
-> Use `MY_SECRET`, `env:MY_SECRET`, or `${MY_SECRET}` as the value. You can also use `secret_alias_env` or
-> `secretAliasEnv` as the key and set its value to the environment variable name.
+> `secret_alias` must reference an environment variable alias in `UPPER_SNAKE_CASE`. It does not store the raw secret
+value in the connector configuration.
 
 ### Example Security Configurations
 
@@ -148,24 +147,32 @@ again at runtime.
 }
 ```
 
+=== "NONE"
+
+    ```json
+    {
+      "type": "NONE"
+    }
+    ```
+
+    For `NONE`, you can omit `config`, set it to `null`, or pass `{}`. Any non-empty `config` is rejected.
+
 ### JWT_BEARER Configuration Reference
 
 - `jwks_uri` (required): literal HTTPS URL used to validate JWT signatures.
-- `client_id_field` (required): claim name used to identify the caller. Allowed values are only `azp` or `email`.
+- `client_id_field` (required): name of the JWT claim that identifies the caller. Any non-empty claim name is accepted, for example `client_id`, `sub`, `azp`, `email`, or a custom claim.
 - `client_id_values` (required): comma-separated allow-list of accepted claim values.
-- `expected_audience` (optional): comma-separated allow-list for the `aud` claim. If present, at least one JWT audience must match. If omitted, IDP-Core does not check the audience.
+- `expected_audience` (optional): comma-separated allow-list for the `aud` claim. If present, at least one JWT audience must match.
+- `allowed-jwks-hosts` (optional, environment-backed): comma-separated allow-list of trusted JWKS hosts under `idp.security.webhook`. Set `ALLOWED_JWKS_HOSTS` when you need to permit a specific issuer host explicitly.
+
+The caller must send the JWT in an `Authorization: Bearer <token>` header. If the claim named by `client_id_field` is missing from the token, the request is rejected with `401 Unauthorized`. If the claim value is not in `client_id_values`, the request is rejected with `403 Forbidden`.
 
 > [!WARNING]
 > `jwks_uri` must use a resolvable public HTTPS host. Local hosts, private networks, link-local addresses, and group-address destinations are rejected at connector creation.
+> If you configure `allowed-jwks-hosts`, the listed hosts bypass this rejection path intentionally.
+> This allow-list is configured under `idp.security.webhook.allowed-jwks-hosts`.
 
 `jwks_uri` is stored as a literal URL in the connector configuration. Environment references are not supported for this field.
-
-### JWKS Host Allow-List
-
-The optional server-level property `idp.security.webhook.allowed-jwks-hosts` defaults to an empty list. Set the
-`ALLOWED_JWKS_HOSTS` environment variable to a comma-separated list of hosts to allow. When the list is non-empty,
-`jwks_uri` must use one of those hosts; allow-listed hosts bypass the private and local address rejection checks.
-The URI must still use HTTPS.
 
 ## Runtime Flow
 
@@ -192,7 +199,7 @@ The request flow is:
 You manage webhook connectors through the inbound webhook management API, which exposes standard CRUD methods.
 
 | HTTP Method | Endpoint                                | Purpose          |
-| ----------- | --------------------------------------- | ---------------- |
+|-------------|-----------------------------------------|------------------|
 | `POST`      | `/api/v1/inbound_webhooks`              | Create connector |
 | `GET`       | `/api/v1/inbound_webhooks`              | List connectors  |
 | `GET`       | `/api/v1/inbound_webhooks/{identifier}` | Get connector    |

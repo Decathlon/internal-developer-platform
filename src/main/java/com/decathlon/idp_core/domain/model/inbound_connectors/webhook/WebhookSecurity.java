@@ -14,9 +14,10 @@ public record WebhookSecurity(WebhookSecurityType type, Map<String, String> conf
     if (type == null) {
       throw new WebhookSecurityConfigurationException(WEBHOOK_CONNECTOR_SECURITY_TYPE_MANDATORY);
     }
-    if (config == null) {
+    // NONE needs no config: a missing config is normalized to an empty map
+    if (config == null && type != WebhookSecurityType.NONE) {
       throw new WebhookSecurityConfigurationException(WEBHOOK_CONNECTOR_SECURITY_CONFIG_MANDATORY);
     }
-    config = Map.copyOf(config);
+    config = config == null ? Map.of() : Map.copyOf(config);
   }
 }
