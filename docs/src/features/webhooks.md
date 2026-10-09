@@ -160,7 +160,7 @@ value in the connector configuration.
 ### JWT_BEARER Configuration Reference
 
 - `jwks_uri` (required): literal HTTPS URL used to validate JWT signatures.
-- `client_id_field` (required): name of the JWT claim that identifies the caller. Any non-empty claim name is accepted, for example `client_id`, `sub`, `azp`, `email`, or a custom claim. Existing configurations using `azp` or `email` keep working unchanged.
+- `client_id_field` (required): name of the JWT claim that identifies the caller. Any non-empty claim name is accepted, for example `client_id`, `sub`, `azp`, `email`, or a custom claim.
 - `client_id_values` (required): comma-separated allow-list of accepted claim values.
 - `expected_audience` (optional): comma-separated allow-list for the `aud` claim. If present, at least one JWT audience must match.
 - `allowed-jwks-hosts` (optional, environment-backed): comma-separated allow-list of trusted JWKS hosts under `idp.security.webhook`. Set `ALLOWED_JWKS_HOSTS` when you need to permit a specific issuer host explicitly.
