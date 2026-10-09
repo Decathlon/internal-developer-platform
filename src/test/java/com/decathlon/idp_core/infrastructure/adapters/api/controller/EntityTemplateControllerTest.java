@@ -71,7 +71,7 @@ class EntityTemplateControllerTest extends AbstractIntegrationTest {
     /// **This test verifies that:**
     /// - The endpoint returns HTTP 200 OK status
     /// - Response content type is application/json
-    /// - All 10 templates are returned in the content array
+    /// - All 15 templates are returned in the content array
     /// - Default pagination settings are applied (page 0, size 20)
     /// - Template ordering is consistent (batch-job at index 1)
     /// - Pagination metadata is correctly populated
@@ -84,9 +84,9 @@ class EntityTemplateControllerTest extends AbstractIntegrationTest {
       mockMvc.perform(get("/api/v1/entity-templates").accept(APPLICATION_JSON))
           .andExpect(status().isOk()).andExpect(content().contentType(APPLICATION_JSON))
           .andExpect(jsonPath("$.content").isArray())
-          .andExpect(jsonPath("$.content.length()").value(14))
+          .andExpect(jsonPath("$.content.length()").value(15))
           .andExpect(jsonPath("$.content[1].identifier").value("batch-job"))
-          .andExpect(jsonPath("$.page.total_elements").value(14))
+          .andExpect(jsonPath("$.page.total_elements").value(15))
           .andExpect(jsonPath("$.page.total_pages").value(1))
           .andExpect(jsonPath("$.page.size").value(20))
           .andExpect(jsonPath("$.page.number").value(0));
@@ -118,7 +118,7 @@ class EntityTemplateControllerTest extends AbstractIntegrationTest {
           .andExpect(status().isOk()).andExpect(content().contentType(APPLICATION_JSON))
           .andExpect(jsonPath("$.content.length()").value(5))
           .andExpect(jsonPath("$.content[0].identifier").value("frontend-app"))
-          .andExpect(jsonPath("$.page.total_elements").value(14))
+          .andExpect(jsonPath("$.page.total_elements").value(15))
           .andExpect(jsonPath("$.page.total_pages").value(3))
           .andExpect(jsonPath("$.page.size").value(5))
           .andExpect(jsonPath("$.page.number").value(1));

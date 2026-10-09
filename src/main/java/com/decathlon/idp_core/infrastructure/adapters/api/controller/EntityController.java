@@ -9,6 +9,8 @@ import static com.decathlon.idp_core.infrastructure.adapters.api.configuration.S
 import static com.decathlon.idp_core.infrastructure.adapters.api.configuration.SwaggerDescription.ENDPOINT_GET_ENTITIES_SUMMARY;
 import static com.decathlon.idp_core.infrastructure.adapters.api.configuration.SwaggerDescription.ENDPOINT_GET_ENTITY_BY_IDENTIFIER_DESCRIPTION;
 import static com.decathlon.idp_core.infrastructure.adapters.api.configuration.SwaggerDescription.ENDPOINT_GET_ENTITY_BY_IDENTIFIER_SUMMARY;
+import static com.decathlon.idp_core.infrastructure.adapters.api.configuration.SwaggerDescription.ENDPOINT_PATCH_ENTITY_DESCRIPTION;
+import static com.decathlon.idp_core.infrastructure.adapters.api.configuration.SwaggerDescription.ENDPOINT_PATCH_ENTITY_SUMMARY;
 import static com.decathlon.idp_core.infrastructure.adapters.api.configuration.SwaggerDescription.ENDPOINT_POST_ENTITY_DESCRIPTION;
 import static com.decathlon.idp_core.infrastructure.adapters.api.configuration.SwaggerDescription.ENDPOINT_POST_ENTITY_SUMMARY;
 import static com.decathlon.idp_core.infrastructure.adapters.api.configuration.SwaggerDescription.ENDPOINT_POST_SEARCH_DESCRIPTION;
@@ -63,6 +65,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
@@ -74,6 +77,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.decathlon.idp_core.domain.model.entity.Entity;
 import com.decathlon.idp_core.domain.model.entity.EntityFilter;
+import com.decathlon.idp_core.domain.model.entity.EntityPatch;
 import com.decathlon.idp_core.domain.model.entity_graph.EntityGraphNode;
 import com.decathlon.idp_core.domain.model.entity_graph.EntityGraphTraversalMode;
 import com.decathlon.idp_core.domain.model.search.PaginatedResult;
@@ -86,6 +90,7 @@ import com.decathlon.idp_core.domain.service.filter.EntityFilterDslParser;
 import com.decathlon.idp_core.domain.service.search.SearchFilterParser;
 import com.decathlon.idp_core.infrastructure.adapters.api.configuration.SwaggerConfiguration.EntityPageResponse;
 import com.decathlon.idp_core.infrastructure.adapters.api.dto.in.EntityCreateDtoIn;
+import com.decathlon.idp_core.infrastructure.adapters.api.dto.in.EntityPatchDtoIn;
 import com.decathlon.idp_core.infrastructure.adapters.api.dto.in.EntitySearchRequestDtoIn;
 import com.decathlon.idp_core.infrastructure.adapters.api.dto.in.EntityUpdateDtoIn;
 import com.decathlon.idp_core.infrastructure.adapters.api.dto.out.entity.EntityDtoOut;
@@ -292,6 +297,32 @@ public class EntityController {
     Entity entity = entityDtoInMapper.fromPutEntityDtoInToEntity(entityUpdateDtoIn,
         templateIdentifier, entityIdentifier);
     Entity updatedEntity = entityService.updateEntity(templateIdentifier, entityIdentifier, entity);
+    return entityDtoOutMapper.fromEntity(updatedEntity);
+  }
+
+  /// Partially updates an existing entity for the specified template.
+  ///
+  /// Omitted fields are kept unchanged. Properties and relations supplied in
+  /// the request are merged by name with the existing entity.
+  @Operation(summary = ENDPOINT_PATCH_ENTITY_SUMMARY, description = ENDPOINT_PATCH_ENTITY_DESCRIPTION)
+  @ApiResponse(responseCode = OK_CODE, description = RESPONSE_ENTITY_UPDATED, content = {
+      @Content(schema = @Schema(implementation = EntityDtoOut.class))})
+  @ApiResponse(responseCode = BAD_REQUEST_CODE, description = RESPONSE_INVALID_ENTITY_DATA, content = {
+      @Content(schema = @Schema(implementation = ErrorResponse.class))})
+  @ApiResponse(responseCode = UNAUTHORIZED_CODE, description = RESPONSE_UNAUTHORIZED, content = @Content)
+  @ApiResponse(responseCode = FORBIDDEN_CODE, description = RESPONSE_INSUFFICIENT_RIGHTS, content = @Content)
+  @ApiResponse(responseCode = NOT_FOUND_CODE, description = RESPONSE_ENTITY_NOT_FOUND_IDENTIFIER, content = {
+      @Content(schema = @Schema(implementation = ErrorResponse.class))})
+  @ApiResponse(responseCode = INTERNAL_SERVER_ERROR_CODE, description = RESPONSE_UNEXPECTED_SERVER_ERROR, content = {
+      @Content(schema = @Schema(implementation = ErrorResponse.class))})
+  @PatchMapping("/{templateIdentifier}/{entityIdentifier}")
+  @ResponseStatus(OK)
+  public EntityDtoOut patchEntity(@NotBlank @PathVariable String templateIdentifier,
+      @NotBlank @PathVariable String entityIdentifier,
+      @Valid @RequestBody EntityPatchDtoIn patchDtoIn) {
+    EntityPatch patchData = entityDtoInMapper.fromPatchEntityDtoInToEntity(patchDtoIn);
+    Entity updatedEntity = entityService.patchEntity(templateIdentifier, entityIdentifier,
+        patchData);
     return entityDtoOutMapper.fromEntity(updatedEntity);
   }
 

@@ -69,6 +69,8 @@ public class SwaggerDescription {
 
   public static final String ENDPOINT_PUT_ENTITY_SUMMARY = "Update an existing entity";
   public static final String ENDPOINT_PUT_ENTITY_DESCRIPTION = "Update an existing entity in the system with the provided information";
+  public static final String ENDPOINT_PATCH_ENTITY_SUMMARY = "Partially update an existing entity";
+  public static final String ENDPOINT_PATCH_ENTITY_DESCRIPTION = "Partially update an existing entity in the system with the provided information";
   public static final String ENDPOINT_DELETE_ENTITY_SUMMARY = "Delete an existing entity";
   public static final String ENDPOINT_DELETE_ENTITY_DESCRIPTION = "Delete an entity from the system using its template and entity identifiers. This operation removes the entity and automatically cleans up any relations from other entities that reference it.";
 
@@ -164,6 +166,7 @@ public class SwaggerDescription {
   public static final String SCHEMA_ENTITY_IN = "Input DTO for creating or updating an entity";
   public static final String SCHEMA_ENTITY_CREATE_IN = "Input DTO for creating an entity";
   public static final String SCHEMA_ENTITY_UPDATE_IN = "Input DTO for updating an entity";
+  public static final String SCHEMA_ENTITY_PATCH_IN = "Input DTO for partially updating an entity";
   public static final String SCHEMA_ENTITY_RELATION_IN = "Input DTO for an entity relation instance";
   public static final String SCHEMA_ENTITY_SEARCH_REQUEST_IN = "Request body for the POST /api/v1/entities/search endpoint";
   public static final String SCHEMA_FILTER_NODE = "A node in the search filter tree. Either a logical group (connector + criteria) or a leaf criterion (field + operation + value).";

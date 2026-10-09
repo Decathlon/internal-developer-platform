@@ -7,6 +7,8 @@ import static org.springframework.http.MediaType.APPLICATION_JSON;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -36,6 +38,8 @@ public class EntityControllerTest extends AbstractIntegrationTest {
 
   private static final String TEMPLATE_IDENTIFIER = "web-service";
   private static final String ENTITY_IDENTIFIER = "web-api-2";
+  private static final String PATCH_TEMPLATE_IDENTIFIER = "patch-test";
+  private static final String PATCH_ENTITY_IDENTIFIER = "web-api-patch-1";
   private static final String ENTITIES_BY_IDENTIFIER_PATH = "/api/v1/entities/{template-identifier}/{identifier}";
   private static final String ENTITIES_BY_TEMPLATE_IDENTIFIER_PATH = "/api/v1/entities/{template-identifier}";
   private static final String ENTITY_JSON_FILES_TEST_PATH = "integration_test/json/entity/v1/";
@@ -696,6 +700,94 @@ public class EntityControllerTest extends AbstractIntegrationTest {
   }
 
   @Nested
+  @DisplayName("PATCH /api/v1/entities/{template-identifier}/{identifier} - Partially update entity")
+  class PatchEntitiesTests {
+
+    @Test
+    @WithMockUser
+    @DisplayName("Should update only supplied fields and keep omitted fields")
+    void patchEntity_200_keeps_omitted_fields() throws Exception {
+      mockMvc
+          .perform(
+              patch(ENTITIES_BY_IDENTIFIER_PATH, PATCH_TEMPLATE_IDENTIFIER, PATCH_ENTITY_IDENTIFIER)
+                  .contentType(APPLICATION_JSON).accept(APPLICATION_JSON).with(csrf()).content("""
+                      {
+                       "properties": { "port": "9090" }
+                      }
+                      """))
+          .andExpect(status().isOk()).andExpect(jsonPath("$.name").value("Web API Patch 1"))
+          .andExpect(jsonPath("$.properties.applicationName").value("catalog-api"))
+          .andExpect(jsonPath("$.properties.port").value(9090));
+    }
+
+    @Test
+    @WithMockUser
+    @DisplayName("Should update relations without changing omitted fields")
+    void patchEntity_200_updates_relations() throws Exception {
+      var entityIdentifier = "web-api-patch-relation";
+      try {
+        mockMvc.perform(post(ENTITIES_BY_TEMPLATE_IDENTIFIER_PATH, PATCH_TEMPLATE_IDENTIFIER)
+            .contentType(APPLICATION_JSON).accept(APPLICATION_JSON).with(csrf()).content("""
+                {
+                  "name": "Web API Patch Relation",
+                  "identifier": "%s",
+                  "properties": {
+                    "applicationName": "catalog-api",
+                    "port": "8080"
+                  }
+                }
+                """.formatted(entityIdentifier))).andExpect(status().isCreated());
+
+        mockMvc
+            .perform(patch(ENTITIES_BY_IDENTIFIER_PATH, PATCH_TEMPLATE_IDENTIFIER, entityIdentifier)
+                .contentType(APPLICATION_JSON).accept(APPLICATION_JSON).with(csrf()).content("""
+                    {
+                      "name": "Web API Patch Relation",
+                      "relations": [
+                        {
+                          "name": "api-link",
+                          "target_entity_identifiers": ["microservice-1"]
+                        }
+                      ]
+                    }
+                    """))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.properties.applicationName").value("catalog-api"))
+            .andExpect(jsonPath("$.properties.port").value(8080))
+            .andExpect(jsonPath("$.relations.api-link").isArray())
+            .andExpect(jsonPath("$.relations.api-link[0].identifier").value("microservice-1"));
+      } finally {
+        mockMvc.perform(
+            delete(ENTITIES_BY_IDENTIFIER_PATH, PATCH_TEMPLATE_IDENTIFIER, entityIdentifier)
+                .accept(APPLICATION_JSON).with(csrf()));
+      }
+    }
+
+    @Test
+    @WithMockUser
+    @DisplayName("Should return 404 when patching a non-existent entity")
+    void patchEntity_404_non_existent_entity() throws Exception {
+      mockMvc.perform(patch(ENTITIES_BY_IDENTIFIER_PATH, TEMPLATE_IDENTIFIER, "unknown-entity")
+          .contentType(APPLICATION_JSON).accept(APPLICATION_JSON).with(csrf()).content("""
+              {
+                "name": "Patched name"
+              }
+              """)).andExpect(status().isNotFound());
+    }
+
+    @Test
+    @DisplayName("Should return 401 when patching without authentication")
+    void patchEntity_401_without_user_token() throws Exception {
+      mockMvc.perform(patch(ENTITIES_BY_IDENTIFIER_PATH, TEMPLATE_IDENTIFIER, ENTITY_IDENTIFIER)
+          .contentType(APPLICATION_JSON).accept(APPLICATION_JSON).with(csrf()).content("""
+              {
+                "name": "Patched name"
+              }
+              """)).andExpect(status().isUnauthorized());
+    }
+  }
+
+  @Nested
   @DisplayName("PUT /api/v1/entities/{template-identifier}/{identifier} - Update entity relations with merge")
   class PutEntitiesRelationsMergeTests {
 
@@ -1302,8 +1394,8 @@ public class EntityControllerTest extends AbstractIntegrationTest {
               .accept(APPLICATION_JSON).with(csrf()).content("""
                   { "query": "web-api", "page": 0, "size": 20 }
                   """))
-          .andExpect(status().isOk()).andExpect(jsonPath("$.content.length()").value(2))
-          .andExpect(jsonPath("$.page.total_elements").value(2));
+          .andExpect(status().isOk()).andExpect(jsonPath("$.content.length()").value(3))
+          .andExpect(jsonPath("$.page.total_elements").value(3));
     }
 
     @Test
@@ -1315,8 +1407,8 @@ public class EntityControllerTest extends AbstractIntegrationTest {
               .accept(APPLICATION_JSON).with(csrf()).content("""
                   { "query": "Web API", "page": 0, "size": 20 }
                   """))
-          .andExpect(status().isOk()).andExpect(jsonPath("$.content.length()").value(2))
-          .andExpect(jsonPath("$.page.total_elements").value(2));
+          .andExpect(status().isOk()).andExpect(jsonPath("$.content.length()").value(3))
+          .andExpect(jsonPath("$.page.total_elements").value(3));
     }
 
     @Test
