@@ -22,7 +22,6 @@ import lombok.extern.slf4j.Slf4j;
 public class IngestionProcessor {
 
   private static final String SPAN_ATTRIBUTE_WEBHOOK_IDENTIFIER = "idp.webhook.identifier";
-  private static final String SPAN_ATTRIBUTE_MAPPING_RESULT = "idp.webhook.mapping.result";
 
   private final MappingEnginePort mappingEngine;
   private final EntityService entityService;
@@ -57,30 +56,23 @@ public class IngestionProcessor {
   /// @param mapping the mapping definition to apply
   private void applyMapping(String payload, EntityDynamicMapping mapping) {
     log.debug("Applying mapping for template: {} with action: {}", mapping.identifier(), mapping.action());
-    try {
-      Entity entity = mappingEngine.mapToEntity(payload, mapping);
+    Entity entity = mappingEngine.mapToEntity(payload, mapping);
 
-      if (entity == null) {
-        Span.current().setAttribute(SPAN_ATTRIBUTE_MAPPING_RESULT, "FILTERED");
-        log.debug("Mapping filter excluded payload for template: {}",
-            mapping.entityTemplateIdentifier());
-        return;
-      }
-      switch (mapping.action()) {
-        case UPDATE_ENTITY -> handleUpdate(entity);
-        case UPDATE_PROPERTIES -> handleUpdateProperties(entity);
-        case UPDATE_RELATIONS -> handleUpdateRelations(entity);
-        case DELETE_ENTITY -> handleDelete(entity);
-        case null, default -> log.warn("Unsupported or null mapping action: {}", mapping.action());
-      }
-
-      Span.current().setAttribute(SPAN_ATTRIBUTE_MAPPING_RESULT, "SUCCESS");
-      log.info("Successfully processed action {} for entity: {} under template: {}",
-          mapping.action(), entity.identifier(), entity.templateIdentifier());
-    } catch (RuntimeException exception) {
-      Span.current().setAttribute(SPAN_ATTRIBUTE_MAPPING_RESULT, "ERROR");
-      throw exception;
+    if (entity == null) {
+      log.debug("Mapping filter excluded payload for template: {}",
+          mapping.entityTemplateIdentifier());
+      return;
     }
+    switch (mapping.action()) {
+      case UPDATE_ENTITY -> handleUpdate(entity);
+      case UPDATE_PROPERTIES -> handleUpdateProperties(entity);
+      case UPDATE_RELATIONS -> handleUpdateRelations(entity);
+      case DELETE_ENTITY -> handleDelete(entity);
+      case null, default -> log.warn("Unsupported or null mapping action: {}", mapping.action());
+    }
+
+    log.info("Successfully processed action {} for entity: {} under template: {}",
+        mapping.action(), entity.identifier(), entity.templateIdentifier());
   }
 
   /// Handles the Update action for an entity.
