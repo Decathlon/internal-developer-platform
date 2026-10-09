@@ -333,6 +333,40 @@ public class EntityDtoOutMapper {
                 es -> new EntitySummaryDto(es.identifier(), es.name(), es.templateIdentifier())));
   }
 
+  /// Maps a paginated, single-template list of entities to API DTOs without
+  /// resolving relations.
+  ///
+  /// **Performance optimization:** Skips relation-graph resolution entirely —
+  /// no per-item relation lookups, no entity summary batch queries. Intended
+  /// for the default (non-`include_relations`) list/pagination path, where the
+  /// per-item relation fetch previously ran unconditionally regardless of
+  /// whether the caller needed relations, multiplying cost with result-set
+  /// size. Use [#fromEntitiesSearchPageToDtoPage] or the entity-graph-based
+  /// paths when relations are actually required.
+  ///
+  /// @param entities paginated domain entities, all belonging to
+  /// `templateIdentifier`
+  /// @param templateIdentifier the template used to resolve property type
+  /// metadata once for the whole page
+  /// @return paginated API DTOs with properties only; `relations` is always
+  /// empty
+  public Page<EntityDtoOut> fromEntitiesPageToDtoPageWithoutRelations(Page<Entity> entities,
+      String templateIdentifier) {
+    if (entities.isEmpty()) {
+      return entities.map(entity -> new EntityDtoOut(entity.identifier(), entity.name(),
+          entity.templateIdentifier(), Map.of(), Map.of()));
+    }
+
+    EntityTemplate entityTemplate = entityTemplateService
+        .getEntityTemplateByIdentifier(templateIdentifier);
+
+    return entities.map(entity -> {
+      Map<String, Object> props = mapPropertiesDto(entity, entityTemplate);
+      return new EntityDtoOut(entity.identifier(), entity.name(), entity.templateIdentifier(),
+          props, Map.of());
+    });
+  }
+
   /// Maps paginated search results to API DTOs with optimized bulk operations.
   ///
   /// **Performance optimization:** Batches template resolution across all
