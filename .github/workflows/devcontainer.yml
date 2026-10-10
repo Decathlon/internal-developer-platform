@@ -1,0 +1,43 @@
+---
+name: Dev Container
+
+on:
+  pull_request:
+    paths:
+      - '.devcontainer/**'
+      - '.gitattributes'
+      - 'docker-compose.yml'
+      - '.github/workflows/devcontainer.yml'
+  push:
+    branches:
+      - main
+    paths:
+      - '.devcontainer/**'
+      - '.gitattributes'
+      - 'docker-compose.yml'
+      - '.github/workflows/devcontainer.yml'
+  workflow_dispatch:
+
+jobs:
+  verify:
+    permissions:
+      contents: read
+    name: Build and verify dev container
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Build and verify dev container
+        uses: devcontainers/ci@513af61f4de4f75d37e4438f184ba4358f0fc1ca # v0.3.1900000450
+        with:
+          runCmd: |
+            set -euo pipefail
+            trap 'bash .devcontainer/scripts/dev-services.sh stop all' EXIT
+            bash .devcontainer/post-start.sh
+            before=$(bash .devcontainer/scripts/dev-services.sh status all)
+            bash .devcontainer/scripts/dev-services.sh start all
+            after=$(bash .devcontainer/scripts/dev-services.sh status all)
+            [[ "$before" == "$after" ]]
+            bash .devcontainer/scripts/dev-services.sh stop all
+            ./mvnw -B -ntp verify

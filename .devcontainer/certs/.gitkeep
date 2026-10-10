@@ -1,0 +1,3 @@
+# Keeps the optional certificate directory in the Docker build context.
+# Populated automatically per-host by scripts/export-host-ca-certs.sh
+# (initializeCommand); contents are gitignored and never committed.

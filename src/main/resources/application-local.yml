@@ -2,6 +2,9 @@
 server:
   port: 8084
 spring:
+  devtools:
+    livereload:
+      enabled: false
   datasource:
     url: jdbc:postgresql://localhost:5437/idpcore
     username: idpcore

@@ -45,6 +45,10 @@ buildNumber.properties
 .env
 application-secret.*
 
+# Local certificate authorities used by the dev container.
+.devcontainer/certs/*
+!.devcontainer/certs/.gitkeep
+
 
 # BlueJ files
 *.ctxt
