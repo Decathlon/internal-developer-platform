@@ -19,8 +19,6 @@ import org.springframework.stereotype.Component;
 
 import com.decathlon.idp_core.infrastructure.adapters.ingestion.exception.WebhookDecodingException;
 
-import lombok.extern.slf4j.Slf4j;
-
 /// Processor responsible for decoding webhook payloads based on HTTP `Content-Encoding` headers.
 ///
 /// Supported Encodings:
@@ -34,7 +32,6 @@ import lombok.extern.slf4j.Slf4j;
 /// Security: All payload conversions (String→byte[], byte[]→String) are validated against
 /// MAX_INPUT_PAYLOAD_BYTES to prevent unbounded allocations.
 @Component
-@Slf4j
 public class DecodingProcessor {
 
   private static final int SANITIZED_HEADER_MAX_LENGTH = 128;

@@ -11,11 +11,9 @@ import com.decathlon.idp_core.infrastructure.adapters.ingestion.exception.Webhoo
 import com.decathlon.idp_core.infrastructure.adapters.ingestion.exception.WebhookAuthUnauthorizedException;
 
 import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
 
 @Component
 @RequiredArgsConstructor
-@Slf4j
 public class HmacSha256SecurityValidator
     implements
       WebhookSecurityStrategy,

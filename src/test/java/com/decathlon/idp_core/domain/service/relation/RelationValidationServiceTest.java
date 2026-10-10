@@ -42,7 +42,8 @@ class RelationValidationServiceTest {
   private RelationValidationService service;
 
   private void mockExistingEntities(String... identifiers) {
-    var summaries = Arrays.stream(identifiers).map(id -> new EntitySummary(id, "Name", "template"))
+    var summaries = Arrays.stream(identifiers)
+        .map(identifier -> new EntitySummary(UUID.randomUUID(), identifier, "Name", "template"))
         .toList();
     when(entityRepository.findByIdentifierIn(any())).thenReturn(summaries);
   }
@@ -89,7 +90,7 @@ class RelationValidationServiceTest {
   }
 
   private EntitySummary entitySummary(String identifier, String templateIdentifier) {
-    return new EntitySummary(identifier, "Name", templateIdentifier);
+    return new EntitySummary(UUID.randomUUID(), identifier, "Name", templateIdentifier);
   }
 
   @Nested

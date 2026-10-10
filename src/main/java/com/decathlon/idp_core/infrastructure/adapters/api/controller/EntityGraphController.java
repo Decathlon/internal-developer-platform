@@ -91,7 +91,6 @@ public class EntityGraphController {
 
     EntityGraphNode graphNode = entityGraphService.getEntityGraph(templateIdentifier,
         entityIdentifier, depth, includeData, relationFilter, propertyFilter, mode);
-
     return EntityGraphFlatDtoOutMapper.toFlatDto(graphNode);
   }
 
