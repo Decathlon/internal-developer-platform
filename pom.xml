@@ -85,6 +85,13 @@
         <type>pom</type>
         <scope>import</scope>
       </dependency>
+      <dependency>
+        <groupId>io.opentelemetry</groupId>
+        <artifactId>opentelemetry-bom</artifactId>
+        <version>1.54.0</version>
+        <type>pom</type>
+        <scope>import</scope>
+      </dependency>
     </dependencies>
   </dependencyManagement>
 
@@ -337,6 +344,28 @@
       <artifactId>camel-rest-starter</artifactId>
     </dependency>
 
+    <dependency>
+      <groupId>io.opentelemetry</groupId>
+      <artifactId>opentelemetry-api</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>io.opentelemetry</groupId>
+      <artifactId>opentelemetry-sdk</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>io.opentelemetry</groupId>
+      <artifactId>opentelemetry-sdk-extension-autoconfigure</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>io.opentelemetry</groupId>
+      <artifactId>opentelemetry-exporter-otlp</artifactId>
+    </dependency>
+
+    <dependency>
+      <groupId>org.apache.camel.springboot</groupId>
+      <artifactId>camel-opentelemetry-starter</artifactId>
+    </dependency>
+
   </dependencies>
 
   <build>
@@ -545,6 +574,7 @@
             <exclude>org.hibernate.orm:hibernate-core:6.6.29.Final</exclude>
             <exclude>ch.qos.logback:logback-classic:1.5.34</exclude>
             <exclude>ch.qos.logback:logback-core:1.5.34</exclude>
+            <exclude>org.codehaus.mojo:animal-sniffer-annotations:1.26</exclude>
           </exclusions>
         </configuration>
         <executions>

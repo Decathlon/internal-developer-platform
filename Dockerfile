@@ -1,6 +1,7 @@
 FROM eclipse-temurin:25-jre-alpine
 
 ENV PORT=8080
+ENV JAVA_TOOL_OPTIONS="-Dotel.java.global-autoconfigure.enabled=true"
 
 RUN apk add --no-cache shadow && \
     groupadd -r idp-core-group && \
