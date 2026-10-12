@@ -21,7 +21,8 @@ VALUES
   ('550e8400-e29b-41d4-a716-446655440114', 'monitoring-service-6', 'Monitoring Service 6', 'monitoring-service'),
   ('550e8400-e29b-41d4-a716-446655440115', 'default-team', 'Default Team', 'team'),
   ('550e8400-e29b-41d4-a716-446655440116', 'test-team-required', 'Test Team Required', 'team'),
-  ('550e8400-e29b-41d4-a716-446655440117', 'test-support-with-required-team', 'Test Support With Required Team', 'support');
+  ('550e8400-e29b-41d4-a716-446655440117', 'test-support-with-required-team', 'Test Support With Required Team', 'support'),
+  ('550e8400-e29b-41d4-a716-446655440118', 'web-api-patch-1', 'Web API Patch 1', 'patch-test');
 
 -- Properties for default-team entity
 INSERT INTO idp_core.property (id, name, value)
@@ -62,6 +63,16 @@ VALUES
   ('550e8400-e29b-41d4-a716-446655440117', 'aa000000-0000-0000-0000-000000000015'),
   ('550e8400-e29b-41d4-a716-446655440117', 'aa000000-0000-0000-0000-000000000016'),
   ('550e8400-e29b-41d4-a716-446655440117', 'aa000000-0000-0000-0000-000000000017');
+
+-- Properties for web-api-patch-1 (minimal patch-test fixture)
+INSERT INTO idp_core.property (id, name, value)
+VALUES
+  ('aa000000-0000-0000-0000-000000000018', 'applicationName', 'catalog-api'),
+  ('aa000000-0000-0000-0000-000000000019', 'port', '8080');
+INSERT INTO idp_core.entity_properties (entity_id, property_id)
+VALUES
+  ('550e8400-e29b-41d4-a716-446655440118', 'aa000000-0000-0000-0000-000000000018'),
+  ('550e8400-e29b-41d4-a716-446655440118', 'aa000000-0000-0000-0000-000000000019');
 
 -- Properties for web-api-1 (language=JAVA, environment=PROD)
 INSERT INTO idp_core.property (id, name, value)

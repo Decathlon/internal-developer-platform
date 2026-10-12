@@ -74,7 +74,8 @@ class SecurityConfigurationTest {
     assertNull(config.getAllowedOriginPatterns(),
         "Allowed origin patterns should remain null if property is empty");
 
-    assertEquals(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"), config.getAllowedMethods());
+    assertEquals(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"),
+        config.getAllowedMethods());
     assertEquals(List.of("*"), config.getAllowedHeaders());
     assertTrue(config.getAllowCredentials());
   }
@@ -95,7 +96,8 @@ class SecurityConfigurationTest {
     assertEquals(List.of("http://localhost:8080"), config.getAllowedOrigins());
     assertEquals(List.of("https://*.decathlon.com"), config.getAllowedOriginPatterns());
 
-    assertEquals(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"), config.getAllowedMethods());
+    assertEquals(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"),
+        config.getAllowedMethods());
     assertEquals(List.of("*"), config.getAllowedHeaders());
     assertTrue(config.getAllowCredentials());
   }

@@ -1,5 +1,7 @@
 package com.decathlon.idp_core.domain.service.entity;
 
+import static com.decathlon.idp_core.domain.constant.ValidationMessages.ENTITY_NAME_MANDATORY;
+
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -77,6 +79,7 @@ public class EntityValidationService {
   /// violated, including missing required properties
   private void validateAgainstTemplate(EntityTemplate template, Entity entity) {
     Violations violations = new Violations();
+    violations.addIfBlank(entity.name(), ENTITY_NAME_MANDATORY);
 
     List<PropertyDefinition> definitions = Optional.ofNullable(template.propertiesDefinitions())
         .orElse(List.of());
