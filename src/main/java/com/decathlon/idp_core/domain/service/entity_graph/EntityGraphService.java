@@ -22,7 +22,6 @@ import com.decathlon.idp_core.domain.model.entity_graph.EntityGraphTraversalMode
 import com.decathlon.idp_core.domain.port.EntityGraphRepositoryPort;
 import com.decathlon.idp_core.domain.port.EntityRepositoryPort;
 import com.decathlon.idp_core.domain.service.entity.EntityService;
-import com.decathlon.idp_core.domain.service.entity_template.EntityTemplateValidationService;
 
 import lombok.RequiredArgsConstructor;
 
@@ -33,15 +32,9 @@ import lombok.RequiredArgsConstructor;
 /// [EntityGraphNode] records containing summary information for each connected
 /// entity.
 ///
-/// Phase 1 - Gathering the Raw information (DB & Footprint): Gets a list of all
-/// possibly related entities from the database within a single transaction.
-/// Phase 2 - Reachability Pruning (Breadth-First Propagation): It computes a
-/// precise reachable footprint to ensure we only traverse nodes that actually
-/// connect to our root in the selected direction. Phase 3 - Recursive
-/// Construction (DFS with Safety Nets): The helper runs a depth-first traversal
-/// starting at the root entity to build the nested EntityGraphNode tree. It
-/// prevents stack overflows from circular references and avoid re-evaluating the
-/// same nodes via different paths.
+/// For a single root, loads a depth-limited entity footprint and delegates
+/// reachability pruning and graph-node construction to [EntityGraphHelper]. For
+/// template pages, loads graph footprints for the page's entities in one batch.
 ///
 /// **Business purpose:**
 /// - Visualizing entity dependency graphs in the catalog UI
@@ -52,17 +45,9 @@ import lombok.RequiredArgsConstructor;
 /// **Design decisions:**
 /// - Uses depth-limited traversal to prevent unbounded recursion
 /// - Optimized with recursive CTE and batch loading to minimize database queries
-/// - A per-request `visitedNodeIds` set prevents exponential recursion: without
-///   it, inbound relation scanning would re-expand already-visited nodes at
-///   every depth level, producing O(2^depth) calls even for small graphs (OOM at
-///   depth ≥ 10).
-/// - Relation and property filtering are domain concerns applied during graph
-///   construction, so that callers (e.g. the REST controller) receive a graph
-///   that already respects the requested scope instead of carrying unnecessary
-///   data to the Infrastructure layer.
-///
-///
-///
+/// - Relation and property-name filtering are applied during graph-node
+///   construction. Property fetching itself is controlled by the repository
+///   flags so unrequested property data is not loaded.
 @Service
 @RequiredArgsConstructor
 public class EntityGraphService {
@@ -77,26 +62,28 @@ public class EntityGraphService {
   /// Resolves a depth-limited, fully populated relationship graph for a single
   /// root entity.
   ///
-  /// This method validates template existence, fetches the raw relational map in
-  /// a
-  /// single optimized DB query, and delegates the recursive tree building to the
-  /// [EntityGraphHelper].
+  /// Resolves the root entity summary, fetches the graph footprint with the
+  /// requested property scope, and delegates graph-node construction to
+  /// [EntityGraphHelper]. The service clamps this call's depth to 1 through 6.
   ///
   /// @param templateIdentifier the template to find the root entity under (e.g.,
   /// "service")
   /// @param entityIdentifier the unique business identifier of the entity
   /// @param depth the requested depth of relationship traversal
-  /// @param includeProperties whether to fetch property fields for the nodes
-  /// @param showRootEntityProperties whether to include properties of the root
+  /// @param includeProperties whether to fetch properties for every discovered
   /// entity
+  /// @param showRootEntityProperties when true while `includeProperties` is
+  /// false, fetch properties only for the root entity
   /// @param relationFilter a set of relation names to restrict the traversal
   /// to (empty means all)
   /// @param propertyFilter a set of property names to restrict the properties
   /// to (empty means all)
   /// @param mode the traversal mode (e.g., `OUTBOUND_ONLY`,
   /// `BIDIRECTIONAL`)
-  /// @return the resolved root [EntityGraphNode] with its relationship
-  /// tree populated
+  /// @return the resolved root [EntityGraphNode] with its filtered relations and
+  /// available properties
+  /// @throws EntityNotFoundException if no root matches the template and entity
+  /// identifiers
 
   @Transactional(readOnly = true)
   public EntityGraphNode getEntityGraph(String templateIdentifier, String entityIdentifier,
@@ -144,7 +131,8 @@ public class EntityGraphService {
   /// @param pageable pagination and sorting configuration
   /// @param templateIdentifier template to scope the entity list
   /// @param entityFilter optional filter criteria; `null` means no filtering
-  /// @param depth the requested depth of relationship traversal
+  /// @param depth the maximum relationship depth used for each page entity's
+  /// graph traversal
   /// @return paginated graph nodes with outbound and inbound relations resolved
   /// @throws EntityTemplateNotFoundException when the template does not exist
   @SuppressWarnings("null")

@@ -302,6 +302,16 @@ public interface JpaEntityRepository
   /// @return list of entities belonging to the template
   List<EntityJpaEntity> findAllByTemplateIdentifier(String templateIdentifier);
 
+  /// Loads a JSON projection for each discovered entity, including its relations
+  /// and properties selected by the two property flags.
+  ///
+  /// @param entityIds UUIDs discovered by the graph traversal query
+  /// @param rootIds UUIDs treated as roots for root-only property selection
+  /// @param includeProperties when true, include properties for every entity
+  /// @param showRootProperties when true with `includeProperties` false, include
+  /// properties only for the root IDs
+  /// @return projections containing entity fields and JSON for properties and
+  /// relations
   @Query(value = """
       SELECT
           e.id AS id,

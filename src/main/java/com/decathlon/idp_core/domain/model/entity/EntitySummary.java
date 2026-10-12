@@ -6,9 +6,9 @@ import lombok.Builder;
 
 /// Lightweight projection of an [Entity] for efficient summary views.
 ///
-/// Provides essential business identification without the full property and relation
-/// data. Used in listing operations, search results, and API responses where only
-/// key identifying information is needed for business purposes.
+/// Provides the persistence UUID and essential business identification without
+/// property and relation data. Used when resolving graph roots and in listing,
+/// search, or API operations that need entity identity without full entity data.
 ///
 /// **Business purpose:**
 /// - Entity listings in admin interfaces

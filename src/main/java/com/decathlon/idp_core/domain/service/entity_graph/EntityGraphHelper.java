@@ -33,13 +33,13 @@ public class EntityGraphHelper {
   /// callers that already own a transaction can reuse the logic directly without
   /// triggering a new transaction via the Spring proxy.
   ///
-  /// @param entityGraphs map of entity UUIDs to their corresponding Entity
-  /// objects
+  /// @param entityGraphs map of available entity UUIDs to their corresponding
+  /// entities; every non-null entry is used as a graph root
   /// @param relationFilter relation names to include; empty means all
   /// @param propertyFilter property names to include; empty means all
-  /// @param mode traversal direction (OUTBOUND, BIDIRECTIONAL, etc.)
-  /// @param depth traversal depth
-  /// @return map of entity identifier to its fully resolved EntityGraphNode
+  /// @param mode traversal direction controlling reachable nodes and relations
+  /// @param depth maximum number of relationship steps from each root
+  /// @return map keyed by each non-null root UUID, with its resolved graph node
   @SuppressWarnings("null")
   public Map<UUID, EntityGraphNode> buildGraphNodesForEntityIds(Map<UUID, Entity> entityGraphs,
       Set<String> relationFilter, Set<String> propertyFilter, EntityGraphTraversalMode mode,

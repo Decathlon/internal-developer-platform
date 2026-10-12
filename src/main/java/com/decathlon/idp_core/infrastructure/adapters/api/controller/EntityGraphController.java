@@ -64,7 +64,7 @@ public class EntityGraphController {
   /// @param templateIdentifier the template identifier of the root entity
   /// @param entityIdentifier the business identifier of the root entity
   /// @param depth the maximum traversal depth (default 1, clamped between 1 and
-  /// 10)
+  /// 6 by the service)
   /// @param includeData when true, each node includes a data object with entity
   /// property values
   /// @param relations when provided, only relations with matching names are

@@ -30,11 +30,9 @@ import com.fasterxml.jackson.databind.ObjectReader;
 /// following the Interface Segregation Principle.
 ///
 /// **Query strategy:**
-/// 1. One recursive CTE query to collect all (identifier, template_identifier)
-///    pairs in the graph.
-/// 2. One batch query to load entities with their relations (avoids N+1).
-/// 3. One batch query to load properties separately
-///    (avoids MultipleBagFetchException).
+/// 1. A recursive CTE discovers reachable entity UUIDs.
+/// 2. A projection query returns entity fields plus JSONB-aggregated relations
+///    and properties, avoiding entity hydration and N+1 loading.
 @Component
 public class PostgresEntityGraphAdapter implements EntityGraphRepositoryPort {
 
@@ -42,6 +40,12 @@ public class PostgresEntityGraphAdapter implements EntityGraphRepositoryPort {
   private final ObjectReader propertyReader;
   private final ObjectReader relationReader;
 
+  /// Creates the adapter and prepares readers for the JSONB projection payloads.
+  ///
+  /// @param jpaEntityRepository repository used to discover and project graph
+  /// data
+  /// @param objectMapper application-configured mapper used for JSON projection
+  /// parsing
   public PostgresEntityGraphAdapter(JpaEntityRepository jpaEntityRepository,
       ObjectMapper objectMapper) {
     this.jpaEntityRepository = jpaEntityRepository;
@@ -54,48 +58,25 @@ public class PostgresEntityGraphAdapter implements EntityGraphRepositoryPort {
   /// Fetches a depth-limited entity relationship graph for one or more root
   /// entities.
   ///
-  /// **Purpose:** Implements the persistence contract for graph traversal by
-  /// executing
-  /// a recursive CTE query followed by targeted batch loads. This method bridges
-  /// the
-  /// Domain Service (which calls this port) with the database, handling all
-  /// technical
-  /// concerns: query execution, result materialization, and entity mapping.
+  /// **Purpose:** Implements the graph repository contract using a recursive
+  /// CTE to discover reachable UUIDs, followed by one JSON projection query and
+  /// conversion of those projections to domain entities.
   ///
-  /// **Three-step strategy:**
-  /// 1. **Graph discovery**: Execute recursive CTE to find all reachable entity
-  /// UUIDs
-  /// within the depth limit, respecting the traversal mode (OUTBOUND,
-  /// BIDIRECTIONAL, etc.)
-  /// 2. **Batch entity load**: Fetch all discovered entities with their relations
-  /// in a
-  /// single query to avoid N+1 problems
-  /// 3. **Optional properties load**: If requested, load properties separately to
-  /// avoid
-  /// Hibernate's MultipleBagFetchException when combining multiple `@OneToMany`
-  /// collections
+  /// **Query strategy:** The first query discovers IDs using the requested
+  /// traversal mode and depth. The second query projects those entities and
+  /// aggregates relations and selected properties as JSONB, without loading JPA
+  /// entity collections.
   ///
-  /// **Why separate queries for properties?**
-  /// - Hibernate cannot safely join multiple collection-valued associations in a
-  /// single
-  /// query without cartesian products
-  /// - Properties are often not needed (e.g., list endpoints just show names)
-  /// - Splitting queries keeps payloads lean and avoids unnecessary data transfer
-  ///
-  /// @param rootIds the UUIDs of entities to use as traversal roots
-  /// (single or
-  /// multiple)
-  /// @param depth maximum levels to traverse (clamped by domain layer
-  /// to [1,
-  /// MAX_DEPTH])
-  /// @param includeProperties whether to fetch property data for each entity
-  /// @param showRootEntityProperties whether to include properties of the root
-  /// entity specifically
-  /// @param mode traversal direction (OUTBOUND_ONLY, BIDIRECTIONAL,
-  /// DIRECT_LINEAGE)
-  /// @return immutable map of all discovered entities keyed by UUID; empty map if
-  /// no
-  /// entities found or if input is null/empty
+  /// @param rootIds UUIDs of entities to use as traversal roots
+  /// @param depth maximum number of relationship steps to traverse
+  /// @param includeProperties whether to include properties for every discovered
+  /// entity
+  /// @param showRootEntityProperties when true and `includeProperties` is
+  /// false, include properties only for the requested roots
+  /// @param mode traversal direction and flow semantics
+  /// @return map of discovered entities keyed by UUID; empty when roots are
+  /// empty,
+  /// the mode is null, the depth is less than one, or no entities are discovered
   @Override
   @Transactional(readOnly = true)
   public Map<UUID, Entity> findEntityGraph(Collection<UUID> rootIds, int depth,
