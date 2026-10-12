@@ -119,4 +119,48 @@ class PostgresEntityGraphAdapterIntegrationTest extends AbstractIntegrationTest 
         "INSERT INTO idp_core.entity_relations (entity_id, relation_id) VALUES (?, ?)", entityId,
         relationId);
   }
+
+  @Test
+  @Transactional
+  @DisplayName("Should traverse inbound and outbound recursively in bidirectional mode")
+  void shouldTraverseBothDirectionsRecursivelyInBidirectionalMode() {
+    UUID upstream2Id = insertEntity("bidirectional-upstream-2");
+    UUID upstreamId = insertEntity("bidirectional-upstream");
+    UUID rootId = insertEntity("bidirectional-root");
+    UUID downstreamId = insertEntity("bidirectional-downstream");
+    UUID downstream2Id = insertEntity("bidirectional-downstream-2");
+
+    insertRelation(upstream2Id, "uses", upstreamId, "bidirectional-upstream");
+    insertRelation(upstreamId, "uses", rootId, "bidirectional-root");
+    insertRelation(rootId, "uses", downstreamId, "bidirectional-downstream");
+    insertRelation(downstreamId, "uses", downstream2Id, "bidirectional-downstream-2");
+
+    Map<UUID, Entity> graph = adapter.findEntityGraph(List.of(rootId), 2, false, false,
+        EntityGraphTraversalMode.BIDIRECTIONAL);
+
+    assertThat(graph.values()).extracting(Entity::identifier).containsExactlyInAnyOrder(
+        "bidirectional-upstream-2", "bidirectional-upstream", "bidirectional-root",
+        "bidirectional-downstream", "bidirectional-downstream-2");
+  }
+
+  @Test
+  @Transactional
+  @DisplayName("Should follow outbound recursively without traversing inbound in outbound-only mode")
+  void shouldOnlyTraverseOutboundRecursivelyInOutboundOnlyMode() {
+    UUID upstreamId = insertEntity("outbound-upstream");
+    UUID rootId = insertEntity("outbound-root");
+    UUID downstreamId = insertEntity("outbound-downstream");
+    UUID downstream2Id = insertEntity("outbound-downstream-2");
+
+    insertRelation(upstreamId, "uses", rootId, "outbound-root");
+    insertRelation(rootId, "uses", downstreamId, "outbound-downstream");
+    insertRelation(downstreamId, "uses", downstream2Id, "outbound-downstream-2");
+
+    Map<UUID, Entity> graph = adapter.findEntityGraph(List.of(rootId), 2, false, false,
+        EntityGraphTraversalMode.OUTBOUND_ONLY);
+
+    assertThat(graph.values()).extracting(Entity::identifier)
+        .containsExactlyInAnyOrder("outbound-root", "outbound-downstream", "outbound-downstream-2");
+  }
+
 }

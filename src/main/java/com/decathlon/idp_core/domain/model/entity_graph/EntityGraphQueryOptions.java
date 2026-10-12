@@ -1,5 +1,6 @@
 package com.decathlon.idp_core.domain.model.entity_graph;
 
+import java.util.Objects;
 import java.util.Set;
 
 /// Options controlling graph traversal and the data included in graph nodes.
@@ -18,5 +19,6 @@ public record EntityGraphQueryOptions(int depth, boolean includeProperties,
   public EntityGraphQueryOptions {
     relationFilter = relationFilter == null ? Set.of() : Set.copyOf(relationFilter);
     propertyFilter = propertyFilter == null ? Set.of() : Set.copyOf(propertyFilter);
+    Objects.requireNonNull(mode, "mode");
   }
 }
