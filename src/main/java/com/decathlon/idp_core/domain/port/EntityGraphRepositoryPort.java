@@ -52,6 +52,6 @@ public interface EntityGraphRepositoryPort {
   /// including the root entity. Returns an empty map if the root entity
   /// does not exist.
   Map<UUID, Entity> findEntityGraph(Collection<UUID> rootIds, int depth, boolean includeProperties,
-      EntityGraphTraversalMode mode);
+      boolean showRootEntityProperties, EntityGraphTraversalMode mode);
 
 }

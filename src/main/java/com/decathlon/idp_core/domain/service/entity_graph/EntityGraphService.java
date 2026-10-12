@@ -98,8 +98,8 @@ public class EntityGraphService {
 
   @Transactional(readOnly = true)
   public EntityGraphNode getEntityGraph(String templateIdentifier, String entityIdentifier,
-      int depth, boolean includeProperties, Set<String> relationFilter, Set<String> propertyFilter,
-      EntityGraphTraversalMode mode) {
+      int depth, boolean includeProperties, boolean showRootEntityProperties,
+      Set<String> relationFilter, Set<String> propertyFilter, EntityGraphTraversalMode mode) {
 
     int effectiveDepth = Math.clamp(depth, 1, MAX_DEPTH);
 
@@ -111,7 +111,7 @@ public class EntityGraphService {
 
     // 2. Load the graph footprint via optimized DB calls
     Map<UUID, Entity> entityMap = entityGraphRepositoryPort.findEntityGraph(Set.of(rootEntity.id()),
-        effectiveDepth, includeProperties, mode);
+        effectiveDepth, includeProperties, showRootEntityProperties, mode);
 
     if (entityMap == null || entityMap.isEmpty()) {
       return new EntityGraphNode(rootEntity.templateIdentifier(), rootEntity.identifier(),
@@ -120,7 +120,7 @@ public class EntityGraphService {
 
     // 3. Delegate to helper for graph building
     Map<UUID, EntityGraphNode> graphNodes = entityGraphHelper.buildGraphNodesForEntityIds(entityMap,
-        includeProperties, relationFilter, propertyFilter, mode, effectiveDepth);
+        true, relationFilter, propertyFilter, mode, effectiveDepth);
 
     return graphNodes.getOrDefault(rootEntity.id(),
         new EntityGraphNode(rootEntity.templateIdentifier(), rootEntity.identifier(),
@@ -167,7 +167,7 @@ public class EntityGraphService {
     // Load entity graphs in batch (includes roots + neighbors for relation
     // resolution)
     Map<UUID, Entity> entityGraphs = entityGraphRepositoryPort.findEntityGraph(entityUuids, depth,
-        true, EntityGraphTraversalMode.DIRECT_LINEAGE);
+        false, true, EntityGraphTraversalMode.DIRECT_LINEAGE);
 
     // Call the helper to build graph nodes
     Map<UUID, EntityGraphNode> graphsByUuid = entityGraphHelper.buildGraphNodesForEntityIds(

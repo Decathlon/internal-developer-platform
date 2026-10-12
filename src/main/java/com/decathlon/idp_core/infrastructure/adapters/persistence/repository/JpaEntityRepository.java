@@ -309,8 +309,8 @@ public interface JpaEntityRepository
           e.name AS name,
           e.template_identifier AS templateIdentifier,
 
-          -- Aggregate EAV Properties sorted by name
-          CASE WHEN :includeProperties IS TRUE THEN
+          -- Aggregate EAV Properties (Include all IF includeProperties=true OR only root IF showRootProperties=true)
+          CASE WHEN (:includeProperties IS TRUE OR (:showRootProperties IS TRUE AND e.id IN :rootIds)) THEN
               COALESCE(
                   (SELECT jsonb_agg(jsonb_build_object(
                               'id', p.id,
@@ -324,7 +324,7 @@ public interface JpaEntityRepository
           ELSE '[]'
           END AS propertiesJson,
 
-          -- Aggregate EAV Relations sorted by name & target entities sorted lexically
+          -- Aggregate EAV Relations
           COALESCE(
               (SELECT jsonb_agg(jsonb_build_object(
                           'id', r.id,
@@ -348,6 +348,7 @@ public interface JpaEntityRepository
       WHERE e.id IN :entityIds
       """, nativeQuery = true)
   List<EntityGraphJsonProjection> findEntityGraphDataByIds(
-      @Param("entityIds") Collection<UUID> entityIds,
-      @Param("includeProperties") boolean includeProperties);
+      @Param("entityIds") Collection<UUID> entityIds, @Param("rootIds") Collection<UUID> rootIds,
+      @Param("includeProperties") boolean includeProperties,
+      @Param("showRootProperties") boolean showRootProperties);
 }

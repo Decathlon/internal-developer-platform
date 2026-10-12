@@ -97,7 +97,7 @@ public class PostgresEntityGraphAdapter implements EntityGraphRepositoryPort {
   @Override
   @Transactional(readOnly = true)
   public Map<UUID, Entity> findEntityGraph(Collection<UUID> rootIds, int depth,
-      boolean includeProperties, EntityGraphTraversalMode mode) {
+      boolean includeProperties, boolean showRootEntityProperties, EntityGraphTraversalMode mode) {
     // Restore null and empty-input guard before executing CTE query or calling
     // mode.name()
     if (rootIds == null || rootIds.isEmpty() || mode == null || depth < 1) {
@@ -109,8 +109,8 @@ public class PostgresEntityGraphAdapter implements EntityGraphRepositoryPort {
       return Map.of();
     }
 
-    List<EntityGraphJsonProjection> projections = jpaEntityRepository
-        .findEntityGraphDataByIds(discoveredIds, includeProperties);
+    List<EntityGraphJsonProjection> projections = jpaEntityRepository.findEntityGraphDataByIds(
+        discoveredIds, rootIds, includeProperties, showRootEntityProperties);
     Map<UUID, Entity> entities = HashMap.newHashMap(projections.size());
     for (EntityGraphJsonProjection projection : projections) {
       Entity entity = mapProjectionToDomain(projection);

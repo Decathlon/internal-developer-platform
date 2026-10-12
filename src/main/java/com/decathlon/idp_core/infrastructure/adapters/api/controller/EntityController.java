@@ -217,7 +217,7 @@ public class EntityController {
       @RequestParam(name = "relations_to_display", required = false) Set<String> relationsToDisplay) {
 
     EntityGraphNode entityGraphNode = entityGraphService.getEntityGraph(templateIdentifier,
-        entityIdentifier, relationsDepth, true,
+        entityIdentifier, relationsDepth, false, true,
         relationsToDisplay == null ? Set.of() : relationsToDisplay, Set.of(),
         EntityGraphTraversalMode.DIRECT_LINEAGE);
     return entityDtoOutFromEntityNodeMapper.toDto(entityGraphNode, templateIdentifier,
