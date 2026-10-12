@@ -253,7 +253,7 @@ public interface JpaEntityRepository
           WHERE e.id IN :rootIds
             AND :mode = 'BIDIRECTIONAL'
 
-          UNION ALL
+          UNION -- deduplicated the frontier (id, depth, flow) in each iteration
 
           -- 2. SINGLE RECURSIVE MEMBER: Lateral traversal per frontier node
           SELECT next_node.id, eg.depth + 1, eg.flow
@@ -309,19 +309,22 @@ public interface JpaEntityRepository
           e.name AS name,
           e.template_identifier AS templateIdentifier,
 
-          -- Aggregate EAV Properties into JSON Array
-          COALESCE(
-              (SELECT jsonb_agg(jsonb_build_object(
-                          'id', p.id,
-                          'name', p.name,
-                          'value', p.value
-                      ))
-               FROM idp_core.entity_properties ep
-               JOIN idp_core.property p ON p.id = ep.property_id
-               WHERE ep.entity_id = e.id), '[]'::jsonb
-          )::text AS propertiesJson,
+          -- Aggregate EAV Properties sorted by name
+          CASE WHEN :includeProperties IS TRUE THEN
+              COALESCE(
+                  (SELECT jsonb_agg(jsonb_build_object(
+                              'id', p.id,
+                              'name', p.name,
+                              'value', p.value
+                          ) ORDER BY p.name ASC)
+                   FROM idp_core.entity_properties ep
+                   JOIN idp_core.property p ON p.id = ep.property_id
+                   WHERE ep.entity_id = e.id), '[]'::jsonb
+              )::text
+          ELSE '[]'
+          END AS propertiesJson,
 
-          -- Aggregate EAV Relations & Relation Target Entities into JSON Array
+          -- Aggregate EAV Relations sorted by name & target entities sorted lexically
           COALESCE(
               (SELECT jsonb_agg(jsonb_build_object(
                           'id', r.id,
@@ -331,11 +334,11 @@ public interface JpaEntityRepository
                               SELECT COALESCE(jsonb_agg(jsonb_build_object(
                                   'targetEntityUuid', rte.target_entity_uuid,
                                   'targetEntityIdentifier', rte.target_entity_identifier
-                              )), '[]'::jsonb)
+                              ) ORDER BY rte.target_entity_identifier ASC), '[]'::jsonb)
                               FROM idp_core.relation_target_entities rte
                               WHERE rte.relation_id = r.id
                           )
-                      ))
+                      ) ORDER BY r.name ASC)
                FROM idp_core.entity_relations er
                JOIN idp_core.relation r ON r.id = er.relation_id
                WHERE er.entity_id = e.id), '[]'::jsonb
@@ -345,5 +348,6 @@ public interface JpaEntityRepository
       WHERE e.id IN :entityIds
       """, nativeQuery = true)
   List<EntityGraphJsonProjection> findEntityGraphDataByIds(
-      @Param("entityIds") Collection<UUID> entityIds);
+      @Param("entityIds") Collection<UUID> entityIds,
+      @Param("includeProperties") boolean includeProperties);
 }

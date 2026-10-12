@@ -82,9 +82,11 @@ public class PostgresEntityGraphAdapter implements EntityGraphRepositoryPort {
   /// - Properties are often not needed (e.g., list endpoints just show names)
   /// - Splitting queries keeps payloads lean and avoids unnecessary data transfer
   ///
-  /// @param rootIds the UUIDs of entities to use as traversal roots (single or
+  /// @param rootIds the UUIDs of entities to use as traversal roots
+  /// (single or
   /// multiple)
-  /// @param depth maximum levels to traverse (clamped by domain layer to [1,
+  /// @param depth maximum levels to traverse (clamped by domain layer
+  /// to [1,
   /// MAX_DEPTH])
   /// @param includeProperties whether to fetch property data for each entity
   /// @param mode traversal direction (OUTBOUND_ONLY, BIDIRECTIONAL,
@@ -96,6 +98,11 @@ public class PostgresEntityGraphAdapter implements EntityGraphRepositoryPort {
   @Transactional(readOnly = true)
   public Map<UUID, Entity> findEntityGraph(Collection<UUID> rootIds, int depth,
       boolean includeProperties, EntityGraphTraversalMode mode) {
+    // Restore null and empty-input guard before executing CTE query or calling
+    // mode.name()
+    if (rootIds == null || rootIds.isEmpty() || mode == null || depth < 1) {
+      return Map.of();
+    }
     List<UUID> discoveredIds = jpaEntityRepository.findEntityIdsInGraph(rootIds, depth,
         mode.name());
     if (discoveredIds.isEmpty()) {
@@ -103,7 +110,7 @@ public class PostgresEntityGraphAdapter implements EntityGraphRepositoryPort {
     }
 
     List<EntityGraphJsonProjection> projections = jpaEntityRepository
-        .findEntityGraphDataByIds(discoveredIds);
+        .findEntityGraphDataByIds(discoveredIds, includeProperties);
     Map<UUID, Entity> entities = HashMap.newHashMap(projections.size());
     for (EntityGraphJsonProjection projection : projections) {
       Entity entity = mapProjectionToDomain(projection);
@@ -121,11 +128,15 @@ public class PostgresEntityGraphAdapter implements EntityGraphRepositoryPort {
       List<RelationProjection> relationProjections = relationReader
           .readValue(jsonOrEmptyArray(projection.getRelationsJson()));
 
+      // 1. Map and sort properties by name
       List<Property> properties = new java.util.ArrayList<>(propertyProjections.size());
       for (PropertyProjection property : propertyProjections) {
         properties.add(new Property(property.id(), property.name(), property.value()));
       }
+      properties.sort(java.util.Comparator.comparing(Property::name,
+          java.util.Comparator.nullsLast(java.util.Comparator.naturalOrder())));
 
+      // 2. Map and sort relations by name, and target identifiers lexically
       List<Relation> relations = new java.util.ArrayList<>(relationProjections.size());
       for (RelationProjection relation : relationProjections) {
         List<String> targetIdentifiers = new java.util.ArrayList<>(
@@ -135,9 +146,15 @@ public class PostgresEntityGraphAdapter implements EntityGraphRepositoryPort {
             targetIdentifiers.add(target.targetEntityIdentifier());
           }
         }
+        // Lexical sorting for target identifiers
+        targetIdentifiers.sort(java.util.Comparator.naturalOrder());
+
         relations.add(new Relation(relation.id(), relation.name(),
             relation.targetTemplateIdentifier(), targetIdentifiers));
       }
+      // Sort relations by name
+      relations.sort(java.util.Comparator.comparing(Relation::name,
+          java.util.Comparator.nullsLast(java.util.Comparator.naturalOrder())));
 
       return new Entity(projection.getId(), projection.getTemplateIdentifier(),
           projection.getName(), projection.getIdentifier(), properties, relations);
