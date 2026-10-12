@@ -71,7 +71,7 @@ public class PostgresEntityGraphAdapter implements EntityGraphRepositoryPort {
   /// @param depth maximum number of relationship steps to traverse
   /// @param includeProperties whether to include properties for every discovered
   /// entity
-  /// @param showRootEntityProperties when true and `includeProperties` is
+  /// @param includeRootEntityProperties when true and `includeProperties` is
   /// false, include properties only for the requested roots
   /// @param mode traversal direction and flow semantics
   /// @return map of discovered entities keyed by UUID; empty when roots are
@@ -80,7 +80,8 @@ public class PostgresEntityGraphAdapter implements EntityGraphRepositoryPort {
   @Override
   @Transactional(readOnly = true)
   public Map<UUID, Entity> findEntityGraph(Collection<UUID> rootIds, int depth,
-      boolean includeProperties, boolean showRootEntityProperties, EntityGraphTraversalMode mode) {
+      boolean includeProperties, boolean includeRootEntityProperties,
+      EntityGraphTraversalMode mode) {
     // Restore null and empty-input guard before executing CTE query or calling
     // mode.name()
     if (rootIds == null || rootIds.isEmpty() || mode == null || depth < 1) {
@@ -93,7 +94,7 @@ public class PostgresEntityGraphAdapter implements EntityGraphRepositoryPort {
     }
 
     List<EntityGraphJsonProjection> projections = jpaEntityRepository.findEntityGraphDataByIds(
-        discoveredIds, rootIds, includeProperties, showRootEntityProperties);
+        discoveredIds, rootIds, includeProperties, includeRootEntityProperties);
     Map<UUID, Entity> entities = HashMap.newHashMap(projections.size());
     for (EntityGraphJsonProjection projection : projections) {
       Entity entity = mapProjectionToDomain(projection);

@@ -7,13 +7,13 @@ import java.util.Set;
 ///
 /// @param depth maximum relationship depth requested by the caller
 /// @param includeProperties whether to fetch properties for every discovered entity
-/// @param showRootEntityProperties whether to fetch properties only for roots when
+/// @param includeRootEntityProperties whether to fetch properties for root entities when
 ///        `includeProperties` is false
 /// @param relationFilter relation names to include; empty means all
 /// @param propertyFilter property names to include; empty means all
 /// @param mode traversal direction and flow semantics
 public record EntityGraphQueryOptions(int depth, boolean includeProperties,
-    boolean showRootEntityProperties, Set<String> relationFilter, Set<String> propertyFilter,
+    boolean includeRootEntityProperties, Set<String> relationFilter, Set<String> propertyFilter,
     EntityGraphTraversalMode mode) {
 
   public EntityGraphQueryOptions {

@@ -41,12 +41,12 @@ public interface EntityGraphRepositoryPort {
   /// clamp this to the supported range before calling the port
   /// @param includeProperties when true, include properties for every discovered
   /// entity
-  /// @param showRootEntityProperties when true and `includeProperties` is
+  /// @param includeRootEntityProperties when true and `includeProperties` is
   /// false, include properties only for entities in `rootIds`
   /// @param mode traversal mode determining which relation directions to follow
   /// @return map of discovered entities keyed by UUID; empty when no entities are
   /// discovered or the inputs cannot start a traversal
   Map<UUID, Entity> findEntityGraph(Collection<UUID> rootIds, int depth, boolean includeProperties,
-      boolean showRootEntityProperties, EntityGraphTraversalMode mode);
+      boolean includeRootEntityProperties, EntityGraphTraversalMode mode);
 
 }

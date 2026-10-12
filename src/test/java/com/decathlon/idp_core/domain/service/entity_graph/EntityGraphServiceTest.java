@@ -89,12 +89,12 @@ class EntityGraphServiceTest {
         any(EntityGraphTraversalMode.class))).thenAnswer(invocation -> {
           Collection<UUID> rootIds = invocation.getArgument(0);
           boolean includeProperties = invocation.getArgument(2);
-          boolean showRootEntityProperties = invocation.getArgument(3);
+          boolean includeRootEntityProperties = invocation.getArgument(3);
           Map<UUID, Entity> result = new HashMap<>();
           for (Map.Entry<UUID, Entity> entry : entityMap.entrySet()) {
             Entity entity = entry.getValue();
             List<Property> properties = includeProperties
-                || rootIds.contains(entry.getKey()) && showRootEntityProperties
+                || rootIds.contains(entry.getKey()) && includeRootEntityProperties
                     ? entity.properties()
                     : List.of();
             result.put(entry.getKey(), new Entity(entity.id(), entity.templateIdentifier(),

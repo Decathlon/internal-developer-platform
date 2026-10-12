@@ -91,7 +91,7 @@ public class EntityGraphService {
 
     // 2. Load the graph footprint via optimized DB calls
     Map<UUID, Entity> entityMap = entityGraphRepositoryPort.findEntityGraph(Set.of(rootEntity.id()),
-        effectiveDepth, options.includeProperties(), options.showRootEntityProperties(),
+        effectiveDepth, options.includeProperties(), options.includeRootEntityProperties(),
         options.mode());
 
     if (entityMap == null || entityMap.isEmpty()) {

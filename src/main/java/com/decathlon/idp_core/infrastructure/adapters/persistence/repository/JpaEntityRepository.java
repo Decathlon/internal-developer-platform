@@ -308,7 +308,8 @@ public interface JpaEntityRepository
   /// @param entityIds UUIDs discovered by the graph traversal query
   /// @param rootIds UUIDs treated as roots for root-only property selection
   /// @param includeProperties when true, include properties for every entity
-  /// @param showRootProperties when true with `includeProperties` false, include
+  /// @param includeRootEntityProperties when true with `includeProperties` false,
+  /// include
   /// properties only for the root IDs
   /// @return projections containing entity fields and JSON for properties and
   /// relations
@@ -319,8 +320,8 @@ public interface JpaEntityRepository
           e.name AS name,
           e.template_identifier AS templateIdentifier,
 
-          -- Aggregate EAV Properties (Include all IF includeProperties=true OR only root IF showRootProperties=true)
-          CASE WHEN (:includeProperties IS TRUE OR (:showRootProperties IS TRUE AND e.id IN :rootIds)) THEN
+          -- Aggregate EAV Properties (include all when requested, otherwise optionally include roots)
+          CASE WHEN (:includeProperties IS TRUE OR (:includeRootEntityProperties IS TRUE AND e.id IN :rootIds)) THEN
               COALESCE(
                   (SELECT jsonb_agg(jsonb_build_object(
                               'id', p.id,
@@ -360,5 +361,5 @@ public interface JpaEntityRepository
   List<EntityGraphJsonProjection> findEntityGraphDataByIds(
       @Param("entityIds") Collection<UUID> entityIds, @Param("rootIds") Collection<UUID> rootIds,
       @Param("includeProperties") boolean includeProperties,
-      @Param("showRootProperties") boolean showRootProperties);
+      @Param("includeRootEntityProperties") boolean includeRootEntityProperties);
 }
