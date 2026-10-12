@@ -9,10 +9,10 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 
@@ -84,8 +84,23 @@ class EntityGraphServiceTest {
   /// Builds a map from the provided entities and configures the mock to return it
   private void stubGraph(Entity... entities) {
     Map<UUID, Entity> entityMap = buildEntityMap(entities);
-    when(entityGraphRepositoryPort.findEntityGraph(any(), anyInt(), anyBoolean(),
-        any(EntityGraphTraversalMode.class))).thenReturn(entityMap);
+    when(entityGraphRepositoryPort.findEntityGraph(any(), anyInt(), anyBoolean(), anyBoolean(),
+        any(EntityGraphTraversalMode.class))).thenAnswer(invocation -> {
+          Collection<UUID> rootIds = invocation.getArgument(0);
+          boolean includeProperties = invocation.getArgument(2);
+          boolean showRootEntityProperties = invocation.getArgument(3);
+          Map<UUID, Entity> result = new HashMap<>();
+          for (Map.Entry<UUID, Entity> entry : entityMap.entrySet()) {
+            Entity entity = entry.getValue();
+            List<Property> properties = includeProperties
+                || rootIds.contains(entry.getKey()) && showRootEntityProperties
+                    ? entity.properties()
+                    : List.of();
+            result.put(entry.getKey(), new Entity(entity.id(), entity.templateIdentifier(),
+                entity.name(), entity.identifier(), properties, entity.relations()));
+          }
+          return result;
+        });
   }
 
   /// Builds an immutable map of entities keyed by their UUID
@@ -113,11 +128,11 @@ class EntityGraphServiceTest {
           .isInstanceOf(EntityNotFoundException.class);
 
       verify(entityGraphRepositoryPort, never()).findEntityGraph(any(), anyInt(), anyBoolean(),
-          any(EntityGraphTraversalMode.class));
+          anyBoolean(), any(EntityGraphTraversalMode.class));
     }
 
     private void callGetEntityGraphForMissing() {
-      entityGraphService.getEntityGraph(TEMPLATE, "missing", 1, false, Set.of(), Set.of(),
+      entityGraphService.getEntityGraph(TEMPLATE, "missing", 1, false, false, Set.of(), Set.of(),
           EntityGraphTraversalMode.BIDIRECTIONAL);
     }
   }
@@ -134,7 +149,7 @@ class EntityGraphServiceTest {
       stubRootEntity(api);
       stubGraph(api);
 
-      EntityGraphNode result = entityGraphService.getEntityGraph(TEMPLATE, "api", 1, false,
+      EntityGraphNode result = entityGraphService.getEntityGraph(TEMPLATE, "api", 1, false, false,
           Set.of(), Set.of(), EntityGraphTraversalMode.BIDIRECTIONAL);
 
       assertThat(result.identifier()).isEqualTo("api");
@@ -159,7 +174,7 @@ class EntityGraphServiceTest {
       stubRootEntity(api);
       stubGraph(api, postgres);
 
-      EntityGraphNode result = entityGraphService.getEntityGraph(TEMPLATE, "api", 1, false,
+      EntityGraphNode result = entityGraphService.getEntityGraph(TEMPLATE, "api", 1, false, false,
           Set.of(), Set.of(), EntityGraphTraversalMode.BIDIRECTIONAL);
 
       assertThat(result.relations()).hasSize(1);
@@ -177,7 +192,7 @@ class EntityGraphServiceTest {
       stubRootEntity(api);
       stubGraph(api);
 
-      EntityGraphNode result = entityGraphService.getEntityGraph(TEMPLATE, "api", 1, false,
+      EntityGraphNode result = entityGraphService.getEntityGraph(TEMPLATE, "api", 1, false, false,
           Set.of(), Set.of(), EntityGraphTraversalMode.BIDIRECTIONAL);
 
       // When target entity is not found in the map, it's filtered out
@@ -200,7 +215,7 @@ class EntityGraphServiceTest {
       stubRootEntity(api);
       stubGraph(api, consumer);
 
-      EntityGraphNode result = entityGraphService.getEntityGraph(TEMPLATE, "api", 1, false,
+      EntityGraphNode result = entityGraphService.getEntityGraph(TEMPLATE, "api", 1, false, false,
           Set.of(), Set.of(), EntityGraphTraversalMode.BIDIRECTIONAL);
 
       assertThat(result.relationsAsTarget()).hasSize(1);
@@ -222,10 +237,10 @@ class EntityGraphServiceTest {
       stubRootEntity(api);
       stubGraph(api);
 
-      entityGraphService.getEntityGraph(TEMPLATE, "api", 0, false, Set.of(), Set.of(),
+      entityGraphService.getEntityGraph(TEMPLATE, "api", 0, false, false, Set.of(), Set.of(),
           EntityGraphTraversalMode.BIDIRECTIONAL);
 
-      verify(entityGraphRepositoryPort).findEntityGraph(Set.of(api.id()), 1, false,
+      verify(entityGraphRepositoryPort).findEntityGraph(Set.of(api.id()), 1, false, false,
           EntityGraphTraversalMode.BIDIRECTIONAL);
     }
 
@@ -236,10 +251,10 @@ class EntityGraphServiceTest {
       stubRootEntity(api);
       stubGraph(api);
 
-      entityGraphService.getEntityGraph(TEMPLATE, "api", 99, false, Set.of(), Set.of(),
+      entityGraphService.getEntityGraph(TEMPLATE, "api", 99, false, false, Set.of(), Set.of(),
           EntityGraphTraversalMode.BIDIRECTIONAL);
 
-      verify(entityGraphRepositoryPort).findEntityGraph(Set.of(api.id()), 6, false,
+      verify(entityGraphRepositoryPort).findEntityGraph(Set.of(api.id()), 6, false, false,
           EntityGraphTraversalMode.BIDIRECTIONAL);
     }
   }
@@ -262,7 +277,7 @@ class EntityGraphServiceTest {
       // depth limit)
       stubGraph(api, postgres);
 
-      EntityGraphNode result = entityGraphService.getEntityGraph(TEMPLATE, "api", 1, false,
+      EntityGraphNode result = entityGraphService.getEntityGraph(TEMPLATE, "api", 1, false, false,
           Set.of(), Set.of(), EntityGraphTraversalMode.BIDIRECTIONAL);
 
       EntityGraphNode postgresNode = result.relations().get(0).targets().get(0);
@@ -293,7 +308,7 @@ class EntityGraphServiceTest {
       stubRootEntity(api);
       stubGraph(api, postgres, auth);
 
-      EntityGraphNode result = entityGraphService.getEntityGraph(TEMPLATE, "api", 1, false,
+      EntityGraphNode result = entityGraphService.getEntityGraph(TEMPLATE, "api", 1, false, false,
           Set.of(), Set.of(), EntityGraphTraversalMode.BIDIRECTIONAL);
 
       assertThat(result.relations()).hasSize(2);
@@ -319,7 +334,7 @@ class EntityGraphServiceTest {
       stubRootEntity(a);
       stubGraph(a, b, c);
 
-      EntityGraphNode result = entityGraphService.getEntityGraph(TEMPLATE, "a", 2, false,
+      EntityGraphNode result = entityGraphService.getEntityGraph(TEMPLATE, "a", 2, false, false,
           Set.of("depends-on"), Set.of(), EntityGraphTraversalMode.BIDIRECTIONAL);
 
       assertThat(result.relations()).hasSize(1);
@@ -337,8 +352,8 @@ class EntityGraphServiceTest {
       stubRootEntity(a);
       stubGraph(a, b, c);
 
-      EntityGraphNode result = entityGraphService.getEntityGraph(TEMPLATE, "a", 2, false, Set.of(),
-          Set.of(), EntityGraphTraversalMode.BIDIRECTIONAL);
+      EntityGraphNode result = entityGraphService.getEntityGraph(TEMPLATE, "a", 2, false, false,
+          Set.of(), Set.of(), EntityGraphTraversalMode.BIDIRECTIONAL);
 
       assertThat(result.relations()).hasSize(2);
       assertThat(result.relations().stream().map(r -> r.name()))
@@ -357,7 +372,7 @@ class EntityGraphServiceTest {
       stubRootEntity(api);
       stubGraph(api, consumer, unrelated);
 
-      EntityGraphNode result = entityGraphService.getEntityGraph(TEMPLATE, "api", 1, false,
+      EntityGraphNode result = entityGraphService.getEntityGraph(TEMPLATE, "api", 1, false, false,
           Set.of("depends-on"), Set.of(), EntityGraphTraversalMode.BIDIRECTIONAL);
 
       assertThat(result.relationsAsTarget()).hasSize(1);
@@ -387,8 +402,8 @@ class EntityGraphServiceTest {
       stubRootEntity(api);
       stubGraph(api);
 
-      EntityGraphNode result = entityGraphService.getEntityGraph(TEMPLATE, "api", 1, true, Set.of(),
-          Set.of("env"), EntityGraphTraversalMode.BIDIRECTIONAL);
+      EntityGraphNode result = entityGraphService.getEntityGraph(TEMPLATE, "api", 1, true, true,
+          Set.of(), Set.of("env"), EntityGraphTraversalMode.BIDIRECTIONAL);
 
       assertThat(result.properties()).hasSize(1);
       assertThat(result.properties().get(0).name()).isEqualTo("env");
@@ -405,8 +420,8 @@ class EntityGraphServiceTest {
       stubRootEntity(api);
       stubGraph(api);
 
-      EntityGraphNode result = entityGraphService.getEntityGraph(TEMPLATE, "api", 1, true, Set.of(),
-          Set.of(), EntityGraphTraversalMode.BIDIRECTIONAL);
+      EntityGraphNode result = entityGraphService.getEntityGraph(TEMPLATE, "api", 1, true, true,
+          Set.of(), Set.of(), EntityGraphTraversalMode.BIDIRECTIONAL);
 
       assertThat(result.properties()).hasSize(2);
     }
@@ -420,10 +435,30 @@ class EntityGraphServiceTest {
       stubRootEntity(api);
       stubGraph(api);
 
-      EntityGraphNode result = entityGraphService.getEntityGraph(TEMPLATE, "api", 1, false,
+      EntityGraphNode result = entityGraphService.getEntityGraph(TEMPLATE, "api", 1, false, false,
           Set.of(), Set.of("env"), EntityGraphTraversalMode.BIDIRECTIONAL);
 
       assertThat(result.properties()).isEmpty();
+    }
+
+    @Test
+    @DisplayName("Should include properties only for the root when requested")
+    void shouldIncludePropertiesOnlyForRootWhenRequested() {
+      var rootProperty = new Property(UUID.randomUUID(), "owner", "team-a");
+      var targetProperty = new Property(UUID.randomUUID(), "tier", "database");
+      Entity api = new Entity(UUID.randomUUID(), TEMPLATE, "API Service", "api",
+          List.of(rootProperty), List.of(relation("uses-db", "database", "postgres")));
+      Entity postgres = new Entity(UUID.randomUUID(), "database", "Postgres DB", "postgres",
+          List.of(targetProperty), List.of());
+
+      stubRootEntity(api);
+      stubGraph(api, postgres);
+
+      EntityGraphNode result = entityGraphService.getEntityGraph(TEMPLATE, "api", 1, false, true,
+          Set.of(), Set.of(), EntityGraphTraversalMode.OUTBOUND_ONLY);
+
+      assertThat(result.properties()).containsExactly(rootProperty);
+      assertThat(result.relations().getFirst().targets().getFirst().properties()).isEmpty();
     }
   }
 
@@ -447,8 +482,8 @@ class EntityGraphServiceTest {
 
       // Must complete instantly — any OOM or StackOverflow here means the guard is
       // missing.
-      EntityGraphNode result = entityGraphService.getEntityGraph(TEMPLATE, "a", 10, false, Set.of(),
-          Set.of(), EntityGraphTraversalMode.BIDIRECTIONAL);
+      EntityGraphNode result = entityGraphService.getEntityGraph(TEMPLATE, "a", 10, false, false,
+          Set.of(), Set.of(), EntityGraphTraversalMode.BIDIRECTIONAL);
 
       assertThat(result.identifier()).isEqualTo("a");
       assertThat(result.relations()).hasSize(1);
@@ -464,8 +499,8 @@ class EntityGraphServiceTest {
       stubRootEntity(a);
       stubGraph(a, b);
 
-      EntityGraphNode result = entityGraphService.getEntityGraph(TEMPLATE, "a", 5, false, Set.of(),
-          Set.of(), EntityGraphTraversalMode.BIDIRECTIONAL);
+      EntityGraphNode result = entityGraphService.getEntityGraph(TEMPLATE, "a", 5, false, false,
+          Set.of(), Set.of(), EntityGraphTraversalMode.BIDIRECTIONAL);
 
       // A → B is resolved
       assertThat(result.relations()).hasSize(1);
@@ -498,7 +533,7 @@ class EntityGraphServiceTest {
       stubRootEntity(api);
       stubGraph(api, postgres, consumer);
 
-      EntityGraphNode result = entityGraphService.getEntityGraph(TEMPLATE, "api", 1, false,
+      EntityGraphNode result = entityGraphService.getEntityGraph(TEMPLATE, "api", 1, false, false,
           Set.of(), Set.of(), EntityGraphTraversalMode.BIDIRECTIONAL);
 
       // Should have outbound relation to postgres
@@ -525,7 +560,7 @@ class EntityGraphServiceTest {
       stubRootEntity(api);
       stubGraph(api, postgres, consumer);
 
-      EntityGraphNode result = entityGraphService.getEntityGraph(TEMPLATE, "api", 1, false,
+      EntityGraphNode result = entityGraphService.getEntityGraph(TEMPLATE, "api", 1, false, false,
           Set.of(), Set.of(), EntityGraphTraversalMode.OUTBOUND_ONLY);
 
       // Should have outbound relation to postgres
@@ -552,7 +587,7 @@ class EntityGraphServiceTest {
       stubRootEntity(api);
       stubGraph(api, postgres, consumer, backend);
 
-      EntityGraphNode result = entityGraphService.getEntityGraph(TEMPLATE, "api", 2, false,
+      EntityGraphNode result = entityGraphService.getEntityGraph(TEMPLATE, "api", 2, false, false,
           Set.of(), Set.of(), EntityGraphTraversalMode.DIRECT_LINEAGE);
 
       // Root should have inbound relations: consumer -> api, backend -> api
@@ -583,19 +618,19 @@ class EntityGraphServiceTest {
       stubRootEntity(api);
       stubGraph(api);
 
-      entityGraphService.getEntityGraph(TEMPLATE, "api", 1, false, Set.of(), Set.of(),
+      entityGraphService.getEntityGraph(TEMPLATE, "api", 1, false, false, Set.of(), Set.of(),
           EntityGraphTraversalMode.OUTBOUND_ONLY);
-      entityGraphService.getEntityGraph(TEMPLATE, "api", 1, false, Set.of(), Set.of(),
+      entityGraphService.getEntityGraph(TEMPLATE, "api", 1, false, false, Set.of(), Set.of(),
           EntityGraphTraversalMode.DIRECT_LINEAGE);
-      entityGraphService.getEntityGraph(TEMPLATE, "api", 1, false, Set.of(), Set.of(),
+      entityGraphService.getEntityGraph(TEMPLATE, "api", 1, false, false, Set.of(), Set.of(),
           EntityGraphTraversalMode.BIDIRECTIONAL);
 
       var inOrder = org.mockito.Mockito.inOrder(entityGraphRepositoryPort);
-      inOrder.verify(entityGraphRepositoryPort).findEntityGraph(Set.of(api.id()), 1, false,
+      inOrder.verify(entityGraphRepositoryPort).findEntityGraph(Set.of(api.id()), 1, false, false,
           EntityGraphTraversalMode.OUTBOUND_ONLY);
-      inOrder.verify(entityGraphRepositoryPort).findEntityGraph(Set.of(api.id()), 1, false,
+      inOrder.verify(entityGraphRepositoryPort).findEntityGraph(Set.of(api.id()), 1, false, false,
           EntityGraphTraversalMode.DIRECT_LINEAGE);
-      inOrder.verify(entityGraphRepositoryPort).findEntityGraph(Set.of(api.id()), 1, false,
+      inOrder.verify(entityGraphRepositoryPort).findEntityGraph(Set.of(api.id()), 1, false, false,
           EntityGraphTraversalMode.BIDIRECTIONAL);
     }
 
@@ -614,7 +649,7 @@ class EntityGraphServiceTest {
       stubRootEntity(api);
       stubGraph(api, postgres, consumer, backend);
 
-      EntityGraphNode result = entityGraphService.getEntityGraph(TEMPLATE, "api", 2, false,
+      EntityGraphNode result = entityGraphService.getEntityGraph(TEMPLATE, "api", 2, false, false,
           Set.of(), Set.of(), EntityGraphTraversalMode.BIDIRECTIONAL);
 
       // Outbound: api -> postgres
@@ -642,7 +677,7 @@ class EntityGraphServiceTest {
       stubGraph(frontend, api, postgres);
 
       EntityGraphNode result = entityGraphService.getEntityGraph(TEMPLATE, "frontend", 2, false,
-          Set.of(), Set.of(), EntityGraphTraversalMode.OUTBOUND_ONLY);
+          false, Set.of(), Set.of(), EntityGraphTraversalMode.OUTBOUND_ONLY);
 
       // Should follow: frontend -> api -> postgres
       assertThat(result.identifier()).isEqualTo("frontend");
@@ -669,14 +704,14 @@ class EntityGraphServiceTest {
       // With BIDIRECTIONAL, consumer should be in the graph
       stubGraph(api, consumer);
       EntityGraphNode bidirectionalResult = entityGraphService.getEntityGraph(TEMPLATE, "api", 1,
-          false, Set.of(), Set.of(), EntityGraphTraversalMode.BIDIRECTIONAL);
+          false, false, Set.of(), Set.of(), EntityGraphTraversalMode.BIDIRECTIONAL);
       assertThat(bidirectionalResult.relationsAsTarget()).hasSize(1);
 
       // With OUTBOUND_ONLY, even if consumer is in the map, inbound shouldn't be
       // built
       stubGraph(api, consumer);
       EntityGraphNode outboundResult = entityGraphService.getEntityGraph(TEMPLATE, "api", 1, false,
-          Set.of(), Set.of(), EntityGraphTraversalMode.OUTBOUND_ONLY);
+          false, Set.of(), Set.of(), EntityGraphTraversalMode.OUTBOUND_ONLY);
       assertThat(outboundResult.relationsAsTarget()).isEmpty();
     }
   }

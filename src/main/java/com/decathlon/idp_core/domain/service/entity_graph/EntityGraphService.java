@@ -87,6 +87,8 @@ public class EntityGraphService {
   /// @param entityIdentifier the unique business identifier of the entity
   /// @param depth the requested depth of relationship traversal
   /// @param includeProperties whether to fetch property fields for the nodes
+  /// @param showRootEntityProperties whether to include properties of the root
+  /// entity
   /// @param relationFilter a set of relation names to restrict the traversal
   /// to (empty means all)
   /// @param propertyFilter a set of property names to restrict the properties
@@ -120,7 +122,7 @@ public class EntityGraphService {
 
     // 3. Delegate to helper for graph building
     Map<UUID, EntityGraphNode> graphNodes = entityGraphHelper.buildGraphNodesForEntityIds(entityMap,
-        true, relationFilter, propertyFilter, mode, effectiveDepth);
+        relationFilter, propertyFilter, mode, effectiveDepth);
 
     return graphNodes.getOrDefault(rootEntity.id(),
         new EntityGraphNode(rootEntity.templateIdentifier(), rootEntity.identifier(),
@@ -171,7 +173,7 @@ public class EntityGraphService {
 
     // Call the helper to build graph nodes
     Map<UUID, EntityGraphNode> graphsByUuid = entityGraphHelper.buildGraphNodesForEntityIds(
-        entityGraphs, true, Set.of(), Set.of(), EntityGraphTraversalMode.DIRECT_LINEAGE, depth);
+        entityGraphs, Set.of(), Set.of(), EntityGraphTraversalMode.DIRECT_LINEAGE, depth);
 
     // Map each Entity to its EntityGraphNode, falling back gracefully if missing
     return entityPage.map(entity -> graphsByUuid.getOrDefault(entity.id(),

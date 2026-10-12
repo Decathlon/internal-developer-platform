@@ -35,7 +35,6 @@ public class EntityGraphHelper {
   ///
   /// @param entityGraphs map of entity UUIDs to their corresponding Entity
   /// objects
-  /// @param includeProperties whether to include property data in the nodes
   /// @param relationFilter relation names to include; empty means all
   /// @param propertyFilter property names to include; empty means all
   /// @param mode traversal direction (OUTBOUND, BIDIRECTIONAL, etc.)
@@ -43,8 +42,8 @@ public class EntityGraphHelper {
   /// @return map of entity identifier to its fully resolved EntityGraphNode
   @SuppressWarnings("null")
   public Map<UUID, EntityGraphNode> buildGraphNodesForEntityIds(Map<UUID, Entity> entityGraphs,
-      boolean includeProperties, Set<String> relationFilter, Set<String> propertyFilter,
-      EntityGraphTraversalMode mode, int depth) {
+      Set<String> relationFilter, Set<String> propertyFilter, EntityGraphTraversalMode mode,
+      int depth) {
 
     if (entityGraphs == null || entityGraphs.isEmpty()) {
       return Map.of();
@@ -70,8 +69,8 @@ public class EntityGraphHelper {
         Map<UUID, EntityGraphNode> isolatedCache = new HashMap<>();
 
         GraphTraversalContext localizedCtx = new GraphTraversalContext(localizedEntityMap,
-            localizedIndices.textToUuidLookup(), localizedIndices.inboundIndex(), includeProperties,
-            propertyFilter, relationFilter, isolatedStack, isolatedCache, mode);
+            localizedIndices.textToUuidLookup(), localizedIndices.inboundIndex(), propertyFilter,
+            relationFilter, isolatedStack, isolatedCache, mode);
 
         EntityGraphNode node = buildGraphNode(entry.getKey(), localizedCtx);
         result.put(entry.getKey(), node);
@@ -269,8 +268,7 @@ public class EntityGraphHelper {
     // we hit a cyclic loop closure. Break instantly with a stub to prevent infinite
     // stack overflow.
     if (ctx.activeStack().contains(entityUuid)) {
-      List<Property> stubProperties = resolveProperties(entity, ctx.includeProperties(),
-          ctx.propertyFilter());
+      List<Property> stubProperties = resolveProperties(entity, ctx.propertyFilter());
       return new EntityGraphNode(entity.templateIdentifier(), entity.identifier(), entity.name(),
           stubProperties, List.of(), List.of());
     }
@@ -303,8 +301,7 @@ public class EntityGraphHelper {
     List<EntityGraphRelation> inboundRelations = buildRelationsAsTargetFromIndex(
         entity.identifier(), ctx);
 
-    List<Property> properties = resolveProperties(entity, ctx.includeProperties(),
-        ctx.propertyFilter());
+    List<Property> properties = resolveProperties(entity, ctx.propertyFilter());
 
     // Assemble the complete node object
     EntityGraphNode completedNode = new EntityGraphNode(entity.templateIdentifier(),
@@ -413,13 +410,9 @@ public class EntityGraphHelper {
   /// Resolves and filters an entity's properties based on the request settings.
   ///
   /// @param entity the source entity record
-  /// @param includeProperties whether to fetch property fields
   /// @param propertyFilter set of allowed property names (empty = allow all)
   /// @return a list of filtered [Property] records
-  private List<Property> resolveProperties(Entity entity, boolean includeProperties,
-      Set<String> propertyFilter) {
-    if (!includeProperties)
-      return List.of();
+  private List<Property> resolveProperties(Entity entity, Set<String> propertyFilter) {
     if (propertyFilter.isEmpty())
       return entity.properties();
     return entity.properties().stream().filter(p -> propertyFilter.contains(p.name())).toList();
@@ -434,9 +427,11 @@ public class EntityGraphHelper {
 
   private static record GraphTraversalContext(Map<UUID, Entity> entityMap,
       Map<EntityCompositeKey, UUID> textToUuidLookup,
-      Map<String, Map<String, List<UUID>>> inboundIndex, boolean includeProperties,
-      Set<String> propertyFilter, Set<String> relationFilter, Set<UUID> activeStack,
-      Map<UUID, EntityGraphNode> memoCache, // High-speed in-memory reuse cache
+      Map<String, Map<String, List<UUID>>> inboundIndex, Set<String> propertyFilter,
+      Set<String> relationFilter, Set<UUID> activeStack, Map<UUID, EntityGraphNode> memoCache, // High-speed
+                                                                                               // in-memory
+                                                                                               // reuse
+                                                                                               // cache
       EntityGraphTraversalMode mode) {
   }
 

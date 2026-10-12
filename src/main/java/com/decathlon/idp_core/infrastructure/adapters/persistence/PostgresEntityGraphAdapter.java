@@ -89,6 +89,8 @@ public class PostgresEntityGraphAdapter implements EntityGraphRepositoryPort {
   /// to [1,
   /// MAX_DEPTH])
   /// @param includeProperties whether to fetch property data for each entity
+  /// @param showRootEntityProperties whether to include properties of the root
+  /// entity specifically
   /// @param mode traversal direction (OUTBOUND_ONLY, BIDIRECTIONAL,
   /// DIRECT_LINEAGE)
   /// @return immutable map of all discovered entities keyed by UUID; empty map if
