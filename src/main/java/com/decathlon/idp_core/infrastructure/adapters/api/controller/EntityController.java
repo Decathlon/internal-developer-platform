@@ -79,6 +79,7 @@ import com.decathlon.idp_core.domain.model.entity.Entity;
 import com.decathlon.idp_core.domain.model.entity.EntityFilter;
 import com.decathlon.idp_core.domain.model.entity.EntityPatch;
 import com.decathlon.idp_core.domain.model.entity_graph.EntityGraphNode;
+import com.decathlon.idp_core.domain.model.entity_graph.EntityGraphQueryOptions;
 import com.decathlon.idp_core.domain.model.entity_graph.EntityGraphTraversalMode;
 import com.decathlon.idp_core.domain.model.search.PaginatedResult;
 import com.decathlon.idp_core.domain.model.search.PaginationCriteria;
@@ -222,9 +223,10 @@ public class EntityController {
       @RequestParam(name = "relations_to_display", required = false) Set<String> relationsToDisplay) {
 
     EntityGraphNode entityGraphNode = entityGraphService.getEntityGraph(templateIdentifier,
-        entityIdentifier, relationsDepth, false, true,
-        relationsToDisplay == null ? Set.of() : relationsToDisplay, Set.of(),
-        EntityGraphTraversalMode.DIRECT_LINEAGE);
+        entityIdentifier,
+        new EntityGraphQueryOptions(relationsDepth, false, true,
+            relationsToDisplay == null ? Set.of() : relationsToDisplay, Set.of(),
+            EntityGraphTraversalMode.DIRECT_LINEAGE));
     return entityDtoOutFromEntityNodeMapper.toDto(entityGraphNode, templateIdentifier,
         relationsDepth);
   }

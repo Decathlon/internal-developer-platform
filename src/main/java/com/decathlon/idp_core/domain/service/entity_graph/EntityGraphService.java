@@ -18,6 +18,7 @@ import com.decathlon.idp_core.domain.model.entity.EntityCompositeKey;
 import com.decathlon.idp_core.domain.model.entity.EntityFilter;
 import com.decathlon.idp_core.domain.model.entity.EntitySummary;
 import com.decathlon.idp_core.domain.model.entity_graph.EntityGraphNode;
+import com.decathlon.idp_core.domain.model.entity_graph.EntityGraphQueryOptions;
 import com.decathlon.idp_core.domain.model.entity_graph.EntityGraphTraversalMode;
 import com.decathlon.idp_core.domain.port.EntityGraphRepositoryPort;
 import com.decathlon.idp_core.domain.port.EntityRepositoryPort;
@@ -69,17 +70,8 @@ public class EntityGraphService {
   /// @param templateIdentifier the template to find the root entity under (e.g.,
   /// "service")
   /// @param entityIdentifier the unique business identifier of the entity
-  /// @param depth the requested depth of relationship traversal
-  /// @param includeProperties whether to fetch properties for every discovered
-  /// entity
-  /// @param showRootEntityProperties when true while `includeProperties` is
-  /// false, fetch properties only for the root entity
-  /// @param relationFilter a set of relation names to restrict the traversal
-  /// to (empty means all)
-  /// @param propertyFilter a set of property names to restrict the properties
-  /// to (empty means all)
-  /// @param mode the traversal mode (e.g., `OUTBOUND_ONLY`,
-  /// `BIDIRECTIONAL`)
+  /// @param options traversal depth, property selection, relation and property
+  /// filters, and traversal mode
   /// @return the resolved root [EntityGraphNode] with its filtered relations and
   /// available properties
   /// @throws EntityNotFoundException if no root matches the template and entity
@@ -87,10 +79,9 @@ public class EntityGraphService {
 
   @Transactional(readOnly = true)
   public EntityGraphNode getEntityGraph(String templateIdentifier, String entityIdentifier,
-      int depth, boolean includeProperties, boolean showRootEntityProperties,
-      Set<String> relationFilter, Set<String> propertyFilter, EntityGraphTraversalMode mode) {
+      EntityGraphQueryOptions options) {
 
-    int effectiveDepth = Math.clamp(depth, 1, MAX_DEPTH);
+    int effectiveDepth = Math.clamp(options.depth(), 1, MAX_DEPTH);
 
     EntitySummary rootEntity = entityRepositoryPort
         .findSummariesByCompositeKeys(
@@ -100,7 +91,8 @@ public class EntityGraphService {
 
     // 2. Load the graph footprint via optimized DB calls
     Map<UUID, Entity> entityMap = entityGraphRepositoryPort.findEntityGraph(Set.of(rootEntity.id()),
-        effectiveDepth, includeProperties, showRootEntityProperties, mode);
+        effectiveDepth, options.includeProperties(), options.showRootEntityProperties(),
+        options.mode());
 
     if (entityMap == null || entityMap.isEmpty()) {
       return new EntityGraphNode(rootEntity.templateIdentifier(), rootEntity.identifier(),
@@ -109,7 +101,7 @@ public class EntityGraphService {
 
     // 3. Delegate to helper for graph building
     Map<UUID, EntityGraphNode> graphNodes = entityGraphHelper.buildGraphNodesForEntityIds(entityMap,
-        relationFilter, propertyFilter, mode, effectiveDepth);
+        options.relationFilter(), options.propertyFilter(), options.mode(), effectiveDepth);
 
     return graphNodes.getOrDefault(rootEntity.id(),
         new EntityGraphNode(rootEntity.templateIdentifier(), rootEntity.identifier(),
