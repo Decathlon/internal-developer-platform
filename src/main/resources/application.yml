@@ -192,6 +192,7 @@ management:
         # Metrics export is opt-in. Signal-specific variables win over the generic ones.
         url: ${OTEL_EXPORTER_OTLP_METRICS_ENDPOINT:${OTEL_EXPORTER_OTLP_ENDPOINT:http://localhost:4318}/v1/metrics}
         enabled: ${OTEL_METRICS_EXPORT_ENABLED:false}
+        transport: ${OTEL_EXPORTER_OTLP_PROTOCOL:http/protobuf}
   opentelemetry:
     tracing:
       export:
@@ -238,5 +239,5 @@ management:
 
 
 camel:
-  opentelemetry:
+  opentelemetry2:
     enabled: true
