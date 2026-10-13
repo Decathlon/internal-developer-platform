@@ -5,6 +5,7 @@ import java.util.Map;
 
 import org.springframework.stereotype.Component;
 
+import com.decathlon.idp_core.domain.exception.webhook.WebhookAuthenticationException;
 import com.decathlon.idp_core.domain.model.enums.WebhookSecurityType;
 import com.decathlon.idp_core.domain.model.inbound_connectors.webhook.WebhookConnector;
 import com.decathlon.idp_core.domain.model.inbound_connectors.webhook.WebhookSecurity;
@@ -12,6 +13,7 @@ import com.decathlon.idp_core.domain.port.WebhookSecurityStrategy;
 import com.decathlon.idp_core.infrastructure.adapters.ingestion.exception.WebhookSecurityException;
 import com.decathlon.idp_core.infrastructure.adapters.ingestion.security.WebhookRequestAuthenticator;
 
+import io.micrometer.core.instrument.MeterRegistry;
 import io.opentelemetry.api.trace.Span;
 import lombok.extern.slf4j.Slf4j;
 
@@ -23,21 +25,34 @@ public class SecurityProcessor {
   private static final String SPAN_ATTRIBUTE_WEBHOOK_IDENTIFIER = "idp.webhook.identifier";
   private static final String SPAN_ATTRIBUTE_SECURITY_RESULT = "idp.webhook.security.result";
   private static final String RESULT_SUCCESS = "SUCCESS";
+  private static final String RESULT_REJECTED = "REJECTED";
+  private static final String RESULT_ERROR = "ERROR";
+  private static final String METRIC_SECURITY_REQUESTS = "idp.webhook.security.requests.total";
+  private static final String METRIC_SECURITY_RESULT = "idp.webhook.security.result";
+  private static final String METRIC_SECURITY_VALIDATION_ERRORS =
+      "idp.webhook.security.validation.errors.total";
 
   private final List<WebhookSecurityStrategy> strategies;
+  private final MeterRegistry meterRegistry;
 
-  public SecurityProcessor(List<WebhookSecurityStrategy> strategies) {
+  public SecurityProcessor(List<WebhookSecurityStrategy> strategies, MeterRegistry meterRegistry) {
     this.strategies = List.copyOf(strategies);
+    this.meterRegistry = meterRegistry;
   }
 
   public void validate(Map<String, Object> headers, byte[] rawPayload,
       WebhookConnector webhookConnector) {
     String webhookIdentifier = webhookConnector.identifier();
+    WebhookSecurity security = webhookConnector.security();
+    String securityType = security == null || security.type() == null ? WebhookSecurityType.NONE.name()
+        : security.type().name();
+
+    meterRegistry.counter(METRIC_SECURITY_REQUESTS, "connector", webhookIdentifier,
+        "security_type", securityType).increment();
     Span.current().setAttribute(SPAN_ATTRIBUTE_WEBHOOK_IDENTIFIER, webhookIdentifier);
 
-    WebhookSecurity security = webhookConnector.security();
     if (security == null || security.type() == WebhookSecurityType.NONE) {
-      Span.current().setAttribute(SPAN_ATTRIBUTE_SECURITY_RESULT, RESULT_SUCCESS);
+      recordSecurityResult(webhookIdentifier, securityType, RESULT_SUCCESS);
       return;
     }
 
@@ -53,13 +68,32 @@ public class SecurityProcessor {
       authenticator.validateRequest(headers, rawPayload == null ? new byte[0] : rawPayload,
           security.config());
 
-      Span.current().setAttribute(SPAN_ATTRIBUTE_SECURITY_RESULT, RESULT_SUCCESS);
+      recordSecurityResult(webhookIdentifier, securityType, RESULT_SUCCESS);
       log.debug("Webhook security validation passed for connector '{}' with strategy '{}'.",
           webhookIdentifier, security.type());
     } catch (RuntimeException exception) {
-      Span.current().setAttribute(SPAN_ATTRIBUTE_SECURITY_RESULT, "REJECTED");
+      String result = isSecurityRejected(exception) ? RESULT_REJECTED : RESULT_ERROR;
+      recordSecurityResult(webhookIdentifier, securityType, result);
+      meterRegistry.counter(METRIC_SECURITY_VALIDATION_ERRORS, "connector", webhookIdentifier,
+          "security_type", securityType, "reason", classifyFailure(exception)).increment();
       throw exception;
     }
+  }
+
+  private void recordSecurityResult(String webhookIdentifier, String securityType, String result) {
+    meterRegistry.counter(METRIC_SECURITY_RESULT, "connector", webhookIdentifier,
+        "security_type", securityType, "result", result).increment();
+    Span.current().setAttribute(SPAN_ATTRIBUTE_SECURITY_RESULT, result);
+  }
+
+  private boolean isSecurityRejected(RuntimeException exception) {
+    return exception instanceof WebhookAuthenticationException
+        || exception instanceof WebhookSecurityException;
+  }
+
+  private String classifyFailure(RuntimeException exception) {
+    String reason = exception.getClass().getSimpleName();
+    return reason.isBlank() ? "unknown" : reason;
   }
 
 }
