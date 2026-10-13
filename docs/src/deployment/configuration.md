@@ -1,5 +1,5 @@
 ---
-title: Configuration Reference
+title: General Configuration
 description: Complete configuration reference for IDP-Core
 ---
 

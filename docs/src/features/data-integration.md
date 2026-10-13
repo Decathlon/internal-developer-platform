@@ -1,11 +1,11 @@
 ---
-title: Data Integration
+title: Overview
 description: Connect to any data source through Webhooks, Kafka, or Pub/Sub with runtime-configurable mappings
 status: 🕐 Doing
 ---
 
 > [!IMPORTANT]
-> This document describes a feature that is not yet developed. The content is subject to change and may not reflect the final implementation.
+> This document describes a feature that is not fully developed yet. The content is subject to change and may not reflect the final implementation.
 
 The Internal Developer Platform provides flexible data integration to connect to any source and map incoming data to your entities at runtime without code changes. That's powerful for rapid adaptation.
 

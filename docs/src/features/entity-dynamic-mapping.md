@@ -5,7 +5,7 @@ description: Understand Dynamic mappings and JSLT expressions.
 
 ## Overview
 
-A mapping targets one Entity Template and describes how to derive entity fields from the incoming JSON payload with a JSLT filter and entity projections.
+A mapping targets one Entity Template and describes how to derive entity fields from the incoming JSON payload with a JSLT filter and entity projections. It is linked to a data integration configuration (Webhook, Kafka, etc) as it describes how to transform incoming payloads.
 
 Only catalog administrators can create or update mappings that target the protected `principal` template. This
 restriction prevents an ingestion mapping from changing principal privileges. Webhook deliveries that use an already
@@ -39,16 +39,30 @@ authorized mapping continue to run through the configured connector security str
 | `name`                      | ✅       | Relation name from the Entity Template                   |
 | `target_entity_identifiers` | ✅       | Array of JSLT expressions to extract target identifiers  |
 
+> [!TIP]
+> To remove all target relations while preserving the entity, set `target_entity_identifiers` to `["null"]`.
+> Setting `[]` or `[""]` will not work.
+>
+> ```json
+> "relations": [
+>   {
+>     "name": "your-relation-name",
+>     "target_entity_identifiers": ["null"]
+>   }
+> ]
+> ```
+>
+
 ### Mapping Actions
 
 The `action` field determines how the resolved entity payload modifies the entity in IDP-Core:
 
-| Action              | Behaviour                                                                   |
-| ------------------  | ----------------------------------------------------------------------------|
-| `UPDATE_ENTITY`     | Creates the entity if absent, otherwise patches all fields                  |
-| `UPDATE_PROPERTIES` | Creates the entity if absent, otherwise patches name and properties only    |
-| `UPDATE_RELATIONS`  | Creates the entity if absent, otherwise patches relations only              |
-| `DELETE_ENTITY`     | Deletes the entity if it exists                                             |
+| Action              | Behaviour                                                                |
+| ------------------  |--------------------------------------------------------------------------|
+| `UPDATE_ENTITY`     | Creates the entity if absent, otherwise patches all fields               |
+| `UPDATE_PROPERTIES` | Creates the entity if absent, otherwise patches name and properties only |
+| `UPDATE_RELATIONS`  | Patches relations on an existing entity, fails if the entity is absent   |
+| `DELETE_ENTITY`     | Deletes the entity if it exists                                          |
 
 #### UPDATE_RELATIONS: Relation Normalization
 

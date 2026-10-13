@@ -655,6 +655,6 @@ curl -s http://localhost:8084/api/v1/audit/entities/web-service/my-service | \
 
 ## Next Steps
 
-- **[Entities](entities.md)** - Entity structure and lifecycle
-- **[Properties](properties.md)** - Property types and validation
-- **[Relations](relations.md)** - Entity relationships
+- **[Entities](../concepts/entities.md)** - Entity structure and lifecycle
+- **[Properties](../concepts/properties.md)** - Property types and validation
+- **[Relations](../concepts/relations.md)** - Entity relationships
