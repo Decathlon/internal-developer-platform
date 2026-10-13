@@ -29,8 +29,7 @@ public class SecurityProcessor {
   private static final String RESULT_ERROR = "ERROR";
   private static final String METRIC_SECURITY_REQUESTS = "idp.webhook.security.requests.total";
   private static final String METRIC_SECURITY_RESULT = "idp.webhook.security.result";
-  private static final String METRIC_SECURITY_VALIDATION_ERRORS =
-      "idp.webhook.security.validation.errors.total";
+  private static final String METRIC_SECURITY_VALIDATION_ERRORS = "idp.webhook.security.validation.errors.total";
 
   private final List<WebhookSecurityStrategy> strategies;
   private final MeterRegistry meterRegistry;
@@ -44,11 +43,12 @@ public class SecurityProcessor {
       WebhookConnector webhookConnector) {
     String webhookIdentifier = webhookConnector.identifier();
     WebhookSecurity security = webhookConnector.security();
-    String securityType = security == null || security.type() == null ? WebhookSecurityType.NONE.name()
+    String securityType = security == null || security.type() == null
+        ? WebhookSecurityType.NONE.name()
         : security.type().name();
 
-    meterRegistry.counter(METRIC_SECURITY_REQUESTS, "connector", webhookIdentifier,
-        "security_type", securityType).increment();
+    meterRegistry.counter(METRIC_SECURITY_REQUESTS, "connector", webhookIdentifier, "security_type",
+        securityType).increment();
     Span.current().setAttribute(SPAN_ATTRIBUTE_WEBHOOK_IDENTIFIER, webhookIdentifier);
 
     if (security == null || security.type() == WebhookSecurityType.NONE) {
@@ -81,8 +81,8 @@ public class SecurityProcessor {
   }
 
   private void recordSecurityResult(String webhookIdentifier, String securityType, String result) {
-    meterRegistry.counter(METRIC_SECURITY_RESULT, "connector", webhookIdentifier,
-        "security_type", securityType, "result", result).increment();
+    meterRegistry.counter(METRIC_SECURITY_RESULT, "connector", webhookIdentifier, "security_type",
+        securityType, "result", result).increment();
     Span.current().setAttribute(SPAN_ATTRIBUTE_SECURITY_RESULT, result);
   }
 

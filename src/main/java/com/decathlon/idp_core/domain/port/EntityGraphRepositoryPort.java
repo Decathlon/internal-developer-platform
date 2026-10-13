@@ -23,14 +23,10 @@ import com.decathlon.idp_core.domain.model.entity_graph.EntityGraphTraversalMode
 /// as this port performs no write operations.
 public interface EntityGraphRepositoryPort {
 
-  /// Fetches all entities in the relationship graph rooted at the given entity
-  /// UUID.
+  /// Fetches entities reachable from one or more root entity UUIDs.
   ///
-  /// Performs an optimized recursive CTE (Common Table Expression) database query
-  /// to
-  /// traverse both outbound (forward) and inbound (reverse) relations up to the
-  /// requested depth. All loaded entities are batch-fetched to minimize database
-  /// round trips.
+  /// Performs a recursive CTE traversal up to the requested depth, then loads
+  /// entity summaries, relations, and the requested properties in a batch.
   ///
   /// **Key design notes:**
   /// - Relation name filtering is intentionally NOT pushed into this port. The
@@ -40,18 +36,17 @@ public interface EntityGraphRepositoryPort {
   /// Example: "filter owns" still returns B and C when A→(depends-on)→B→(owns)→C.
   /// - The traversal mode determines which relation directions are included.
   ///
-  /// @param entityId the root entity UUID from which the graph is traversed
-  /// @param depth the maximum traversal depth; typically clamped to 1-6 by the
-  /// service layer
-  /// @param includeProperties when true, entity properties are eagerly loaded
-  /// along
-  /// with the root entity and all reachable entities
-  /// @param mode the graph traversal mode (BIDIRECTIONAL, OUTBOUND_ONLY, or
-  /// STRICT_LINEAGE) determining which relation directions to follow
-  /// @return an immutable map of all discovered entities keyed by their UUID,
-  /// including the root entity. Returns an empty map if the root entity
-  /// does not exist.
+  /// @param rootIds UUIDs of entities from which traversal starts
+  /// @param depth maximum traversal depth; callers of the single-root service
+  /// clamp this to the supported range before calling the port
+  /// @param includeProperties when true, include properties for every discovered
+  /// entity
+  /// @param includeRootEntityProperties when true and `includeProperties` is
+  /// false, include properties only for entities in `rootIds`
+  /// @param mode traversal mode determining which relation directions to follow
+  /// @return map of discovered entities keyed by UUID; empty when no entities are
+  /// discovered or the inputs cannot start a traversal
   Map<UUID, Entity> findEntityGraph(Collection<UUID> rootIds, int depth, boolean includeProperties,
-      EntityGraphTraversalMode mode);
+      boolean includeRootEntityProperties, EntityGraphTraversalMode mode);
 
 }
