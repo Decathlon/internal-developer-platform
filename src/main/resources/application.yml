@@ -177,6 +177,7 @@ logging:
     # Suppresses a specific repetitive bean registration delegate log line.
     org.springframework.context.support.PostProcessorRegistrationDelegate: ERROR
 
+
 management:
   tracing:
     # Tracing is disabled by default and only enabled via environment variables (OTEL_TRACING_ENABLED).

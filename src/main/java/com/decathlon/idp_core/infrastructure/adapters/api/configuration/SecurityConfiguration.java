@@ -14,8 +14,6 @@ import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
 import com.decathlon.idp_core.infrastructure.adapters.api.auth.JitProvisioningFilter;
 
-import lombok.extern.slf4j.Slf4j;
-
 /// Spring Security configuration for API authentication and authorization.
 ///
 /// **Security policy rationale:**
@@ -44,7 +42,6 @@ import lombok.extern.slf4j.Slf4j;
 /// @see JitProvisioningFilter
 @Configuration
 @EnableWebSecurity
-@Slf4j
 @EnableConfigurationProperties({CorsProperties.class, SecurityRoleProperties.class,
     AuthenticationProperties.class})
 public class SecurityConfiguration {

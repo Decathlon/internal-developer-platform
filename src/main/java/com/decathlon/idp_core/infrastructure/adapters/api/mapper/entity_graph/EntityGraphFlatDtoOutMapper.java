@@ -1,6 +1,7 @@
 package com.decathlon.idp_core.infrastructure.adapters.api.mapper.entity_graph;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -8,8 +9,8 @@ import java.util.Map;
 import java.util.SequencedSet;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.stream.Collectors;
 
+import com.decathlon.idp_core.domain.model.entity.Property;
 import com.decathlon.idp_core.domain.model.entity_graph.EntityGraphNode;
 import com.decathlon.idp_core.domain.model.entity_graph.EntityGraphRelation;
 import com.decathlon.idp_core.domain.service.entity_graph.EntityGraphService;
@@ -66,7 +67,7 @@ public final class EntityGraphFlatDtoOutMapper {
 
     traverse(root, state);
 
-    return new EntityGraphFlatDtoOut(List.copyOf(state.nodes()), List.copyOf(state.edges()));
+    return new EntityGraphFlatDtoOut(new ArrayList<>(state.nodes()), state.edges());
   }
 
   private static void traverse(EntityGraphNode node, TraversalState state) {
@@ -134,6 +135,15 @@ public final class EntityGraphFlatDtoOutMapper {
   /// @JsonInclude(NON_EMPTY) annotation ensures an empty map is omitted from the
   /// JSON output.
   private static Map<String, Object> toDataMap(EntityGraphNode node) {
-    return node.properties().stream().collect(Collectors.toMap(p -> p.name(), p -> p.value()));
+    List<Property> properties = node.properties();
+    Map<String, Object> data = HashMap.newHashMap(properties.size());
+    for (Property property : properties) {
+      if (data.containsKey(property.name())) {
+        throw new IllegalStateException("Duplicate property name: " + property.name());
+      }
+      data.put(property.name(), property.value());
+    }
+    return data;
   }
+
 }

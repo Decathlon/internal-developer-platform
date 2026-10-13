@@ -26,7 +26,6 @@ import com.decathlon.idp_core.infrastructure.adapters.api.dto.out.entity.EntityD
 import com.decathlon.idp_core.infrastructure.adapters.api.dto.out.entity.EntitySummaryDto;
 
 import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
 
 /// Adapter mapper for converting domain [Entity] objects to API DTOs.
 ///
@@ -46,7 +45,6 @@ import lombok.extern.slf4j.Slf4j;
 /// - Integrates with Jackson for JSON serialization patterns
 /// - Stateless design ensures thread safety in web containers
 @Component
-@Slf4j
 @RequiredArgsConstructor
 public class EntityDtoOutMapper {
 
