@@ -180,7 +180,8 @@ logging:
 management:
   tracing:
     sampling:
-      probability: 1.0  # 100% des traces
+      # Fraction of traces kept (1.0 = 100%). Standard OTel variable.
+      probability: ${OTEL_TRACES_SAMPLER_ARG:0.1}
     export:
       enabled: ${OTEL_TRACING_ENABLED:false}
 
@@ -188,22 +189,23 @@ management:
   otlp:
     metrics:
       export:
-        url: ${OTEL_EXPORTER_OTLP_ENDPOINT:}
-        transport: ${OTEL_EXPORTER_OTLP_PROTOCOL:http/protobuf}
+        # Metrics export is opt-in. Signal-specific variables win over the generic ones.
+        url: ${OTEL_EXPORTER_OTLP_METRICS_ENDPOINT:${OTEL_EXPORTER_OTLP_ENDPOINT:http://localhost:4318}/v1/metrics}
         enabled: ${OTEL_METRICS_EXPORT_ENABLED:false}
   opentelemetry:
     tracing:
       export:
         otlp:
           # Boot does not append /v1/traces itself: the full traces URL is required for HTTP.
-          endpoint: ${OTEL_EXPORTER_OTLP_ENDPOINT:http://localhost:4318}/v1/traces}
+          endpoint: ${OTEL_EXPORTER_OTLP_TRACES_ENDPOINT:${OTEL_EXPORTER_OTLP_ENDPOINT:http://localhost:4318}/v1/traces}
+          # Boot's transport enum only accepts http or grpc (not the OTel value http/protobuf).
           transport: ${OTEL_EXPORTER_OTLP_TRACES_TRANSPORT:http}
+    # Extra attributes (for example X-Datadog-Org, X-Backend) are set by the user
+    # through OTEL_RESOURCE_ATTRIBUTES, not hard-coded here.
     resource-attributes:
       deployment.environment: ${OTEL_ENV:local}
       service.namespace: ${OTEL_SERVICE_NAMESPACE:idp-core}
-      service.name: ${OTEL_SERVICE_NAME:idp-core}
-      X-Datadog-Org: ${ORG:}
-      X-Backend: ${BACKEND:}
+      service.name: ${OTEL_SERVICE_NAME:internal-developer-platform}
 
   endpoints:
     web:
