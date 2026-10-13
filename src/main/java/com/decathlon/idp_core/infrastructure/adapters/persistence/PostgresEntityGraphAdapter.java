@@ -44,7 +44,8 @@ public class PostgresEntityGraphAdapter implements EntityGraphRepositoryPort {
   ///
   /// @param jpaEntityRepository repository used to discover and project graph
   /// data
-  /// @param objectMapper application-configured mapper used for JSON projection
+  /// @param objectMapper application-configured mapper used for JSON
+  /// projection
   /// parsing
   public PostgresEntityGraphAdapter(JpaEntityRepository jpaEntityRepository,
       ObjectMapper objectMapper) {
@@ -67,16 +68,21 @@ public class PostgresEntityGraphAdapter implements EntityGraphRepositoryPort {
   /// aggregates relations and selected properties as JSONB, without loading JPA
   /// entity collections.
   ///
-  /// @param rootIds UUIDs of entities to use as traversal roots
-  /// @param depth maximum number of relationship steps to traverse
-  /// @param includeProperties whether to include properties for every discovered
+  /// @param rootIds UUIDs of entities to use as traversal
+  /// roots
+  /// @param depth maximum number of relationship steps to
+  /// traverse
+  /// @param includeProperties whether to include properties for every
+  /// discovered
   /// entity
   /// @param includeRootEntityProperties when true and `includeProperties` is
-  /// false, include properties only for the requested roots
+  /// false, include properties only for the
+  /// requested roots
   /// @param mode traversal direction and flow semantics
   /// @return map of discovered entities keyed by UUID; empty when roots are
   /// empty,
-  /// the mode is null, the depth is less than one, or no entities are discovered
+  /// the mode is null, the depth is less than one, or no entities
+  /// are discovered
   @Override
   @Transactional(readOnly = true)
   public Map<UUID, Entity> findEntityGraph(Collection<UUID> rootIds, int depth,
@@ -105,6 +111,11 @@ public class PostgresEntityGraphAdapter implements EntityGraphRepositoryPort {
     return entities;
   }
 
+  // Suppress "Use a stream instead of this loop" rule warning
+  // This path maps JSON projections into entities,
+  // and explicit loops avoid building stream pipelines and intermediate
+  // collections
+  @SuppressWarnings("java:S9391")
   private Entity mapProjectionToDomain(EntityGraphJsonProjection projection) {
     try {
       List<PropertyProjection> propertyProjections = propertyReader
