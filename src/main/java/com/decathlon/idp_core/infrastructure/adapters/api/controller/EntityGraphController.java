@@ -27,6 +27,7 @@ import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.decathlon.idp_core.domain.model.entity_graph.EntityGraphNode;
+import com.decathlon.idp_core.domain.model.entity_graph.EntityGraphQueryOptions;
 import com.decathlon.idp_core.domain.model.entity_graph.EntityGraphTraversalMode;
 import com.decathlon.idp_core.domain.service.entity_graph.EntityGraphService;
 import com.decathlon.idp_core.infrastructure.adapters.api.dto.out.entity_graph.EntityGraphFlatDtoOut;
@@ -64,7 +65,7 @@ public class EntityGraphController {
   /// @param templateIdentifier the template identifier of the root entity
   /// @param entityIdentifier the business identifier of the root entity
   /// @param depth the maximum traversal depth (default 1, clamped between 1 and
-  /// 10)
+  /// 6 by the service)
   /// @param includeData when true, each node includes a data object with entity
   /// property values
   /// @param relations when provided, only relations with matching names are
@@ -90,8 +91,8 @@ public class EntityGraphController {
     Set<String> propertyFilter = properties != null ? Set.copyOf(properties) : Set.of();
 
     EntityGraphNode graphNode = entityGraphService.getEntityGraph(templateIdentifier,
-        entityIdentifier, depth, includeData, relationFilter, propertyFilter, mode);
-
+        entityIdentifier, new EntityGraphQueryOptions(depth, includeData, includeData,
+            relationFilter, propertyFilter, mode));
     return EntityGraphFlatDtoOutMapper.toFlatDto(graphNode);
   }
 
