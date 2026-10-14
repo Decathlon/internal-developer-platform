@@ -10,6 +10,7 @@ import com.decathlon.idp_core.domain.model.enums.WebhookSecurityType;
 import com.decathlon.idp_core.domain.model.inbound_connectors.webhook.WebhookConnector;
 import com.decathlon.idp_core.domain.model.inbound_connectors.webhook.WebhookSecurity;
 import com.decathlon.idp_core.domain.port.WebhookSecurityStrategy;
+import com.decathlon.idp_core.infrastructure.adapters.ingestion.configuration.IngestionMetricConstants;
 import com.decathlon.idp_core.infrastructure.adapters.ingestion.exception.WebhookSecurityException;
 import com.decathlon.idp_core.infrastructure.adapters.ingestion.security.WebhookRequestAuthenticator;
 
@@ -27,9 +28,6 @@ public class SecurityProcessor {
   private static final String RESULT_SUCCESS = "SUCCESS";
   private static final String RESULT_REJECTED = "REJECTED";
   private static final String RESULT_ERROR = "ERROR";
-  private static final String METRIC_SECURITY_REQUESTS = "idp.webhook.security.requests.total";
-  private static final String METRIC_SECURITY_RESULT = "idp.webhook.security.result";
-  private static final String METRIC_SECURITY_VALIDATION_ERRORS = "idp.webhook.security.validation.errors.total";
 
   private final List<WebhookSecurityStrategy> strategies;
   private final MeterRegistry meterRegistry;
@@ -47,8 +45,8 @@ public class SecurityProcessor {
         ? WebhookSecurityType.NONE.name()
         : security.type().name();
 
-    meterRegistry.counter(METRIC_SECURITY_REQUESTS, "connector", webhookIdentifier, "security_type",
-        securityType).increment();
+    meterRegistry.counter(IngestionMetricConstants.SECURITY_REQUESTS_TOTAL, "connector",
+        webhookIdentifier, "security_type", securityType).increment();
     Span.current().setAttribute(SPAN_ATTRIBUTE_WEBHOOK_IDENTIFIER, webhookIdentifier);
 
     if (security == null || security.type() == WebhookSecurityType.NONE) {
@@ -74,15 +72,16 @@ public class SecurityProcessor {
     } catch (RuntimeException exception) {
       String result = isSecurityRejected(exception) ? RESULT_REJECTED : RESULT_ERROR;
       recordSecurityResult(webhookIdentifier, securityType, result);
-      meterRegistry.counter(METRIC_SECURITY_VALIDATION_ERRORS, "connector", webhookIdentifier,
-          "security_type", securityType, "reason", classifyFailure(exception)).increment();
+      meterRegistry.counter(IngestionMetricConstants.SECURITY_VALIDATION_ERRORS_TOTAL, "connector",
+          webhookIdentifier, "security_type", securityType, "reason", classifyFailure(exception))
+          .increment();
       throw exception;
     }
   }
 
   private void recordSecurityResult(String webhookIdentifier, String securityType, String result) {
-    meterRegistry.counter(METRIC_SECURITY_RESULT, "connector", webhookIdentifier, "security_type",
-        securityType, "result", result).increment();
+    meterRegistry.counter(IngestionMetricConstants.SECURITY_RESULT, "connector", webhookIdentifier,
+        "security_type", securityType, "result", result).increment();
     Span.current().setAttribute(SPAN_ATTRIBUTE_SECURITY_RESULT, result);
   }
 

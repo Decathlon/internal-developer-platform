@@ -41,6 +41,7 @@ import com.decathlon.idp_core.domain.service.entity.EntityService;
 import ch.qos.logback.classic.Logger;
 import ch.qos.logback.classic.spi.ILoggingEvent;
 import ch.qos.logback.core.read.ListAppender;
+import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 
 /// Unit tests for IngestionProcessor covering all mapping actions and edge cases.
 ///
@@ -70,7 +71,8 @@ class IngestionProcessorTest {
     listAppender = new ListAppender<>();
     listAppender.start();
     logger.addAppender(listAppender);
-    ingestionProcessor = new IngestionProcessor(mappingEngine, entityService);
+    ingestionProcessor = new IngestionProcessor(mappingEngine, entityService,
+        new SimpleMeterRegistry());
   }
 
   private Entity createTestEntity(String templateId, String identifier) {
