@@ -61,6 +61,9 @@ app:
         jwks-env-key: JWKS_URI
         jwks-env-value: https://auth.example.com/.well-known/jwks.json
 management:
+  # Tests must not create or export traces.
+  tracing:
+    enabled: false
   endpoint:
     health:
       probes:

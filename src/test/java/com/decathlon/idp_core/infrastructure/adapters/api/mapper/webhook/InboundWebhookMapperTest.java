@@ -97,6 +97,32 @@ class InboundWebhookMapperTest {
   }
 
   @Test
+  @DisplayName("Should normalize an omitted (null) config of a NONE security to an empty map")
+  void shouldNormalizeNullConfigForNoneSecurity() {
+    InboundWebhookCreateDtoIn request = new InboundWebhookCreateDtoIn("my-connector", "No Auth",
+        "Webhook without authentication", true, List.of("deployment-mapping"),
+        new InboundWebhookSecurityContractDtoIn("NONE", null));
+
+    WebhookConnector domain = mapper.toDomain(request, List.of(resolvedMapping()));
+
+    assertThat(domain.security().type()).isEqualTo(WebhookSecurityType.NONE);
+    assertThat(domain.security().config()).isNotNull().isEmpty();
+  }
+
+  @Test
+  @DisplayName("Should normalize an omitted (null) config on update for a NONE security")
+  void shouldNormalizeNullConfigOnUpdateForNoneSecurity() {
+    InboundWebhookUpdateDtoIn request = new InboundWebhookUpdateDtoIn("No Auth",
+        "Webhook without authentication", true, List.of("deployment-mapping"),
+        new InboundWebhookSecurityContractDtoIn("NONE", null));
+
+    WebhookConnector domain = mapper.toDomainForUpdate("identifier_from_path", request,
+        List.of(resolvedMapping()));
+
+    assertThat(domain.security().config()).isNotNull().isEmpty();
+  }
+
+  @Test
   @DisplayName("Should default to NONE when security section is missing")
   void shouldDefaultToNoneWhenSecurityIsMissing() {
     var request = new InboundWebhookCreateDtoIn("my-connector", "No Auth",

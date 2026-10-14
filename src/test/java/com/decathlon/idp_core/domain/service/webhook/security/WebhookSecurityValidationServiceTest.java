@@ -2,6 +2,7 @@ package com.decathlon.idp_core.domain.service.webhook.security;
 
 import static com.decathlon.idp_core.domain.model.enums.WebhookSecurityType.HMAC_SHA256;
 import static com.decathlon.idp_core.domain.model.enums.WebhookSecurityType.JWT_BEARER;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.lenient;
@@ -93,6 +94,15 @@ class WebhookSecurityValidationServiceTest {
     void shouldPassForNoneTypeWithEmptyConfig() {
       var security = new WebhookSecurity(WebhookSecurityType.NONE, Map.of());
 
+      assertThatCode(() -> service.validateForCreation(security)).doesNotThrowAnyException();
+    }
+
+    @Test
+    @DisplayName("Should normalize a null config of a NONE type to an empty map and pass")
+    void shouldNormalizeNullConfigForNoneType() {
+      WebhookSecurity security = new WebhookSecurity(WebhookSecurityType.NONE, null);
+
+      assertThat(security.config()).isNotNull().isEmpty();
       assertThatCode(() -> service.validateForCreation(security)).doesNotThrowAnyException();
     }
 

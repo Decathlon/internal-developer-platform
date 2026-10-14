@@ -12,6 +12,7 @@ import com.decathlon.idp_core.domain.port.WebhookSecurityStrategy;
 import com.decathlon.idp_core.infrastructure.adapters.ingestion.exception.WebhookSecurityException;
 import com.decathlon.idp_core.infrastructure.adapters.ingestion.security.WebhookRequestAuthenticator;
 
+import io.opentelemetry.api.trace.Span;
 import lombok.extern.slf4j.Slf4j;
 
 @Component
@@ -19,6 +20,9 @@ import lombok.extern.slf4j.Slf4j;
 public class SecurityProcessor {
 
   private static final String WEBHOOK_AUTHENTICATION_FAILED_MESSAGE = "Webhook authentication failed";
+  private static final String SPAN_ATTRIBUTE_WEBHOOK_IDENTIFIER = "idp.webhook.identifier";
+  private static final String SPAN_ATTRIBUTE_SECURITY_RESULT = "idp.webhook.security.result";
+  private static final String RESULT_SUCCESS = "SUCCESS";
 
   private final List<WebhookSecurityStrategy> strategies;
 
@@ -28,24 +32,34 @@ public class SecurityProcessor {
 
   public void validate(Map<String, Object> headers, byte[] rawPayload,
       WebhookConnector webhookConnector) {
+    String webhookIdentifier = webhookConnector.identifier();
+    Span.current().setAttribute(SPAN_ATTRIBUTE_WEBHOOK_IDENTIFIER, webhookIdentifier);
+
     WebhookSecurity security = webhookConnector.security();
     if (security == null || security.type() == WebhookSecurityType.NONE) {
+      Span.current().setAttribute(SPAN_ATTRIBUTE_SECURITY_RESULT, RESULT_SUCCESS);
       return;
     }
 
-    WebhookSecurityStrategy strategy = strategies.stream()
-        .filter(candidate -> candidate.supports(security.type())).findFirst()
-        .orElseThrow(() -> new WebhookSecurityException(WEBHOOK_AUTHENTICATION_FAILED_MESSAGE));
+    try {
+      WebhookSecurityStrategy strategy = strategies.stream()
+          .filter(candidate -> candidate.supports(security.type())).findFirst()
+          .orElseThrow(() -> new WebhookSecurityException(WEBHOOK_AUTHENTICATION_FAILED_MESSAGE));
 
-    if (!(strategy instanceof WebhookRequestAuthenticator authenticator)) {
-      throw new WebhookSecurityException(WEBHOOK_AUTHENTICATION_FAILED_MESSAGE);
+      if (!(strategy instanceof WebhookRequestAuthenticator authenticator)) {
+        throw new WebhookSecurityException(WEBHOOK_AUTHENTICATION_FAILED_MESSAGE);
+      }
+
+      authenticator.validateRequest(headers, rawPayload == null ? new byte[0] : rawPayload,
+          security.config());
+
+      Span.current().setAttribute(SPAN_ATTRIBUTE_SECURITY_RESULT, RESULT_SUCCESS);
+      log.debug("Webhook security validation passed for connector '{}' with strategy '{}'.",
+          webhookIdentifier, security.type());
+    } catch (RuntimeException exception) {
+      Span.current().setAttribute(SPAN_ATTRIBUTE_SECURITY_RESULT, "REJECTED");
+      throw exception;
     }
-
-    authenticator.validateRequest(headers, rawPayload == null ? new byte[0] : rawPayload,
-        security.config());
-
-    log.debug("Webhook security validation passed for connector '{}' with strategy '{}'.",
-        webhookConnector.identifier(), security.type());
   }
 
 }

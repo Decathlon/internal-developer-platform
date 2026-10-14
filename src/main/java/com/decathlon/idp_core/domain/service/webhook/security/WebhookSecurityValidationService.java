@@ -48,7 +48,7 @@ public class WebhookSecurityValidationService {
   }
 
   private void validateNoSecurityConfig(Map<String, String> config) {
-    if (!config.isEmpty()) {
+    if (config != null && !config.isEmpty()) {
       throw new WebhookSecurityConfigurationException(
           "Webhook security config must be empty when type is NONE");
     }

@@ -604,6 +604,28 @@ class InboundWebhookManagementControllerTest extends AbstractIntegrationTest {
 
     @Test
     @WithMockUser
+    @DisplayName("Should update to NONE security when config is omitted")
+    void putWebhook_200_none_security_without_config() throws Exception {
+      createWebhookConnector("connector-put-none-no-config", "Connector Put None Initial");
+
+      var payload = """
+          {
+            "name": "Connector Put None Updated",
+            "description": "updated without security config",
+            "enabled": false,
+            "mapping_identifiers": ["connector-put-none-no-config-mapping"],
+            "security": { "type": "NONE" }
+          }
+          """;
+      mockMvc
+          .perform(MockMvcRequestBuilders.put(WEBHOOK_PATH + "/connector-put-none-no-config")
+              .contentType(APPLICATION_JSON).accept(APPLICATION_JSON).with(csrf()).content(payload))
+          .andExpect(status().isOk()).andExpect(jsonPath("$.security.type").value("NONE"))
+          .andExpect(jsonPath("$.security.config").isEmpty());
+    }
+
+    @Test
+    @WithMockUser
     @DisplayName("Should return 404 when connector does not exist")
     void putWebhook_404_not_found() throws Exception {
       mockMvc
@@ -1028,19 +1050,71 @@ class InboundWebhookManagementControllerTest extends AbstractIntegrationTest {
     @WithMockUser
     @DisplayName("NONE — Should create connector without config field")
     void security_none_no_config_201() throws Exception {
+      // The "config" key is truly omitted from the request body.
       var payload = """
           {
             "identifier": "sec-none-no-config",
             "name": "None No Config",
             "enabled": false,
             "mapping_identifiers": [],
-            "security": { "type": "NONE", "config":{} }
+            "security": { "type": "NONE" }
           }
           """;
       mockMvc
           .perform(MockMvcRequestBuilders.post(WEBHOOK_PATH).contentType(APPLICATION_JSON)
               .accept(APPLICATION_JSON).with(csrf()).content(payload))
-          .andExpect(status().isCreated()).andExpect(jsonPath("$.security.type").value("NONE"));
+          .andExpect(status().isCreated()).andExpect(jsonPath("$.security.type").value("NONE"))
+          .andExpect(jsonPath("$.security.config").isEmpty());
+    }
+
+    @Test
+    @WithMockUser
+    @DisplayName("NONE — Should create connector with a null config")
+    void security_none_null_config_201() throws Exception {
+      var payload = """
+          {
+            "identifier": "sec-none-null-config",
+            "name": "None Null Config",
+            "enabled": false,
+            "mapping_identifiers": [],
+            "security": { "type": "NONE", "config": null }
+          }
+          """;
+      mockMvc
+          .perform(MockMvcRequestBuilders.post(WEBHOOK_PATH).contentType(APPLICATION_JSON)
+              .accept(APPLICATION_JSON).with(csrf()).content(payload))
+          .andExpect(status().isCreated()).andExpect(jsonPath("$.security.type").value("NONE"))
+          .andExpect(jsonPath("$.security.config").isEmpty());
+    }
+
+    @Test
+    @WithMockUser
+    @DisplayName("NONE — Should return 400 when config is not empty")
+    void security_none_non_empty_config_400() throws Exception {
+      mockMvc
+          .perform(MockMvcRequestBuilders.post(WEBHOOK_PATH).contentType(APPLICATION_JSON)
+              .accept(APPLICATION_JSON).with(csrf()).content(buildSecurityPayload(
+                  "sec-none-with-config", "None With Config", "NONE", "{ \"a\": \"b\" }")))
+          .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    @WithMockUser
+    @DisplayName("HMAC_SHA256 — Should return 400 when config is omitted")
+    void security_hmac_no_config_400() throws Exception {
+      var payload = """
+          {
+            "identifier": "sec-hmac-no-config",
+            "name": "HMAC No Config",
+            "enabled": false,
+            "mapping_identifiers": [],
+            "security": { "type": "HMAC_SHA256" }
+          }
+          """;
+      mockMvc
+          .perform(MockMvcRequestBuilders.post(WEBHOOK_PATH).contentType(APPLICATION_JSON)
+              .accept(APPLICATION_JSON).with(csrf()).content(payload))
+          .andExpect(status().isBadRequest());
     }
 
     @Test
