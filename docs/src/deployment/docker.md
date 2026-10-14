@@ -231,7 +231,7 @@ The effective precedence is:
 - `OTEL_EXPORTER_OTLP_TRACES_TRANSPORT` > `OTEL_EXPORTER_OTLP_PROTOCOL` > `http`
 - `OTEL_EXPORTER_OTLP_METRICS_PROTOCOL` > `OTEL_EXPORTER_OTLP_PROTOCOL` > `http/protobuf`
 
-This means the application can work in local Docker, in Kubernetes, or in a managed platform while still honoring the standard OTel variables set by the operator or deployment pipeline.
+This means the application can work in local Docker, in Kubernetes, or in a managed platform while still honoring the standard OpenTelemetry variables set by the operator or deployment pipeline.
 
 | Variable                              | Description                                              | Default                                        |
 |---------------------------------------|----------------------------------------------------------|------------------------------------------------|
@@ -254,30 +254,13 @@ The signal-specific variable wins over the generic one, so the image works in th
 
 - **Docker Compose or a simple container:** set `OTEL_EXPORTER_OTLP_ENDPOINT`
 - **Kubernetes with the OpenTelemetry Operator:** the platform injects `OTEL_EXPORTER_OTLP_TRACES_ENDPOINT`
-- **Datadog or another OTLP collector:** set the standard OTel endpoint and resource attributes
+- **Datadog or another OTLP collector:** set the standard OpenTelemetry endpoint and resource attributes
 - **Local development:** leave the variables unset and use the built-in `localhost:4318` fallback
 
-> [!NOTE]
-> Lower `OTEL_TRACES_SAMPLER_ARG` in high-throughput production. Capturing 100% of the traces increases CPU overhead
+> Note: Lower `OTEL_TRACES_SAMPLER_ARG` in high-throughput production. Capturing 100% of the traces increases CPU overhead
 > and vendor costs. For example, `0.1` keeps 10% of the traces.
 
-#### Example: Docker deployment with Datadog
-
-This example sends traces and metrics to a Datadog Agent exposing the OTLP receiver on port `4318`.
-
-```bash
-docker run -d --name idp-core \
-  -e OTEL_TRACING_ENABLED=true \
-  -e OTEL_METRICS_EXPORT_ENABLED=true \
-  -e OTEL_EXPORTER_OTLP_ENDPOINT=http://datadog-agent:4318 \
-  -e OTEL_EXPORTER_OTLP_PROTOCOL=http/protobuf \
-  -e OTEL_TRACES_SAMPLER_ARG=0.2 \
-  -e OTEL_SERVICE_NAME=idp-core \
-  -e OTEL_RESOURCE_ATTRIBUTES="deployment.environment=prod,service.namespace=idp-core,service.name=internal-developer-platform,service.version=1.0.0,team=platform" \
-  idp-core:latest
-```
-
-`OTEL_RESOURCE_ATTRIBUTES` is the right place to pass Datadog tags such as `env`, `service`, and `version`. The application does not need hard-coded Datadog values; it just emits the standard OTel resource metadata.
+`OTEL_RESOURCE_ATTRIBUTES` is the right place to pass Datadog tags such as `env`, `service`, and `version`. The application does not need hard-coded Datadog values; it just emits the standard OpenTelemetry resource metadata.
 
 ## Troubleshooting
 
