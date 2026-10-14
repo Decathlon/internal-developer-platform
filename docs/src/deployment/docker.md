@@ -224,78 +224,43 @@ ENTRYPOINT ["java", "-jar", "app.jar"]
 
 ### Observability
 
-| Variable                      | Description                                         | Default    |
-| ----------------------------- | --------------------------------------------------- | ---------- |
-| `OTEL_TRACING_ENABLED`        | Enables OpenTelemetry tracing (`false` disables it) | `true`     |
-| `OTEL_EXPORTER_OTLP_ENDPOINT` | OTLP endpoint                                       | -          |
-| `OTEL_SERVICE_NAME`           | Service name                                        | `idp-core` |
-| `LOG_LEVEL`                   | Root log level                                      | `INFO`     |
+IDP-Core follows the standard OpenTelemetry environment variables. Tracing and metrics export are opt-in, and the application keeps the usual OpenTelemetry fallbacks so you can set the standard variables without hard-coding a vendor-specific configuration.
 
----
+The effective precedence is:
 
-## Docker Compose Commands
+- `OTEL_EXPORTER_OTLP_TRACES_TRANSPORT` > `OTEL_EXPORTER_OTLP_PROTOCOL` > `http`
+- `OTEL_EXPORTER_OTLP_METRICS_PROTOCOL` > `OTEL_EXPORTER_OTLP_PROTOCOL` > `http/protobuf`
 
-### Start Services
+This means the application can work in local Docker, in Kubernetes, or in a managed platform while still honoring the standard OpenTelemetry variables set by the operator or deployment pipeline.
 
-```bash
-# Start all
-docker compose up -d
+| Variable                              | Description                                              | Default                                        |
+|---------------------------------------|----------------------------------------------------------|------------------------------------------------|
+| `OTEL_TRACING_ENABLED`                | Enables OpenTelemetry tracing (opt-in)                   | `false`                                        |
+| `OTEL_EXPORTER_OTLP_ENDPOINT`         | Base OTLP endpoint for all signals                       | `http://localhost:4318`                        |
+| `OTEL_EXPORTER_OTLP_TRACES_ENDPOINT`  | Full traces URL. It wins over the base endpoint          | `<base endpoint>/v1/traces`                    |
+| `OTEL_EXPORTER_OTLP_METRICS_ENDPOINT` | Full metrics URL. It wins over the base endpoint         | `<base endpoint>/v1/metrics`                   |
+| `OTEL_EXPORTER_OTLP_PROTOCOL`         | OTLP protocol used as the generic fallback               | `http/protobuf` for metrics, `http` for traces |
+| `OTEL_EXPORTER_OTLP_TRACES_TRANSPORT` | Transport for traces. It wins over the generic protocol  | `OTEL_EXPORTER_OTLP_PROTOCOL` or `http`        |
+| `OTEL_EXPORTER_OTLP_METRICS_PROTOCOL` | Transport for metrics. It wins over the generic protocol | `OTEL_EXPORTER_OTLP_PROTOCOL`                  |
+| `OTEL_METRICS_EXPORT_ENABLED`         | Enables OTLP metrics export (opt-in)                     | `false`                                        |
+| `OTEL_TRACES_SAMPLER_ARG`             | Fraction of traces kept, from `0.0` to `1.0`             | `0.1`                                          |
+| `OTEL_SERVICE_NAME`                   | Service name                                             | `internal-developer-platform`                  |
+| `OTEL_SERVICE_NAMESPACE`              | Service namespace                                        | `idp-core`                                     |
+| `OTEL_ENV`                            | Value of the `deployment.environment` attribute          | `local`                                        |
+| `OTEL_RESOURCE_ATTRIBUTES`            | Extra resource attributes (`key=value,key=value`)        | -                                              |
+| `LOG_LEVEL`                           | Root log level                                           | `INFO`                                         |
 
-# Start specific service
-docker compose up -d idp-core
+The signal-specific variable wins over the generic one, so the image works in the common deployments:
 
-# View logs
-docker compose logs -f idp-core
-```
+- **Docker Compose or a simple container:** set `OTEL_EXPORTER_OTLP_ENDPOINT`
+- **Kubernetes with the OpenTelemetry Operator:** the platform injects `OTEL_EXPORTER_OTLP_TRACES_ENDPOINT`
+- **Datadog or another OTLP collector:** set the standard OpenTelemetry endpoint and resource attributes
+- **Local development:** leave the variables unset and use the built-in `localhost:4318` fallback
 
-### Stop Services
+> Note: Lower `OTEL_TRACES_SAMPLER_ARG` in high-throughput production. Capturing 100% of the traces increases CPU overhead
+> and vendor costs. For example, `0.1` keeps 10% of the traces.
 
-```bash
-# Stop all
-docker compose down
-
-# Stop and remove volumes
-docker compose down -v
-```
-
-### Update
-
-```bash
-# Pull latest images
-docker compose pull
-
-# Recreate containers
-docker compose up -d --force-recreate
-```
-
-### Scale
-
-```bash
-# Run 3 instances
-docker compose up -d --scale idp-core=3
-```
-
----
-
-## Database Management
-
-### Initialize Database
-
-The database schema is managed by Flyway and applies automatically on startup.
-
-### Backup
-
-```bash
-docker exec postgres pg_dump -U idp idp > backup.sql
-```
-
-### Restore
-
-```bash
-cat backup.sql | docker exec -i postgres psql -U idp idp
-```
-
----
+`OTEL_RESOURCE_ATTRIBUTES` is the right place to pass Datadog tags such as `env`, `service`, and `version`. The application does not need hard-coded Datadog values; it just emits the standard OpenTelemetry resource metadata.
 
 ## Troubleshooting
 

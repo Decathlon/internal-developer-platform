@@ -193,7 +193,7 @@ management:
         # Metrics export is opt-in. Signal-specific variables win over the generic ones.
         url: ${OTEL_EXPORTER_OTLP_METRICS_ENDPOINT:${OTEL_EXPORTER_OTLP_ENDPOINT:http://localhost:4318}/v1/metrics}
         enabled: ${OTEL_METRICS_EXPORT_ENABLED:false}
-        transport: ${OTEL_EXPORTER_OTLP_PROTOCOL:http/protobuf}
+        transport: ${OTEL_EXPORTER_OTLP_METRICS_PROTOCOL:${OTEL_EXPORTER_OTLP_PROTOCOL:http/protobuf}}
   opentelemetry:
     tracing:
       export:
@@ -201,7 +201,7 @@ management:
           # Boot does not append /v1/traces itself: the full traces URL is required for HTTP.
           endpoint: ${OTEL_EXPORTER_OTLP_TRACES_ENDPOINT:${OTEL_EXPORTER_OTLP_ENDPOINT:http://localhost:4318}/v1/traces}
           # Boot's transport enum only accepts http or grpc (not the OTel value http/protobuf).
-          transport: ${OTEL_EXPORTER_OTLP_TRACES_TRANSPORT:http}
+          transport: ${OTEL_EXPORTER_OTLP_TRACES_TRANSPORT:${OTEL_EXPORTER_OTLP_PROTOCOL:http}}
     # Extra attributes (for example X-Datadog-Org, X-Backend) are set by the user
     # through OTEL_RESOURCE_ATTRIBUTES, not hard-coded here.
     resource-attributes:
