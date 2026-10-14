@@ -3,336 +3,124 @@ title: Observability
 description: Monitoring, logging, and tracing for the Internal Developer Platform
 ---
 
-The Internal Developer Platform provides comprehensive observability through metrics, logs, and distributed tracing using OpenTelemetry.
-
-## Overview
+The Internal Developer Platform emits metrics, logs, and traces through Spring Boot and OpenTelemetry, with Camel instrumentation enabled for the webhook ingestion flow.
 
 ```mermaid
 flowchart LR
-    subgraph "Internal Developer Platform"
-        M[Metrics]
-        L[Logs]
-        T[Traces]
+    subgraph "Application"
+        APP[IDP-Core]
+        CAMEL[Camel route]
+        OTEL[OpenTelemetry]
     end
 
-    subgraph "Collection"
-        OTEL[OpenTelemetry Collector]
+    subgraph "Backends"
+        DD[Datadog / OTLP collector]
         PROM[Prometheus]
     end
 
-    subgraph "Visualization"
-        GRAF[Grafana]
-        LOKI[Loki]
-        TEMPO[Tempo / Jaeger]
-        DATADOG[Datadog]
-    end
-
-    M --> PROM --> GRAF
-    L --> OTEL --> LOKI --> GRAF
-    T --> OTEL --> TEMPO --> GRAF
-    OTEL --> DATADOG
-    PROM --> DATADOG
+    APP --> CAMEL
+    CAMEL --> OTEL
+    OTEL --> DD
+    OTEL --> PROM
 ```
 
----
+The app exposes health endpoints and uses OTLP export for traces and metrics when enabled. The standard OpenTelemetry variables remain the integration point for the environment, not vendor-specific configuration.
 
 ## Metrics
 
-### Prometheus Endpoint
+### Metrics exported by Spring Boot and Micrometer
 
-The Internal Developer Platform exposes metrics at `/actuator/prometheus`:
-
-```bash
-curl http://localhost:8080/actuator/prometheus
-```
-
-### Key Metrics
-
-#### Application Metrics
-
-| Metric | Description |
-| -------- | ------------- |
-| `idp_entities_total` | Total entities by template |
-| `idp_entity_operations_total` | CRUD operations count |
-| `idp_webhook_invocations_total` | Webhook calls |
-| `idp_action_executions_total` | Self-service action runs |
-
-#### HTTP Metrics
-
-| Metric | Description |
-| -------- | ------------- |
-| `http_server_requests_seconds` | Request latency |
-| `http_server_requests_active` | Active requests |
-
-#### JVM Metrics
-
-| Metric | Description |
-| -------- | ------------- |
-| `jvm_memory_used_bytes` | Memory usage |
-| `jvm_gc_pause_seconds` | GC pause time |
-| `jvm_threads_live` | Thread count |
-
-#### Database Metrics
-
-| Metric | Description |
-| -------- | ------------- |
-| `hikaricp_connections_active` | Active DB connections |
-| `hikaricp_connections_pending` | Waiting connections |
-
-### Metrics Configuration
-
-```yaml
-management:
-  endpoints:
-    web:
-      exposure:
-        include: health,info,metrics,prometheus
-  metrics:
-    export:
-      prometheus:
-        enabled: true
-    distribution:
-      percentiles-histogram:
-        http.server.requests: true
-      percentiles:
-        http.server.requests: 0.5,0.95,0.99
-    tags:
-      application: idp-core
-      environment: ${ENVIRONMENT:dev}
-```
-
-### Prometheus scrape configuration
-
-```yaml title="prometheus.yml"
-scrape_configs:
-  - job_name: 'idp-core'
-    metrics_path: '/actuator/prometheus'
-    static_configs:
-      - targets: ['idp-core:8080']
-    scrape_interval: 15s
-```
-
-### Kubernetes ServiceMonitor
-
-```yaml title="servicemonitor.yaml"
-apiVersion: monitoring.coreos.com/v1
-kind: ServiceMonitor
-metadata:
-  name: idp-core
-  namespace: idp
-spec:
-  selector:
-    matchLabels:
-      app: idp-core
-  endpoints:
-    - port: http
-      path: /actuator/prometheus
-      interval: 30s
-```
-
----
-
-## Logging
-
-### Log Format
-
-#### Development (Human-readable)
-
-```text
-2024-01-15 10:30:45.123 INFO  [http-nio-8080-exec-1] c.d.i.a.EntityController - Creating entity: payment-service
-```
-
-#### Production (JSON)
-
-```json
-{
-  "timestamp": "2024-01-15T10:30:45.123Z",
-  "level": "INFO",
-  "logger": "c.d.i.a.EntityController",
-  "message": "Creating entity: payment-service",
-  "thread": "http-nio-8080-exec-1",
-  "traceId": "abc123def456",
-  "spanId": "789xyz"
-}
-```
-
-### Logging Configuration
-
-```yaml
-logging:
-  level:
-    root: INFO
-    com.decathlon.idp_core: INFO
-    org.springframework.web: WARN
-    org.hibernate: WARN
-
-  pattern:
-    # JSON for production
-    console: '{"timestamp":"%d{ISO8601}","level":"%level","logger":"%logger{36}","message":"%msg","thread":"%thread","traceId":"%X{traceId}","spanId":"%X{spanId}"}%n'
-```
-
-### Loki Integration
-
-Send logs to Loki via the OpenTelemetry Collector:
-
-```yaml title="otel-collector-config.yaml"
-receivers:
-  otlp:
-    protocols:
-      grpc:
-        endpoint: 0.0.0.0:4317
-
-exporters:
-  loki:
-    endpoint: http://loki:3100/loki/api/v1/push
-    labels:
-      attributes:
-        service.name: "service_name"
-        deployment.environment: "environment"
-
-service:
-  pipelines:
-    logs:
-      receivers: [otlp]
-      exporters: [loki]
-```
-
-### Log Levels
-
-| Level   | Usage                      |
-| ------- | -------------------------- |
-| `ERROR` | Errors requiring attention |
-| `WARN`  | Potential issues           |
-| `INFO`  | Key business events        |
-| `DEBUG` | Development debugging      |
-| `TRACE` | Detailed tracing           |
-
----
-
-## Distributed Tracing
-
-### OpenTelemetry Setup
+The application exposes the standard Micrometer metrics and OTLP export can be enabled through environment variables.
 
 ```yaml
 management:
   tracing:
-    enabled: true
     sampling:
-      probability: 1.0  # Sample all requests (use 0.1 for 10% in prod)
+      probability: ${OTEL_TRACES_SAMPLER_ARG:0.1}
+    export:
+      enabled: ${OTEL_TRACING_ENABLED:false}
 
-otel:
-  exporter:
-    otlp:
-      endpoint: http://otel-collector:4317
-  service:
-    name: idp-core
-  resource:
-    attributes:
-      deployment.environment: production
-      service.version: "1.0.0"
-```
-
-### Trace Context
-
-IDP-Core propagates trace context through:
-
-- HTTP headers (W3C Trace Context)
-- Kafka message headers
-- Webhook requests
-
-### Key Spans
-
-| Span                        | Description          |
-| --------------------------- | -------------------- |
-| `HTTP GET /api/v1/entities` | Incoming API request |
-| `EntityRepository.findById` | Database query       |
-| `WebhookService.invoke`     | Outgoing webhook     |
-| `KafkaProducer.send`        | Kafka message        |
-
-### Jaeger/Tempo Integration
-
-```yaml title="otel-collector-config.yaml"
-receivers:
   otlp:
-    protocols:
-      grpc:
-        endpoint: 0.0.0.0:4317
+    metrics:
+      export:
+        url: ${OTEL_EXPORTER_OTLP_METRICS_ENDPOINT:${OTEL_EXPORTER_OTLP_ENDPOINT:http://localhost:4318}/v1/metrics}
+        enabled: ${OTEL_METRICS_EXPORT_ENABLED:false}
+        transport: ${OTEL_EXPORTER_OTLP_METRICS_PROTOCOL:${OTEL_EXPORTER_OTLP_PROTOCOL:http/protobuf}}
 
-exporters:
-  otlp/tempo:
-    endpoint: http://tempo:4317
-    tls:
-      insecure: true
-
-service:
-  pipelines:
-    traces:
-      receivers: [otlp]
-      exporters: [otlp/tempo]
+  opentelemetry:
+    tracing:
+      export:
+        otlp:
+          endpoint: ${OTEL_EXPORTER_OTLP_TRACES_ENDPOINT:${OTEL_EXPORTER_OTLP_ENDPOINT:http://localhost:4318}/v1/traces}
+          transport: ${OTEL_EXPORTER_OTLP_TRACES_TRANSPORT:${OTEL_EXPORTER_OTLP_PROTOCOL:http}}
+    resource-attributes:
+      deployment.environment: ${OTEL_ENV:local}
+      service.namespace: ${OTEL_SERVICE_NAMESPACE:idp-core}
+      service.name: ${OTEL_SERVICE_NAME:internal-developer-platform}
 ```
 
----
+### Custom business metrics
 
-## Health Checks
+Business-level metrics are intentionally separate from Camel route telemetry. The application adds custom counters only for functional decisions that Camel does not expose as a reusable business signal.
 
-### Endpoints
+Examples:
 
-| Endpoint                     | Purpose         |
-| ---------------------------- | --------------- |
-| `/actuator/health`           | Overall health  |
-| `/actuator/health/liveness`  | Liveness probe  |
-| `/actuator/health/readiness` | Readiness probe |
+- `idp.webhook.security.requests.total{connector, security_type}`
+- `idp.webhook.security.result{connector, security_type, result}`
+- `idp.webhook.security.validation.errors.total{connector, security_type, reason}`
 
-### Health Configuration
+These metrics reflect the real security decision made by the application and should not duplicate the standard Camel `route.*` metrics.
 
-```yaml
-management:
-  endpoint:
-    health:
-      show-details: when_authorized
-      show-components: always
-      probes:
-        enabled: true
-  health:
-    db:
-      enabled: true
-    diskspace:
-      enabled: true
-      threshold: 100MB
-```
+## Logging
 
-### Response Example
+Logs remain useful for debugging and operational incidents, but they are not the primary analytics signal. The main operational signals are traces and metrics.
 
-```json
-{
-  "status": "UP",
-  "components": {
-    "db": {
-      "status": "UP",
-      "details": {
-        "database": "PostgreSQL",
-        "validationQuery": "isValid()"
-      }
-    },
-    "diskSpace": {
-      "status": "UP",
-      "details": {
-        "total": 107374182400,
-        "free": 85899345920,
-        "threshold": 104857600
-      }
-    },
-    "ping": {
-      "status": "UP"
-    }
-  }
-}
-```
+The application configuration keeps log filtering under `logging.level.*` and actuator health endpoints under `management.endpoint.health`.
 
----
+## Distributed tracing
 
-## Next Steps
+OpenTelemetry tracing is enabled through Spring Boot configuration. The application keeps the trace sampling rate and OTLP exporter configurable through environment variables.
 
-- **[Configuration](configuration.md)** - Observability settings
-- **[Kubernetes](kubernetes.md)** - Production monitoring
-- **[Docker](docker.md)** - Local observability setup
+### Standard environment variables
+
+| Variable | Description | Default |
+| --- | --- | --- |
+| `OTEL_TRACING_ENABLED` | Enables tracing export | `false` |
+| `OTEL_METRICS_EXPORT_ENABLED` | Enables OTLP metrics export | `false` |
+| `OTEL_TRACES_SAMPLER_ARG` | Trace sampling ratio | `0.1` |
+| `OTEL_EXPORTER_OTLP_ENDPOINT` | Base OTLP endpoint | `http://localhost:4318` |
+| `OTEL_EXPORTER_OTLP_TRACES_ENDPOINT` | Full traces endpoint | `<base>/v1/traces` |
+| `OTEL_EXPORTER_OTLP_METRICS_ENDPOINT` | Full metrics endpoint | `<base>/v1/metrics` |
+| `OTEL_EXPORTER_OTLP_PROTOCOL` | Generic OTLP protocol fallback | `http/protobuf` for metrics, `http` for traces |
+| `OTEL_EXPORTER_OTLP_TRACES_TRANSPORT` | Trace-specific transport override | `OTEL_EXPORTER_OTLP_PROTOCOL` or `http` |
+| `OTEL_EXPORTER_OTLP_METRICS_PROTOCOL` | Metrics-specific transport override | `OTEL_EXPORTER_OTLP_PROTOCOL` |
+| `OTEL_RESOURCE_ATTRIBUTES` | Resource metadata injected by the environment | - |
+
+The signal-specific variables win over the generic fallback, so local development and hosted deployments can both work without hard-coded vendor configuration.
+
+### Important trace attributes
+
+The application sets trace attributes for the webhook pipeline, including the connector identifier and the security decision.
+
+Examples:
+
+- `idp.webhook.identifier`
+- `idp.webhook.security.result`
+
+These attributes support trace correlation in Datadog APM and allow support teams to trace a request across route execution, security validation, and mapping.
+
+## Health checks
+
+The app exposes health endpoints used by Docker and Kubernetes.
+
+| Endpoint                     | Purpose              |
+|------------------------------|----------------------|
+| `/actuator/health`           | Overall health       |
+| `/actuator/health/liveness`  | Liveness probe       |
+| `/actuator/health/readiness` | Readiness probe      |
+
+## Next steps
+
+- **[Configuration](configuration.md)** - Environment and Spring Boot settings
+- **[Docker](docker.md)** - Docker deployment and OTLP examples
+- **[Kubernetes](kubernetes.md)** - Production deployment patterns
