@@ -14,10 +14,14 @@ import java.util.Objects;
 import java.util.zip.GZIPInputStream;
 import java.util.zip.ZipException;
 
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
+import com.decathlon.idp_core.infrastructure.adapters.ingestion.configuration.IngestionMetricConstants;
 import com.decathlon.idp_core.infrastructure.adapters.ingestion.exception.WebhookDecodingException;
+
+import io.opentelemetry.api.metrics.Meter;
 
 /// Processor responsible for decoding webhook payloads based on HTTP `Content-Encoding` headers.
 ///
@@ -36,20 +40,17 @@ public class DecodingProcessor {
 
   private static final int SANITIZED_HEADER_MAX_LENGTH = 128;
   private static final int DECOMPRESSION_BUFFER_SIZE = 8192;
-  // Maximum input payload size (before decompression) — aligns with
-  // PayloadValidationProcessor
-  // Prevents unbounded String→byte[] or byte[]→String conversions
   private static final long MAX_INPUT_PAYLOAD_BYTES = 10L * 1024 * 1024; // 10MB
 
   private final Map<String, PayloadDecoder> decoders;
-
-  // Max decompressed size — configurable via idp.ingestion.max-decompressed-bytes
-  // to prevent Zip Bomb attacks.
+  private final Meter meter;
   private final long maxDecompressedBytes;
 
   public DecodingProcessor(
-      @Value("${idp.ingestion.max-decompressed-bytes:10485760}") long maxDecompressedBytes) {
+      @Value("${idp.ingestion.max-decompressed-bytes:10485760}") long maxDecompressedBytes,
+      @Qualifier("decodingMeter") Meter meter) {
     this.maxDecompressedBytes = maxDecompressedBytes;
+    this.meter = meter;
     this.decoders = Map.of(CONTENT_ENCODING_IDENTITY, this::decodeIdentity, CONTENT_ENCODING_GZIP,
         this::decodeGzip);
   }
@@ -60,37 +61,79 @@ public class DecodingProcessor {
   public String decode(Object encodedPayload, Map<String, Object> headers) {
     String contentEncoding = extractContentEncodingHeader(headers);
     List<String> encodingChain = parseEncodingChain(contentEncoding);
-
-    if (encodingChain.isEmpty()) {
-      return payloadToString(encodedPayload);
-    }
-
-    // Reject unsupported encodings explicitly — silent pass-through risks silent
-    // data corruption.
-    List<String> unsupported = encodingChain.stream()
-        .filter(encoding -> !decoders.containsKey(encoding)).toList();
-    if (!unsupported.isEmpty()) {
-      throw new WebhookDecodingException(
-          "Unsupported Content-Encoding: '" + sanitizeHeaderValue(contentEncoding)
-              + "'. Supported encodings: " + String.join(", ", decoders.keySet()));
-    }
-
-    byte[] decodedPayload = toByteArray(encodedPayload);
-    if (decodedPayload.length == 0 && encodingChain.contains(CONTENT_ENCODING_GZIP)) {
-      throw new WebhookDecodingException("Empty payload cannot be decoded as gzip");
-    }
+    String connector = headers == null
+        ? "unknown"
+        : String.valueOf(headers.getOrDefault("connector", "unknown"));
 
     try {
-      for (int i = encodingChain.size() - 1; i >= 0; i--) {
-        decodedPayload = decoders.get(encodingChain.get(i)).decode(decodedPayload);
+      if (encodingChain.isEmpty()) {
+        String decoded = payloadToString(encodedPayload);
+        recordPayloadSizeMetric(connector, decoded.getBytes(StandardCharsets.UTF_8).length);
+        incrementDecodedMetric(connector, "identity");
+        return decoded;
       }
-      return new String(decodedPayload, StandardCharsets.UTF_8);
-    } catch (ZipException e) {
-      throw new WebhookDecodingException("Corrupted or invalid compressed gzip stream", e);
-    } catch (IOException e) {
-      throw new WebhookDecodingException(
-          "Failed to decompress payload for encoding: " + sanitizeHeaderValue(contentEncoding), e);
+
+      // Reject unsupported encodings explicitly — silent pass-through risks silent
+      // data corruption.
+      List<String> unsupported = encodingChain.stream()
+          .filter(encoding -> !decoders.containsKey(encoding)).toList();
+      if (!unsupported.isEmpty()) {
+        String reason = "unsupported_encoding";
+        incrementDecodeErrorMetric(connector, reason);
+        throw new WebhookDecodingException(
+            "Unsupported Content-Encoding: '" + sanitizeHeaderValue(contentEncoding)
+                + "'. Supported encodings: " + String.join(", ", decoders.keySet()));
+      }
+
+      byte[] decodedPayload = toByteArray(encodedPayload);
+      if (decodedPayload.length == 0 && encodingChain.contains(CONTENT_ENCODING_GZIP)) {
+        incrementDecodeErrorMetric(connector, "empty_gzip_payload");
+        throw new WebhookDecodingException("Empty payload cannot be decoded as gzip");
+      }
+
+      try {
+        for (int i = encodingChain.size() - 1; i >= 0; i--) {
+          decodedPayload = decoders.get(encodingChain.get(i)).decode(decodedPayload);
+        }
+        String result = new String(decodedPayload, StandardCharsets.UTF_8);
+        recordPayloadSizeMetric(connector, decodedPayload.length);
+        incrementDecodedMetric(connector, String.join(",", encodingChain));
+        return result;
+      } catch (ZipException e) {
+        incrementDecodeErrorMetric(connector, "corrupted_gzip_payload");
+        throw new WebhookDecodingException("Corrupted or invalid compressed gzip stream", e);
+      } catch (IOException e) {
+        incrementDecodeErrorMetric(connector, "decompression_failure");
+        throw new WebhookDecodingException(
+            "Failed to decompress payload for encoding: " + sanitizeHeaderValue(contentEncoding),
+            e);
+      }
+    } catch (RuntimeException exception) {
+      if (!(exception instanceof WebhookDecodingException)) {
+        incrementDecodeErrorMetric(connector, exception.getClass().getSimpleName());
+      }
+      throw exception;
     }
+  }
+
+  private void recordPayloadSizeMetric(String connector, long payloadSizeBytes) {
+    meter.histogramBuilder(IngestionMetricConstants.PAYLOAD_SIZE_BYTES).ofLongs().build()
+        .record(payloadSizeBytes, io.opentelemetry.api.common.Attributes
+            .of(io.opentelemetry.api.common.AttributeKey.stringKey("connector"), connector));
+  }
+
+  private void incrementDecodedMetric(String connector, String encoding) {
+    meter.counterBuilder(IngestionMetricConstants.PAYLOAD_DECODED_TOTAL).build().add(1,
+        io.opentelemetry.api.common.Attributes.of(
+            io.opentelemetry.api.common.AttributeKey.stringKey("connector"), connector,
+            io.opentelemetry.api.common.AttributeKey.stringKey("encoding"), encoding));
+  }
+
+  private void incrementDecodeErrorMetric(String connector, String reason) {
+    meter.counterBuilder(IngestionMetricConstants.PAYLOAD_DECODE_ERRORS_TOTAL).build().add(1,
+        io.opentelemetry.api.common.Attributes.of(
+            io.opentelemetry.api.common.AttributeKey.stringKey("connector"), connector,
+            io.opentelemetry.api.common.AttributeKey.stringKey("reason"), reason));
   }
 
   private String extractContentEncodingHeader(Map<String, Object> headers) {

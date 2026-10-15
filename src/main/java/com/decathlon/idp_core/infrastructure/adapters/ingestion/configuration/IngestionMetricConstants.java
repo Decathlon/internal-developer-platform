@@ -14,6 +14,10 @@ public final class IngestionMetricConstants {
   public static final String SECURITY_RESULT = "idp.webhook.security.result";
   public static final String SECURITY_VALIDATION_ERRORS_TOTAL = "idp.webhook.security.validation.errors.total";
 
+  public static final String PAYLOAD_DECODED_TOTAL = "idp.webhook.payload.decoded.total";
+  public static final String PAYLOAD_DECODE_ERRORS_TOTAL = "idp.webhook.payload.decode.errors.total";
+  public static final String PAYLOAD_SIZE_BYTES = "idp.webhook.payload.size.bytes";
+
   public static final String MAPPING_APPLIED_TOTAL = "idp.webhook.mapping.applied.total";
   public static final String MAPPING_FILTERED_TOTAL = "idp.webhook.mapping.filtered.total";
   public static final String MAPPING_RESULT = "idp.webhook.mapping.result";

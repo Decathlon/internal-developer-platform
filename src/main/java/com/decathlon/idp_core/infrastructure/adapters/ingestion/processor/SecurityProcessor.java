@@ -3,6 +3,7 @@ package com.decathlon.idp_core.infrastructure.adapters.ingestion.processor;
 import java.util.List;
 import java.util.Map;
 
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Component;
 
 import com.decathlon.idp_core.domain.exception.webhook.WebhookAuthenticationException;
@@ -12,9 +13,11 @@ import com.decathlon.idp_core.domain.model.inbound_connectors.webhook.WebhookSec
 import com.decathlon.idp_core.domain.port.WebhookSecurityStrategy;
 import com.decathlon.idp_core.infrastructure.adapters.ingestion.configuration.IngestionMetricConstants;
 import com.decathlon.idp_core.infrastructure.adapters.ingestion.exception.WebhookSecurityException;
+import com.decathlon.idp_core.infrastructure.adapters.ingestion.metrics.IngestionObservabilitySupport;
 import com.decathlon.idp_core.infrastructure.adapters.ingestion.security.WebhookRequestAuthenticator;
 
-import io.micrometer.core.instrument.MeterRegistry;
+import io.opentelemetry.api.common.Attributes;
+import io.opentelemetry.api.metrics.Meter;
 import io.opentelemetry.api.trace.Span;
 import lombok.extern.slf4j.Slf4j;
 
@@ -30,11 +33,12 @@ public class SecurityProcessor {
   private static final String RESULT_ERROR = "ERROR";
 
   private final List<WebhookSecurityStrategy> strategies;
-  private final MeterRegistry meterRegistry;
+  private final Meter meter;
 
-  public SecurityProcessor(List<WebhookSecurityStrategy> strategies, MeterRegistry meterRegistry) {
+  public SecurityProcessor(List<WebhookSecurityStrategy> strategies,
+      @Qualifier("securityMeter") Meter meter) {
     this.strategies = List.copyOf(strategies);
-    this.meterRegistry = meterRegistry;
+    this.meter = meter;
   }
 
   public void validate(Map<String, Object> headers, byte[] rawPayload,
@@ -45,9 +49,10 @@ public class SecurityProcessor {
         ? WebhookSecurityType.NONE.name()
         : security.type().name();
 
-    meterRegistry.counter(IngestionMetricConstants.SECURITY_REQUESTS_TOTAL, "connector",
-        webhookIdentifier, "security_type", securityType).increment();
-    Span.current().setAttribute(SPAN_ATTRIBUTE_WEBHOOK_IDENTIFIER, webhookIdentifier);
+    incrementCounter(IngestionMetricConstants.SECURITY_REQUESTS_TOTAL, "connector",
+        webhookIdentifier, "security_type", securityType);
+    IngestionObservabilitySupport.setSpanAttribute(Span.current(),
+        SPAN_ATTRIBUTE_WEBHOOK_IDENTIFIER, webhookIdentifier);
 
     if (security == null || security.type() == WebhookSecurityType.NONE) {
       recordSecurityResult(webhookIdentifier, securityType, RESULT_SUCCESS);
@@ -72,17 +77,21 @@ public class SecurityProcessor {
     } catch (RuntimeException exception) {
       String result = isSecurityRejected(exception) ? RESULT_REJECTED : RESULT_ERROR;
       recordSecurityResult(webhookIdentifier, securityType, result);
-      meterRegistry.counter(IngestionMetricConstants.SECURITY_VALIDATION_ERRORS_TOTAL, "connector",
-          webhookIdentifier, "security_type", securityType, "reason", classifyFailure(exception))
-          .increment();
+      incrementCounter(IngestionMetricConstants.SECURITY_VALIDATION_ERRORS_TOTAL, "connector",
+          webhookIdentifier, "security_type", securityType, "reason", classifyFailure(exception));
       throw exception;
     }
   }
 
   private void recordSecurityResult(String webhookIdentifier, String securityType, String result) {
-    meterRegistry.counter(IngestionMetricConstants.SECURITY_RESULT, "connector", webhookIdentifier,
-        "security_type", securityType, "result", result).increment();
-    Span.current().setAttribute(SPAN_ATTRIBUTE_SECURITY_RESULT, result);
+    incrementCounter(IngestionMetricConstants.SECURITY_RESULT, "connector", webhookIdentifier,
+        "security_type", securityType, "result", result);
+    IngestionObservabilitySupport.setSpanAttribute(Span.current(), SPAN_ATTRIBUTE_SECURITY_RESULT,
+        result);
+  }
+
+  private void incrementCounter(String metricName, String... attributes) {
+    IngestionObservabilitySupport.incrementCounter(meter, metricName, attributes);
   }
 
   private boolean isSecurityRejected(RuntimeException exception) {
@@ -94,5 +103,4 @@ public class SecurityProcessor {
     String reason = exception.getClass().getSimpleName();
     return reason.isBlank() ? "unknown" : reason;
   }
-
 }
