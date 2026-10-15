@@ -25,7 +25,6 @@ import com.decathlon.idp_core.infrastructure.adapters.api.dto.out.entity.EntityD
 import com.decathlon.idp_core.infrastructure.adapters.api.dto.out.entity.EntitySummaryDto;
 
 import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
 
 /// Adapter mapper for converting a recursive [EntityGraphNode] domain tree into
 /// the flat, unified [EntityDtoOut] representation expected by API clients.
@@ -48,7 +47,6 @@ import lombok.extern.slf4j.Slf4j;
 /// - Directional isolation is maintained: outbound traversal strictly ignores
 ///   `relationsAsTarget`, and inbound traversal strictly ignores `relations`,
 ///   preventing cross-branch entity leakage at shared convergence nodes.
-@Slf4j
 @Component
 @RequiredArgsConstructor
 public class EntityDtoOutFromEntityNodeMapper {

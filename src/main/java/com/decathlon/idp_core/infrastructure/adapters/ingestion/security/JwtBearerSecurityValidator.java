@@ -21,6 +21,9 @@ import com.decathlon.idp_core.domain.port.WebhookSecurityStrategy;
 import com.decathlon.idp_core.infrastructure.adapters.ingestion.exception.WebhookAuthForbiddenException;
 import com.decathlon.idp_core.infrastructure.adapters.ingestion.exception.WebhookAuthUnauthorizedException;
 
+import lombok.extern.slf4j.Slf4j;
+
+@Slf4j
 @Component
 public class JwtBearerSecurityValidator
     implements
@@ -37,8 +40,10 @@ public class JwtBearerSecurityValidator
   private static final String KEY_EXPECTED_AUDIENCE_CAMEL_CASE = "expectedAudience";
 
   private static final String BEARER_PREFIX = "Bearer ";
-  private static final String CLIENT_CLAIM_AZP = "azp";
-  private static final String CLIENT_CLAIM_EMAIL = "email";
+  private static final String CALLER_RESULT_ACCEPTED = "ACCEPTED";
+  private static final String CALLER_RESULT_REJECTED = "REJECTED";
+  private static final String CLAIM_EMAIL = "email";
+  private static final int MAX_LOGGED_CALLER_LENGTH = 128;
 
   private final WebhookJwtDecoderProvider jwtDecoderProvider;
   private final Set<String> allowedJwksHosts;
@@ -81,9 +86,9 @@ public class JwtBearerSecurityValidator
           "Invalid client_id_field for JWT_BEARER security: runtime environment references are not supported");
     }
 
-    if (!CLIENT_CLAIM_AZP.equals(clientIdField) && !CLIENT_CLAIM_EMAIL.equals(clientIdField)) {
+    if (!StringUtils.hasText(clientIdField)) {
       throw new WebhookSecurityConfigurationException(
-          "Invalid client_id_field for JWT_BEARER security: must be 'azp' (Client ID) or 'email' (Service Account)");
+          "Invalid client_id_field for JWT_BEARER security: must be a non-empty claim name");
     }
 
     String clientIdValues = WebhookSecurityConfigurationUtils.required(config,
@@ -137,18 +142,52 @@ public class JwtBearerSecurityValidator
 
     String actualCallerIdentity = jwt.getClaimAsString(clientIdField);
     if (!StringUtils.hasText(actualCallerIdentity)) {
-      throw new WebhookAuthForbiddenException("JWT missing required claim: " + clientIdField);
+      logCallerOutcome(clientIdField, null, CALLER_RESULT_REJECTED);
+      throw new WebhookAuthUnauthorizedException("JWT missing required claim: " + clientIdField);
     }
 
     Set<String> allowedIdentities = parseAllowedClientIdValues(clientIdValues);
     if (!allowedIdentities.contains(actualCallerIdentity)) {
+      logCallerOutcome(clientIdField, actualCallerIdentity, CALLER_RESULT_REJECTED);
       throw new WebhookAuthForbiddenException(
           "JWT client or service account identifier was rejected");
     }
 
     if (StringUtils.hasText(optionalExpectedAudience)) {
-      validateAudienceClaim(jwt, optionalExpectedAudience);
+      try {
+        validateAudienceClaim(jwt, optionalExpectedAudience);
+      } catch (WebhookAuthForbiddenException exception) {
+        logCallerOutcome(clientIdField, actualCallerIdentity, CALLER_RESULT_REJECTED);
+        throw exception;
+      }
     }
+
+    logCallerOutcome(clientIdField, actualCallerIdentity, CALLER_RESULT_ACCEPTED);
+  }
+
+  /// Logs the caller identity and the validation outcome. The token itself is
+  /// never logged. The caller value is omitted when the identifying claim is
+  /// `email`, because an email address is personal data.
+  private void logCallerOutcome(String claimName, String caller, String result) {
+    String loggedCaller = resolveLoggedCaller(claimName, caller);
+    if (CALLER_RESULT_ACCEPTED.equals(result)) {
+      log.info("webhook_jwt_caller claim={} caller={} result={}", claimName, loggedCaller, result);
+    } else {
+      log.warn("webhook_jwt_caller claim={} caller={} result={}", claimName, loggedCaller, result);
+    }
+  }
+
+  private String resolveLoggedCaller(String claimName, String caller) {
+    if (caller == null) {
+      return "<missing>";
+    }
+    if (CLAIM_EMAIL.equalsIgnoreCase(claimName)) {
+      return "<redacted>";
+    }
+    String sanitized = caller.replaceAll("\\p{Cntrl}", "_");
+    return sanitized.length() > MAX_LOGGED_CALLER_LENGTH
+        ? sanitized.substring(0, MAX_LOGGED_CALLER_LENGTH)
+        : sanitized;
   }
 
   /// Validates the jwks_uri to prevent SSRF attacks.
@@ -220,8 +259,8 @@ public class JwtBearerSecurityValidator
     } catch (WebhookSecurityConfigurationException _) {
       throw new WebhookSecurityConfigurationException(
           "Missing required JWT_BEARER config key. Expected one of: client_id_field, clientIdField. "
-              + "Allowed values: 'azp' (Client ID) or 'email' (Service Account). "
-              + "Example: \"client_id_field\": \"email\"");
+              + "Value must be a non-empty JWT claim name (for example 'client_id', 'azp', 'email'). "
+              + "Example: \"client_id_field\": \"client_id\"");
     }
   }
 
