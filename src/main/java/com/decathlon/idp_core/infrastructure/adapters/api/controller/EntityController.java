@@ -89,6 +89,7 @@ import com.decathlon.idp_core.domain.service.entity.EntityService;
 import com.decathlon.idp_core.domain.service.entity_graph.EntityGraphService;
 import com.decathlon.idp_core.domain.service.filter.EntityFilterDslParser;
 import com.decathlon.idp_core.domain.service.search.SearchFilterParser;
+import com.decathlon.idp_core.infrastructure.adapters.api.auth.AuthorizedResource;
 import com.decathlon.idp_core.infrastructure.adapters.api.configuration.SwaggerConfiguration.EntityPageResponse;
 import com.decathlon.idp_core.infrastructure.adapters.api.dto.in.EntityCreateDtoIn;
 import com.decathlon.idp_core.infrastructure.adapters.api.dto.in.EntityPatchDtoIn;
@@ -119,6 +120,7 @@ import lombok.RequiredArgsConstructor;
 /// - Provides paginated responses for efficient data transfer
 /// - Maps domain exceptions to appropriate HTTP status codes
 @RestController
+@AuthorizedResource("entity")
 @RequestMapping("/api/v1/entities")
 @Tag(name = "Entities Management", description = "Operations related to entity management")
 @Validated
@@ -372,6 +374,7 @@ public class EntityController {
   @ApiResponse(responseCode = BAD_REQUEST_CODE, description = RESPONSE_INVALID_SEARCH_QUERY, content = {
       @Content(schema = @Schema(implementation = ErrorResponse.class))})
   @PostMapping("/search")
+  @AuthorizedResource(value = "entity_search", readOnly = true)
   @ResponseStatus(OK)
   public Page<EntityDtoOut> searchEntities(@RequestBody EntitySearchRequestDtoIn searchRequest) {
     RawSearchFilterNode rawFilter = searchFilterMapper.toRaw(searchRequest.filter());

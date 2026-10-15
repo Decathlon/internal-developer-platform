@@ -158,19 +158,15 @@ public class PrincipalControllerTest extends AbstractIntegrationTest {
   }
 
   @Nested
-  @DisplayName("Security Role Assignment")
-  class SecurityRoleAssignmentTests {
+  @DisplayName("Global read access")
+  class GlobalReadAccessTests {
 
     @Test
-    @DisplayName("Should allow access with baseline role assignment")
-    @WithMockUser(username = "baseline-role-user")
-    void baselineRole_allowsAccess() throws Exception {
-      // Given: User with baseline role (assigned via JwtAuthenticationConverter)
-
-      // When: Access protected endpoint
-      mockMvc.perform(get(PRINCIPAL_ME_PATH).accept(APPLICATION_JSON))
-          // Then: Access granted (baseline role * provides access)
-          .andExpect(status().isOk()).andExpect(jsonPath("$.identifier", is("baseline-role-user")));
+    @DisplayName("Should allow a standard human to read their principal")
+    @WithMockUser(username = "standard-human-reader")
+    void standardHuman_canReadPrincipal() throws Exception {
+      mockMvc.perform(get(PRINCIPAL_ME_PATH).accept(APPLICATION_JSON)).andExpect(status().isOk())
+          .andExpect(jsonPath("$.identifier", is("standard-human-reader")));
     }
   }
 }

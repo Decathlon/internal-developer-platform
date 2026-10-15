@@ -6,7 +6,6 @@ import org.springframework.boot.context.properties.EnableConfigurationProperties
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
-import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationConverter;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
@@ -42,25 +41,18 @@ import com.decathlon.idp_core.infrastructure.adapters.api.auth.JitProvisioningFi
 /// @see JitProvisioningFilter
 @Configuration
 @EnableWebSecurity
-@EnableConfigurationProperties({CorsProperties.class, SecurityRoleProperties.class,
-    AuthenticationProperties.class})
+@EnableConfigurationProperties({CorsProperties.class, AuthenticationProperties.class})
 public class SecurityConfiguration {
 
   private final CorsProperties corsProperties;
-  private final SecurityRoleProperties securityRoleProperties;
 
-  public SecurityConfiguration(CorsProperties corsProperties,
-      SecurityRoleProperties securityRoleProperties) {
+  public SecurityConfiguration(CorsProperties corsProperties) {
     this.corsProperties = corsProperties;
-    this.securityRoleProperties = securityRoleProperties;
   }
 
   @Bean
   public JwtAuthenticationConverter jwtAuthenticationConverter() {
-    JwtAuthenticationConverter converter = new JwtAuthenticationConverter();
-    converter.setJwtGrantedAuthoritiesConverter(
-        jwt -> List.of(new SimpleGrantedAuthority(securityRoleProperties.baselineRole())));
-    return converter;
+    return new JwtAuthenticationConverter();
   }
 
   @Bean

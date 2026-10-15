@@ -1,13 +1,22 @@
 package com.decathlon.idp_core.infrastructure.adapters.api.controller;
 
-import static com.decathlon.idp_core.domain.constant.ValidationMessages.*;
+import static com.decathlon.idp_core.domain.constant.ValidationMessages.ENTITY_DYNAMIC_MAPPING_TEMPLATE_IDENTIFIER_MANDATORY;
 import static org.hamcrest.Matchers.containsString;
 import static org.springframework.http.MediaType.APPLICATION_JSON;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.jwt;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-import org.junit.jupiter.api.*;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.ClassOrderer;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Nested;
+import org.junit.jupiter.api.Order;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestClassOrder;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.context.jdbc.Sql;
@@ -24,15 +33,14 @@ import lombok.extern.slf4j.Slf4j;
 /// for all CRUD operations on entity dynamic mappings.
 @DisplayName("EntityDynamicMappingController Integration Tests")
 @TestClassOrder(ClassOrderer.OrderAnnotation.class)
-@Sql(scripts = {"/db/test/R__1_Insert_test_data.sql",
-    "/db/test/R__4_insert_webhook_test_data.sql"}, executionPhase = Sql.ExecutionPhase.BEFORE_TEST_METHOD)
+@Sql(scripts = {"/db/test/R__1_Insert_test_data.sql", "/db/test/R__4_insert_webhook_test_data.sql",
+    "/db/test/R__6_insert_principal_user_for_test.sql"}, executionPhase = Sql.ExecutionPhase.BEFORE_TEST_METHOD)
 @Slf4j
 class EntityDynamicMappingControllerTest extends AbstractIntegrationTest {
 
+  private static final String MAPPING_PATH = "/api/v1/entity_dynamic_mappings";
   @Autowired
   private MockMvc mockMvc;
-
-  private static final String MAPPING_PATH = "/api/v1/entity_dynamic_mappings";
 
   /// Builds a valid entity dynamic mapping creation payload.
   private String buildCreatePayload(String mappingIdentifier) {
@@ -143,6 +151,35 @@ class EntityDynamicMappingControllerTest extends AbstractIntegrationTest {
   @DisplayName("POST /api/v1/entity-dynamic-mappings - Create mapping")
   @Order(2)
   class PostMappingTests {
+
+    @Test
+    @DisplayName("Should forbid service accounts from creating principal-targeting mappings")
+    void postPrincipalTargetMapping_forbiddenForServiceAccount() throws Exception {
+      String serviceIdentifier = "mapping-service-" + java.util.UUID.randomUUID();
+      String payload = """
+          {
+            "identifier": "protected-principal-mapping",
+            "entity_template_identifier": "principal",
+            "filter": ".action == \\"pushed\\"",
+            "action": "UPDATE_ENTITY",
+            "name": "Protected principal mapping",
+            "entity": {
+              "identifier": ".user.id",
+              "name": ".user.name",
+              "properties": {"is_admin": "true"},
+              "relations": []
+            }
+          }
+          """;
+
+      mockMvc
+          .perform(MockMvcRequestBuilders.post(MAPPING_PATH)
+              .with(jwt().jwt(token -> token.claim("sub", serviceIdentifier)
+                  .claim("client_id", serviceIdentifier).claim("token_type", "m2m")))
+              .contentType(APPLICATION_JSON).accept(APPLICATION_JSON).with(csrf()).content(payload))
+          .andExpect(status().isForbidden()).andExpect(jsonPath("$.error").value("FORBIDDEN"))
+          .andExpect(jsonPath("$.error_description").exists());
+    }
 
     @Test
     @DisplayName("Should return 401 without authentication")
@@ -815,11 +852,11 @@ class EntityDynamicMappingControllerTest extends AbstractIntegrationTest {
                 "relations": [
                   {
                     "name": "apim-api-consumed_by-component",
-                    "target_entity_identifiers": [".relations.\\\"apim-api-consumed_by-component\\\""]
+                    "target_entity_identifiers": [".relations.\\"apim-api-consumed_by-component\\""]
                   },
                   {
                     "name": "apim-api-provided_by-component",
-                    "target_entity_identifiers": [".relations.\\\"apim-api-provided_by-component\\\""]
+                    "target_entity_identifiers": [".relations.\\"apim-api-provided_by-component\\""]
                   }
                 ]
               }
@@ -1353,17 +1390,17 @@ class EntityDynamicMappingControllerTest extends AbstractIntegrationTest {
             "mapping": {
               "identifier": "runtime-expression-error-test",
               "entity_template_identifier": "microservice",
-              "filter": ".action == \\\"pushed\\\"",
+              "filter": ".action == \\"pushed\\"",
               "action": "UPDATE_ENTITY",
               "name": "runtime expression error test",
               "description": "test",
               "entity": {
-                "identifier": "error(\\\"forced dry-run failure\\\")",
+                "identifier": "error(\\"forced dry-run failure\\")",
                 "name": ".repository.name",
                 "properties": {
                   "applicationName": ".repository.name",
                   "ownerEmail": ".sender.email",
-                  "environment": "\\\"DEV\\\"",
+                  "environment": "\\"DEV\\"",
                   "version": ".ref",
                   "port": "8080",
                   "programmingLanguage": ".repository.language"
@@ -1446,7 +1483,7 @@ class EntityDynamicMappingControllerTest extends AbstractIntegrationTest {
             "mapping": {
               "identifier": "github-commits-dry-run",
               "entity_template_identifier": "microservice",
-              "filter": ".action == \\\"pushed\\\"",
+              "filter": ".action == \\"pushed\\"",
               "action": "UPDATE_ENTITY",
               "name": "GitHub multi-commit dry-run",
               "description": "Generation d'une liste d'entites a partir des commits",
@@ -1456,10 +1493,10 @@ class EntityDynamicMappingControllerTest extends AbstractIntegrationTest {
                 "properties": {
                   "applicationName": ".repository.name",
                   "ownerEmail": ".email",
-                  "port": "\\\"8080\\\"",
+                  "port": "\\"8080\\"",
                   "programmingLanguage": ".repository.language",
-                  "version": "\\\"1.0.0\\\"",
-                  "environment": "\\\"DEV\\\""
+                  "version": "\\"1.0.0\\"",
+                  "environment": "\\"DEV\\""
                 },
                 "relations": []
               }

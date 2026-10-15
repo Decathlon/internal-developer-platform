@@ -20,6 +20,7 @@ import com.decathlon.idp_core.domain.exception.principal.PrincipalNotFoundExcept
 import com.decathlon.idp_core.domain.model.entity.Entity;
 import com.decathlon.idp_core.domain.model.principal.PrincipalInfo;
 import com.decathlon.idp_core.domain.service.principal.PrincipalProvisioningService;
+import com.decathlon.idp_core.infrastructure.adapters.api.auth.AuthorizedResource;
 import com.decathlon.idp_core.infrastructure.adapters.api.dto.out.entity.EntityDtoOut;
 import com.decathlon.idp_core.infrastructure.adapters.api.mapper.entity.EntityDtoOutMapper;
 import com.decathlon.idp_core.infrastructure.adapters.api.principal.PrincipalExtractor;
@@ -43,6 +44,7 @@ import lombok.RequiredArgsConstructor;
 /// **Design rationale:** Separates principal self-service from general entity
 /// management. Uses dedicated `/principals/me` path to clearly signal intent.
 @RestController
+@AuthorizedResource("principal")
 @RequestMapping("/api/v1/entities/principals")
 @RequiredArgsConstructor
 @Tag(name = "Principals", description = "Principal identity and profile management")

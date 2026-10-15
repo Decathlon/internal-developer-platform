@@ -21,37 +21,28 @@ import com.decathlon.idp_core.infrastructure.adapters.api.principal.PrincipalExt
  * <li>Clear documentation of IdP-specific token claim expectations</li>
  * </ul>
  *
- * <h2>Design rationale</h2> Follows the same pattern as {@code CorsProperties}
- * and {@code SecurityRoleProperties}. Configuration is externalized to
+ * <h2>Design rationale</h2> Configuration is externalized to
  * {@code application.yml} for easy environment customization.
  *
- * <h2>Claim Mapping Strategy</h2> Different IdPs use different JWT claim names
- * for the same semantic meaning. This configuration allows mapping IdP-specific
- * claim names to standardized extraction logic.
+ * <h2>Principal Identifier</h2> The configured claim supplies the stable
+ * identifier for human principals. Service accounts continue to use their
+ * client identifier.
  * <p>
- * Examples:
+ * <h2>Service Account Detection</h2> Service accounts (M2M tokens) require one
+ * configured definitive claim:
  * <ul>
- * <li>Auth0: {@code preferred_username} (username) vs. {@code sub} (unique
- * ID)</li>
- * <li>Azure AD: {@code unique_name} vs. {@code oid}</li>
- * <li>Keycloak: {@code preferred_username} vs. {@code sub}</li>
+ * <li>{@code token_type=m2m}</li>
+ * <li>{@code account_type=service}</li>
  * </ul>
- *
- * <h2>Service Account Detection</h2> Service accounts (M2M tokens) can be
- * identified in multiple ways depending on the IdP:
- * <ul>
- * <li><strong>Strict Mode (Recommended):</strong> Single definitive claim
- * (e.g., {@code token_type=m2m}, {@code client_credentials})</li>
- * <li><strong>Legacy Mode:</strong> Multiple fallback claims (for backwards
- * compatibility with existing deployments)</li>
- * </ul>
+ * Legacy detection properties remain bindable for configuration compatibility
+ * but do not classify a token as a service account.
  *
  * @see SecurityConfiguration
  * @see PrincipalExtractor
  */
 @ConfigurationProperties(prefix = "app.security.authentication")
 public record AuthenticationProperties(
-    // Maps standard claim names to the names used by the configured identity
+    // Maps optional standard claims to the names used by the configured identity
     // provider.
     Map<String, String> userClaimMappings,
 
@@ -59,23 +50,34 @@ public record AuthenticationProperties(
     ServiceAccountDetection serviceAccountDetection,
 
     // Public paths excluded from JIT provisioning.
-    List<String> jitProvisioningExcludedPaths) {
+    List<String> jitProvisioningExcludedPaths,
+
+    // Claim containing the stable identifier for a human principal; defaults to
+    // "sub".
+    String principalIdentifierClaim) {
+
+  public AuthenticationProperties {
+    principalIdentifierClaim = principalIdentifierClaim == null
+        || principalIdentifierClaim.isBlank() ? "sub" : principalIdentifierClaim.trim();
+  }
 
   // Configuration used to identify service accounts.
   public record ServiceAccountDetection(
       // Enables or disables service account detection.
       boolean enabled,
 
-      // "strict" checks one claim; "legacy" checks the configured fallbacks.
+      // Retained for configuration compatibility; detection always requires the
+      // definitive claim.
       String mode,
 
-      // Claim checked in strict mode.
+      // Claim required to identify a service account.
       String definitiveClaimName,
 
-      // Value that identifies a service account in strict mode.
+      // Value that identifies a service account.
       String definitiveClaimValue,
 
-      // Claims checked as fallbacks in legacy mode.
+      // Retained for configuration compatibility; fallback claims do not classify
+      // service accounts.
       List<String> legacyFallbackClaims) {
   }
 }

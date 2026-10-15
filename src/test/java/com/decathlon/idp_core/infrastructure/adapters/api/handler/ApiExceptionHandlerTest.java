@@ -1,6 +1,8 @@
 package com.decathlon.idp_core.infrastructure.adapters.api.handler;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -26,6 +28,7 @@ import org.springframework.validation.BeanPropertyBindingResult;
 import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 
+import com.decathlon.idp_core.domain.exception.authorization.PrincipalNotAuthorizedException;
 import com.decathlon.idp_core.domain.exception.entity.EntityAlreadyExistsException;
 import com.decathlon.idp_core.domain.exception.entity.EntityValidationException;
 import com.decathlon.idp_core.domain.exception.entity_dynamic_mapping.EntityDynamicMappingConfigurationException;
@@ -35,6 +38,7 @@ import com.decathlon.idp_core.domain.exception.entity_template.EntityTemplateNot
 import com.decathlon.idp_core.domain.exception.entity_template.PropertyNameNotFoundEntityTemplatePropertiesException;
 import com.decathlon.idp_core.domain.exception.entity_template.RelationNameNotFoundEntityTemplateRelationsException;
 import com.decathlon.idp_core.domain.exception.webhook.WebhookSecurityConfigurationException;
+import com.decathlon.idp_core.infrastructure.adapters.api.exception.MissingPrincipalIdentifierException;
 import com.decathlon.idp_core.infrastructure.adapters.common.model.ErrorResponse;
 
 /// Comprehensive unit tests for [ApiExceptionHandler].
@@ -58,6 +62,30 @@ class ApiExceptionHandlerTest {
   @Nested
   @DisplayName("Domain Exception Handling")
   class DomainExceptionTests {
+
+    @Test
+    void shouldHandlePrincipalNotAuthorizedExceptionWith403Status() {
+      var exception = new PrincipalNotAuthorizedException("platform-user");
+
+      ResponseEntity<ErrorResponse> response = exceptionHandler
+          .handlePrincipalNotAuthorizedException(exception);
+
+      assertEquals(HttpStatus.FORBIDDEN, response.getStatusCode());
+      assertEquals(HttpStatus.FORBIDDEN.name(), response.getBody().getError());
+      assertEquals(exception.getMessage(), response.getBody().getErrorDescription());
+    }
+
+    @Test
+    void shouldHandleMissingPrincipalIdentifierAsUnauthorized() {
+      var exception = new MissingPrincipalIdentifierException("id");
+
+      ResponseEntity<ErrorResponse> response = exceptionHandler
+          .handleMissingPrincipalIdentifierException(exception);
+
+      assertEquals(HttpStatus.UNAUTHORIZED, response.getStatusCode());
+      assertEquals(HttpStatus.UNAUTHORIZED.name(), response.getBody().getError());
+      assertEquals(exception.getMessage(), response.getBody().getErrorDescription());
+    }
 
     /// Tests the handling of [EntityTemplateNotFoundException] by the
     /// [ApiExceptionHandler].
@@ -159,6 +187,98 @@ class ApiExceptionHandlerTest {
       assertNotNull(body);
       assertEquals(HttpStatus.BAD_REQUEST.name(), body.getError());
       assertEquals(exception.getMessage(), body.getErrorDescription());
+    }
+
+    /// Tests the handling of [ConstraintViolationException] with multiple
+    /// validation violations.
+    ///
+    /// **This test verifies that:**
+    /// - ConstraintViolationException with multiple violations is properly handled
+    /// - HTTP 400 Bad Request status is returned
+    /// - All violation messages are concatenated with comma separation
+    /// - Error response contains all validation error messages
+    @Test
+    @DisplayName("Should handle ConstraintViolationException with multiple violations")
+    void shouldHandleConstraintViolationExceptionMultipleViolations() {
+      // Given
+      ConstraintViolation<Object> violation1 = createMockConstraintViolation(
+          "Field1 must not be null");
+      ConstraintViolation<Object> violation2 = createMockConstraintViolation(
+          "Field2 must not be blank");
+      Set<ConstraintViolation<Object>> violations = Set.of(violation1, violation2);
+      ConstraintViolationException exception = new ConstraintViolationException("Validation failed",
+          violations);
+
+      // When
+      ResponseEntity<ErrorResponse> response = exceptionHandler
+          .handleConstraintViolationException(exception);
+
+      // Then
+      assertNotNull(response);
+      assertEquals(HttpStatus.BAD_REQUEST, response.getStatusCode());
+      ErrorResponse body = response.getBody();
+      assertNotNull(body);
+      assertEquals(HttpStatus.BAD_REQUEST.name(), body.getError());
+
+      String errorDescription = body.getErrorDescription();
+      assertTrue(errorDescription.contains("Field1 must not be null"));
+      assertTrue(errorDescription.contains("Field2 must not be blank"));
+      assertTrue(errorDescription.contains(", "));
+    }
+
+    /// Tests the handling of [MethodArgumentNotValidException] with field
+    /// validation errors.
+    ///
+    /// **This test verifies that:**
+    /// - MethodArgumentNotValidException is properly caught and handled
+    /// - HTTP 400 Bad Request status is returned
+    /// - Field error messages from binding result are extracted and concatenated
+    /// - All field validation errors are included in the response with comma
+    /// separation
+    ///
+    /// @throws Exception if reflection fails during test setup
+    @Test
+    @DisplayName("Should handle MethodArgumentNotValidException with field errors")
+    void shouldHandleMethodArgumentNotValidException() throws Exception {
+      // Given
+      Object target = new Object();
+      BeanPropertyBindingResult bindingResult = new BeanPropertyBindingResult(target, "testObject");
+      bindingResult.addError(new FieldError("testObject", "field1", "Field1 is required"));
+      bindingResult.addError(new FieldError("testObject", "field2", "Field2 must be valid"));
+
+      // Create a proper MethodParameter mock with required methods
+      MethodParameter methodParameter = mock(MethodParameter.class);
+      when(methodParameter.getExecutable()).thenReturn(this.getClass().getMethod("testMethod"));
+
+      MethodArgumentNotValidException exception = new MethodArgumentNotValidException(
+          methodParameter, bindingResult);
+
+      // When
+      ResponseEntity<ErrorResponse> response = exceptionHandler
+          .handleMethodArgumentNotValidException(exception);
+
+      // Then
+      assertNotNull(response);
+      assertEquals(HttpStatus.BAD_REQUEST, response.getStatusCode());
+      ErrorResponse body = response.getBody();
+      assertNotNull(body);
+      assertEquals(HttpStatus.BAD_REQUEST.name(), body.getError());
+      String errorDescription = body.getErrorDescription();
+      assertTrue(errorDescription.contains("Field1 is required"));
+      assertTrue(errorDescription.contains("Field2 must be valid"));
+      assertTrue(errorDescription.contains(", "));
+    }
+
+    // Helper method for mocking
+    public void testMethod() {
+      // Empty method for testing purposes
+    }
+
+    @SuppressWarnings("unchecked")
+    private ConstraintViolation<Object> createMockConstraintViolation(String message) {
+      ConstraintViolation<Object> violation = mock(ConstraintViolation.class);
+      when(violation.getMessage()).thenReturn(message);
+      return violation;
     }
 
     @Nested
@@ -381,98 +501,6 @@ class ApiExceptionHandlerTest {
         when(violation.getMessage()).thenReturn(message);
         return violation;
       }
-    }
-
-    /// Tests the handling of [ConstraintViolationException] with multiple
-    /// validation violations.
-    ///
-    /// **This test verifies that:**
-    /// - ConstraintViolationException with multiple violations is properly handled
-    /// - HTTP 400 Bad Request status is returned
-    /// - All violation messages are concatenated with comma separation
-    /// - Error response contains all validation error messages
-    @Test
-    @DisplayName("Should handle ConstraintViolationException with multiple violations")
-    void shouldHandleConstraintViolationExceptionMultipleViolations() {
-      // Given
-      ConstraintViolation<Object> violation1 = createMockConstraintViolation(
-          "Field1 must not be null");
-      ConstraintViolation<Object> violation2 = createMockConstraintViolation(
-          "Field2 must not be blank");
-      Set<ConstraintViolation<Object>> violations = Set.of(violation1, violation2);
-      ConstraintViolationException exception = new ConstraintViolationException("Validation failed",
-          violations);
-
-      // When
-      ResponseEntity<ErrorResponse> response = exceptionHandler
-          .handleConstraintViolationException(exception);
-
-      // Then
-      assertNotNull(response);
-      assertEquals(HttpStatus.BAD_REQUEST, response.getStatusCode());
-      ErrorResponse body = response.getBody();
-      assertNotNull(body);
-      assertEquals(HttpStatus.BAD_REQUEST.name(), body.getError());
-
-      String errorDescription = body.getErrorDescription();
-      assertTrue(errorDescription.contains("Field1 must not be null"));
-      assertTrue(errorDescription.contains("Field2 must not be blank"));
-      assertTrue(errorDescription.contains(", "));
-    }
-
-    /// Tests the handling of [MethodArgumentNotValidException] with field
-    /// validation errors.
-    ///
-    /// **This test verifies that:**
-    /// - MethodArgumentNotValidException is properly caught and handled
-    /// - HTTP 400 Bad Request status is returned
-    /// - Field error messages from binding result are extracted and concatenated
-    /// - All field validation errors are included in the response with comma
-    /// separation
-    ///
-    /// @throws Exception if reflection fails during test setup
-    @Test
-    @DisplayName("Should handle MethodArgumentNotValidException with field errors")
-    void shouldHandleMethodArgumentNotValidException() throws Exception {
-      // Given
-      Object target = new Object();
-      BeanPropertyBindingResult bindingResult = new BeanPropertyBindingResult(target, "testObject");
-      bindingResult.addError(new FieldError("testObject", "field1", "Field1 is required"));
-      bindingResult.addError(new FieldError("testObject", "field2", "Field2 must be valid"));
-
-      // Create a proper MethodParameter mock with required methods
-      MethodParameter methodParameter = mock(MethodParameter.class);
-      when(methodParameter.getExecutable()).thenReturn(this.getClass().getMethod("testMethod"));
-
-      MethodArgumentNotValidException exception = new MethodArgumentNotValidException(
-          methodParameter, bindingResult);
-
-      // When
-      ResponseEntity<ErrorResponse> response = exceptionHandler
-          .handleMethodArgumentNotValidException(exception);
-
-      // Then
-      assertNotNull(response);
-      assertEquals(HttpStatus.BAD_REQUEST, response.getStatusCode());
-      ErrorResponse body = response.getBody();
-      assertNotNull(body);
-      assertEquals(HttpStatus.BAD_REQUEST.name(), body.getError());
-      String errorDescription = body.getErrorDescription();
-      assertTrue(errorDescription.contains("Field1 is required"));
-      assertTrue(errorDescription.contains("Field2 must be valid"));
-      assertTrue(errorDescription.contains(", "));
-    }
-
-    // Helper method for mocking
-    public void testMethod() {
-      // Empty method for testing purposes
-    }
-
-    @SuppressWarnings("unchecked")
-    private ConstraintViolation<Object> createMockConstraintViolation(String message) {
-      ConstraintViolation<Object> violation = mock(ConstraintViolation.class);
-      when(violation.getMessage()).thenReturn(message);
-      return violation;
     }
   }
 

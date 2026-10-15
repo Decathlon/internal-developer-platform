@@ -36,6 +36,8 @@ import lombok.RequiredArgsConstructor;
 public class PrincipalProvisioningService {
 
   private static final String PRINCIPAL_TEMPLATE_IDENTIFIER = "principal";
+  private static final String KIND_PROPERTY = "kind";
+  private static final String IS_ADMIN_PROPERTY = "is_admin";
 
   private final EntityRepositoryPort entityRepository;
 
@@ -112,10 +114,14 @@ public class PrincipalProvisioningService {
   /// @return list of properties for the principal entity
   private List<Property> buildProperties(PrincipalInfo principalInfo) {
     List<Property> properties = new ArrayList<>();
-    properties.add(new Property(null, "kind", principalInfo.kind().name()));
+    properties.add(new Property(null, KIND_PROPERTY, principalInfo.kind().name()));
+    // JIT must not grant catalog-admin privileges from identity-provider
+    // attributes.
+    properties.add(new Property(null, IS_ADMIN_PROPERTY, "false"));
 
     principalInfo.attributes().forEach((key, value) -> {
-      if (value != null && !value.isBlank()) {
+      if (!KIND_PROPERTY.equalsIgnoreCase(key) && !IS_ADMIN_PROPERTY.equalsIgnoreCase(key)
+          && value != null && !value.isBlank()) {
         properties.add(new Property(null, key, value));
       }
     });

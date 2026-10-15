@@ -5,6 +5,7 @@ import static org.springframework.security.config.Customizer.withDefaults;
 import java.io.IOException;
 import java.time.Instant;
 import java.util.Collection;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -31,7 +32,9 @@ import org.springframework.security.web.authentication.AnonymousAuthenticationFi
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import com.decathlon.idp_core.domain.exception.mock.MockSecurityConfigurationException;
+import com.decathlon.idp_core.infrastructure.adapters.api.auth.GlobalAuthorizationFilter;
 import com.decathlon.idp_core.infrastructure.adapters.api.auth.JitProvisioningFilter;
+import com.decathlon.idp_core.infrastructure.adapters.api.configuration.AuthenticationProperties;
 
 /// Local mock security configuration that mirrors OAuth2/JWT behavior for local development.
 ///
@@ -50,10 +53,17 @@ import com.decathlon.idp_core.infrastructure.adapters.api.auth.JitProvisioningFi
 @ConditionalOnProperty(prefix = "app.security.authentication.mock", name = "enabled", havingValue = "true")
 public class MockFilterChainConfig {
 
+  public static final String LOCAL_DEVELOPER = "local-developer";
   private final JitProvisioningFilter jitProvisioningFilter;
+  private final GlobalAuthorizationFilter globalAuthorizationFilter;
+  private final AuthenticationProperties authenticationProperties;
 
-  public MockFilterChainConfig(JitProvisioningFilter jitProvisioningFilter) {
+  public MockFilterChainConfig(JitProvisioningFilter jitProvisioningFilter,
+      GlobalAuthorizationFilter globalAuthorizationFilter,
+      AuthenticationProperties authenticationProperties) {
     this.jitProvisioningFilter = jitProvisioningFilter;
+    this.globalAuthorizationFilter = globalAuthorizationFilter;
+    this.authenticationProperties = authenticationProperties;
   }
 
   /// Security filter chain for local mocking with JWT-like behavior.
@@ -79,10 +89,14 @@ public class MockFilterChainConfig {
           // Everything reaching here must be authenticated via our mock filter
           .authorizeHttpRequests(auth -> auth.anyRequest().authenticated())
           // 1. Inject the fake JWT token into the SecurityContext
-          .addFilterBefore(new MockJwtAuthenticationFilter(), AnonymousAuthenticationFilter.class)
+          .addFilterBefore(
+              new MockJwtAuthenticationFilter(authenticationProperties.principalIdentifierClaim()),
+              AnonymousAuthenticationFilter.class)
           // 2. Trigger JIT provisioning based on the fake token (tests production
           // behavior locally)
-          .addFilterAfter(jitProvisioningFilter, MockJwtAuthenticationFilter.class);
+          .addFilterAfter(jitProvisioningFilter, MockJwtAuthenticationFilter.class)
+          // 3. Apply the global authorization policy after the principal is provisioned
+          .addFilterAfter(globalAuthorizationFilter, JitProvisioningFilter.class);
 
     } catch (Exception e) {
       throw new MockSecurityConfigurationException("Failed to configure mock security filter chain",
@@ -102,6 +116,16 @@ public class MockFilterChainConfig {
   /// making it available to all downstream components (controllers, services,
   /// etc.)
   static class MockJwtAuthenticationFilter extends OncePerRequestFilter {
+    private final String principalIdentifierClaim;
+
+    MockJwtAuthenticationFilter() {
+      this("sub");
+    }
+
+    MockJwtAuthenticationFilter(String principalIdentifierClaim) {
+      this.principalIdentifierClaim = principalIdentifierClaim;
+    }
+
     @Override
     protected void doFilterInternal(@Nonnull HttpServletRequest request,
         @Nonnull HttpServletResponse response, @Nonnull FilterChain filterChain)
@@ -137,10 +161,17 @@ public class MockFilterChainConfig {
       Instant expiresAt = now.plusSeconds(3600);
       Map<String, Object> headers = Map.of("alg", "RS256", "typ", "JWT");
 
-      Map<String, Object> claims = Map.of("sub", "local-developer", "preferred_username",
-          "local-developer", "name", "Local Developer", "client_id", "client-id", "scope",
-          "auth read write", "iat", now.getEpochSecond(), "exp", expiresAt.getEpochSecond(),
-          "email", "developer@local.dev", "user_id", "dev-user-001");
+      Map<String, Object> claims = new HashMap<>();
+      claims.put("sub", LOCAL_DEVELOPER);
+      claims.put("preferred_username", LOCAL_DEVELOPER);
+      claims.put("name", "Local Developer");
+      claims.put("client_id", "client-id");
+      claims.put("scope", "auth read write");
+      claims.put("iat", now.getEpochSecond());
+      claims.put("exp", expiresAt.getEpochSecond());
+      claims.put("email", "developer@local.dev");
+      claims.put("user_id", "dev-user-001");
+      claims.put(principalIdentifierClaim, LOCAL_DEVELOPER);
 
       return new Jwt("mock-token-value", now, expiresAt, headers, claims);
     }

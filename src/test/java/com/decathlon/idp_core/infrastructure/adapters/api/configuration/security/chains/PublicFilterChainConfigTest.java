@@ -42,8 +42,8 @@ class PublicFilterChainConfigTest {
 
   private AuthenticationProperties authenticationProperties(List<String> excludedPaths) {
     return new AuthenticationProperties(Map.of(),
-        new ServiceAccountDetection(false, "legacy", "token_type", "m2m", List.of()),
-        excludedPaths);
+        new ServiceAccountDetection(false, "legacy", "token_type", "m2m", List.of()), excludedPaths,
+        "sub");
   }
 
   private HttpSecurity httpSecurity() {

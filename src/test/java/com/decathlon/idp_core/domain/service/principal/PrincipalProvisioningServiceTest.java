@@ -116,6 +116,26 @@ class PrincipalProvisioningServiceTest {
   }
 
   @Test
+  void shouldProvisionPrincipalWithAdminDisabledRegardlessOfAttributes() {
+    PrincipalInfo principalInfo = new PrincipalInfo("alice", PrincipalKind.HUMAN, "Alice Dupont",
+        Map.of("is_admin", "true", "kind", "SERVICE_ACCOUNT"), List.of());
+    when(entityRepository.findByTemplateIdentifierAndIdentifier("principal", "alice"))
+        .thenReturn(Optional.empty());
+    when(entityRepository.save(any(Entity.class)))
+        .thenAnswer(invocation -> invocation.getArgument(0));
+
+    provisioningService.provisionPrincipal(principalInfo);
+
+    ArgumentCaptor<Entity> entityCaptor = ArgumentCaptor.forClass(Entity.class);
+    verify(entityRepository).save(entityCaptor.capture());
+    List<Property> properties = entityCaptor.getValue().properties();
+    assertThat(properties).filteredOn(property -> property.name().equals("is_admin"))
+        .extracting(Property::value).containsExactly("false");
+    assertThat(properties).filteredOn(property -> property.name().equals("kind"))
+        .extracting(Property::value).containsExactly("HUMAN");
+  }
+
+  @Test
   void shouldHandlePrincipalWithNoGroups() {
     // Given: Principal without group membership
     PrincipalInfo principalInfo = new PrincipalInfo("bob", PrincipalKind.HUMAN, "Bob Smith",
