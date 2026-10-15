@@ -122,7 +122,7 @@ app:
       mode: GLOBAL
       # Comma-separated immutable principal identifiers for emergency access, even before JIT provisioning.
       global-principal-identifiers: ${IDP_SUPER_ADMIN_IDENTIFIER:},${IDP_PLATFORM_ADMIN_IDENTIFIER:}
-      # Optional human-access gate; when set, the named principal property must be true.
+      # Optional human-access gate; when set, the given boolean property in the user's Principal must be true.
       required-principal-property: ${IDP_REQUIRED_PRINCIPAL_PROPERTY:}
 
     # Authentication configuration - externalized for multi-IdP support
@@ -130,7 +130,9 @@ app:
     authentication:
       # Human identity claim used as the catalog principal identifier.
       principal-identifier-claim: ${IDP_PRINCIPAL_IDENTIFIER_CLAIM:sub}
-
+      # Enable to take in custom JWT tokens for authentication
+      # This will also enable the IDP_PRINCIPAL_IDENTIFIER_CLAIM to be extracted from the JWT token
+      # and be setted as identifier of an entity of kind Principal
       jwt:
         enabled: true
       api-key:
