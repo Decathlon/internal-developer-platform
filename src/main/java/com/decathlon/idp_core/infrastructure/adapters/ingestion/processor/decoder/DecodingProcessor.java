@@ -1,6 +1,7 @@
 package com.decathlon.idp_core.infrastructure.adapters.ingestion.processor.decoder;
 
 import static com.decathlon.idp_core.infrastructure.adapters.ingestion.configuration.IngestionConstants.*;
+import static com.decathlon.idp_core.infrastructure.adapters.ingestion.configuration.IngestionObservabilityConstants.*;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
@@ -18,7 +19,6 @@ import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
-import com.decathlon.idp_core.infrastructure.adapters.ingestion.configuration.IngestionMetricConstants;
 import com.decathlon.idp_core.infrastructure.adapters.ingestion.exception.WebhookDecodingException;
 
 import io.opentelemetry.api.metrics.Meter;
@@ -91,23 +91,8 @@ public class DecodingProcessor {
         throw new WebhookDecodingException("Empty payload cannot be decoded as gzip");
       }
 
-      try {
-        for (int i = encodingChain.size() - 1; i >= 0; i--) {
-          decodedPayload = decoders.get(encodingChain.get(i)).decode(decodedPayload);
-        }
-        String result = new String(decodedPayload, StandardCharsets.UTF_8);
-        recordPayloadSizeMetric(connector, decodedPayload.length);
-        incrementDecodedMetric(connector, String.join(",", encodingChain));
-        return result;
-      } catch (ZipException e) {
-        incrementDecodeErrorMetric(connector, "corrupted_gzip_payload");
-        throw new WebhookDecodingException("Corrupted or invalid compressed gzip stream", e);
-      } catch (IOException e) {
-        incrementDecodeErrorMetric(connector, "decompression_failure");
-        throw new WebhookDecodingException(
-            "Failed to decompress payload for encoding: " + sanitizeHeaderValue(contentEncoding),
-            e);
-      }
+      return decodePayloadWithEncodingChain(decodedPayload, encodingChain, contentEncoding,
+          connector);
     } catch (RuntimeException exception) {
       if (!(exception instanceof WebhookDecodingException)) {
         incrementDecodeErrorMetric(connector, exception.getClass().getSimpleName());
@@ -116,23 +101,43 @@ public class DecodingProcessor {
     }
   }
 
+  private String decodePayloadWithEncodingChain(byte[] decodedPayload, List<String> encodingChain,
+      String contentEncoding, String connector) {
+    try {
+      for (int i = encodingChain.size() - 1; i >= 0; i--) {
+        decodedPayload = decoders.get(encodingChain.get(i)).decode(decodedPayload);
+      }
+      String result = new String(decodedPayload, StandardCharsets.UTF_8);
+      recordPayloadSizeMetric(connector, decodedPayload.length);
+      incrementDecodedMetric(connector, String.join(",", encodingChain));
+      return result;
+    } catch (ZipException e) {
+      incrementDecodeErrorMetric(connector, "corrupted_gzip_payload");
+      throw new WebhookDecodingException("Corrupted or invalid compressed gzip stream", e);
+    } catch (IOException e) {
+      incrementDecodeErrorMetric(connector, "decompression_failure");
+      throw new WebhookDecodingException(
+          "Failed to decompress payload for encoding: " + sanitizeHeaderValue(contentEncoding), e);
+    }
+  }
+
   private void recordPayloadSizeMetric(String connector, long payloadSizeBytes) {
-    meter.histogramBuilder(IngestionMetricConstants.PAYLOAD_SIZE_BYTES).ofLongs().build()
-        .record(payloadSizeBytes, io.opentelemetry.api.common.Attributes
+    meter.histogramBuilder(PAYLOAD_SIZE_BYTES).ofLongs().build().record(payloadSizeBytes,
+        io.opentelemetry.api.common.Attributes
             .of(io.opentelemetry.api.common.AttributeKey.stringKey("connector"), connector));
   }
 
   private void incrementDecodedMetric(String connector, String encoding) {
-    meter.counterBuilder(IngestionMetricConstants.PAYLOAD_DECODED_TOTAL).build().add(1,
+    meter.counterBuilder(PAYLOAD_DECODED_TOTAL).build().add(1,
         io.opentelemetry.api.common.Attributes.of(
-            io.opentelemetry.api.common.AttributeKey.stringKey("connector"), connector,
+            io.opentelemetry.api.common.AttributeKey.stringKey(ATTRIBUTE_CONNECTOR), connector,
             io.opentelemetry.api.common.AttributeKey.stringKey("encoding"), encoding));
   }
 
   private void incrementDecodeErrorMetric(String connector, String reason) {
-    meter.counterBuilder(IngestionMetricConstants.PAYLOAD_DECODE_ERRORS_TOTAL).build().add(1,
+    meter.counterBuilder(PAYLOAD_DECODE_ERRORS_TOTAL).build().add(1,
         io.opentelemetry.api.common.Attributes.of(
-            io.opentelemetry.api.common.AttributeKey.stringKey("connector"), connector,
+            io.opentelemetry.api.common.AttributeKey.stringKey(ATTRIBUTE_CONNECTOR), connector,
             io.opentelemetry.api.common.AttributeKey.stringKey("reason"), reason));
   }
 

@@ -1,14 +1,6 @@
 package com.decathlon.idp_core.infrastructure.adapters.ingestion.configuration;
 
-/**
- * Shared metric names for the ingestion workflow.
- *
- * <p>
- * These values are intentionally centralized so the routing and processing
- * layers can reuse the same business metric names without duplicating string
- * literals across processors.
- */
-public final class IngestionMetricConstants {
+public final class IngestionObservabilityConstants {
 
   public static final String SECURITY_REQUESTS_TOTAL = "idp.webhook.security.requests.total";
   public static final String SECURITY_RESULT = "idp.webhook.security.result";
@@ -34,6 +26,16 @@ public final class IngestionMetricConstants {
   public static final String ENTITY_NOT_FOUND_TOTAL = "idp.webhook.entity.notfound.total";
   public static final String ENTITY_CONFLICT_TOTAL = "idp.webhook.entity.conflict.total";
 
-  private IngestionMetricConstants() {
+  public static final String ATTRIBUTE_CONNECTOR = "connector";
+  public static final String ATTRIBUTE_MAPPING_ID = "mapping_id";
+  public static final String ATTRIBUTE_ACTION = "action";
+  public static final String ATTRIBUTE_REASON = "reason";
+  public static final String ATTRIBUTE_TEMPLATE = "template";
+  public static final String ATTRIBUTE_RESULT = "result";
+  public static final String ATTRIBUTE_SECURITY_TYPE = "security_type";
+
+  public static final String SPAN_ATTRIBUTE_WEBHOOK_IDENTIFIER = "idp.webhook.identifier";
+
+  private IngestionObservabilityConstants() {
   }
 }

@@ -1,22 +1,33 @@
 package com.decathlon.idp_core.infrastructure.adapters.ingestion.metrics;
 
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
+
+import io.opentelemetry.api.common.AttributeKey;
 import io.opentelemetry.api.common.Attributes;
+import io.opentelemetry.api.metrics.LongCounter;
 import io.opentelemetry.api.metrics.LongHistogram;
 import io.opentelemetry.api.metrics.Meter;
 import io.opentelemetry.api.trace.Span;
 
 public final class IngestionObservabilitySupport {
 
+  private static final Map<String, LongCounter> COUNTER_CACHE = new ConcurrentHashMap<>();
+  private static final Map<String, LongHistogram> HISTOGRAM_CACHE = new ConcurrentHashMap<>();
+
   private IngestionObservabilitySupport() {
   }
 
   public static void incrementCounter(Meter meter, String metricName, String... attributes) {
-    meter.counterBuilder(metricName).build().add(1, toAttributes(attributes));
+    LongCounter counter = COUNTER_CACHE.computeIfAbsent(metricName,
+        name -> meter.counterBuilder(name).build());
+    counter.add(1, toAttributes(attributes));
   }
 
   public static void recordHistogram(Meter meter, String metricName, long value,
       String... attributes) {
-    LongHistogram histogram = meter.histogramBuilder(metricName).ofLongs().build();
+    LongHistogram histogram = HISTOGRAM_CACHE.computeIfAbsent(metricName,
+        name -> meter.histogramBuilder(name).ofLongs().build());
     histogram.record(value, toAttributes(attributes));
   }
 
@@ -37,7 +48,7 @@ public final class IngestionObservabilitySupport {
     }
     var builder = Attributes.builder();
     for (int i = 0; i < keyValues.length; i += 2) {
-      builder.put(keyValues[i], keyValues[i + 1]);
+      builder.put(AttributeKey.stringKey(keyValues[i]), keyValues[i + 1]);
     }
     return builder.build();
   }

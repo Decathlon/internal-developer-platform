@@ -11,17 +11,16 @@ public class IngestionMetricsConfiguration {
 
   @Bean("ingestionMeter")
   public Meter ingestionMeter(OpenTelemetry openTelemetry) {
-    return openTelemetry.getMeterProvider().meterBuilder("com.decathlon.idp_core.ingestion")
-        .build();
+    return openTelemetry.getMeter("com.decathlon.idp_core.ingestion");
   }
 
   @Bean("securityMeter")
   public Meter securityMeter(OpenTelemetry openTelemetry) {
-    return openTelemetry.getMeterProvider().meterBuilder("com.decathlon.idp_core.security").build();
+    return openTelemetry.getMeter("com.decathlon.idp_core.security");
   }
 
   @Bean("decodingMeter")
   public Meter decodingMeter(OpenTelemetry openTelemetry) {
-    return openTelemetry.getMeterProvider().meterBuilder("com.decathlon.idp_core.decoding").build();
+    return openTelemetry.getMeter("com.decathlon.idp_core.decoding");
   }
 }

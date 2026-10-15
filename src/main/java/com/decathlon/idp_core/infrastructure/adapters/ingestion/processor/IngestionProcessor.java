@@ -1,5 +1,7 @@
 package com.decathlon.idp_core.infrastructure.adapters.ingestion.processor;
 
+import static com.decathlon.idp_core.infrastructure.adapters.ingestion.configuration.IngestionObservabilityConstants.*;
+
 import java.util.List;
 
 import org.springframework.beans.factory.annotation.Qualifier;
@@ -14,7 +16,7 @@ import com.decathlon.idp_core.domain.model.entity_mapping.EntityDynamicMapping;
 import com.decathlon.idp_core.domain.model.inbound_connectors.webhook.WebhookConnector;
 import com.decathlon.idp_core.domain.port.MappingEnginePort;
 import com.decathlon.idp_core.domain.service.entity.EntityService;
-import com.decathlon.idp_core.infrastructure.adapters.ingestion.configuration.IngestionMetricConstants;
+import com.decathlon.idp_core.infrastructure.adapters.ingestion.configuration.IngestionObservabilityConstants;
 import com.decathlon.idp_core.infrastructure.adapters.ingestion.metrics.IngestionObservabilitySupport;
 
 import io.opentelemetry.api.metrics.Meter;
@@ -24,8 +26,6 @@ import lombok.extern.slf4j.Slf4j;
 @Component
 @Slf4j
 public class IngestionProcessor {
-
-  private static final String SPAN_ATTRIBUTE_WEBHOOK_IDENTIFIER = "idp.webhook.identifier";
 
   private final MappingEnginePort mappingEngine;
   private final EntityService entityService;
@@ -70,23 +70,24 @@ public class IngestionProcessor {
     String action = mapping.action() == null ? "unknown" : mapping.action().name();
     long startTimeNanos = System.nanoTime();
 
-    incrementCounter(IngestionMetricConstants.MAPPING_APPLIED_TOTAL,
-        "connector", connectorIdentifier, "mapping_id", mappingId, "action", action);
+    incrementCounter(MAPPING_APPLIED_TOTAL, ATTRIBUTE_CONNECTOR, connectorIdentifier, ATTRIBUTE_MAPPING_ID, mappingId, ATTRIBUTE_ACTION, action);
 
     try {
       Entity entity = mappingEngine.mapToEntity(payload, mapping);
 
       if (entity == null) {
-        incrementCounter(IngestionMetricConstants.MAPPING_FILTERED_TOTAL,
-            "connector", connectorIdentifier, "mapping_id", mappingId, "reason",
+        incrementCounter(MAPPING_FILTERED_TOTAL,
+            ATTRIBUTE_CONNECTOR, connectorIdentifier, ATTRIBUTE_MAPPING_ID, mappingId, ATTRIBUTE_REASON,
             "filter_rejected");
-        incrementCounter(IngestionMetricConstants.MAPPING_RESULT,
-            "connector", connectorIdentifier, "mapping_id", mappingId, "result", "FILTERED_OUT");
+        incrementCounter(MAPPING_RESULT,
+            ATTRIBUTE_CONNECTOR, connectorIdentifier, ATTRIBUTE_MAPPING_ID, mappingId, ATTRIBUTE_RESULT,
+            "FILTERED_OUT");
         return;
       }
 
-      incrementCounter(IngestionMetricConstants.MAPPING_RESULT,
-          "connector", connectorIdentifier, "mapping_id", mappingId, "result", "MATCHED");
+      incrementCounter(MAPPING_RESULT,
+          ATTRIBUTE_CONNECTOR, connectorIdentifier, ATTRIBUTE_MAPPING_ID, mappingId, ATTRIBUTE_RESULT,
+          "MATCHED");
 
       switch (mapping.action()) {
         case UPDATE_ENTITY -> handleUpdate(entity, connectorIdentifier);
@@ -99,20 +100,20 @@ public class IngestionProcessor {
       log.info("Successfully processed action {} for entity: {} under template: {}",
           mapping.action(), entity.identifier(), entity.templateIdentifier());
     } catch (RuntimeException exception) {
-      incrementCounter(IngestionMetricConstants.MAPPING_ERRORS_TOTAL,
-          "connector", connectorIdentifier, "mapping_id", mappingId,
+      incrementCounter(MAPPING_ERRORS_TOTAL,
+          ATTRIBUTE_CONNECTOR, connectorIdentifier, ATTRIBUTE_MAPPING_ID, mappingId,
           "error_type", exception.getClass().getSimpleName());
-      incrementCounter(IngestionMetricConstants.MAPPING_RESULT,
-          "connector", connectorIdentifier, "mapping_id", mappingId, "result", "ERROR");
-      incrementCounter(IngestionMetricConstants.FUNCTIONAL_VALIDATION_FAILED_TOTAL,
-          "connector", connectorIdentifier, "mapping_id", mappingId,
-          "reason", exception.getClass().getSimpleName());
+      incrementCounter(MAPPING_RESULT,
+          ATTRIBUTE_CONNECTOR, connectorIdentifier, ATTRIBUTE_MAPPING_ID, mappingId, ATTRIBUTE_RESULT, "ERROR");
+      incrementCounter(IngestionObservabilityConstants.FUNCTIONAL_VALIDATION_FAILED_TOTAL,
+          ATTRIBUTE_CONNECTOR, connectorIdentifier, "mapping_id", mappingId,
+          ATTRIBUTE_REASON, exception.getClass().getSimpleName());
       recordEntityFailureMetrics(connectorIdentifier, exception);
       throw exception;
     } finally {
       long durationMs = (System.nanoTime() - startTimeNanos) / 1_000_000L;
-      recordHistogram(IngestionMetricConstants.MAPPING_LATENCY_MS, durationMs,
-          "connector", connectorIdentifier, "mapping_id", mappingId);
+      recordHistogram(IngestionObservabilityConstants.MAPPING_LATENCY_MS, durationMs,
+          ATTRIBUTE_CONNECTOR, connectorIdentifier, ATTRIBUTE_MAPPING_ID, mappingId);
     }
   }
 
@@ -123,17 +124,17 @@ public class IngestionProcessor {
             entity.templateIdentifier());
         entityService.patchEntity(entity.templateIdentifier(), entity.identifier(),
             EntityPatch.fromEntity(entity));
-        incrementCounter(IngestionMetricConstants.ENTITY_PATCH_TOTAL, "template",
-            entity.templateIdentifier(), "connector", connectorIdentifier, "action",
+        incrementCounter(IngestionObservabilityConstants.ENTITY_PATCH_TOTAL, ATTRIBUTE_TEMPLATE,
+            entity.templateIdentifier(), ATTRIBUTE_CONNECTOR, connectorIdentifier, ATTRIBUTE_ACTION,
             "UPDATE_ENTITY");
-        incrementCounter(IngestionMetricConstants.ENTITY_UPDATED_TOTAL, "template",
-            entity.templateIdentifier(), "connector", connectorIdentifier);
+        incrementCounter(IngestionObservabilityConstants.ENTITY_UPDATED_TOTAL, ATTRIBUTE_TEMPLATE,
+            entity.templateIdentifier(), ATTRIBUTE_CONNECTOR, connectorIdentifier);
       } else {
         log.debug("Creating entity {} for template: {}", entity.identifier(),
             entity.templateIdentifier());
         entityService.createEntity(entity);
-        incrementCounter(IngestionMetricConstants.ENTITY_CREATED_TOTAL, "template",
-            entity.templateIdentifier(), "connector", connectorIdentifier);
+        incrementCounter(IngestionObservabilityConstants.ENTITY_CREATED_TOTAL, ATTRIBUTE_TEMPLATE,
+            entity.templateIdentifier(), ATTRIBUTE_CONNECTOR, connectorIdentifier);
       }
     } catch (RuntimeException exception) {
       recordEntityFailureMetrics(connectorIdentifier, exception, entity.templateIdentifier());
@@ -148,16 +149,16 @@ public class IngestionProcessor {
       if (entityService.entityExists(entity.templateIdentifier(), entity.identifier())) {
         entityService.patchEntity(entity.templateIdentifier(), entity.identifier(),
             propertiesPatch);
-        incrementCounter(IngestionMetricConstants.ENTITY_PATCH_TOTAL, "template",
-            entity.templateIdentifier(), "connector", connectorIdentifier, "action",
+        incrementCounter(IngestionObservabilityConstants.ENTITY_PATCH_TOTAL, ATTRIBUTE_TEMPLATE,
+            entity.templateIdentifier(), ATTRIBUTE_CONNECTOR, connectorIdentifier, ATTRIBUTE_ACTION,
             "UPDATE_PROPERTIES");
-        incrementCounter(IngestionMetricConstants.ENTITY_UPDATED_TOTAL, "template",
-            entity.templateIdentifier(), "connector", connectorIdentifier);
+        incrementCounter(IngestionObservabilityConstants.ENTITY_UPDATED_TOTAL, ATTRIBUTE_TEMPLATE,
+            entity.templateIdentifier(), ATTRIBUTE_CONNECTOR, connectorIdentifier);
       } else {
         entityService.createEntity(new Entity(null, entity.templateIdentifier(), entity.name(),
             entity.identifier(), entity.properties(), List.of()));
-        incrementCounter(IngestionMetricConstants.ENTITY_CREATED_TOTAL, "template",
-            entity.templateIdentifier(), "connector", connectorIdentifier);
+        incrementCounter(IngestionObservabilityConstants.ENTITY_CREATED_TOTAL, ATTRIBUTE_TEMPLATE,
+            entity.templateIdentifier(), ATTRIBUTE_CONNECTOR, connectorIdentifier);
       }
     } catch (RuntimeException exception) {
       recordEntityFailureMetrics(connectorIdentifier, exception, entity.templateIdentifier());
@@ -173,11 +174,11 @@ public class IngestionProcessor {
       EntityPatch relationsPatch = new EntityPatch(null, List.of(), entity.relations());
 
       entityService.patchEntity(entity.templateIdentifier(), entity.identifier(), relationsPatch);
-      incrementCounter(IngestionMetricConstants.ENTITY_PATCH_TOTAL, "template",
-          entity.templateIdentifier(), "connector", connectorIdentifier, "action",
+      incrementCounter(IngestionObservabilityConstants.ENTITY_PATCH_TOTAL, ATTRIBUTE_TEMPLATE,
+          entity.templateIdentifier(), ATTRIBUTE_CONNECTOR, connectorIdentifier, ATTRIBUTE_ACTION,
           "UPDATE_RELATIONS");
-      incrementCounter(IngestionMetricConstants.ENTITY_UPDATED_TOTAL, "template",
-          entity.templateIdentifier(), "connector", connectorIdentifier);
+      incrementCounter(IngestionObservabilityConstants.ENTITY_UPDATED_TOTAL, ATTRIBUTE_TEMPLATE,
+          entity.templateIdentifier(), ATTRIBUTE_CONNECTOR, connectorIdentifier);
     } catch (RuntimeException exception) {
       recordEntityFailureMetrics(connectorIdentifier, exception, entity.templateIdentifier());
       throw exception;
@@ -187,8 +188,8 @@ public class IngestionProcessor {
   private void handleDelete(Entity entity, String connectorIdentifier) {
     try {
       entityService.deleteEntity(entity.templateIdentifier(), entity.identifier());
-      incrementCounter(IngestionMetricConstants.ENTITY_DELETED_TOTAL, "template",
-          entity.templateIdentifier(), "connector", connectorIdentifier);
+      incrementCounter(IngestionObservabilityConstants.ENTITY_DELETED_TOTAL, ATTRIBUTE_TEMPLATE,
+          entity.templateIdentifier(), ATTRIBUTE_CONNECTOR, connectorIdentifier);
       log.debug("Deleted entity: {} for template: {}", entity.identifier(),
           entity.templateIdentifier());
     } catch (RuntimeException exception) {
@@ -203,25 +204,27 @@ public class IngestionProcessor {
 
   private void recordEntityFailureMetrics(String connectorIdentifier, RuntimeException exception,
       String templateIdentifier) {
-    incrementCounter(IngestionMetricConstants.ENTITY_VALIDATION_ERRORS_TOTAL, "template",
-        templateIdentifier, "connector", connectorIdentifier, "reason",
-        exception.getClass().getSimpleName());
-    incrementCounter(IngestionMetricConstants.FUNCTIONAL_VALIDATION_FAILED_TOTAL, "connector",
-        connectorIdentifier, "template", templateIdentifier, "reason",
-        exception.getClass().getSimpleName());
+    incrementCounter(IngestionObservabilityConstants.ENTITY_VALIDATION_ERRORS_TOTAL,
+        ATTRIBUTE_TEMPLATE, templateIdentifier, ATTRIBUTE_CONNECTOR, connectorIdentifier,
+        ATTRIBUTE_REASON, exception.getClass().getSimpleName());
+    incrementCounter(IngestionObservabilityConstants.FUNCTIONAL_VALIDATION_FAILED_TOTAL,
+        ATTRIBUTE_CONNECTOR, connectorIdentifier, ATTRIBUTE_TEMPLATE, templateIdentifier,
+        ATTRIBUTE_REASON, exception.getClass().getSimpleName());
 
     if (exception instanceof EntityNotFoundException) {
-      incrementCounter(IngestionMetricConstants.ENTITY_NOT_FOUND_TOTAL, "template",
-          templateIdentifier, "connector", connectorIdentifier, "action", "ingestion");
+      incrementCounter(IngestionObservabilityConstants.ENTITY_NOT_FOUND_TOTAL, ATTRIBUTE_TEMPLATE,
+          templateIdentifier, ATTRIBUTE_CONNECTOR, connectorIdentifier, ATTRIBUTE_ACTION,
+          "ingestion");
     }
     if (exception instanceof EntityAlreadyExistsException) {
-      incrementCounter(IngestionMetricConstants.ENTITY_CONFLICT_TOTAL, "template",
-          templateIdentifier, "connector", connectorIdentifier, "reason", "already_exists");
+      incrementCounter(IngestionObservabilityConstants.ENTITY_CONFLICT_TOTAL, ATTRIBUTE_TEMPLATE,
+          templateIdentifier, ATTRIBUTE_CONNECTOR, connectorIdentifier, ATTRIBUTE_REASON,
+          "already_exists");
     }
     if (exception instanceof EntityValidationException) {
-      incrementCounter(IngestionMetricConstants.ENTITY_VALIDATION_ERRORS_TOTAL, "template",
-          templateIdentifier, "connector", connectorIdentifier, "reason",
-          exception.getClass().getSimpleName());
+      incrementCounter(IngestionObservabilityConstants.ENTITY_VALIDATION_ERRORS_TOTAL,
+          ATTRIBUTE_TEMPLATE, templateIdentifier, ATTRIBUTE_CONNECTOR, connectorIdentifier,
+          ATTRIBUTE_REASON, exception.getClass().getSimpleName());
     }
   }
 

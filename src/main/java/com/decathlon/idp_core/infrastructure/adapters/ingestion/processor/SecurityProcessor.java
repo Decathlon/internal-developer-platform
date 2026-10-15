@@ -1,5 +1,7 @@
 package com.decathlon.idp_core.infrastructure.adapters.ingestion.processor;
 
+import static com.decathlon.idp_core.infrastructure.adapters.ingestion.configuration.IngestionObservabilityConstants.*;
+
 import java.util.List;
 import java.util.Map;
 
@@ -11,12 +13,11 @@ import com.decathlon.idp_core.domain.model.enums.WebhookSecurityType;
 import com.decathlon.idp_core.domain.model.inbound_connectors.webhook.WebhookConnector;
 import com.decathlon.idp_core.domain.model.inbound_connectors.webhook.WebhookSecurity;
 import com.decathlon.idp_core.domain.port.WebhookSecurityStrategy;
-import com.decathlon.idp_core.infrastructure.adapters.ingestion.configuration.IngestionMetricConstants;
+import com.decathlon.idp_core.infrastructure.adapters.ingestion.configuration.IngestionObservabilityConstants;
 import com.decathlon.idp_core.infrastructure.adapters.ingestion.exception.WebhookSecurityException;
 import com.decathlon.idp_core.infrastructure.adapters.ingestion.metrics.IngestionObservabilitySupport;
 import com.decathlon.idp_core.infrastructure.adapters.ingestion.security.WebhookRequestAuthenticator;
 
-import io.opentelemetry.api.common.Attributes;
 import io.opentelemetry.api.metrics.Meter;
 import io.opentelemetry.api.trace.Span;
 import lombok.extern.slf4j.Slf4j;
@@ -49,7 +50,7 @@ public class SecurityProcessor {
         ? WebhookSecurityType.NONE.name()
         : security.type().name();
 
-    incrementCounter(IngestionMetricConstants.SECURITY_REQUESTS_TOTAL, "connector",
+    incrementCounter(IngestionObservabilityConstants.SECURITY_REQUESTS_TOTAL, ATTRIBUTE_CONNECTOR,
         webhookIdentifier, "security_type", securityType);
     IngestionObservabilitySupport.setSpanAttribute(Span.current(),
         SPAN_ATTRIBUTE_WEBHOOK_IDENTIFIER, webhookIdentifier);
@@ -77,15 +78,16 @@ public class SecurityProcessor {
     } catch (RuntimeException exception) {
       String result = isSecurityRejected(exception) ? RESULT_REJECTED : RESULT_ERROR;
       recordSecurityResult(webhookIdentifier, securityType, result);
-      incrementCounter(IngestionMetricConstants.SECURITY_VALIDATION_ERRORS_TOTAL, "connector",
-          webhookIdentifier, "security_type", securityType, "reason", classifyFailure(exception));
+      incrementCounter(IngestionObservabilityConstants.SECURITY_VALIDATION_ERRORS_TOTAL,
+          ATTRIBUTE_CONNECTOR, webhookIdentifier, ATTRIBUTE_SECURITY_TYPE, securityType,
+          ATTRIBUTE_REASON, classifyFailure(exception));
       throw exception;
     }
   }
 
   private void recordSecurityResult(String webhookIdentifier, String securityType, String result) {
-    incrementCounter(IngestionMetricConstants.SECURITY_RESULT, "connector", webhookIdentifier,
-        "security_type", securityType, "result", result);
+    incrementCounter(IngestionObservabilityConstants.SECURITY_RESULT, ATTRIBUTE_CONNECTOR,
+        webhookIdentifier, ATTRIBUTE_SECURITY_TYPE, securityType, "result", result);
     IngestionObservabilitySupport.setSpanAttribute(Span.current(), SPAN_ATTRIBUTE_SECURITY_RESULT,
         result);
   }

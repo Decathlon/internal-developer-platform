@@ -176,9 +176,18 @@ logging:
     org.springframework.context.support: WARN
     # Suppresses a specific repetitive bean registration delegate log line.
     org.springframework.context.support.PostProcessorRegistrationDelegate: ERROR
+    io.opentelemetry: DEBUG
+    io.opentelemetry.sdk: DEBUG
+    io.opentelemetry.exporter: DEBUG
+    io.opentelemetry.exporter.otlp: DEBUG
+    com.decathlon.idp_core.infrastructure.adapters.ingestion: DEBUG
 
 
 management:
+  metrics:
+    export:
+      otlp:
+        enabled: ${OTEL_MICROMETER_EXPORT_ENABLED:false}
   tracing:
     sampling:
       # Fraction of traces kept (1.0 = 100%). Standard OTel variable.
@@ -186,15 +195,18 @@ management:
     export:
       enabled: ${OTEL_TRACING_ENABLED:false}
 
-  # Trace OTLP export lives under management.opentelemetry.tracing.export.otlp.* (see below).
   otlp:
     metrics:
       export:
-        # Metrics export is opt-in. Signal-specific variables win over the generic ones.
-        url: ${OTEL_EXPORTER_OTLP_METRICS_ENDPOINT:${OTEL_EXPORTER_OTLP_ENDPOINT:http://localhost:4318}/v1/metrics}
-        enabled: ${OTEL_METRICS_EXPORT_ENABLED:false}
-        transport: ${OTEL_EXPORTER_OTLP_METRICS_PROTOCOL:${OTEL_EXPORTER_OTLP_PROTOCOL:http/protobuf}}
+        url: ${OTEL_EXPORTER_OTLP_ENDPOINT}
+        enabled: true
+        protocol: ${OTEL_EXPORTER_OTLP_METRICS_PROTOCOL:${OTEL_EXPORTER_OTLP_PROTOCOL:http/protobuf}}
   opentelemetry:
+    metrics:
+      export:
+        otlp:
+          endpoint: ${OTEL_EXPORTER_OTLP_METRICS_ENDPOINT:${OTEL_EXPORTER_OTLP_ENDPOINT:http://localhost:4318}/v1/metrics}
+          transport: ${OTEL_EXPORTER_OTLP_METRICS_TRANSPORT:${OTEL_EXPORTER_OTLP_PROTOCOL:http}}
     tracing:
       export:
         otlp:
@@ -202,8 +214,6 @@ management:
           endpoint: ${OTEL_EXPORTER_OTLP_TRACES_ENDPOINT:${OTEL_EXPORTER_OTLP_ENDPOINT:http://localhost:4318}/v1/traces}
           # Boot's transport enum only accepts http or grpc (not the OTel value http/protobuf).
           transport: ${OTEL_EXPORTER_OTLP_TRACES_TRANSPORT:${OTEL_EXPORTER_OTLP_PROTOCOL:http}}
-    # Extra attributes (for example X-Datadog-Org, X-Backend) are set by the user
-    # through OTEL_RESOURCE_ATTRIBUTES, not hard-coded here.
     resource-attributes:
       deployment.environment: ${OTEL_ENV:local}
       service.namespace: ${OTEL_SERVICE_NAMESPACE:idp-core}
@@ -238,7 +248,8 @@ management:
       # Avoids leaking internal infrastructure info to unauthenticated callers.
       show-details: when_authorized
 
-
 camel:
+  metrics:
+    enabled: true
   opentelemetry2:
     enabled: true
