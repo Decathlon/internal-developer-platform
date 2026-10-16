@@ -85,14 +85,13 @@ class ApiExceptionHandlerTest {
     @DisplayName("Should return 400 with a description for invalid graph parameters")
     void shouldRejectInvalidGraphParameters(String parameter, String value) {
       client.get().uri("/api/v1/entities/product/test/graph?{parameter}={value}", parameter, value)
-          .exchange().expectStatus().isBadRequest().expectBody(ErrorResponse.class)
-          .value(body -> {
+          .exchange().expectStatus().isBadRequest().expectBody(ErrorResponse.class).value(body -> {
             assertEquals("BAD_REQUEST", body.getError());
             assertTrue(body.getErrorDescription().contains(parameter));
             assertTrue(body.getErrorDescription().contains(value));
             if ("traversal_mode".equals(parameter)) {
-              assertTrue(body.getErrorDescription().contains(
-                  "Allowed values: [DIRECT_LINEAGE, BIDIRECTIONAL, OUTBOUND_ONLY]."));
+              assertTrue(body.getErrorDescription()
+                  .contains("Allowed values: [DIRECT_LINEAGE, BIDIRECTIONAL, OUTBOUND_ONLY]."));
             }
           });
       verifyNoInteractions(graphService);
@@ -102,8 +101,8 @@ class ApiExceptionHandlerTest {
     @EnumSource(EntityGraphTraversalMode.class)
     @DisplayName("Should continue accepting all supported traversal modes")
     void shouldAcceptSupportedTraversalModes(EntityGraphTraversalMode mode) {
-      client.get().uri("/api/v1/entities/product/test/graph?traversal_mode={mode}", mode)
-          .exchange().expectStatus().isOk();
+      client.get().uri("/api/v1/entities/product/test/graph?traversal_mode={mode}", mode).exchange()
+          .expectStatus().isOk();
 
       verify(graphService).getEntityGraph("product", "test",
           new EntityGraphQueryOptions(1, false, false, Set.of(), Set.of(), mode));
