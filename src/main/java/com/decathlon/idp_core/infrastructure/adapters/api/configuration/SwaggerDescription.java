@@ -235,6 +235,7 @@ public class SwaggerDescription {
   public static final String ENDPOINT_GET_ENTITY_GRAPH_FLAT_SUMMARY = "Get entity relationship graph as flat nodes and edges";
   public static final String ENDPOINT_GET_ENTITY_GRAPH_FLAT_DESCRIPTION = "Retrieves the entity relationship graph as a flat nodes-and-edges structure, suitable for frontend visualization tools such as React Flow, Vis.js, and Cytoscape.";
   public static final String RESPONSE_ENTITY_GRAPH_FLAT_SUCCESS = "Flat entity graph successfully retrieved";
+  public static final String RESPONSE_INVALID_GRAPH_QUERY = "Invalid graph query parameter value";
   public static final String ENTITY_GRAPH_FLAT_NODES_DESCRIPTION = "All entity nodes in the graph";
   public static final String ENTITY_GRAPH_FLAT_EDGES_DESCRIPTION = "All directed relation edges in the graph";
   public static final String ENTITY_GRAPH_FLAT_NODE_ID_DESCRIPTION = "Unique node identifier composed of templateIdentifier:identifier";
