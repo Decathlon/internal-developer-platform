@@ -10,6 +10,7 @@ import static com.decathlon.idp_core.infrastructure.adapters.api.configuration.S
 import static com.decathlon.idp_core.infrastructure.adapters.api.configuration.SwaggerDescription.UNAUTHORIZED_CODE;
 import static org.springframework.http.HttpStatus.OK;
 
+import org.springframework.http.ProblemDetail;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -73,8 +74,8 @@ public class PrincipalController {
   @ApiResponse(responseCode = OK_CODE, description = "Principal entity retrieved successfully", content = @Content(mediaType = "application/json", schema = @Schema(implementation = EntityDtoOut.class)))
   @ApiResponse(responseCode = UNAUTHORIZED_CODE, description = RESPONSE_UNAUTHORIZED, content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponse.class)))
   @ApiResponse(responseCode = FORBIDDEN_CODE, description = RESPONSE_INSUFFICIENT_RIGHTS, content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponse.class)))
-  @ApiResponse(responseCode = NOT_FOUND_CODE, description = "Principal not found in catalog (JIT provisioning may have failed)", content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponse.class)))
-  @ApiResponse(responseCode = INTERNAL_SERVER_ERROR_CODE, description = RESPONSE_UNEXPECTED_SERVER_ERROR, content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponse.class)))
+  @ApiResponse(responseCode = NOT_FOUND_CODE, description = "Principal not found in catalog (JIT provisioning may have failed)", content = @Content(mediaType = org.springframework.http.MediaType.APPLICATION_PROBLEM_JSON_VALUE, schema = @Schema(implementation = ProblemDetail.class)))
+  @ApiResponse(responseCode = INTERNAL_SERVER_ERROR_CODE, description = RESPONSE_UNEXPECTED_SERVER_ERROR, content = @Content(mediaType = org.springframework.http.MediaType.APPLICATION_PROBLEM_JSON_VALUE, schema = @Schema(implementation = ProblemDetail.class)))
   public EntityDtoOut getCurrentPrincipal(Authentication authentication) {
     PrincipalInfo principalInfo = principalExtractor.extractPrincipalInfo(authentication);
 

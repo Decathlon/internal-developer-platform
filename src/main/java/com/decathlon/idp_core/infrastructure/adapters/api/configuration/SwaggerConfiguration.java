@@ -5,6 +5,7 @@ import static io.swagger.v3.oas.models.security.SecurityScheme.Type.OAUTH2;
 
 import java.util.List;
 
+import org.springdoc.core.customizers.OpenApiCustomizer;
 import org.springdoc.core.models.GroupedOpenApi;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
@@ -25,6 +26,8 @@ import io.swagger.v3.core.util.Json;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.models.OpenAPI;
 import io.swagger.v3.oas.models.info.Info;
+import io.swagger.v3.oas.models.media.DateTimeSchema;
+import io.swagger.v3.oas.models.media.StringSchema;
 import io.swagger.v3.oas.models.security.OAuthFlow;
 import io.swagger.v3.oas.models.security.OAuthFlows;
 import io.swagger.v3.oas.models.security.SecurityRequirement;
@@ -96,6 +99,34 @@ public class SwaggerConfiguration {
     }
 
     return openApi;
+  }
+
+  /**
+   * Documents the ProblemDetail extension members at the schema root, matching
+   * the wire format (Jackson unwraps the properties map), instead of a nested
+   * "properties" object.
+   */
+  @Bean
+  public OpenApiCustomizer problemDetailSchemaCustomizer() {
+    return openApi -> {
+      if (openApi.getComponents() == null || openApi.getComponents().getSchemas() == null) {
+        return;
+      }
+      io.swagger.v3.oas.models.media.Schema<?> problemDetail = openApi.getComponents().getSchemas()
+          .get("ProblemDetail");
+      if (problemDetail == null) {
+        return;
+      }
+      if (problemDetail.getProperties() != null) {
+        problemDetail.getProperties().remove("properties");
+      }
+      problemDetail.addProperty("error",
+          new StringSchema().description("HTTP status name, e.g. NOT_FOUND"));
+      problemDetail.addProperty("error_description",
+          new StringSchema().description("Human-readable description of the error"));
+      problemDetail.addProperty("timestamp",
+          new DateTimeSchema().description("Instant at which the error occurred"));
+    };
   }
 
   @Bean
