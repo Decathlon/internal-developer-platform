@@ -535,7 +535,7 @@ paths:
               default: '0'
       - name: size
         in: query
-        description: Number of items per page. Defaults to 20.
+        description: Number of items per page. Defaults to 20. Must be between 1 and 500.
         content:
           "*/*":
             schema:
@@ -614,7 +614,7 @@ paths:
               default: '0'
       - name: size
         in: query
-        description: Number of items per page. Defaults to 20.
+        description: Number of items per page. Defaults to 20. Must be between 1 and 500.
         content:
           "*/*":
             schema:
@@ -732,7 +732,7 @@ paths:
               default: '0'
       - name: size
         in: query
-        description: Number of items per page. Defaults to 20.
+        description: Number of items per page. Defaults to 20. Must be between 1 and 500.
         content:
           "*/*":
             schema:
@@ -804,7 +804,7 @@ paths:
               default: '0'
       - name: size
         in: query
-        description: Number of items per page. Defaults to 20.
+        description: Number of items per page. Defaults to 20. Must be between 1 and 500.
         required: false
         content:
           "*/*":
@@ -1853,7 +1853,7 @@ components:
           type: integer
           format: int32
           default: 20
-          description: Number of items per page. Defaults to 20.
+          description: Number of items per page. Defaults to 20. Must be between 1 and 500.
           example: 20
         sort:
           type: string

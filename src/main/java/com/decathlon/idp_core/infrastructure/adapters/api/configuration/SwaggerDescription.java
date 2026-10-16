@@ -221,7 +221,7 @@ public class SwaggerDescription {
 
   // --- Pagination and sorting parameter descriptions ---
   public static final String PARAM_PAGE_DESCRIPTION = "Page number for pagination. Defaults to 0.";
-  public static final String PARAM_SIZE_DESCRIPTION = "Number of items per page. Defaults to 20.";
+  public static final String PARAM_SIZE_DESCRIPTION = "Number of items per page. Defaults to 20. Must be between 1 and 500.";
   public static final String PARAM_SORT_DESCRIPTION = "Sorting criteria in the format: property(,asc|desc). Defaults to identifier,asc.";
   public static final String PARAM_QUERY_DESCRIPTION = """
       Optional filter query using a simple expression language. See more details in the API documentation. Example: `name:idp` for entities with names containing 'idp'.
