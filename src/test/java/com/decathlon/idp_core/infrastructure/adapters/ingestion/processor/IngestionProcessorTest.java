@@ -41,6 +41,11 @@ import com.decathlon.idp_core.domain.service.entity.EntityService;
 import ch.qos.logback.classic.Logger;
 import ch.qos.logback.classic.spi.ILoggingEvent;
 import ch.qos.logback.core.read.ListAppender;
+import io.opentelemetry.api.OpenTelemetry;
+import io.opentelemetry.api.metrics.Meter;
+import io.opentelemetry.sdk.OpenTelemetrySdk;
+import io.opentelemetry.sdk.metrics.SdkMeterProvider;
+import io.opentelemetry.sdk.testing.exporter.InMemoryMetricReader;
 
 /// Unit tests for IngestionProcessor covering all mapping actions and edge cases.
 ///
@@ -70,7 +75,14 @@ class IngestionProcessorTest {
     listAppender = new ListAppender<>();
     listAppender.start();
     logger.addAppender(listAppender);
-    ingestionProcessor = new IngestionProcessor(mappingEngine, entityService);
+
+    InMemoryMetricReader metricReader = InMemoryMetricReader.create();
+    OpenTelemetry openTelemetry = OpenTelemetrySdk.builder()
+        .setMeterProvider(SdkMeterProvider.builder().registerMetricReader(metricReader).build())
+        .build();
+    Meter meter = openTelemetry.getMeter("com.decathlon.idp_core.tests");
+
+    ingestionProcessor = new IngestionProcessor(mappingEngine, entityService, meter);
   }
 
   private Entity createTestEntity(String templateId, String identifier) {
