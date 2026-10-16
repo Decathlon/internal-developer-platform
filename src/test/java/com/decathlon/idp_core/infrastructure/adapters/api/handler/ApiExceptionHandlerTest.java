@@ -2,6 +2,8 @@ package com.decathlon.idp_core.infrastructure.adapters.api.handler;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 import java.lang.reflect.Constructor;
@@ -17,14 +19,18 @@ import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.CsvSource;
+import org.junit.jupiter.params.provider.EnumSource;
 import org.junit.jupiter.params.provider.MethodSource;
 import org.springframework.core.MethodParameter;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
+import org.springframework.test.web.servlet.client.RestTestClient;
 import org.springframework.validation.BeanPropertyBindingResult;
 import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
+import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 
 import com.decathlon.idp_core.domain.exception.entity.EntityAlreadyExistsException;
 import com.decathlon.idp_core.domain.exception.entity.EntityValidationException;
@@ -35,6 +41,10 @@ import com.decathlon.idp_core.domain.exception.entity_template.EntityTemplateNot
 import com.decathlon.idp_core.domain.exception.entity_template.PropertyNameNotFoundEntityTemplatePropertiesException;
 import com.decathlon.idp_core.domain.exception.entity_template.RelationNameNotFoundEntityTemplateRelationsException;
 import com.decathlon.idp_core.domain.exception.webhook.WebhookSecurityConfigurationException;
+import com.decathlon.idp_core.domain.model.entity_graph.EntityGraphQueryOptions;
+import com.decathlon.idp_core.domain.model.entity_graph.EntityGraphTraversalMode;
+import com.decathlon.idp_core.domain.service.entity_graph.EntityGraphService;
+import com.decathlon.idp_core.infrastructure.adapters.api.controller.EntityGraphController;
 import com.decathlon.idp_core.infrastructure.adapters.common.model.ErrorResponse;
 
 /// Comprehensive unit tests for [ApiExceptionHandler].
@@ -53,6 +63,88 @@ class ApiExceptionHandlerTest {
         .getDeclaredConstructor();
     constructor.setAccessible(true);
     exceptionHandler = constructor.newInstance();
+  }
+
+  @Nested
+  @DisplayName("Request parameter conversion")
+  class RequestParameterConversionTests {
+
+    private EntityGraphService graphService;
+    private RestTestClient client;
+
+    @BeforeEach
+    void setUpClient() {
+      graphService = mock(EntityGraphService.class);
+      client = RestTestClient.bindToController(new EntityGraphController(graphService))
+          .configureServer(builder -> builder.setControllerAdvice(exceptionHandler)).build();
+    }
+
+    @ParameterizedTest
+    @CsvSource({"traversal_mode, OUTBOUND_ONL", "traversal_mode, UNKNOWN",
+        "traversal_mode, outbound_only", "depth, abc", "include_data, invalid"})
+    @DisplayName("Should return 400 with a description for invalid graph parameters")
+    void shouldRejectInvalidGraphParameters(String parameter, String value) {
+      client.get().uri("/api/v1/entities/product/test/graph?{parameter}={value}", parameter, value)
+          .exchange().expectStatus().isBadRequest().expectBody(ErrorResponse.class)
+          .value(body -> {
+            assertEquals("BAD_REQUEST", body.getError());
+            assertTrue(body.getErrorDescription().contains(parameter));
+            assertTrue(body.getErrorDescription().contains(value));
+            if ("traversal_mode".equals(parameter)) {
+              assertTrue(body.getErrorDescription().contains(
+                  "Allowed values: [DIRECT_LINEAGE, BIDIRECTIONAL, OUTBOUND_ONLY]."));
+            }
+          });
+      verifyNoInteractions(graphService);
+    }
+
+    @ParameterizedTest
+    @EnumSource(EntityGraphTraversalMode.class)
+    @DisplayName("Should continue accepting all supported traversal modes")
+    void shouldAcceptSupportedTraversalModes(EntityGraphTraversalMode mode) {
+      client.get().uri("/api/v1/entities/product/test/graph?traversal_mode={mode}", mode)
+          .exchange().expectStatus().isOk();
+
+      verify(graphService).getEntityGraph("product", "test",
+          new EntityGraphQueryOptions(1, false, false, Set.of(), Set.of(), mode));
+    }
+
+    @Test
+    @DisplayName("Should preserve the default traversal mode")
+    void shouldPreserveDefaultTraversalMode() {
+      client.get().uri("/api/v1/entities/product/test/graph").exchange().expectStatus().isOk();
+
+      verify(graphService).getEntityGraph("product", "test", new EntityGraphQueryOptions(1, false,
+          false, Set.of(), Set.of(), EntityGraphTraversalMode.DIRECT_LINEAGE));
+    }
+
+    @Test
+    @DisplayName("Should describe the expected type for non-enum parameters")
+    void shouldDescribeExpectedType() {
+      var exception = new MethodArgumentTypeMismatchException("abc", int.class, "depth",
+          mock(MethodParameter.class), new IllegalArgumentException());
+
+      var response = exceptionHandler.handleMethodArgumentTypeMismatchException(exception);
+
+      assertEquals(HttpStatus.BAD_REQUEST, response.getStatusCode());
+      assertNotNull(response.getBody());
+      assertEquals("Invalid value 'abc' for parameter 'depth'. Expected type: int.",
+          response.getBody().getErrorDescription());
+    }
+
+    @Test
+    @DisplayName("Should handle parameter type mismatches without a required type")
+    void shouldHandleUnknownRequiredType() {
+      var exception = new MethodArgumentTypeMismatchException("invalid", null, "parameter",
+          mock(MethodParameter.class), new IllegalArgumentException());
+
+      var response = exceptionHandler.handleMethodArgumentTypeMismatchException(exception);
+
+      assertEquals(HttpStatus.BAD_REQUEST, response.getStatusCode());
+      assertNotNull(response.getBody());
+      assertEquals("Invalid value 'invalid' for parameter 'parameter'.",
+          response.getBody().getErrorDescription());
+    }
   }
 
   @Nested
