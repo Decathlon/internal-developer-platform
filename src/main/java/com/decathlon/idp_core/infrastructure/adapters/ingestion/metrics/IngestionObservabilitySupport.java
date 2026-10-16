@@ -1,5 +1,7 @@
 package com.decathlon.idp_core.infrastructure.adapters.ingestion.metrics;
 
+import static reactor.netty.http.HttpConnectionLiveness.log;
+
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -19,6 +21,8 @@ public final class IngestionObservabilitySupport {
   }
 
   public static void incrementCounter(Meter meter, String metricName, String... attributes) {
+    log.info(">>> [OTEL DEBUG] Increment counter: " + metricName + " with attributes: "
+        + java.util.Arrays.toString(attributes));
     LongCounter counter = COUNTER_CACHE.computeIfAbsent(metricName,
         name -> meter.counterBuilder(name).build());
     counter.add(1, toAttributes(attributes));

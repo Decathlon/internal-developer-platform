@@ -39,6 +39,14 @@
   <!--  Swagger version management to avoid conflicts -->
   <dependencyManagement>
     <dependencies>
+      <!-- Align the native metrics SDK and the official OTel Spring Boot starter. -->
+      <dependency>
+        <groupId>io.opentelemetry.instrumentation</groupId>
+        <artifactId>opentelemetry-instrumentation-bom</artifactId>
+        <version>2.32.0</version>
+        <type>pom</type>
+        <scope>import</scope>
+      </dependency>
       <dependency>
         <groupId>io.netty</groupId>
         <artifactId>netty-bom</artifactId>
@@ -338,19 +346,15 @@
       <artifactId>camel-rest-starter</artifactId>
     </dependency>
 
+    <!-- Autoconfigures native OTel metrics, readers and exporters, not Micrometer metrics. -->
     <dependency>
-      <groupId>org.springframework.boot</groupId>
-      <artifactId>spring-boot-starter-opentelemetry</artifactId>
+      <groupId>io.opentelemetry.instrumentation</groupId>
+      <artifactId>opentelemetry-spring-boot-starter</artifactId>
     </dependency>
 
     <dependency>
       <groupId>org.apache.camel.springboot</groupId>
       <artifactId>camel-opentelemetry2-starter</artifactId>
-    </dependency>
-
-    <dependency>
-      <groupId>org.apache.camel.springboot</groupId>
-      <artifactId>camel-micrometer-starter</artifactId>
     </dependency>
 
     <dependency>
