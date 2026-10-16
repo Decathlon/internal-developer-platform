@@ -71,6 +71,54 @@ public class EntityControllerTest extends AbstractIntegrationTest {
     }
 
     @Test
+    @DisplayName("Should accept size at the minimum bound of 1")
+    @WithMockUser
+    void getEntities_sizeMinimum_200() throws Exception {
+      mockMvc
+          .perform(get(ENTITIES_BY_TEMPLATE_IDENTIFIER_PATH, TEMPLATE_IDENTIFIER).param("page", "0")
+              .param("size", "1").accept(APPLICATION_JSON))
+          .andExpect(status().isOk()).andExpect(jsonPath("$.page.size").value(1));
+    }
+
+    @Test
+    @DisplayName("Should accept size at the maximum bound of 500")
+    @WithMockUser
+    void getEntities_sizeMaximum_200() throws Exception {
+      mockMvc
+          .perform(get(ENTITIES_BY_TEMPLATE_IDENTIFIER_PATH, TEMPLATE_IDENTIFIER).param("page", "0")
+              .param("size", "500").accept(APPLICATION_JSON))
+          .andExpect(status().isOk()).andExpect(jsonPath("$.page.size").value(500));
+    }
+
+    @Test
+    @DisplayName("Should return 400 when size is zero")
+    @WithMockUser
+    void getEntities_sizeZero_400() throws Exception {
+      mockMvc.perform(get(ENTITIES_BY_TEMPLATE_IDENTIFIER_PATH, TEMPLATE_IDENTIFIER)
+          .param("page", "0").param("size", "0").accept(APPLICATION_JSON))
+          .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    @DisplayName("Should return 400 when size exceeds 500")
+    @WithMockUser
+    void getEntities_sizeAboveMaximum_400() throws Exception {
+      mockMvc.perform(get(ENTITIES_BY_TEMPLATE_IDENTIFIER_PATH, TEMPLATE_IDENTIFIER)
+          .param("page", "0").param("size", "501").accept(APPLICATION_JSON))
+          .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    @DisplayName("Should return 400 when page is negative")
+    @WithMockUser
+    void getEntities_negativePage_400() throws Exception {
+      mockMvc
+          .perform(get(ENTITIES_BY_TEMPLATE_IDENTIFIER_PATH, TEMPLATE_IDENTIFIER)
+              .param("page", "-1").param("size", "10").accept(APPLICATION_JSON))
+          .andExpect(status().isBadRequest());
+    }
+
+    @Test
     @DisplayName("Should return 404 when template does not exist")
     @WithMockUser
     void getEntities_paginated_404_when_non_existent_template() throws Exception {

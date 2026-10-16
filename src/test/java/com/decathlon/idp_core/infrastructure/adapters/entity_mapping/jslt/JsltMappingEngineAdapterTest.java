@@ -1,6 +1,8 @@
 package com.decathlon.idp_core.infrastructure.adapters.entity_mapping.jslt;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatCode;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import java.util.Collections;
 import java.util.List;
@@ -10,6 +12,8 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
+import com.decathlon.idp_core.domain.constant.JsltConstraints;
+import com.decathlon.idp_core.domain.exception.entity_dynamic_mapping.EntityDynamicMappingConfigurationException;
 import com.decathlon.idp_core.domain.model.entity_mapping.EntityDynamicMapping;
 import com.decathlon.idp_core.domain.model.entity_mapping.MappingAction;
 import com.decathlon.idp_core.domain.model.entity_mapping.RelationMapping;
@@ -118,6 +122,47 @@ class JsltMappingEngineAdapterTest {
     assertThat(entity.relations()).hasSize(1);
     assertThat(entity.relations().getFirst().targetEntityIdentifiers())
         .containsExactly("398cb790-9117-4bfe-830e-bbb0e423c26e");
+  }
+
+  @Test
+  @DisplayName("Should reject a payload larger than the maximum payload size")
+  void shouldRejectOversizedPayload() {
+    var mapping = new EntityDynamicMapping(null, "mapping", "microservice", ".action == \"pushed\"",
+        MappingAction.UPDATE_ENTITY, "Mapping", "desc", ".repository.full_name", ".repository.name",
+        Map.of(), List.of());
+    var payload = "{\"data\":\"" + "a".repeat(JsltConstraints.MAX_PAYLOAD_BYTES) + "\"}";
+
+    assertThatThrownBy(() -> adapter.mapToEntity(payload, mapping))
+        .isInstanceOf(EntityDynamicMappingConfigurationException.class)
+        .hasMessageContaining("maximum size");
+  }
+
+  @Test
+  @DisplayName("Should accept a payload nested at the maximum depth")
+  void shouldAcceptPayloadAtMaximumDepth() {
+    var mapping = new EntityDynamicMapping(null, "mapping", "microservice", ".action == \"pushed\"",
+        MappingAction.UPDATE_ENTITY, "Mapping", "desc", ".repository.full_name", ".repository.name",
+        Map.of(), List.of());
+    var payload = nestedObject(JsltConstraints.MAX_JSON_DEPTH);
+
+    assertThatCode(() -> adapter.mapToEntity(payload, mapping)).doesNotThrowAnyException();
+  }
+
+  @Test
+  @DisplayName("Should reject a payload nested beyond the maximum depth")
+  void shouldRejectPayloadBeyondMaximumDepth() {
+    var mapping = new EntityDynamicMapping(null, "mapping", "microservice", ".action == \"pushed\"",
+        MappingAction.UPDATE_ENTITY, "Mapping", "desc", ".repository.full_name", ".repository.name",
+        Map.of(), List.of());
+    var payload = nestedObject(JsltConstraints.MAX_JSON_DEPTH + 1);
+
+    assertThatThrownBy(() -> adapter.mapToEntity(payload, mapping))
+        .isInstanceOf(EntityDynamicMappingConfigurationException.class)
+        .hasMessageContaining("maximum depth");
+  }
+
+  private static String nestedObject(int depth) {
+    return "{\"a\":".repeat(depth) + "1" + "}".repeat(depth);
   }
 
 }
