@@ -56,7 +56,8 @@ public class IngestionProcessor {
     Span currentSpan = Span.current();
     IngestionObservabilitySupport.setSpanAttribute(currentSpan, SPAN_ATTRIBUTE_WEBHOOK_IDENTIFIER,
         connectorIdentifier);
-
+    log.info("span  id: {}, trace_id: {}", currentSpan.getSpanContext().getSpanId(),
+        currentSpan.getSpanContext().getTraceId());// todo todelete
     log.info("Starting ingestion for webhook connector: {}", connectorIdentifier);
     webhookConnectorConfiguration.mappings()
         .forEach(mapping -> applyMapping(payload, mapping, webhookConnectorConfiguration));

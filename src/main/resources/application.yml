@@ -110,6 +110,8 @@ springdoc:
 
 app:
   ingestion:
+    # Enable temporary diagnostics to inspect Camel exchange telemetry context propagation.
+    tracing-diagnostic-enabled: ${APP_INGESTION_TRACING_DIAGNOSTIC_ENABLED:true}
     webhook:
       base-path: /webhooks
       identifier-path: /{webhookIdentifier}
@@ -192,6 +194,7 @@ logging:
 
 # OpenTelemetry Spring Boot Starter Configuration
 otel:
+  register-global: true
   service:
     name: ${OTEL_SERVICE_NAME:internal-developer-platform}
   resource:
@@ -209,6 +212,7 @@ otel:
   traces:
     exporter: ${OTEL_TRACES_EXPORTER:otlp}
     sampler: ${OTEL_TRACES_SAMPLER:always_on}
+    sampler-arg: ${OTEL_TRACES_SAMPLER_ARG:1.0}
 
   logs:
     exporter: ${OTEL_LOGS_EXPORTER:none}
@@ -268,3 +272,7 @@ management:
 camel:
   opentelemetry2:
     enabled: true
+    # Keep core route spans enabled; processor spans depend on them for active scope propagation.
+    disable-core-processors: false
+    # Keep processor-level spans (setHeader, setBody, processors...) for ingestion diagnostics.
+    trace-processors: true
