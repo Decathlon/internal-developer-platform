@@ -167,6 +167,9 @@ idp:
       allowed-jwks-hosts: ${ALLOWED_JWKS_HOSTS:}
 
 logging:
+  pattern:
+    # Keep trace/span ids in logs with the OpenTelemetry starter.
+    correlation: "[%32X{traceId:-}-%16X{spanId:-}] "
   level:
     # Application log level, defaults to INFO. Override per environment via LOG_LEVEL env var.
     com.decathlon: ${LOG_LEVEL:INFO}
@@ -221,12 +224,20 @@ otel:
         endpoint: ${OTEL_EXPORTER_OTLP_TRACES_ENDPOINT:${OTEL_EXPORTER_OTLP_ENDPOINT:http://localhost:4318}/v1/traces}
         protocol: ${OTEL_EXPORTER_OTLP_TRACES_PROTOCOL:${OTEL_EXPORTER_OTLP_PROTOCOL:http/protobuf}}
   instrumentation:
+    common:
+      logging:
+        # Spring log patterns use traceId/spanId while OTel defaults to trace_id/span_id.
+        trace-id-key: traceId
+        span-id-key: spanId
     micrometer:
       enabled: false
     spring-web:
       enabled: true
     spring-webmvc:
       enabled: true
+    # OTEL_INSTRUMENTATION_JDBC_ENABLED=true to add database spans.
+    jdbc:
+      enabled: ${OTEL_INSTRUMENTATION_JDBC_ENABLED:false}
 
 management:
   endpoints:
