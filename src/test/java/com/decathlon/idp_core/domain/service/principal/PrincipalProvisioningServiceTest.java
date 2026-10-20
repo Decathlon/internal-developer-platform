@@ -234,4 +234,16 @@ class PrincipalProvisioningServiceTest {
     // Then: Empty optional returned
     assertThat(result).isEmpty();
   }
+
+  @Test
+  void shouldNotLinkPrincipalWhenStoredKindDiffersFromAuthenticatedKind() {
+    PrincipalInfo human = new PrincipalInfo("alice", PrincipalKind.HUMAN, "Alice", Map.of(),
+        List.of());
+    Entity serviceAccount = new Entity(UUID.randomUUID(), "principal", "Alice", "alice",
+        List.of(new Property(null, "kind", "SERVICE_ACCOUNT")), List.of());
+    when(entityRepository.findByTemplateIdentifierAndIdentifier("principal", "alice"))
+        .thenReturn(Optional.of(serviceAccount));
+
+    assertThat(provisioningService.getPrincipalFor(human)).isEmpty();
+  }
 }

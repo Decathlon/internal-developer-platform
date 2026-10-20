@@ -14,6 +14,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Stream;
 
 import jakarta.servlet.FilterChain;
@@ -70,7 +71,7 @@ class GlobalAuthorizationFilterTest {
     when(authentication.isAuthenticated()).thenReturn(true);
     SecurityContextHolder.getContext().setAuthentication(authentication);
     when(principalExtractor.extractPrincipalInfo(authentication)).thenReturn(principal);
-    when(provisioningService.getPrincipal("platform-user")).thenReturn(Optional.empty());
+    when(provisioningService.getPrincipalFor(principal)).thenReturn(Optional.empty());
   }
 
   @AfterEach
@@ -136,7 +137,7 @@ class GlobalAuthorizationFilterTest {
     });
 
     verify(principalExtractor, never()).extractPrincipalInfo(any());
-    verify(provisioningService, never()).getPrincipal(any());
+    verify(provisioningService, never()).getPrincipalFor(any());
     var requestCaptor = org.mockito.ArgumentCaptor.forClass(AuthorizationRequest.class);
     verify(authorizationService).authorize(requestCaptor.capture(), any(AuthorizationPolicy.class));
     assertThat(requestCaptor.getValue().principalEntity()).contains(principalEntity);
@@ -147,7 +148,8 @@ class GlobalAuthorizationFilterTest {
       throws ServletException, IOException {
     var request = new MockHttpServletRequest("POST", "/api/v1/entities");
     var response = new MockHttpServletResponse();
-    FilterChain chain = mock(FilterChain.class);
+    AtomicInteger downstreamMutations = new AtomicInteger();
+    FilterChain chain = (req, res) -> downstreamMutations.incrementAndGet();
     doThrow(new PrincipalNotAuthorizedException("platform-user")).when(authorizationService)
         .authorize(any(AuthorizationRequest.class), any(AuthorizationPolicy.class));
 
@@ -157,7 +159,7 @@ class GlobalAuthorizationFilterTest {
     assertThat(response.getContentType()).startsWith("application/json");
     assertThat(response.getContentAsString()).contains("\"error\":\"FORBIDDEN\"",
         "\"error_description\":\"Principal is not authorized to perform this operation\"");
-    verify(chain, never()).doFilter(any(), any());
+    assertThat(downstreamMutations).hasValue(0);
   }
 
   @Test
@@ -197,7 +199,7 @@ class GlobalAuthorizationFilterTest {
     var request = new MockHttpServletRequest("POST", "/api/v1/entities");
     var response = new MockHttpServletResponse();
     FilterChain chain = mock(FilterChain.class);
-    when(provisioningService.getPrincipal("platform-user"))
+    when(provisioningService.getPrincipalFor(principal))
         .thenThrow(new IllegalStateException("catalog unavailable"));
 
     assertThatThrownBy(() -> filter.doFilter(request, response, chain))

@@ -29,6 +29,8 @@ spring:
 # Added App Security configuration
 app:
   security:
+    principal-provisioning:
+      mode: JIT
     authentication:
       jwt:
         enabled: true

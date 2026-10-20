@@ -13,7 +13,8 @@ import com.decathlon.idp_core.infrastructure.adapters.api.auth.GlobalAuthorizati
 
 /// Bridges external authorization properties into the pure domain policy.
 @Configuration
-@EnableConfigurationProperties(AuthorizationProperties.class)
+@EnableConfigurationProperties({AuthorizationProperties.class,
+    PrincipalProvisioningProperties.class})
 public class AuthorizationConfiguration {
 
   /// Binds a disabled servlet registration so the filter only runs in selected

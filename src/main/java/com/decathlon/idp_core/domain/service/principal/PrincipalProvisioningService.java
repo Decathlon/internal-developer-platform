@@ -13,6 +13,7 @@ import com.decathlon.idp_core.domain.model.entity.Entity;
 import com.decathlon.idp_core.domain.model.entity.Property;
 import com.decathlon.idp_core.domain.model.entity.Relation;
 import com.decathlon.idp_core.domain.model.principal.PrincipalInfo;
+import com.decathlon.idp_core.domain.model.principal.PrincipalKind;
 import com.decathlon.idp_core.domain.port.EntityRepositoryPort;
 
 import lombok.RequiredArgsConstructor;
@@ -79,6 +80,23 @@ public class PrincipalProvisioningService {
   public Optional<Entity> getPrincipal(String identifier) {
     return entityRepository.findByTemplateIdentifierAndIdentifier(PRINCIPAL_TEMPLATE_IDENTIFIER,
         identifier);
+  }
+
+  /// Retrieves a principal only when its stored kind matches the authenticated
+  /// actor.
+  ///
+  /// @param principalInfo authenticated principal identity
+  /// @return matching principal entity, or empty when missing or of a different
+  /// kind
+  @Transactional(readOnly = true)
+  public Optional<Entity> getPrincipalFor(PrincipalInfo principalInfo) {
+    return getPrincipal(principalInfo.identifier())
+        .filter(entity -> hasMatchingKind(entity, principalInfo.kind()));
+  }
+
+  private boolean hasMatchingKind(Entity entity, PrincipalKind kind) {
+    return entity.properties().stream().anyMatch(
+        property -> KIND_PROPERTY.equals(property.name()) && kind.name().equals(property.value()));
   }
 
   /// Creates a new Principal entity in the catalog.

@@ -7,9 +7,13 @@ import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
+import java.util.stream.Stream;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
 
 import com.decathlon.idp_core.domain.exception.authorization.PrincipalNotAuthorizedException;
 import com.decathlon.idp_core.domain.model.authorization.AuthorizationAction;
@@ -43,6 +47,83 @@ class GlobalAuthorizationServiceTest {
     humanPrincipal = principal(PRINCIPAL_IDENTIFIER, PrincipalKind.HUMAN);
   }
 
+  @ParameterizedTest(name = "{0}")
+  @MethodSource("authorizationMatrix")
+  void shouldApplyGlobalAuthorizationMatrix(String scenario, PrincipalInfo principal,
+      AuthorizationAction action, AuthorizationResource resource, Optional<Entity> principalEntity,
+      boolean allowed) {
+    var request = request(principal, action, resource, principalEntity);
+
+    if (allowed) {
+      assertThatCode(() -> authorizationService.authorize(request, policy))
+          .doesNotThrowAnyException();
+    } else {
+      assertThatThrownBy(() -> authorizationService.authorize(request, policy))
+          .isInstanceOf(PrincipalNotAuthorizedException.class);
+    }
+  }
+
+  private static Stream<Arguments> authorizationMatrix() {
+    AuthorizationResource entity = new AuthorizationResource("entity", Optional.of("item"),
+        Optional.of("service"));
+    AuthorizationResource template = new AuthorizationResource("entity_template",
+        Optional.of("service"), Optional.empty());
+    AuthorizationResource webhook = new AuthorizationResource(
+        AuthorizationResource.INBOUND_WEBHOOK_CONFIGURATION, Optional.of("hook"), Optional.empty());
+    AuthorizationResource mapping = new AuthorizationResource("entity_dynamic_mapping",
+        Optional.of("mapping"), Optional.empty());
+    AuthorizationResource audit = new AuthorizationResource("audit", Optional.empty(),
+        Optional.empty());
+    AuthorizationResource principalResource = new AuthorizationResource("principal",
+        Optional.of("user"), Optional.empty());
+    AuthorizationResource principalSelf = new AuthorizationResource(
+        AuthorizationResource.PRINCIPAL_SELF, Optional.empty(), Optional.empty());
+    List<AuthorizationResource> readOnlyResources = List.of(entity, template, principalSelf);
+    List<AuthorizationResource> deniedResources = List.of(webhook, mapping, audit,
+        principalResource);
+    List<AuthorizationAction> actions = List.of(AuthorizationAction.READ,
+        AuthorizationAction.CREATE, AuthorizationAction.UPDATE, AuthorizationAction.DELETE);
+
+    PrincipalInfo human = principal("regular-human", PrincipalKind.HUMAN);
+    PrincipalInfo serviceAccount = principal("service-client", PrincipalKind.SERVICE_ACCOUNT);
+    PrincipalInfo admin = principal("catalog-admin", PrincipalKind.HUMAN);
+    Entity activeHuman = principalEntity(false, "true", "true");
+    Entity inactiveHuman = principalEntity(false, "false", "false");
+    Entity servicePrincipal = new Entity(UUID.randomUUID(), "principal", "Service",
+        "service-client", List.of(new Property(null, "kind", "SERVICE_ACCOUNT"),
+            new Property(null, "is_admin", "false")),
+        List.of());
+    Entity adminPrincipal = new Entity(UUID.randomUUID(), "principal", "Admin", "catalog-admin",
+        List.of(new Property(null, "kind", "HUMAN"), new Property(null, "is_admin", "true")),
+        List.of());
+
+    Stream.Builder<Arguments> cases = Stream.builder();
+    for (AuthorizationAction action : actions) {
+      for (AuthorizationResource resource : readOnlyResources) {
+        cases.add(Arguments.of("human " + action + " " + resource.type(), human, action, resource,
+            Optional.of(activeHuman), action == AuthorizationAction.READ));
+        cases.add(Arguments.of("M2M " + action + " " + resource.type(), serviceAccount, action,
+            resource, Optional.of(servicePrincipal), action == AuthorizationAction.READ));
+        cases.add(Arguments.of("admin " + action + " " + resource.type(), admin, action, resource,
+            Optional.of(adminPrincipal), true));
+      }
+      for (AuthorizationResource resource : deniedResources) {
+        cases.add(Arguments.of("human " + action + " " + resource.type(), human, action, resource,
+            Optional.of(activeHuman), false));
+        cases.add(Arguments.of("M2M " + action + " " + resource.type(), serviceAccount, action,
+            resource, Optional.of(servicePrincipal), false));
+        cases.add(Arguments.of("admin " + action + " " + resource.type(), admin, action, resource,
+            Optional.of(adminPrincipal),
+            !resource.type().equals("audit") || action == AuthorizationAction.READ));
+      }
+    }
+    cases.add(Arguments.of("inactive human reads entity", human, AuthorizationAction.READ, entity,
+        Optional.of(inactiveHuman), false));
+    cases.add(Arguments.of("missing human principal reads entity", human, AuthorizationAction.READ,
+        entity, Optional.empty(), false));
+    return cases.build();
+  }
+
   @Test
   void shouldAllowBreakGlassPrincipalBeforeCheckingCatalogAdmin() {
     var request = request(principal("break-glass-user", PrincipalKind.HUMAN),
@@ -53,7 +134,7 @@ class GlobalAuthorizationServiceTest {
   }
 
   @Test
-  void shouldAllowPrincipalWithIsAdminSetToTrueForAllCrud() {
+  void shouldAllowPrincipalWithIsAdminSetToTrueForCrudExceptAuditWrites() {
     for (AuthorizationAction action : crudActions()) {
       var request = request(humanPrincipal, action, WEBHOOK_CONFIGURATION,
           Optional.of(principalEntity("true")));
@@ -61,6 +142,21 @@ class GlobalAuthorizationServiceTest {
       assertThatCode(() -> authorizationService.authorize(request, policy))
           .doesNotThrowAnyException();
     }
+  }
+
+  @Test
+  void shouldAllowCatalogAdministratorToReadAuditButRejectAuditWrites() {
+    AuthorizationResource audit = new AuthorizationResource("audit", Optional.empty(),
+        Optional.empty());
+    var readRequest = request(humanPrincipal, AuthorizationAction.READ, audit,
+        Optional.of(principalEntity("true")));
+    var writeRequest = request(humanPrincipal, AuthorizationAction.CREATE, audit,
+        Optional.of(principalEntity("true")));
+
+    assertThatCode(() -> authorizationService.authorize(readRequest, policy))
+        .doesNotThrowAnyException();
+    assertThatThrownBy(() -> authorizationService.authorize(writeRequest, policy))
+        .isInstanceOf(PrincipalNotAuthorizedException.class);
   }
 
   @Test
@@ -75,27 +171,20 @@ class GlobalAuthorizationServiceTest {
   }
 
   @Test
-  void shouldAllowServiceAccountCrudOutsideWebhookConfigurationCreation() {
-    for (AuthorizationAction action : crudActions()) {
-      if (action == AuthorizationAction.CREATE) {
-        var webhookRequest = request(serviceAccount(), action, WEBHOOK_CONFIGURATION,
-            Optional.empty());
-        assertThatThrownBy(() -> authorizationService.authorize(webhookRequest, policy))
-            .isInstanceOf(PrincipalNotAuthorizedException.class);
-      } else {
-        var request = request(serviceAccount(), action, WEBHOOK_CONFIGURATION, Optional.empty());
-        assertThatCode(() -> authorizationService.authorize(request, policy))
-            .doesNotThrowAnyException();
-      }
+  void shouldAllowServiceAccountReadsOnlyOnEntityAndTemplateResources() {
+    AuthorizationResource entityTemplate = new AuthorizationResource("entity_template",
+        Optional.of("api"), Optional.empty());
+    for (AuthorizationResource resource : List.of(CATALOG, entityTemplate)) {
+      var request = request(serviceAccount(), AuthorizationAction.READ, resource, Optional.empty());
+      assertThatCode(() -> authorizationService.authorize(request, policy))
+          .doesNotThrowAnyException();
     }
-  }
 
-  @Test
-  void shouldAllowServiceAccountToCreateOtherCatalogResources() {
-    var request = request(serviceAccount(), AuthorizationAction.CREATE, CATALOG, Optional.empty());
-
-    assertThatCode(() -> authorizationService.authorize(request, policy))
-        .doesNotThrowAnyException();
+    for (AuthorizationAction action : crudActions()) {
+      var request = request(serviceAccount(), action, WEBHOOK_CONFIGURATION, Optional.empty());
+      assertThatThrownBy(() -> authorizationService.authorize(request, policy))
+          .isInstanceOf(PrincipalNotAuthorizedException.class);
+    }
   }
 
   @Test
@@ -116,6 +205,21 @@ class GlobalAuthorizationServiceTest {
       for (AuthorizationAction action : List.of(AuthorizationAction.CREATE,
           AuthorizationAction.UPDATE, AuthorizationAction.DELETE)) {
         var request = request(serviceAccount(), action, resource, Optional.empty());
+        assertThatThrownBy(() -> authorizationService.authorize(request, policy))
+            .isInstanceOf(PrincipalNotAuthorizedException.class);
+      }
+    }
+  }
+
+  @Test
+  void shouldRejectHumanAndServiceAccountAccessToNonReadOnlyResources() {
+    for (AuthorizationResource resource : List.of(WEBHOOK_CONFIGURATION,
+        new AuthorizationResource("entity_dynamic_mapping", Optional.of("mapping"),
+            Optional.empty()),
+        new AuthorizationResource("audit", Optional.empty(), Optional.empty()))) {
+      for (PrincipalInfo principal : List.of(humanPrincipal, serviceAccount())) {
+        var request = request(principal, AuthorizationAction.READ, resource,
+            Optional.of(principalEntity("false", "true")));
         assertThatThrownBy(() -> authorizationService.authorize(request, policy))
             .isInstanceOf(PrincipalNotAuthorizedException.class);
       }
@@ -240,7 +344,7 @@ class GlobalAuthorizationServiceTest {
         AuthorizationAction.DELETE);
   }
 
-  private PrincipalInfo principal(String identifier, PrincipalKind kind) {
+  private static PrincipalInfo principal(String identifier, PrincipalKind kind) {
     return new PrincipalInfo(identifier, kind, "Platform User", null, null);
   }
 
@@ -255,6 +359,14 @@ class GlobalAuthorizationServiceTest {
   private Entity principalEntity(String isAdmin, String isDigitalTeammate) {
     return new Entity(UUID.randomUUID(), "principal", "Platform User", PRINCIPAL_IDENTIFIER,
         List.of(new Property(null, "is_admin", isAdmin),
+            new Property(null, REQUIRED_PRINCIPAL_PROPERTY, isDigitalTeammate)),
+        List.of());
+  }
+
+  private static Entity principalEntity(boolean isAdmin, String isDigitalTeammate, String kind) {
+    return new Entity(UUID.randomUUID(), "principal", "Platform User", "regular-human",
+        List.of(new Property(null, "kind", kind),
+            new Property(null, "is_admin", Boolean.toString(isAdmin)),
             new Property(null, REQUIRED_PRINCIPAL_PROPERTY, isDigitalTeammate)),
         List.of());
   }

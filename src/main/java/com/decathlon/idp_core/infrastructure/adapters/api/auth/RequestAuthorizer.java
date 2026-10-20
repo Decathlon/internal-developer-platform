@@ -54,7 +54,7 @@ public class RequestAuthorizer {
         : principalExtractor.extractPrincipalInfo(authentication);
     Optional<Entity> principalEntity = provisionedContext != null
         ? provisionedContext.principalEntity()
-        : provisioningService.getPrincipal(principal.identifier());
+        : provisioningService.getPrincipalFor(principal);
 
     authorizationService.authorize(
         new AuthorizationRequest(principal, principalEntity, action, resource),

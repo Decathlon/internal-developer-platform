@@ -41,10 +41,12 @@ app:
   # ${app.idp-core-prefix-url}/login/oauth2/code/github in the OAuth app settings.
   idp-core-prefix-url: http://localhost:8084
   security:
+    principal-provisioning:
+      mode: ${IDP_PRINCIPAL_PROVISIONING_MODE:LINK_ONLY}
     authorization:
       mode: GLOBAL
       # Comma-separated immutable principal identifiers for emergency access, even before JIT provisioning.
-      global-principal-identifiers: ${IDP_SUPER_ADMIN_IDENTIFIER:},${IDP_PLATFORM_ADMIN_IDENTIFIER:}
+      global-principal-identifiers: ${IDP_SUPER_ADMIN_IDENTIFIER:Z29ABRAN},${IDP_PLATFORM_ADMIN_IDENTIFIER:}
       # Optional human-access gate; when set, the named principal property must be true.
       required-principal-property: ${IDP_REQUIRED_PRINCIPAL_PROPERTY:}
     authentication:
@@ -74,10 +76,10 @@ logging:
     org.hibernate.stat: WARN
     org.hibernate.type.descriptor.sql.BasicBinder: TRACE
 
-camel:
-  component:
-    platform-http:
-      engine: "servlet"
+# camel:
+#   component:
+#     platform-http:
+#       engine: "servlet"
 
 management:
   tracing:

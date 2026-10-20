@@ -1,6 +1,7 @@
 package com.decathlon.idp_core.infrastructure.adapters.ingestion.processor;
 
 import java.util.List;
+import java.util.Set;
 
 import org.springframework.stereotype.Component;
 
@@ -22,6 +23,8 @@ import lombok.extern.slf4j.Slf4j;
 public class IngestionProcessor {
 
   private static final String SPAN_ATTRIBUTE_WEBHOOK_IDENTIFIER = "idp.webhook.identifier";
+  private static final Set<String> PROTECTED_PRINCIPAL_PROPERTIES = Set.of("kind", "is_admin",
+      "is_idp_user");
 
   private final MappingEnginePort mappingEngine;
   private final EntityService entityService;
@@ -56,13 +59,14 @@ public class IngestionProcessor {
   /// @param mapping the mapping definition to apply
   private void applyMapping(String payload, EntityDynamicMapping mapping) {
     log.debug("Applying mapping for template: {} with action: {}", mapping.identifier(), mapping.action());
-    Entity entity = mappingEngine.mapToEntity(payload, mapping);
+    Entity mappedEntity = mappingEngine.mapToEntity(payload, mapping);
 
-    if (entity == null) {
+    if (mappedEntity == null) {
       log.debug("Mapping filter excluded payload for template: {}",
           mapping.entityTemplateIdentifier());
       return;
     }
+    Entity entity = protectPrincipalProperties(mappedEntity);
     switch (mapping.action()) {
       case UPDATE_ENTITY -> handleUpdate(entity);
       case UPDATE_PROPERTIES -> handleUpdateProperties(entity);
@@ -73,6 +77,17 @@ public class IngestionProcessor {
 
     log.info("Successfully processed action {} for entity: {} under template: {}",
         mapping.action(), entity.identifier(), entity.templateIdentifier());
+  }
+
+  private Entity protectPrincipalProperties(Entity entity) {
+    if (!"principal".equals(entity.templateIdentifier())) {
+      return entity;
+    }
+    List<com.decathlon.idp_core.domain.model.entity.Property> properties = entity.properties()
+        .stream().filter(property -> !PROTECTED_PRINCIPAL_PROPERTIES.contains(property.name()))
+        .toList();
+    return new Entity(entity.id(), entity.templateIdentifier(), entity.name(), entity.identifier(),
+        properties, entity.relations());
   }
 
   /// Handles the Update action for an entity.

@@ -17,6 +17,7 @@ import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.decathlon.idp_core.domain.exception.principal.PrincipalNotFoundException;
+import com.decathlon.idp_core.domain.model.authorization.AuthorizationResource;
 import com.decathlon.idp_core.domain.model.entity.Entity;
 import com.decathlon.idp_core.domain.model.principal.PrincipalInfo;
 import com.decathlon.idp_core.domain.service.principal.PrincipalProvisioningService;
@@ -55,6 +56,7 @@ public class PrincipalController {
   private final EntityDtoOutMapper entityDtoOutMapper;
 
   @GetMapping("/me")
+  @AuthorizedResource(AuthorizationResource.PRINCIPAL_SELF)
   @ResponseStatus(OK)
   @Operation(summary = "Get current authenticated principal", description = """
       Returns the Principal entity of the currently authenticated actor (human or service account).

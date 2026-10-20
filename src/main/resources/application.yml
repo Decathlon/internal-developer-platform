@@ -118,6 +118,8 @@ app:
   # Base URL of this service, used to build self-referencing links.
   idp-core-prefix-url: ${IDP_CORE_PREFIX_URL}
   security:
+    principal-provisioning:
+      mode: ${IDP_PRINCIPAL_PROVISIONING_MODE:LINK_ONLY}
     authorization:
       mode: GLOBAL
       # Comma-separated immutable principal identifiers for emergency access, even before JIT provisioning.

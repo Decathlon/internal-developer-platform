@@ -11,6 +11,7 @@ import static org.mockito.Mockito.when;
 import java.io.IOException;
 import java.util.List;
 import java.util.Optional;
+import java.util.stream.Stream;
 
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
@@ -22,6 +23,8 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
 import org.junit.jupiter.params.provider.ValueSource;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
@@ -37,6 +40,8 @@ import com.decathlon.idp_core.domain.model.principal.PrincipalInfo;
 import com.decathlon.idp_core.domain.model.principal.PrincipalKind;
 import com.decathlon.idp_core.domain.service.principal.PrincipalProvisioningService;
 import com.decathlon.idp_core.infrastructure.adapters.api.configuration.AuthenticationProperties;
+import com.decathlon.idp_core.infrastructure.adapters.api.configuration.PrincipalProvisioningMode;
+import com.decathlon.idp_core.infrastructure.adapters.api.configuration.PrincipalProvisioningProperties;
 import com.decathlon.idp_core.infrastructure.adapters.api.exception.MissingPrincipalIdentifierException;
 import com.decathlon.idp_core.infrastructure.adapters.api.handler.ApiErrorResponseWriter;
 import com.decathlon.idp_core.infrastructure.adapters.api.principal.PrincipalExtractor;
@@ -52,6 +57,9 @@ class JitProvisioningFilterTest {
 
   @Mock
   private AuthenticationProperties authProperties;
+
+  @Mock
+  private PrincipalProvisioningProperties provisioningProperties;
 
   @Mock
   private ApiErrorResponseWriter errorResponseWriter;
@@ -90,9 +98,13 @@ class JitProvisioningFilterTest {
     when(principalInfo.identifier()).thenReturn("user-123");
     when(principalInfo.kind()).thenReturn(PrincipalKind.valueOf("HUMAN"));
     when(principalExtractor.extractPrincipalInfo(auth)).thenReturn(principalInfo);
-    Entity principalEntity = new Entity(null, "principal", "User", "user-123", List.of(),
+    when(provisioningProperties.mode()).thenReturn(PrincipalProvisioningMode.JIT);
+    Entity principalEntity = new Entity(null, "principal", "User", "user-123",
+        List.of(new com.decathlon.idp_core.domain.model.entity.Property(null, "kind", "HUMAN")),
         List.of());
     when(provisioningService.provisionPrincipal(principalInfo)).thenReturn(principalEntity);
+    when(provisioningService.getPrincipalFor(principalInfo))
+        .thenReturn(Optional.of(principalEntity));
 
     // Act
     jitProvisioningFilter.doFilterInternal(request, response, filterChain);
@@ -103,6 +115,109 @@ class JitProvisioningFilterTest {
     verify(request).setAttribute(ProvisionedPrincipalContext.REQUEST_ATTRIBUTE,
         new ProvisionedPrincipalContext(principalInfo, Optional.of(principalEntity)));
     verify(filterChain).doFilter(request, response);
+  }
+
+  @Test
+  void doFilterInternal_inLinkOnlyMode_linksExistingPrincipalWithoutProvisioning()
+      throws ServletException, IOException {
+    Authentication auth = mock(Authentication.class);
+    when(auth.isAuthenticated()).thenReturn(true);
+    SecurityContextHolder.getContext().setAuthentication(auth);
+    PrincipalInfo principalInfo = new PrincipalInfo("user-123", PrincipalKind.HUMAN, "User",
+        java.util.Map.of(), List.of());
+    Entity principalEntity = new Entity(null, "principal", "User", "user-123",
+        List.of(new com.decathlon.idp_core.domain.model.entity.Property(null, "kind", "HUMAN")),
+        List.of());
+    when(provisioningProperties.mode()).thenReturn(PrincipalProvisioningMode.LINK_ONLY);
+    when(principalExtractor.extractPrincipalInfo(auth)).thenReturn(principalInfo);
+    when(provisioningService.getPrincipalFor(principalInfo))
+        .thenReturn(Optional.of(principalEntity));
+
+    jitProvisioningFilter.doFilterInternal(request, response, filterChain);
+
+    verify(provisioningService, never()).provisionPrincipal(any());
+    verify(request).setAttribute(ProvisionedPrincipalContext.REQUEST_ATTRIBUTE,
+        new ProvisionedPrincipalContext(principalInfo, Optional.of(principalEntity)));
+    verify(filterChain).doFilter(request, response);
+  }
+
+  @Test
+  void doFilterInternal_inLinkOnlyMode_rejectsMissingIdentity()
+      throws ServletException, IOException {
+    Authentication auth = mock(Authentication.class);
+    when(auth.isAuthenticated()).thenReturn(true);
+    SecurityContextHolder.getContext().setAuthentication(auth);
+    PrincipalInfo principalInfo = new PrincipalInfo("unregistered", PrincipalKind.HUMAN, "User",
+        java.util.Map.of(), List.of());
+    when(provisioningProperties.mode()).thenReturn(PrincipalProvisioningMode.LINK_ONLY);
+    when(principalExtractor.extractPrincipalInfo(auth)).thenReturn(principalInfo);
+
+    jitProvisioningFilter.doFilterInternal(request, response, filterChain);
+
+    verify(provisioningService, never()).provisionPrincipal(any());
+    verify(errorResponseWriter).write(response, HttpStatus.UNAUTHORIZED,
+        "No linked principal matches the authenticated identity");
+    verify(filterChain, never()).doFilter(any(), any());
+  }
+
+  @ParameterizedTest(name = "{0} {1} {2}")
+  @MethodSource("principalLinkScenarios")
+  void doFilterInternal_appliesProvisioningModeForBothActorKinds(String scenario,
+      PrincipalProvisioningMode mode, PrincipalKind kind, boolean existingWrongKind)
+      throws ServletException, IOException {
+    Authentication auth = mock(Authentication.class);
+    when(auth.isAuthenticated()).thenReturn(true);
+    SecurityContextHolder.getContext().setAuthentication(auth);
+    PrincipalInfo principalInfo = new PrincipalInfo("linked-identity", kind, "Actor",
+        java.util.Map.of(), List.of());
+    when(provisioningProperties.mode()).thenReturn(mode);
+    when(principalExtractor.extractPrincipalInfo(auth)).thenReturn(principalInfo);
+
+    boolean shouldContinue = mode == PrincipalProvisioningMode.JIT && !existingWrongKind;
+    if (mode == PrincipalProvisioningMode.LINK_ONLY) {
+      when(provisioningService.getPrincipalFor(principalInfo)).thenReturn(Optional.empty());
+    } else if (existingWrongKind) {
+      String storedKind = kind == PrincipalKind.HUMAN ? "SERVICE_ACCOUNT" : "HUMAN";
+      Entity wrongKindPrincipal = new Entity(null, "principal", "Actor", "linked-identity",
+          List.of(
+              new com.decathlon.idp_core.domain.model.entity.Property(null, "kind", storedKind)),
+          List.of());
+      when(provisioningService.provisionPrincipal(principalInfo)).thenReturn(wrongKindPrincipal);
+      when(provisioningService.getPrincipalFor(principalInfo)).thenReturn(Optional.empty());
+    } else {
+      Entity matchingPrincipal = new Entity(null, "principal", "Actor", "linked-identity",
+          List.of(
+              new com.decathlon.idp_core.domain.model.entity.Property(null, "kind", kind.name())),
+          List.of());
+      when(provisioningService.provisionPrincipal(principalInfo)).thenReturn(matchingPrincipal);
+      when(provisioningService.getPrincipalFor(principalInfo))
+          .thenReturn(Optional.of(matchingPrincipal));
+    }
+
+    jitProvisioningFilter.doFilterInternal(request, response, filterChain);
+
+    if (shouldContinue) {
+      verify(filterChain).doFilter(request, response);
+      verify(errorResponseWriter, never()).write(any(), any(), any());
+    } else {
+      verify(errorResponseWriter).write(response, HttpStatus.UNAUTHORIZED,
+          "No linked principal matches the authenticated identity");
+      verify(filterChain, never()).doFilter(any(), any());
+    }
+    if (mode == PrincipalProvisioningMode.LINK_ONLY) {
+      verify(provisioningService, never()).provisionPrincipal(any());
+    }
+  }
+
+  private static Stream<Arguments> principalLinkScenarios() {
+    Stream.Builder<Arguments> scenarios = Stream.builder();
+    for (PrincipalKind kind : PrincipalKind.values()) {
+      for (PrincipalProvisioningMode mode : PrincipalProvisioningMode.values()) {
+        scenarios.add(Arguments.of("missing principal", mode, kind, false));
+        scenarios.add(Arguments.of("wrong-kind principal", mode, kind, true));
+      }
+    }
+    return scenarios.build();
   }
 
   @Test

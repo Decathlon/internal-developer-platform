@@ -14,6 +14,7 @@ public record AuthorizationResource(@NotBlank String type, @NotNull Optional<Str
   public static final String ENTITY_DYNAMIC_MAPPING = "entity_dynamic_mapping";
   public static final String ENTITY_TEMPLATE = "entity_template";
   public static final String PRINCIPAL_TEMPLATE_IDENTIFIER = "principal";
+  public static final String PRINCIPAL_SELF = "principal_self";
 
   public AuthorizationResource {
     Objects.requireNonNull(type, "type must not be null");

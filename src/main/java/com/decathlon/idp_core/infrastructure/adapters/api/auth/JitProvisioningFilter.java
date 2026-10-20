@@ -21,6 +21,8 @@ import com.decathlon.idp_core.domain.model.entity.Entity;
 import com.decathlon.idp_core.domain.model.principal.PrincipalInfo;
 import com.decathlon.idp_core.domain.service.principal.PrincipalProvisioningService;
 import com.decathlon.idp_core.infrastructure.adapters.api.configuration.AuthenticationProperties;
+import com.decathlon.idp_core.infrastructure.adapters.api.configuration.PrincipalProvisioningMode;
+import com.decathlon.idp_core.infrastructure.adapters.api.configuration.PrincipalProvisioningProperties;
 import com.decathlon.idp_core.infrastructure.adapters.api.configuration.SecurityConfiguration;
 import com.decathlon.idp_core.infrastructure.adapters.api.exception.MissingPrincipalIdentifierException;
 import com.decathlon.idp_core.infrastructure.adapters.api.handler.ApiErrorResponseWriter;
@@ -54,11 +56,13 @@ import lombok.extern.slf4j.Slf4j;
 @RequiredArgsConstructor
 public class JitProvisioningFilter extends OncePerRequestFilter {
 
+  private static final PathPatternParser PATTERN_PARSER = new PathPatternParser();
+
   private final PrincipalExtractor principalExtractor;
   private final PrincipalProvisioningService provisioningService;
   private final AuthenticationProperties authProperties;
+  private final PrincipalProvisioningProperties provisioningProperties;
   private final ApiErrorResponseWriter errorResponseWriter;
-  private final PathPatternParser patternParser = new PathPatternParser();
 
   @Override
   protected void doFilterInternal(@NonNull HttpServletRequest request,
@@ -87,9 +91,28 @@ public class JitProvisioningFilter extends OncePerRequestFilter {
     }
 
     try {
-      Entity principalEntity = provisioningService.provisionPrincipal(principalInfo);
+      if (provisioningProperties != null
+          && provisioningProperties.mode() == PrincipalProvisioningMode.LINK_ONLY) {
+        Optional<Entity> linkedPrincipal = provisioningService.getPrincipalFor(principalInfo);
+        if (linkedPrincipal.isEmpty()) {
+          errorResponseWriter.write(response, HttpStatus.UNAUTHORIZED,
+              "No linked principal matches the authenticated identity");
+          return false;
+        }
+        request.setAttribute(ProvisionedPrincipalContext.REQUEST_ATTRIBUTE,
+            new ProvisionedPrincipalContext(principalInfo, linkedPrincipal));
+        return true;
+      }
+
+      provisioningService.provisionPrincipal(principalInfo);
+      Optional<Entity> matchingPrincipal = provisioningService.getPrincipalFor(principalInfo);
+      if (matchingPrincipal.isEmpty()) {
+        errorResponseWriter.write(response, HttpStatus.UNAUTHORIZED,
+            "No linked principal matches the authenticated identity");
+        return false;
+      }
       request.setAttribute(ProvisionedPrincipalContext.REQUEST_ATTRIBUTE,
-          new ProvisionedPrincipalContext(principalInfo, Optional.of(principalEntity)));
+          new ProvisionedPrincipalContext(principalInfo, matchingPrincipal));
 
       log.debug("JIT provisioning successful for principal: {} (kind: {})",
           principalInfo.identifier(), principalInfo.kind());
@@ -109,6 +132,6 @@ public class JitProvisioningFilter extends OncePerRequestFilter {
   protected boolean shouldNotFilter(@NonNull HttpServletRequest request) {
     String path = request.getRequestURI();
     return authProperties.jitProvisioningExcludedPaths().stream()
-        .anyMatch(pattern -> patternParser.parse(pattern).matches(PathContainer.parsePath(path)));
+        .anyMatch(pattern -> PATTERN_PARSER.parse(pattern).matches(PathContainer.parsePath(path)));
   }
 }
