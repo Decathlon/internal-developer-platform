@@ -224,7 +224,7 @@ public class EntityController {
 
     EntityGraphNode entityGraphNode = entityGraphService.getEntityGraph(templateIdentifier,
         entityIdentifier,
-        new EntityGraphQueryOptions(relationsDepth, false, true,
+        new EntityGraphQueryOptions(relationsDepth, true, false,
             relationsToDisplay == null ? Set.of() : relationsToDisplay, Set.of(),
             EntityGraphTraversalMode.DIRECT_LINEAGE));
     return entityDtoOutFromEntityNodeMapper.toDto(entityGraphNode, templateIdentifier,

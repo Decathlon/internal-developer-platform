@@ -24,8 +24,6 @@ import com.decathlon.idp_core.domain.service.entity_template.EntityTemplateServi
 import com.decathlon.idp_core.infrastructure.adapters.api.dto.out.entity.EntityDtoOut;
 import com.decathlon.idp_core.infrastructure.adapters.api.dto.out.entity.EntitySummaryDto;
 
-import lombok.RequiredArgsConstructor;
-
 /// Adapter mapper for converting a recursive [EntityGraphNode] domain tree into
 /// the flat, unified [EntityDtoOut] representation expected by API clients.
 ///
@@ -48,10 +46,13 @@ import lombok.RequiredArgsConstructor;
 ///   `relationsAsTarget`, and inbound traversal strictly ignores `relations`,
 ///   preventing cross-branch entity leakage at shared convergence nodes.
 @Component
-@RequiredArgsConstructor
 public class EntityDtoOutFromEntityNodeMapper {
 
   private final EntityTemplateService entityTemplateService;
+
+  public EntityDtoOutFromEntityNodeMapper(EntityTemplateService entityTemplateService) {
+    this.entityTemplateService = Objects.requireNonNull(entityTemplateService);
+  }
 
   /// Resolves an [EntityGraphNode] tree and converts it into a flat
   /// [EntityDtoOut] representation.
@@ -82,15 +83,18 @@ public class EntityDtoOutFromEntityNodeMapper {
 
     Map<String, Object> properties = mapPropertiesFromGraphNode(root, entityTemplate);
 
+    Map<String, EntityTemplate> templatesByIdentifier = new HashMap<>();
+    templatesByIdentifier.put(entityTemplate.identifier(), entityTemplate);
     var state = new TraversalState(root.identifier(), new HashMap<>(), new HashMap<>(),
-        new HashMap<>(), new HashSet<>());
+        new HashMap<>(), new HashSet<>(), templatesByIdentifier);
 
     // Initiate directional traversals independently starting from root at depth 0
     traverseOutbound(root, 0, maxDepth, state);
     traverseInbound(root, 0, maxDepth, state);
 
-    Map<String, List<EntitySummaryDto>> finalizedRelations = state.relationsMap().entrySet()
-        .stream().collect(Collectors.toMap(Map.Entry::getKey, e -> new ArrayList<>(e.getValue())));
+    Map<String, List<EntitySummaryDto>> finalizedRelations = new HashMap<>();
+    state.relationsMap().forEach((relationName, summaries) -> finalizedRelations.put(relationName,
+        new ArrayList<>(summaries)));
 
     return new EntityDtoOut(root.identifier(), root.name(), root.templateIdentifier(), properties,
         finalizedRelations);
@@ -139,7 +143,7 @@ public class EntityDtoOutFromEntityNodeMapper {
   /// @param maxDepth maximum allowable depth boundary
   /// @param state shared accumulator state tracking visited depths and
   /// emitted edge signatures
-  private static void traverseOutbound(EntityGraphNode node, int currentDepth, int maxDepth,
+  private void traverseOutbound(EntityGraphNode node, int currentDepth, int maxDepth,
       TraversalState state) {
     String nodeId = nodeId(node.templateIdentifier(), node.identifier());
 
@@ -160,8 +164,7 @@ public class EntityDtoOutFromEntityNodeMapper {
 
         if (shouldCollectRelations && isNotRoot && state.emittedEdgeSignatures().add(signature)) {
           state.relationsMap().computeIfAbsent(relation.name(), k -> new LinkedHashSet<>())
-              .add(new EntitySummaryDto(target.identifier(), target.name(),
-                  target.templateIdentifier()));
+              .add(toSummary(target, state));
         }
 
         if (currentDepth < maxDepth) {
@@ -181,7 +184,7 @@ public class EntityDtoOutFromEntityNodeMapper {
   /// @param maxDepth maximum allowable depth boundary
   /// @param state shared accumulator state tracking visited depths and
   /// emitted edge signatures
-  private static void traverseInbound(EntityGraphNode node, int currentDepth, int maxDepth,
+  private void traverseInbound(EntityGraphNode node, int currentDepth, int maxDepth,
       TraversalState state) {
     String nodeId = nodeId(node.templateIdentifier(), node.identifier());
 
@@ -202,8 +205,7 @@ public class EntityDtoOutFromEntityNodeMapper {
 
         if (shouldCollectRelations && isNotRoot && state.emittedEdgeSignatures().add(signature)) {
           state.relationsMap().computeIfAbsent(relation.name(), k -> new LinkedHashSet<>())
-              .add(new EntitySummaryDto(source.identifier(), source.name(),
-                  source.templateIdentifier()));
+              .add(toSummary(source, state));
         }
 
         if (currentDepth < maxDepth) {
@@ -220,6 +222,14 @@ public class EntityDtoOutFromEntityNodeMapper {
   /// traversal accumulators.
   private static String nodeId(String templateIdentifier, String identifier) {
     return templateIdentifier + ":" + identifier;
+  }
+
+  private EntitySummaryDto toSummary(EntityGraphNode node, TraversalState state) {
+    EntityTemplate template = state.templatesByIdentifier().computeIfAbsent(
+        node.templateIdentifier(), entityTemplateService::getEntityTemplateByIdentifier);
+    Map<String, Object> properties = mapPropertiesFromGraphNode(node, template);
+    return new EntitySummaryDto(node.identifier(), node.name(), node.templateIdentifier(),
+        properties);
   }
 
   /// Maps properties from a graph node using the provided template definition for
@@ -258,6 +268,7 @@ public class EntityDtoOutFromEntityNodeMapper {
   /// signatures readable and manage state efficiently across directional passes.
   private record TraversalState(String rootIdentifier,
       Map<String, Set<EntitySummaryDto>> relationsMap, Map<String, Integer> visitedOutboundDepths,
-      Map<String, Integer> visitedInboundDepths, Set<String> emittedEdgeSignatures) {
+      Map<String, Integer> visitedInboundDepths, Set<String> emittedEdgeSignatures,
+      Map<String, EntityTemplate> templatesByIdentifier) {
   }
 }

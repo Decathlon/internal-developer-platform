@@ -282,6 +282,34 @@ Retrieve a specific entity using its template and entity identifiers:
 GET /api/v1/entities/{templateIdentifier}/{entityIdentifier}
 ```
 
+The response includes each related entity's properties alongside its identifier,
+name, and template identifier. The `relations_depth` parameter controls how many
+levels of related entities the endpoint returns.
+
+```json
+{
+  "identifier": "web-api-1",
+  "name": "Web API",
+  "template_identifier": "web-service",
+  "properties": {
+    "environment": "production"
+  },
+  "relations": {
+    "depends_on": [
+      {
+        "identifier": "database-1",
+        "name": "Primary Database",
+        "template_identifier": "database",
+        "properties": {
+          "engine": "postgresql",
+          "version": "16"
+        }
+      }
+    ]
+  }
+}
+```
+
 ---
 
 ## Updating an Entity

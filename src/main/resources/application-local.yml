@@ -65,11 +65,6 @@ logging:
     org.hibernate.stat: WARN
     org.hibernate.type.descriptor.sql.BasicBinder: TRACE
 
-camel:
-  component:
-    platform-http:
-      engine: "servlet"
-
 management:
   tracing:
     enabled: false

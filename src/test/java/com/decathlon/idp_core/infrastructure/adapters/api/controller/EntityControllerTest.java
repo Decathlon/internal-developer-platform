@@ -24,6 +24,7 @@ import org.skyscreamer.jsonassert.JSONAssert;
 import org.skyscreamer.jsonassert.JSONCompareMode;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.test.context.support.WithMockUser;
+import org.springframework.test.context.jdbc.Sql;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders;
@@ -389,6 +390,7 @@ public class EntityControllerTest extends AbstractIntegrationTest {
     }
 
     @Test
+    @Sql(scripts = "/db/test/R__3_Insert_graph_entities_test_data.sql")
     @DisplayName("Should return only depth-1 relations when relations_depth=1")
     @WithMockUser
     void getEntity_relationsDepth_1() throws Exception {
@@ -398,6 +400,8 @@ public class EntityControllerTest extends AbstractIntegrationTest {
           .andExpect(status().isOk()).andExpect(jsonPath("$.identifier").value("graph-svc-a"))
           .andExpect(jsonPath("$.relations.uses", hasSize(1)))
           .andExpect(jsonPath("$.relations.uses[0].identifier").value("graph-svc-b"))
+          .andExpect(jsonPath("$.relations.uses[0].properties.tier").value("silver"))
+          .andExpect(jsonPath("$.relations.uses[0].properties.version").value("2.0.0"))
           .andExpect(jsonPath("$.relations.monitors", hasSize(1)))
           .andExpect(jsonPath("$.relations.monitors[0].identifier").value("graph-svc-b"));
     }
