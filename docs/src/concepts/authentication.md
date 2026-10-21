@@ -1,6 +1,6 @@
 ---
 title: Authentication and Authorization
-description: Learn which authentication modes IDP-Core supports, how to enable them, what a principal is, how principals are provisioned, and how authorization works.
+description: Supported authentication modes, how to enable them, what a principal is, how principals are provisioned, and how authorization works.
 ---
 
 IDP-Core separates three concerns. **Authentication** proves who calls the API. **Principal provisioning** turns that
