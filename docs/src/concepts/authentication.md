@@ -60,7 +60,7 @@ paths.
 ```java
 
 @Configuration
-@Order(1)
+- Classifies JWT principals using configured human-indicator claims
 public class PublicFilterChainConfig {
     @Bean
     public SecurityFilterChain publicFilterChain(HttpSecurity http) throws Exception {
@@ -90,12 +90,11 @@ The JWT chain provides OAuth2 resource server authentication:
 Different Identity Providers (IdPs) use different claim names in their JWT tokens for the same semantic meaning. The
 claim mapping system allows you to configure these differences without code changes.
 
-### Principal Identifier Claim
+### OAuth2/OIDC Principal Identifier
 
-Set `app.security.authentication.principal-identifier-claim` to the claim whose non-empty value uniquely identifies a
-human principal. The default is `sub`. The application uses this setting for JWT, OAuth2, and OIDC human principals.
-Set `IDP_PRINCIPAL_IDENTIFIER_CLAIM` in the environment to override the default. The value does not need to use UUID
-syntax, but it must be stable and unique for each person.
+Set `app.security.authentication.principal-identifier-claim` to select the stable identifier claim for OAuth2/OIDC
+human principals. JWT resource-server tokens use the separate `idp.auth.principal-extraction` configuration described
+below.
 
 ```yaml
 app:
@@ -103,9 +102,6 @@ app:
     authentication:
       principal-identifier-claim: ${IDP_PRINCIPAL_IDENTIFIER_CLAIM:sub}
 ```
-
-Service accounts use their mapped `client_id`, then `azp`, and finally `sub`; this human identifier setting does not
-change service-account identification.
 
 ### Optional Claim Mapping Configuration
 
@@ -210,7 +206,7 @@ the token:
 
 | Principal field    | Mapping key                  | Fallback when the mapped claim is absent        |
 |--------------------|------------------------------|-------------------------------------------------|
-| `identifier`       | `principal-identifier-claim` | Request is rejected; the identifier is required |
+| `identifier`       | JWT kind-specific `id-claim` | Request is rejected; the identifier is required |
 | `name`             | `name`                       | `preferred_username`, then `identifier`         |
 | `attributes.email` | `email`                      | Attribute omitted                               |
 | `groups`           | `groups`                     | Empty list                                      |
@@ -228,14 +224,22 @@ It illustrates claim extraction, not a complete token for authentication.
 }
 ```
 
-To use `uuid` as the human principal identifier and `sub` as its display name,
-configure:
+To identify human tokens by `uuid` and use it as the human principal identifier, configure:
 
 ```yaml
+idp:
+  auth:
+    principal-extraction:
+      human-indicator-claims:
+        - uuid
+      human:
+        id-claim: uuid
+      machine:
+        id-claim: client_id
+        id-prefix: "machine:"
 app:
   security:
     authentication:
-      principal-identifier-claim: uuid
       user-claim-mappings:
         name: sub
         email: email
@@ -254,7 +258,7 @@ For a token classified as human, the extracted `PrincipalInfo` contains:
 > Choose a stable claim. IDP-Core does not automatically rename,
 > merge, or look up previously provisioned principals when this setting changes.
 
-## Service Account Detection
+## JWT Principal Classification
 
 Service accounts are **machine-to-machine (M2M) credentials** used for service-to-service authentication (for example,
 API clients, automation tools). Identifying them correctly is important for:
@@ -263,48 +267,34 @@ API clients, automation tools). Identifying them correctly is important for:
 - Audit logging and security monitoring
 - Rate limiting and quota management
 
-IDP-Core requires a configured definitive claim for service-account classification:
-
-### Definitive Claim
-
-A single **definitive claim** unambiguously identifies M2M tokens:
+Configure one or more human-indicator claims and separate identifier claims for human and machine tokens. A human token
+must contain at least one configured indicator whose value includes a character other than whitespace. Otherwise,
+IDP-Core classifies the token as a
+machine principal. Machine principals use the existing `SERVICE_ACCOUNT` domain kind.
 
 ```yaml
-app:
-  security:
-    authentication:
-      service-account-detection:
-        enabled: true
-        mode: "strict"
-        definitive-claim-name: "token_type"
-        definitive-claim-value: "m2m"
+idp:
+  auth:
+    principal-extraction:
+      human-indicator-claims:
+        - uuid
+      human:
+        id-claim: uuid
+      machine:
+        id-claim: client_id
+        id-prefix: "machine:"
 ```
 
-The system checks if the token contains `token_type=m2m`. If it does, the principal is classified as a
-`SERVICE_ACCOUNT`; otherwise, it follows the human-principal path. The definitive claim is required even when the
-legacy `mode` value is configured.
+The selected `human.id-claim` or `machine.id-claim` must include a character other than whitespace. Otherwise,
+IDP-Core rejects the request
+with HTTP 401. `machine.id-prefix` is optional and applies only to the machine principal identifier. The provider's
+raw `client_id` remains unchanged in principal attributes.
 
-**Benefits:**
-
-- Prevents false positives (human users misidentified as services)
-- More secure - reduces risk of access control bypass
-- Clear, deterministic behavior
-
-**Requirements:**
-
-- Your IdP or API gateway must inject the definitive claim
-- May require custom configuration at the IdP level
-
-### Legacy Configuration Compatibility
-
-Optional claims
-such as `service_name`, `client_id`, `azp`, `grant_type`, and `gty` do not
-establish a service account because this classification grants broader write
-access and bypasses the human access gate.
-
-IDP-Core still accepts the legacy `mode` and `legacy-fallback-claims`
-configuration fields so existing deployments can bind their configuration.
-These fields do not weaken the definitive-claim requirement.
+> [!IMPORTANT]
+> Configure indicators that your provider guarantees are present only on human tokens. IDP-Core does not infer the
+> OAuth grant type from `scope`, `client_id`, `grant_type`, or `token_type` claims. If no configured human indicator
+> includes a character other than whitespace, IDP-Core selects the machine path, so the machine ID claim must be
+> present.
 
 ## Principal Extraction
 
@@ -328,9 +318,9 @@ public PrincipalInfo extractPrincipalInfo(Authentication authentication) {
 
 Each strategy:
 
-1. Reads the configured claim mappings from `AuthenticationProperties`
-2. Extracts values from the token using mapped claim names
-3. Classifies the principal as `HUMAN_USER` or `SERVICE_ACCOUNT` using service account detection
+1. Reads the configured human-indicator and kind-specific identifier claims
+2. Classifies a token as human when any configured indicator includes a character other than whitespace; otherwise selects the machine path
+3. Extracts the selected identifier and applies the optional machine prefix
 4. Returns a unified `PrincipalInfo` domain object
 
 ### PrincipalInfo Domain Model
@@ -389,25 +379,34 @@ to one, add it to both.
 The JWT, mock, and OAuth2 login API chains apply the global authorization policy after JIT provisioning. The dedicated
 webhook ingestion chain remains separate and continues to use the security configured on each webhook connector.
 
-In `GLOBAL` mode, a break-glass identifier or a principal entity with `is_admin: true` has full CRUD access. Other
-principals follow this matrix:
+In `GLOBAL` mode, the policy applies this matrix to supported HTTP actions. A configured global identifier bypasses
+catalog and human-property checks; a principal entity with `is_admin: true` also receives the administrator access
+shown below. Unsupported HTTP methods remain denied.
 
-| Principal                                        | Access                                            |
-|--------------------------------------------------|---------------------------------------------------|
-| Platform admin (`is_admin: true` or break-glass) | CRUD on catalog and webhook configurations        |
-| Service account                                  | CRUD except principal writes and webhook creation |
-| Human (gate disabled or property true)           | Read-only                                         |
-| Human (configured property missing or false)     | No protected API access                           |
+| Principal | Read access | Create, update, or delete |
+| --- | --- | --- |
+| Global identifier in `global-principal-identifiers` | All supported resources | All supported resources |
+| Catalog admin (`is_admin: true`) | All supported resources, including audit | All supported resources |
+| Service account | Entities, entity search, entity templates, and `/api/v1/entities/principals/me` | Denied |
+| Human with gate disabled or required property set to `true` | Entities, entity search, entity templates, and `/api/v1/entities/principals/me` | Denied |
+| Human with required property missing or `false` | Denied | Denied |
 
-The policy classifies `GET`, `HEAD`, and `OPTIONS` as reads. It also treats `POST /api/v1/entities/search` and
-`POST /api/v1/entity_dynamic_mappings/dry-run` as reads. Unsupported HTTP methods are denied. Only platform
-administrators can create inbound webhook configurations at `POST /api/v1/inbound_webhooks`; service accounts retain
-the remaining global CRUD behavior except writes to principal records and the `principal` template. This prevents
-service accounts from granting administrator access by changing principal data. This rule applies to configuration
-management, not to webhook delivery requests. When configured, a human must have the named principal property set to
-`true` to access any protected API endpoint, including read endpoints. If the property name is unset, this additional
-check is disabled and the normal `GLOBAL` policy applies. When configured, missing or false properties deny access.
-Catalog admins and break-glass identities bypass this check; service accounts use their separate access rules.
+The entity routes include `GET /api/v1/entities/{templateIdentifier}` and
+`GET /api/v1/entities/{templateIdentifier}/{entityIdentifier}`. Entity graph reads use
+`/api/v1/entities/{templateIdentifier}/{entityIdentifier}/graph`. Entity-template reads use
+`/api/v1/entity-templates` and `/api/v1/entity-templates/{identifier}`. The `POST /api/v1/entities/search` route is
+treated as a read and is available to eligible non-admin humans and service accounts. Although
+`POST /api/v1/entity_dynamic_mappings/dry-run` is also classified as read-only, its resource type is not in the
+resources permitted for non-admin reads, so non-admin requests are denied. Audit history, dynamic-mapping management, and inbound
+webhook configuration endpoints are also denied to non-admins. The inbound-webhook row refers to configuration
+management, not webhook delivery, which uses a separate connector security chain.
+
+The policy classifies `GET`, `HEAD`, and `OPTIONS` as reads. It treats `POST /api/v1/entities/search` and
+`POST /api/v1/entity_dynamic_mappings/dry-run` as read actions, but the resource rules still determine whether
+non-admins can access them. When configured, a human must have the named principal property set to `true` for any
+non-admin access, including reads. If the property name is unset, this additional check is disabled. Missing or false
+properties deny human access. Catalog admins and configured global identifiers bypass this property check; service
+accounts do not use the human-property gate.
 
 For example, set `IDP_REQUIRED_PRINCIPAL_PROPERTY=is_idp_user` to require that property. A trusted ingestion webhook
 can populate or update it on principal entities; configure connector mappings so only an authoritative source can set
@@ -415,11 +414,12 @@ it. JIT does not derive the property from token claims, and it does not overwrit
 enabling the gate, add the configured optional Boolean property to the `principal` template so the ingestion mapping
 can validate and store it.
 
-Human principals use the value of `principal-identifier-claim`. Service accounts use `client_id`, falling back to `azp`
-and then `sub`. Break-glass values must match the resulting principal identifiers exactly and are checked even when
-JIT provisioning did not create a catalog entity. Use an immutable, globally unique identifier, such as a UUID claim;
-the current allow-list is identifier-based and does not scope entries by issuer. Configure one or both root identifiers
-through environment variables:
+JWT humans and service accounts use their configured kind-specific IDs; machine IDs may include `machine.id-prefix`.
+OAuth2/OIDC humans use `principal-identifier-claim`. Break-glass values must match the resulting principal identifiers
+exactly. In `LINK_ONLY` mode, IDP-Core creates a missing principal for a configured global identifier. In JIT mode,
+ordinary JIT provisioning creates a missing principal, and the global identifier still receives the authorization
+bypass. Use an immutable, globally unique identifier, such as a UUID claim; the current allow-list is identifier-based
+and does not scope entries by issuer. Configure one or both root identifiers through environment variables:
 
 ```yaml
 app:
@@ -433,13 +433,16 @@ app:
 IDP-Core provisions each principal directly under the configured identifier. It does not retain username aliases or
 automatically migrate historical principal identifiers.
 
-JIT provisions new principals with `is_admin: false` and ignores `is_admin` and `kind` among extracted attributes.
-An authorized administrator or a trusted ingestion webhook can update `is_admin`; do not map an untrusted identity
-claim to this property. Normal service-account API requests cannot write principal records, while the connector-
-authenticated webhook ingestion chain remains separate. Restrict its mappings to authoritative sources because
-`is_admin` grants platform-wide CRUD access. Entity-template permission or ownership settings are intentionally ignored
-in this phase. The former `baseline-role: "*"` assignment has been removed; JWT authorities do not grant platform
-permissions.
+Ordinary JIT provisioning creates principals with `is_admin: false` and ignores `is_admin` and `kind` among extracted
+attributes. In `LINK_ONLY` mode, when an authenticated identifier is on the global allow-list but has no linked
+principal, IDP-Core creates a principal with `is_admin: true`. It does not change an existing principal; the configured
+identifier still receives the global authorization bypass. In JIT mode, ordinary provisioning remains non-admin, but
+the configured identifier still receives that authorization bypass. Do not map an untrusted identity claim to
+`is_admin`. An authorized administrator or a trusted ingestion webhook can update this property. Normal service-account
+API requests cannot write principal records, while the connector-authenticated webhook ingestion chain remains
+separate. Restrict its mappings to authoritative sources because `is_admin` grants platform-wide access. Entity-template
+permission or ownership settings are intentionally ignored in this phase. The former `baseline-role: "*"` assignment
+has been removed; JWT authorities do not grant platform permissions.
 
 The authorization request already identifies a principal, action, and resource. The next stage can add configurable
 access profiles and resource/action permissions, with profile names stored as data.

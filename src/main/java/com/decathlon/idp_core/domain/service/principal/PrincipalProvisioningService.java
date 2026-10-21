@@ -60,6 +60,20 @@ public class PrincipalProvisioningService {
   /// @return the provisioned Principal entity
   @Transactional
   public Entity provisionPrincipal(PrincipalInfo principalInfo) {
+    return provisionPrincipal(principalInfo, false);
+  }
+
+  /// Provisions a globally configured administrator principal.
+  ///
+  /// @param principalInfo extracted authentication information for an
+  /// allow-listed principal
+  /// @return the provisioned Principal entity
+  @Transactional
+  public Entity provisionGlobalAdministrator(PrincipalInfo principalInfo) {
+    return provisionPrincipal(principalInfo, true);
+  }
+
+  private Entity provisionPrincipal(PrincipalInfo principalInfo, boolean isAdmin) {
     Optional<Entity> existingPrincipal = entityRepository.findByTemplateIdentifierAndIdentifier(
         PRINCIPAL_TEMPLATE_IDENTIFIER, principalInfo.identifier());
 
@@ -67,7 +81,7 @@ public class PrincipalProvisioningService {
       return existingPrincipal.get();
     }
 
-    return createNewPrincipal(principalInfo);
+    return createNewPrincipal(principalInfo, isAdmin);
   }
 
   /// Retrieves a Principal entity by its identifier.
@@ -107,9 +121,10 @@ public class PrincipalProvisioningService {
   ///
   /// @param principalInfo extracted authentication information
   /// @return the newly created or existing Principal entity
-  private Entity createNewPrincipal(PrincipalInfo principalInfo) {
+  private Entity createNewPrincipal(PrincipalInfo principalInfo, boolean isAdmin) {
     Entity newPrincipal = new Entity(null, PRINCIPAL_TEMPLATE_IDENTIFIER, principalInfo.name(),
-        principalInfo.identifier(), buildProperties(principalInfo), buildRelations(principalInfo));
+        principalInfo.identifier(), buildProperties(principalInfo, isAdmin),
+        buildRelations(principalInfo));
     try {
       return entityRepository.save(newPrincipal);
     } catch (EntityAlreadyExistsException _) {
@@ -130,12 +145,10 @@ public class PrincipalProvisioningService {
   ///
   /// @param principalInfo the principal information containing attributes
   /// @return list of properties for the principal entity
-  private List<Property> buildProperties(PrincipalInfo principalInfo) {
+  private List<Property> buildProperties(PrincipalInfo principalInfo, boolean isAdmin) {
     List<Property> properties = new ArrayList<>();
     properties.add(new Property(null, KIND_PROPERTY, principalInfo.kind().name()));
-    // JIT must not grant catalog-admin privileges from identity-provider
-    // attributes.
-    properties.add(new Property(null, IS_ADMIN_PROPERTY, "false"));
+    properties.add(new Property(null, IS_ADMIN_PROPERTY, Boolean.toString(isAdmin)));
 
     principalInfo.attributes().forEach((key, value) -> {
       if (!KIND_PROPERTY.equalsIgnoreCase(key) && !IS_ADMIN_PROPERTY.equalsIgnoreCase(key)

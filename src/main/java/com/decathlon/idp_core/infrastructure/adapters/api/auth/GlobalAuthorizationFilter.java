@@ -96,6 +96,11 @@ public class GlobalAuthorizationFilter extends OncePerRequestFilter {
     try {
       authorizationService.authorize(authorizationRequest, authorizationPolicy);
     } catch (PrincipalNotAuthorizedException _) {
+      log.debug(
+          "Authorization evaluation: result=DENIED, principal={}, kind={}, action={}, "
+              + "resource={}, method={}, path={}",
+          principal.identifier(), principal.kind(), authorizationRequest.action(),
+          authorizationRequest.resource().type(), request.getMethod(), request.getRequestURI());
       log.warn("Authorization denied for principal {} on {} {}", principal.identifier(),
           request.getMethod(), request.getRequestURI());
       errorResponseWriter.write(response, HttpStatus.FORBIDDEN,
@@ -103,6 +108,11 @@ public class GlobalAuthorizationFilter extends OncePerRequestFilter {
       return;
     }
 
+    log.debug(
+        "Authorization evaluation: result=GRANTED, principal={}, kind={}, action={}, "
+            + "resource={}, method={}, path={}",
+        principal.identifier(), principal.kind(), authorizationRequest.action(),
+        authorizationRequest.resource().type(), request.getMethod(), request.getRequestURI());
     filterChain.doFilter(request, response);
   }
 

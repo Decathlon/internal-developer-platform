@@ -136,6 +136,24 @@ class PrincipalProvisioningServiceTest {
   }
 
   @Test
+  void shouldProvisionGlobalAdministratorWithAdminEnabled() {
+    PrincipalInfo principalInfo = new PrincipalInfo("global-admin", PrincipalKind.HUMAN,
+        "Global Admin", Map.of("is_admin", "false"), List.of());
+    when(entityRepository.findByTemplateIdentifierAndIdentifier("principal", "global-admin"))
+        .thenReturn(Optional.empty());
+    when(entityRepository.save(any(Entity.class)))
+        .thenAnswer(invocation -> invocation.getArgument(0));
+
+    provisioningService.provisionGlobalAdministrator(principalInfo);
+
+    ArgumentCaptor<Entity> entityCaptor = ArgumentCaptor.forClass(Entity.class);
+    verify(entityRepository).save(entityCaptor.capture());
+    assertThat(entityCaptor.getValue().properties())
+        .filteredOn(property -> property.name().equals("is_admin")).extracting(Property::value)
+        .containsExactly("true");
+  }
+
+  @Test
   void shouldHandlePrincipalWithNoGroups() {
     // Given: Principal without group membership
     PrincipalInfo principalInfo = new PrincipalInfo("bob", PrincipalKind.HUMAN, "Bob Smith",

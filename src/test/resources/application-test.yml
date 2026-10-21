@@ -41,9 +41,6 @@ app:
       user-claim-mappings:
         sub: "sub"
         preferred_username: "preferred_username"
-      service-account-detection:
-        enabled: true
-        mode: "strict"
       # ✅ Un-indented: Now properly binds to app.security.authentication.jit-provisioning-excluded-paths
       jit-provisioning-excluded-paths: "/,/actuator/**,/swagger-ui/**,/swagger-ui.html,/v3/api-docs/**"
   ingestion:
@@ -79,6 +76,15 @@ management:
       show-details: when_authorized
 
 idp:
+  auth:
+    principal-extraction:
+      human-indicator-claims:
+        - sub
+      human:
+        id-claim: sub
+      machine:
+        id-claim: client_id
+        id-prefix: "machine:"
   security:
     webhook:
       # Comma-separated allow-list for trusted JWKS hosts.

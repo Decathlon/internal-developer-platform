@@ -108,14 +108,14 @@ class EntityTemplateControllerTest extends AbstractIntegrationTest {
     }
 
     @Test
-    @DisplayName("Should return standard 401 when the configured identifier claim is blank")
-    void getTemplates_401_whenPrincipalIdentifierClaimIsBlank() throws Exception {
+    @DisplayName("Should return standard 401 when an unmarked token has no machine identifier")
+    void getTemplates_401_whenMachineIdentifierClaimIsMissing() throws Exception {
       mockMvc
           .perform(get(ENTITY_TEMPLATE_PATH).with(jwt().jwt(token -> token.claim("sub", " ")))
               .accept(APPLICATION_JSON))
           .andExpect(status().isUnauthorized()).andExpect(jsonPath("$.error").value("UNAUTHORIZED"))
           .andExpect(jsonPath("$.error_description")
-              .value(containsString("principal identifier claim 'sub'")));
+              .value(containsString("principal identifier claim 'client_id'")));
     }
 
     /// Tests the GET /api/v1/entity-templates/ endpoint with custom pagination

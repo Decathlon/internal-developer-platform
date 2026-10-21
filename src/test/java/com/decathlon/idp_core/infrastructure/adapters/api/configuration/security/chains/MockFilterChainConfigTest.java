@@ -38,7 +38,6 @@ import com.decathlon.idp_core.domain.exception.mock.MockSecurityConfigurationExc
 import com.decathlon.idp_core.infrastructure.adapters.api.auth.GlobalAuthorizationFilter;
 import com.decathlon.idp_core.infrastructure.adapters.api.auth.JitProvisioningFilter;
 import com.decathlon.idp_core.infrastructure.adapters.api.configuration.AuthenticationProperties;
-import com.decathlon.idp_core.infrastructure.adapters.api.configuration.AuthenticationProperties.ServiceAccountDetection;
 
 /// Unit tests for MockFilterChainConfig and MockJwtAuthenticationFilter.
 /// Covers mock security setup and JWT token generation for local development.
@@ -139,9 +138,7 @@ class MockFilterChainConfigTest {
   }
 
   private AuthenticationProperties authenticationProperties() {
-    return new AuthenticationProperties(Map.of(),
-        new ServiceAccountDetection(false, "strict", "token_type", "m2m", List.of()), List.of(),
-        "sub");
+    return new AuthenticationProperties(Map.of(), List.of(), "sub");
   }
 
   @Nested

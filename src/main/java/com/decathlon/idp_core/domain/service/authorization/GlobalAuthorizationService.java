@@ -18,9 +18,9 @@ public class GlobalAuthorizationService {
   private static final String IS_ADMIN_PROPERTY = "is_admin";
   private static final String PRINCIPAL_TEMPLATE_IDENTIFIER = AuthorizationResource.PRINCIPAL_TEMPLATE_IDENTIFIER;
   private static final String ENTITY_RESOURCE = "entity";
+  private static final String ENTITY_SEARCH_RESOURCE = "entity_search";
   private static final String ENTITY_TEMPLATE_RESOURCE = AuthorizationResource.ENTITY_TEMPLATE;
   private static final String PRINCIPAL_SELF_RESOURCE = AuthorizationResource.PRINCIPAL_SELF;
-  private static final String AUDIT_RESOURCE = "audit";
 
   /// Applies the global authorization matrix, including the break-glass bypass.
   ///
@@ -41,11 +41,7 @@ public class GlobalAuthorizationService {
     boolean catalogAdministrator = request.principalEntity().filter(this::isCatalogAdministrator)
         .isPresent();
     if (catalogAdministrator) {
-      if (!AUDIT_RESOURCE.equals(request.resource().type())
-          || request.action() == AuthorizationAction.READ) {
-        return;
-      }
-      throw new PrincipalNotAuthorizedException(identifier);
+      return;
     }
 
     boolean missingConfiguredAccessProperty = request.principal().kind() == PrincipalKind.HUMAN
@@ -63,6 +59,7 @@ public class GlobalAuthorizationService {
     }
 
     boolean readOnlyResource = ENTITY_RESOURCE.equals(request.resource().type())
+        || ENTITY_SEARCH_RESOURCE.equals(request.resource().type())
         || ENTITY_TEMPLATE_RESOURCE.equals(request.resource().type());
     if (readOnlyResource && request.action() == AuthorizationAction.READ) {
       return;

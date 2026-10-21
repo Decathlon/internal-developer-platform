@@ -8,7 +8,7 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 import com.decathlon.idp_core.infrastructure.adapters.api.principal.PrincipalExtractor;
 
 /**
- * Type-safe authentication and JWT configuration properties bound from
+ * Type-safe authentication configuration properties bound from
  * {@code app.security.authentication}.
  *
  * <h2>Purpose</h2> Externalizes all hardcoded authentication logic to
@@ -16,7 +16,7 @@ import com.decathlon.idp_core.infrastructure.adapters.api.principal.PrincipalExt
  * <ul>
  * <li>Support for multiple Identity Providers (Auth0, Keycloak, Azure AD,
  * etc.)</li>
- * <li>Flexible service account detection without code changes</li>
+ * <li>Flexible authentication mechanism configuration</li>
  * <li>Conditional authentication mechanism selection per environment</li>
  * <li>Clear documentation of IdP-specific token claim expectations</li>
  * </ul>
@@ -25,17 +25,9 @@ import com.decathlon.idp_core.infrastructure.adapters.api.principal.PrincipalExt
  * {@code application.yml} for easy environment customization.
  *
  * <h2>Principal Identifier</h2> The configured claim supplies the stable
- * identifier for human principals. Service accounts continue to use their
- * client identifier.
+ * identifier for OAuth2/OIDC human principals. JWT resource-server identifiers
+ * and classification are configured by {@link PrincipalExtractionProperties}.
  * <p>
- * <h2>Service Account Detection</h2> Service accounts (M2M tokens) require one
- * configured definitive claim:
- * <ul>
- * <li>{@code token_type=m2m}</li>
- * <li>{@code account_type=service}</li>
- * </ul>
- * Legacy detection properties remain bindable for configuration compatibility
- * but do not classify a token as a service account.
  *
  * @see SecurityConfiguration
  * @see PrincipalExtractor
@@ -45,9 +37,6 @@ public record AuthenticationProperties(
     // Maps optional standard claims to the names used by the configured identity
     // provider.
     Map<String, String> userClaimMappings,
-
-    // Controls strict or legacy detection of machine-to-machine tokens.
-    ServiceAccountDetection serviceAccountDetection,
 
     // Public paths excluded from JIT provisioning.
     List<String> jitProvisioningExcludedPaths,
@@ -61,23 +50,4 @@ public record AuthenticationProperties(
         || principalIdentifierClaim.isBlank() ? "sub" : principalIdentifierClaim.trim();
   }
 
-  // Configuration used to identify service accounts.
-  public record ServiceAccountDetection(
-      // Enables or disables service account detection.
-      boolean enabled,
-
-      // Retained for configuration compatibility; detection always requires the
-      // definitive claim.
-      String mode,
-
-      // Claim required to identify a service account.
-      String definitiveClaimName,
-
-      // Value that identifies a service account.
-      String definitiveClaimValue,
-
-      // Retained for configuration compatibility; fallback claims do not classify
-      // service accounts.
-      List<String> legacyFallbackClaims) {
-  }
 }

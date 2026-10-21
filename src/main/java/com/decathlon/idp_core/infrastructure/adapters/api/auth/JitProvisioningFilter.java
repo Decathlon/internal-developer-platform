@@ -17,6 +17,8 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 import org.springframework.web.util.pattern.PathPatternParser;
 
+import com.decathlon.idp_core.domain.model.authorization.AuthorizationMode;
+import com.decathlon.idp_core.domain.model.authorization.AuthorizationPolicy;
 import com.decathlon.idp_core.domain.model.entity.Entity;
 import com.decathlon.idp_core.domain.model.principal.PrincipalInfo;
 import com.decathlon.idp_core.domain.service.principal.PrincipalProvisioningService;
@@ -62,6 +64,7 @@ public class JitProvisioningFilter extends OncePerRequestFilter {
   private final PrincipalProvisioningService provisioningService;
   private final AuthenticationProperties authProperties;
   private final PrincipalProvisioningProperties provisioningProperties;
+  private final AuthorizationPolicy authorizationPolicy;
   private final ApiErrorResponseWriter errorResponseWriter;
 
   @Override
@@ -95,10 +98,28 @@ public class JitProvisioningFilter extends OncePerRequestFilter {
           && provisioningProperties.mode() == PrincipalProvisioningMode.LINK_ONLY) {
         Optional<Entity> linkedPrincipal = provisioningService.getPrincipalFor(principalInfo);
         if (linkedPrincipal.isEmpty()) {
+          if (authorizationPolicy.mode() == AuthorizationMode.GLOBAL && authorizationPolicy
+              .globalPrincipalIdentifiers().contains(principalInfo.identifier())) {
+            Entity globalPrincipal = provisioningService
+                .provisionGlobalAdministrator(principalInfo);
+            log.debug(
+                "Principal evaluation accepted: mode={}, principal={}, kind={}, linked=true, "
+                    + "global=true",
+                PrincipalProvisioningMode.LINK_ONLY, principalInfo.identifier(),
+                principalInfo.kind());
+            request.setAttribute(ProvisionedPrincipalContext.REQUEST_ATTRIBUTE,
+                new ProvisionedPrincipalContext(principalInfo, Optional.of(globalPrincipal)));
+            return true;
+          }
+          log.debug("Principal evaluation rejected: mode={}, principal={}, kind={}, linked=false",
+              PrincipalProvisioningMode.LINK_ONLY, principalInfo.identifier(),
+              principalInfo.kind());
           errorResponseWriter.write(response, HttpStatus.UNAUTHORIZED,
               "No linked principal matches the authenticated identity");
           return false;
         }
+        log.debug("Principal evaluation accepted: mode={}, principal={}, kind={}, linked=true",
+            PrincipalProvisioningMode.LINK_ONLY, principalInfo.identifier(), principalInfo.kind());
         request.setAttribute(ProvisionedPrincipalContext.REQUEST_ATTRIBUTE,
             new ProvisionedPrincipalContext(principalInfo, linkedPrincipal));
         return true;
@@ -107,10 +128,14 @@ public class JitProvisioningFilter extends OncePerRequestFilter {
       provisioningService.provisionPrincipal(principalInfo);
       Optional<Entity> matchingPrincipal = provisioningService.getPrincipalFor(principalInfo);
       if (matchingPrincipal.isEmpty()) {
+        log.debug("Principal evaluation rejected: mode={}, principal={}, kind={}, linked=false",
+            PrincipalProvisioningMode.JIT, principalInfo.identifier(), principalInfo.kind());
         errorResponseWriter.write(response, HttpStatus.UNAUTHORIZED,
             "No linked principal matches the authenticated identity");
         return false;
       }
+      log.debug("Principal evaluation accepted: mode={}, principal={}, kind={}, linked=true",
+          PrincipalProvisioningMode.JIT, principalInfo.identifier(), principalInfo.kind());
       request.setAttribute(ProvisionedPrincipalContext.REQUEST_ATTRIBUTE,
           new ProvisionedPrincipalContext(principalInfo, matchingPrincipal));
 

@@ -7,8 +7,6 @@ import static com.decathlon.idp_core.infrastructure.adapters.api.principal.strat
 import static com.decathlon.idp_core.infrastructure.adapters.api.principal.strategies.PrincipalStrategiesConstants.ORIGIN;
 import static com.decathlon.idp_core.infrastructure.adapters.api.principal.strategies.PrincipalStrategiesConstants.PREFERRED_USERNAME;
 import static com.decathlon.idp_core.infrastructure.adapters.api.principal.strategies.PrincipalStrategiesConstants.SERVICE_NAME;
-import static com.decathlon.idp_core.infrastructure.adapters.api.principal.strategies.PrincipalStrategiesConstants.SUB;
-import static org.springframework.security.oauth2.core.oidc.IdTokenClaimNames.AZP;
 
 import java.util.HashMap;
 import java.util.List;
@@ -22,6 +20,7 @@ import org.springframework.stereotype.Component;
 import com.decathlon.idp_core.domain.model.principal.PrincipalInfo;
 import com.decathlon.idp_core.domain.model.principal.PrincipalKind;
 import com.decathlon.idp_core.infrastructure.adapters.api.configuration.AuthenticationProperties;
+import com.decathlon.idp_core.infrastructure.adapters.api.configuration.PrincipalExtractionProperties;
 import com.decathlon.idp_core.infrastructure.adapters.api.exception.MissingPrincipalIdentifierException;
 import com.decathlon.idp_core.infrastructure.adapters.api.principal.PrincipalExtractionStrategy;
 
@@ -29,9 +28,12 @@ import com.decathlon.idp_core.infrastructure.adapters.api.principal.PrincipalExt
 public class JwtPrincipalExtractionStrategy implements PrincipalExtractionStrategy {
 
   private final AuthenticationProperties authProperties;
+  private final PrincipalExtractionProperties extractionProperties;
 
-  public JwtPrincipalExtractionStrategy(AuthenticationProperties authProperties) {
+  public JwtPrincipalExtractionStrategy(AuthenticationProperties authProperties,
+      PrincipalExtractionProperties extractionProperties) {
     this.authProperties = authProperties;
+    this.extractionProperties = extractionProperties;
   }
 
   @Override
@@ -42,125 +44,66 @@ public class JwtPrincipalExtractionStrategy implements PrincipalExtractionStrate
   @Override
   public PrincipalInfo extract(Authentication authentication) {
     JwtAuthenticationToken jwtToken = (JwtAuthenticationToken) authentication;
-    var claims = jwtToken.getToken().getClaims();
-    String sub = jwtToken.getToken().getSubject();
+    Map<String, Object> claims = new HashMap<>(jwtToken.getToken().getClaims());
+    Optional.ofNullable(jwtToken.getToken().getSubject())
+        .ifPresent(subject -> claims.putIfAbsent("sub", subject));
+    boolean isHuman = extractionProperties.humanIndicatorClaims().stream().map(claims::get)
+        .anyMatch(JwtPrincipalExtractionStrategy::hasNonblankValue);
 
-    boolean isServiceAccount = detectServiceAccount(claims);
-
-    if (isServiceAccount) {
-      return extractServiceAccountFromJwt(sub, claims);
-    }
-    return extractHumanFromJwt(sub, claims);
+    return isHuman ? extractHumanFromJwt(claims) : extractMachineFromJwt(claims);
   }
 
-  /// Detects if the JWT token belongs to a service account (M2M) using the
-  /// configured definitive claim. Fallback claims cannot establish a service
-  /// account because this classification bypasses human authorization checks.
-  ///
-  /// @param claims the JWT claims map
-  /// @return true if the token is identified as a service account, false
-  /// otherwise
-  private boolean detectServiceAccount(Map<String, Object> claims) {
-    AuthenticationProperties.ServiceAccountDetection config = authProperties
-        .serviceAccountDetection();
-
-    if (!config.enabled()) {
-      return false;
-    }
-
-    return detectServiceAccountStrict(claims, config);
+  private static boolean hasNonblankValue(Object value) {
+    return value != null && !value.toString().isBlank();
   }
 
-  /// Strict mode service account detection: checks for a single definitive claim.
-  /// Example: `token_type=m2m` or `account_type=service`
-  ///
-  /// @param claims the JWT claims map
-  /// @param config the service account detection configuration
-  /// @return true only if the definitive claim is present and has the expected
-  /// value
-  private boolean detectServiceAccountStrict(Map<String, Object> claims,
-      AuthenticationProperties.ServiceAccountDetection config) {
-    Object claimValue = claims.get(config.definitiveClaimName());
-    if (claimValue == null) {
-      return false;
-    }
-    return config.definitiveClaimValue().equals(claimValue.toString());
-  }
-
-  private PrincipalInfo extractHumanFromJwt(String sub, Map<String, Object> claims) {
+  private PrincipalInfo extractHumanFromJwt(Map<String, Object> claims) {
+    String identifierClaim = extractionProperties.human().idClaim();
+    String identifier = requiredClaim(claims, identifierClaim);
     Map<String, String> claimMappings = authProperties.userClaimMappings();
 
-    String identifierClaim = authProperties.principalIdentifierClaim();
-    Object identifierValue = claims.get(identifierClaim);
-    if (identifierValue == null && SUB.equals(identifierClaim)) {
-      identifierValue = sub;
-    }
-    String identifier = Optional.ofNullable(identifierValue).map(Object::toString)
-        .filter(value -> !value.isBlank())
-        .orElseThrow(() -> new MissingPrincipalIdentifierException(identifierClaim));
-
-    String preferredUsernameClaim = claimMappings.get(PREFERRED_USERNAME);
-    Optional<String> preferredUsername = Optional.ofNullable(preferredUsernameClaim)
-        .flatMap(claim -> Optional.ofNullable(claims.get(claim))).map(Object::toString)
-        .filter(value -> !value.isBlank());
-
-    // Try to extract name, fallback to identifier
-    String nameClaim = claimMappings.get(NAME);
-    String name = Optional.ofNullable(nameClaim).flatMap(c -> Optional.ofNullable(claims.get(c)))
-        .map(Object::toString).filter(value -> !value.isBlank()).or(() -> preferredUsername)
+    Optional<String> preferredUsername = mappedClaim(claims, claimMappings, PREFERRED_USERNAME);
+    String name = mappedClaim(claims, claimMappings, NAME).or(() -> preferredUsername)
         .orElse(identifier);
 
     Map<String, String> attributes = new HashMap<>();
+    mappedClaim(claims, claimMappings, EMAIL).ifPresent(value -> attributes.put(EMAIL, value));
 
-    // Extract email if present
-    String emailClaim = claimMappings.get(EMAIL);
-    if (emailClaim != null) {
-      Optional.ofNullable(claims.get(emailClaim)).map(Object::toString)
-          .ifPresent(email -> attributes.put(EMAIL, email));
-    }
-
-    List<String> groups = extractGroups(claims);
-
-    return new PrincipalInfo(identifier, PrincipalKind.HUMAN, name, attributes, groups);
+    return new PrincipalInfo(identifier, PrincipalKind.HUMAN, name, attributes,
+        extractGroups(claims));
   }
 
-  private PrincipalInfo extractServiceAccountFromJwt(String sub, Map<String, Object> claims) {
+  private PrincipalInfo extractMachineFromJwt(Map<String, Object> claims) {
+    String identifierClaim = extractionProperties.machine().idClaim();
+    String machineId = requiredClaim(claims, identifierClaim);
+    String identifier = extractionProperties.machine().idPrefix() + machineId;
     Map<String, String> claimMappings = authProperties.userClaimMappings();
 
-    // Extract client_id or azp, fallback to sub
-    String clientIdClaim = claimMappings.get(CLIENT_ID);
-    String azpClaim = claimMappings.get(AZP);
-
-    String clientId = Optional.ofNullable(clientIdClaim)
-        .flatMap(c -> Optional.ofNullable(claims.get(c)))
-        .or(() -> Optional.ofNullable(azpClaim).flatMap(c -> Optional.ofNullable(claims.get(c))))
-        .map(Object::toString).orElse(sub);
-
-    // Try to extract service_name or name, fallback to clientId
-    String serviceNameClaim = claimMappings.get(SERVICE_NAME);
-    String nameClaim = claimMappings.get(NAME);
-
-    String serviceName = Optional.ofNullable(serviceNameClaim)
-        .flatMap(c -> Optional.ofNullable(claims.get(c)))
-        .or(() -> Optional.ofNullable(nameClaim).flatMap(c -> Optional.ofNullable(claims.get(c))))
-        .map(Object::toString).orElse(clientId);
+    String clientId = mappedClaim(claims, claimMappings, CLIENT_ID).orElse(machineId);
+    String serviceName = mappedClaim(claims, claimMappings, SERVICE_NAME)
+        .or(() -> mappedClaim(claims, claimMappings, NAME)).orElse(clientId);
 
     Map<String, String> attributes = new HashMap<>();
     attributes.put(CLIENT_ID, clientId);
+    mappedClaim(claims, Map.of(ORIGIN, ORIGIN), ORIGIN)
+        .ifPresent(value -> attributes.put(ORIGIN, value));
 
-    // Extract origin if present (non-standard, IdP-specific)
-    String originValue = Optional.ofNullable(claims.get(ORIGIN)).map(Object::toString).orElse(null);
-    if (originValue != null) {
-      attributes.put(ORIGIN, originValue);
-    }
-
-    List<String> groups = extractGroups(claims);
-
-    return new PrincipalInfo(clientId, PrincipalKind.SERVICE_ACCOUNT, serviceName, attributes,
-        groups);
+    return new PrincipalInfo(identifier, PrincipalKind.SERVICE_ACCOUNT, serviceName, attributes,
+        extractGroups(claims));
   }
 
-  @SuppressWarnings("unchecked")
+  private String requiredClaim(Map<String, Object> claims, String claimName) {
+    return Optional.ofNullable(claims.get(claimName)).map(String::valueOf)
+        .filter(value -> !value.isBlank())
+        .orElseThrow(() -> new MissingPrincipalIdentifierException(claimName));
+  }
+
+  private Optional<String> mappedClaim(Map<String, Object> claims,
+      Map<String, String> claimMappings, String mappingName) {
+    return Optional.ofNullable(claimMappings.get(mappingName)).map(claims::get)
+        .filter(JwtPrincipalExtractionStrategy::hasNonblankValue).map(String::valueOf);
+  }
+
   private List<String> extractGroups(Map<String, Object> claims) {
     Map<String, String> claimMappings = authProperties.userClaimMappings();
     String groupsClaim = claimMappings.get(GROUPS);

@@ -68,6 +68,8 @@ class GlobalAuthorizationServiceTest {
         Optional.of("service"));
     AuthorizationResource template = new AuthorizationResource("entity_template",
         Optional.of("service"), Optional.empty());
+    AuthorizationResource entitySearch = new AuthorizationResource("entity_search",
+        Optional.empty(), Optional.empty());
     AuthorizationResource webhook = new AuthorizationResource(
         AuthorizationResource.INBOUND_WEBHOOK_CONFIGURATION, Optional.of("hook"), Optional.empty());
     AuthorizationResource mapping = new AuthorizationResource("entity_dynamic_mapping",
@@ -78,7 +80,8 @@ class GlobalAuthorizationServiceTest {
         Optional.of("user"), Optional.empty());
     AuthorizationResource principalSelf = new AuthorizationResource(
         AuthorizationResource.PRINCIPAL_SELF, Optional.empty(), Optional.empty());
-    List<AuthorizationResource> readOnlyResources = List.of(entity, template, principalSelf);
+    List<AuthorizationResource> readOnlyResources = List.of(entity, entitySearch, template,
+        principalSelf);
     List<AuthorizationResource> deniedResources = List.of(webhook, mapping, audit,
         principalResource);
     List<AuthorizationAction> actions = List.of(AuthorizationAction.READ,
@@ -113,8 +116,7 @@ class GlobalAuthorizationServiceTest {
         cases.add(Arguments.of("M2M " + action + " " + resource.type(), serviceAccount, action,
             resource, Optional.of(servicePrincipal), false));
         cases.add(Arguments.of("admin " + action + " " + resource.type(), admin, action, resource,
-            Optional.of(adminPrincipal),
-            !resource.type().equals("audit") || action == AuthorizationAction.READ));
+            Optional.of(adminPrincipal), true));
       }
     }
     cases.add(Arguments.of("inactive human reads entity", human, AuthorizationAction.READ, entity,
@@ -145,18 +147,15 @@ class GlobalAuthorizationServiceTest {
   }
 
   @Test
-  void shouldAllowCatalogAdministratorToReadAuditButRejectAuditWrites() {
+  void shouldAllowCatalogAdministratorForAllAuditActions() {
     AuthorizationResource audit = new AuthorizationResource("audit", Optional.empty(),
         Optional.empty());
-    var readRequest = request(humanPrincipal, AuthorizationAction.READ, audit,
-        Optional.of(principalEntity("true")));
-    var writeRequest = request(humanPrincipal, AuthorizationAction.CREATE, audit,
-        Optional.of(principalEntity("true")));
+    for (AuthorizationAction action : crudActions()) {
+      var request = request(humanPrincipal, action, audit, Optional.of(principalEntity("true")));
 
-    assertThatCode(() -> authorizationService.authorize(readRequest, policy))
-        .doesNotThrowAnyException();
-    assertThatThrownBy(() -> authorizationService.authorize(writeRequest, policy))
-        .isInstanceOf(PrincipalNotAuthorizedException.class);
+      assertThatCode(() -> authorizationService.authorize(request, policy))
+          .doesNotThrowAnyException();
+    }
   }
 
   @Test

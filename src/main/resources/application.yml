@@ -130,7 +130,7 @@ app:
     # Authentication configuration - externalized for multi-IdP support
     # See docs/src/concepts/authentication.md for comprehensive documentation
     authentication:
-      # Human identity claim used as the catalog principal identifier.
+      # OAuth2/OIDC login identifier; JWT resource-server identifiers use idp.auth.principal-extraction.
       principal-identifier-claim: ${IDP_PRINCIPAL_IDENTIFIER_CLAIM:sub}
       # Enable to take in custom JWT tokens for authentication
       # This will also enable the IDP_PRINCIPAL_IDENTIFIER_CLAIM to be extracted from the JWT token
@@ -155,19 +155,19 @@ app:
         gty: gty
         service_name: service_name
 
-      # Service account detection - identify M2M vs. human user tokens
-      # See docs/src/concepts/authentication.md - Service Account Detection section
-      service-account-detection:
-        enabled: true
-        mode: strict
-        definitive-claim-name: token_type
-        definitive-claim-value: m2m
-        # JIT Provisioning excluded paths
-        # Simplified list binding. Overriding via env var requires a comma-separated string:
-        # export APP_SECURITY_AUTHENTICATION_JIT_PROVISIONING_EXCLUDED_PATHS="/,/actuator/**,/swagger-ui/**,/swagger-ui.html,/v3/api-docs/**"
+      # JIT Provisioning excluded paths. Override with a comma-separated environment value.
       jit-provisioning-excluded-paths: /,/actuator/**,/swagger-ui/**,/swagger-ui.html,/v3/api-docs/**
 
 idp:
+  auth:
+    principal-extraction:
+      human-indicator-claims:
+        - uuid
+      human:
+        id-claim: uuid
+      machine:
+        id-claim: client_id
+        id-prefix: "machine:"
   security:
     webhook:
       # Comma-separated allow-list for trusted JWKS hosts.

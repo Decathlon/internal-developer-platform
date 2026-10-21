@@ -41,7 +41,8 @@ import com.decathlon.idp_core.infrastructure.adapters.api.auth.JitProvisioningFi
 /// @see JitProvisioningFilter
 @Configuration
 @EnableWebSecurity
-@EnableConfigurationProperties({CorsProperties.class, AuthenticationProperties.class})
+@EnableConfigurationProperties({CorsProperties.class, AuthenticationProperties.class,
+    PrincipalExtractionProperties.class})
 public class SecurityConfiguration {
 
   private final CorsProperties corsProperties;

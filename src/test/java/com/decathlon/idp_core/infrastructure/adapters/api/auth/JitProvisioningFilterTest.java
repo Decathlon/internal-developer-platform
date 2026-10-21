@@ -35,6 +35,8 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.authority.AuthorityUtils;
 import org.springframework.security.core.context.SecurityContextHolder;
 
+import com.decathlon.idp_core.domain.model.authorization.AuthorizationMode;
+import com.decathlon.idp_core.domain.model.authorization.AuthorizationPolicy;
 import com.decathlon.idp_core.domain.model.entity.Entity;
 import com.decathlon.idp_core.domain.model.principal.PrincipalInfo;
 import com.decathlon.idp_core.domain.model.principal.PrincipalKind;
@@ -60,6 +62,9 @@ class JitProvisioningFilterTest {
 
   @Mock
   private PrincipalProvisioningProperties provisioningProperties;
+
+  @Mock
+  private AuthorizationPolicy authorizationPolicy;
 
   @Mock
   private ApiErrorResponseWriter errorResponseWriter;
@@ -158,6 +163,35 @@ class JitProvisioningFilterTest {
     verify(errorResponseWriter).write(response, HttpStatus.UNAUTHORIZED,
         "No linked principal matches the authenticated identity");
     verify(filterChain, never()).doFilter(any(), any());
+  }
+
+  @Test
+  void doFilterInternal_inLinkOnlyMode_provisionsAndAllowsUnlinkedGlobalPrincipal()
+      throws ServletException, IOException {
+    Authentication auth = mock(Authentication.class);
+    when(auth.isAuthenticated()).thenReturn(true);
+    SecurityContextHolder.getContext().setAuthentication(auth);
+    PrincipalInfo principalInfo = new PrincipalInfo("global-user", PrincipalKind.HUMAN, "User",
+        java.util.Map.of(), List.of());
+    when(provisioningProperties.mode()).thenReturn(PrincipalProvisioningMode.LINK_ONLY);
+    when(authorizationPolicy.mode()).thenReturn(AuthorizationMode.GLOBAL);
+    when(authorizationPolicy.globalPrincipalIdentifiers())
+        .thenReturn(java.util.Set.of("global-user"));
+    when(principalExtractor.extractPrincipalInfo(auth)).thenReturn(principalInfo);
+    when(provisioningService.getPrincipalFor(principalInfo)).thenReturn(Optional.empty());
+    Entity principalEntity = new Entity(null, "principal", "User", "global-user",
+        List.of(new com.decathlon.idp_core.domain.model.entity.Property(null, "kind", "HUMAN")),
+        List.of());
+    when(provisioningService.provisionGlobalAdministrator(principalInfo))
+        .thenReturn(principalEntity);
+
+    jitProvisioningFilter.doFilterInternal(request, response, filterChain);
+
+    verify(provisioningService).provisionGlobalAdministrator(principalInfo);
+    verify(request).setAttribute(ProvisionedPrincipalContext.REQUEST_ATTRIBUTE,
+        new ProvisionedPrincipalContext(principalInfo, Optional.of(principalEntity)));
+    verify(filterChain).doFilter(request, response);
+    verify(errorResponseWriter, never()).write(any(), any(), any());
   }
 
   @ParameterizedTest(name = "{0} {1} {2}")
