@@ -36,8 +36,8 @@ import lombok.RequiredArgsConstructor;
 /// in `application.yml` to match your IdP's token structure.
 ///
 /// JWT kind and identifiers use the provider-specific
-/// `idp.auth.principal-extraction` configuration. OAuth2/OIDC user extraction
-/// continues to use `AuthenticationProperties`.
+/// `app.security.authentication.principal-extraction` configuration. OAuth2/OIDC
+/// user extraction continues to use `AuthenticationProperties`.
 ///
 /// @see AuthenticationProperties
 @Service

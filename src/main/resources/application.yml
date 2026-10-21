@@ -122,7 +122,7 @@ app:
       mode: ${IDP_PRINCIPAL_PROVISIONING_MODE:LINK_ONLY}
     authorization:
       mode: GLOBAL
-      # Comma-separated immutable principal identifiers for emergency access, even before JIT provisioning.
+      # Comma-separated immutable principal identifiers for emergency access
       global-principal-identifiers: ${IDP_SUPER_ADMIN_IDENTIFIER:},${IDP_PLATFORM_ADMIN_IDENTIFIER:}
       # Optional human-access gate; when set, the given boolean property in the user's Principal must be true.
       required-principal-property: ${IDP_REQUIRED_PRINCIPAL_PROPERTY:}
@@ -130,17 +130,22 @@ app:
     # Authentication configuration - externalized for multi-IdP support
     # See docs/src/concepts/authentication.md for comprehensive documentation
     authentication:
-      # OAuth2/OIDC login identifier; JWT resource-server identifiers use idp.auth.principal-extraction.
-      principal-identifier-claim: ${IDP_PRINCIPAL_IDENTIFIER_CLAIM:sub}
-      # Enable to take in custom JWT tokens for authentication
-      # This will also enable the IDP_PRINCIPAL_IDENTIFIER_CLAIM to be extracted from the JWT token
-      # and be setted as identifier of an entity of kind Principal
       jwt:
         enabled: true
       api-key:
         enabled: false
       mock:
         enabled: false
+
+      # JWT kind-specific identifier claims and human-token indicators.
+      principal-extraction:
+        human-indicator-claims:
+          - email
+        human:
+          id-claim: email
+        machine:
+          id-claim: client_id
+          id-prefix: ""
 
       # JWT claim mappings for different Identity Providers (Auth0, Keycloak, Azure AD, etc.)
       # See docs/src/concepts/authentication.md - JWT Claim Mappings section
@@ -159,15 +164,6 @@ app:
       jit-provisioning-excluded-paths: /,/actuator/**,/swagger-ui/**,/swagger-ui.html,/v3/api-docs/**
 
 idp:
-  auth:
-    principal-extraction:
-      human-indicator-claims:
-        - uuid
-      human:
-        id-claim: uuid
-      machine:
-        id-claim: client_id
-        id-prefix: "machine:"
   security:
     webhook:
       # Comma-separated allow-list for trusted JWKS hosts.

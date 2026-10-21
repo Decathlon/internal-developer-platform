@@ -13,10 +13,13 @@ class PrincipalExtractionPropertiesTest {
 
   @Test
   void shouldBindHumanAndMachineExtractionSettings() {
-    contextRunner.withPropertyValues("idp.auth.principal-extraction.human-indicator-claims[0]=uuid",
-        "idp.auth.principal-extraction.human.id-claim=uuid",
-        "idp.auth.principal-extraction.machine.id-claim=client_id",
-        "idp.auth.principal-extraction.machine.id-prefix=machine:").run(context -> {
+    contextRunner
+        .withPropertyValues(
+            "app.security.authentication.principal-extraction.human-indicator-claims[0]=uuid",
+            "app.security.authentication.principal-extraction.human.id-claim=uuid",
+            "app.security.authentication.principal-extraction.machine.id-claim=client_id",
+            "app.security.authentication.principal-extraction.machine.id-prefix=machine:")
+        .run(context -> {
           assertThat(context).hasNotFailed();
           PrincipalExtractionProperties properties = context
               .getBean(PrincipalExtractionProperties.class);

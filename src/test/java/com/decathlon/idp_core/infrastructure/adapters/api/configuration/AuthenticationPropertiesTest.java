@@ -12,23 +12,16 @@ class AuthenticationPropertiesTest {
       .withUserConfiguration(TestConfiguration.class);
 
   @Test
-  void shouldBindConfiguredPrincipalIdentifierClaim() {
+  void shouldBindAuthenticationProperties() {
     contextRunner
-        .withPropertyValues("app.security.authentication.principal-identifier-claim=person_uuid")
+        .withPropertyValues("app.security.authentication.user-claim-mappings.name=display_name",
+            "app.security.authentication.jit-provisioning-excluded-paths[0]=/health")
         .run(context -> {
           assertThat(context).hasNotFailed();
-          assertThat(context.getBean(AuthenticationProperties.class).principalIdentifierClaim())
-              .isEqualTo("person_uuid");
+          AuthenticationProperties properties = context.getBean(AuthenticationProperties.class);
+          assertThat(properties.userClaimMappings()).containsEntry("name", "display_name");
+          assertThat(properties.jitProvisioningExcludedPaths()).containsExactly("/health");
         });
-  }
-
-  @Test
-  void shouldDefaultPrincipalIdentifierClaimToSubject() {
-    contextRunner.run(context -> {
-      assertThat(context).hasNotFailed();
-      assertThat(context.getBean(AuthenticationProperties.class).principalIdentifierClaim())
-          .isEqualTo("sub");
-    });
   }
 
   @EnableConfigurationProperties(AuthenticationProperties.class)

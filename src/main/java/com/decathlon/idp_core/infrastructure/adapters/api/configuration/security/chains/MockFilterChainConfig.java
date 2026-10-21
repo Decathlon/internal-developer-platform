@@ -34,7 +34,6 @@ import org.springframework.web.filter.OncePerRequestFilter;
 import com.decathlon.idp_core.domain.exception.mock.MockSecurityConfigurationException;
 import com.decathlon.idp_core.infrastructure.adapters.api.auth.GlobalAuthorizationFilter;
 import com.decathlon.idp_core.infrastructure.adapters.api.auth.JitProvisioningFilter;
-import com.decathlon.idp_core.infrastructure.adapters.api.configuration.AuthenticationProperties;
 
 /// Local mock security configuration that mirrors OAuth2/JWT behavior for local development.
 ///
@@ -56,14 +55,11 @@ public class MockFilterChainConfig {
   public static final String LOCAL_DEVELOPER = "local-developer";
   private final JitProvisioningFilter jitProvisioningFilter;
   private final GlobalAuthorizationFilter globalAuthorizationFilter;
-  private final AuthenticationProperties authenticationProperties;
 
   public MockFilterChainConfig(JitProvisioningFilter jitProvisioningFilter,
-      GlobalAuthorizationFilter globalAuthorizationFilter,
-      AuthenticationProperties authenticationProperties) {
+      GlobalAuthorizationFilter globalAuthorizationFilter) {
     this.jitProvisioningFilter = jitProvisioningFilter;
     this.globalAuthorizationFilter = globalAuthorizationFilter;
-    this.authenticationProperties = authenticationProperties;
   }
 
   /// Security filter chain for local mocking with JWT-like behavior.
@@ -89,9 +85,7 @@ public class MockFilterChainConfig {
           // Everything reaching here must be authenticated via our mock filter
           .authorizeHttpRequests(auth -> auth.anyRequest().authenticated())
           // 1. Inject the fake JWT token into the SecurityContext
-          .addFilterBefore(
-              new MockJwtAuthenticationFilter(authenticationProperties.principalIdentifierClaim()),
-              AnonymousAuthenticationFilter.class)
+          .addFilterBefore(new MockJwtAuthenticationFilter(), AnonymousAuthenticationFilter.class)
           // 2. Trigger JIT provisioning based on the fake token (tests production
           // behavior locally)
           .addFilterAfter(jitProvisioningFilter, MockJwtAuthenticationFilter.class)
@@ -116,15 +110,6 @@ public class MockFilterChainConfig {
   /// making it available to all downstream components (controllers, services,
   /// etc.)
   static class MockJwtAuthenticationFilter extends OncePerRequestFilter {
-    private final String principalIdentifierClaim;
-
-    MockJwtAuthenticationFilter() {
-      this("sub");
-    }
-
-    MockJwtAuthenticationFilter(String principalIdentifierClaim) {
-      this.principalIdentifierClaim = principalIdentifierClaim;
-    }
 
     @Override
     protected void doFilterInternal(@Nonnull HttpServletRequest request,
@@ -171,7 +156,6 @@ public class MockFilterChainConfig {
       claims.put("exp", expiresAt.getEpochSecond());
       claims.put("email", "developer@local.dev");
       claims.put("user_id", "dev-user-001");
-      claims.put(principalIdentifierClaim, LOCAL_DEVELOPER);
 
       return new Jwt("mock-token-value", now, expiresAt, headers, claims);
     }

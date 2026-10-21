@@ -83,7 +83,7 @@ The JWT chain provides OAuth2 resource server authentication:
 - Validates token signature using the configured JWKS endpoint
 - Extracts claims and creates `JwtAuthenticationToken`
 - Invokes claim mapping to standardize different IdP claim names
-- Applies service account detection to classify M2M vs. human users
+- Applies configured principal extraction to classify machine vs. human users
 
 ## JWT Claim Mappings
 
@@ -92,16 +92,10 @@ claim mapping system allows you to configure these differences without code chan
 
 ### OAuth2/OIDC Principal Identifier
 
-Set `app.security.authentication.principal-identifier-claim` to select the stable identifier claim for OAuth2/OIDC
-human principals. JWT resource-server tokens use the separate `idp.auth.principal-extraction` configuration described
-below.
-
-```yaml
-app:
-  security:
-    authentication:
-      principal-identifier-claim: ${IDP_PRINCIPAL_IDENTIFIER_CLAIM:sub}
-```
+Generic OAuth2 users use Spring Security's `OAuth2User.getName()`, which comes from the provider's configured
+user-name attribute. For example, GitHub uses its stable numeric `id` as the principal name. OIDC users use the
+standard `sub` claim. IDP-Core does not provide a separate setting to override either identifier. JWT resource-server
+tokens use `app.security.authentication.principal-extraction`, described below.
 
 ### Optional Claim Mapping Configuration
 
@@ -109,7 +103,7 @@ Configure claim mappings in `application.yml` under `app.security.authentication
 When JWT authentication is enabled, these values are mandatory:
 
 - spring.security.oauth2.resourceserver.jwt.jwk-set-uri required for signature validation.
-- A valid JWT signature and the configured principal identifier claim in human tokens.
+- A valid JWT signature and the configured human identifier claim in human tokens.
 
 When `app.security.authentication.jwt.enabled` is `false`, the JWT decoder and
 JWT filter chain are not created, so `OAUTH_JWK_URI` is not required. Swagger
@@ -178,7 +172,6 @@ app:
 app:
   security:
     authentication:
-      principal-identifier-claim: "oid"
       user-claim-mappings:
         preferred_username: "unique_name"
         name: "name"
@@ -206,7 +199,7 @@ the token:
 
 | Principal field    | Mapping key                  | Fallback when the mapped claim is absent        |
 |--------------------|------------------------------|-------------------------------------------------|
-| `identifier`       | JWT kind-specific `id-claim` | Request is rejected; the identifier is required |
+| `identifier`       | JWT kind-specific `id-claim`, OAuth2 principal name, or OIDC `sub` | Request is rejected; the identifier is required |
 | `name`             | `name`                       | `preferred_username`, then `identifier`         |
 | `attributes.email` | `email`                      | Attribute omitted                               |
 | `groups`           | `groups`                     | Empty list                                      |
@@ -227,19 +220,17 @@ It illustrates claim extraction, not a complete token for authentication.
 To identify human tokens by `uuid` and use it as the human principal identifier, configure:
 
 ```yaml
-idp:
-  auth:
-    principal-extraction:
-      human-indicator-claims:
-        - uuid
-      human:
-        id-claim: uuid
-      machine:
-        id-claim: client_id
-        id-prefix: "machine:"
 app:
   security:
     authentication:
+      principal-extraction:
+        human-indicator-claims:
+          - uuid
+        human:
+          id-claim: uuid
+        machine:
+          id-claim: client_id
+          id-prefix: "machine:"
       user-claim-mappings:
         name: sub
         email: email
@@ -273,16 +264,17 @@ IDP-Core classifies the token as a
 machine principal. Machine principals use the existing `SERVICE_ACCOUNT` domain kind.
 
 ```yaml
-idp:
-  auth:
-    principal-extraction:
-      human-indicator-claims:
-        - uuid
-      human:
-        id-claim: uuid
-      machine:
-        id-claim: client_id
-        id-prefix: "machine:"
+app:
+  security:
+    authentication:
+      principal-extraction:
+        human-indicator-claims:
+          - uuid
+        human:
+          id-claim: uuid
+        machine:
+          id-claim: client_id
+          id-prefix: "machine:"
 ```
 
 The selected `human.id-claim` or `machine.id-claim` must include a character other than whitespace. Otherwise,
@@ -415,7 +407,8 @@ enabling the gate, add the configured optional Boolean property to the `principa
 can validate and store it.
 
 JWT humans and service accounts use their configured kind-specific IDs; machine IDs may include `machine.id-prefix`.
-OAuth2/OIDC humans use `principal-identifier-claim`. Break-glass values must match the resulting principal identifiers
+Generic OAuth2 users use the provider-configured principal name; OIDC users use `sub`. Break-glass values must match
+the resulting principal identifiers
 exactly. In `LINK_ONLY` mode, IDP-Core creates a missing principal for a configured global identifier. In JIT mode,
 ordinary JIT provisioning creates a missing principal, and the global identifier still receives the authorization
 bypass. Use an immutable, globally unique identifier, such as a UUID claim; the current allow-list is identifier-based
@@ -535,7 +528,6 @@ app:
         enabled: true
       mock:
         enabled: false
-      principal-identifier-claim: id
       user-claim-mappings:
         preferred_username: login
         name: name

@@ -24,9 +24,10 @@ import com.decathlon.idp_core.infrastructure.adapters.api.principal.PrincipalExt
  * <h2>Design rationale</h2> Configuration is externalized to
  * {@code application.yml} for easy environment customization.
  *
- * <h2>Principal Identifier</h2> The configured claim supplies the stable
- * identifier for OAuth2/OIDC human principals. JWT resource-server identifiers
- * and classification are configured by {@link PrincipalExtractionProperties}.
+ * <h2>Principal Identifier</h2> OAuth2 users use the provider-configured
+ * principal name, while OIDC users use the standard subject. JWT
+ * resource-server identifiers and classification are configured by
+ * {@link PrincipalExtractionProperties}.
  * <p>
  *
  * @see SecurityConfiguration
@@ -39,15 +40,6 @@ public record AuthenticationProperties(
     Map<String, String> userClaimMappings,
 
     // Public paths excluded from JIT provisioning.
-    List<String> jitProvisioningExcludedPaths,
-
-    // Claim containing the stable identifier for a human principal; defaults to
-    // "sub".
-    String principalIdentifierClaim) {
-
-  public AuthenticationProperties {
-    principalIdentifierClaim = principalIdentifierClaim == null
-        || principalIdentifierClaim.isBlank() ? "sub" : principalIdentifierClaim.trim();
-  }
+    List<String> jitProvisioningExcludedPaths) {
 
 }

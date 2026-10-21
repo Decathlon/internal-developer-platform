@@ -40,7 +40,7 @@ class PublicFilterChainConfigTest {
   }
 
   private AuthenticationProperties authenticationProperties(List<String> excludedPaths) {
-    return new AuthenticationProperties(Map.of(), excludedPaths, "sub");
+    return new AuthenticationProperties(Map.of(), excludedPaths);
   }
 
   private HttpSecurity httpSecurity() {

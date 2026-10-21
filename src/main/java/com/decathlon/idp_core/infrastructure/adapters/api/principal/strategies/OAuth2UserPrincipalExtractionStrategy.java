@@ -62,11 +62,8 @@ public class OAuth2UserPrincipalExtractionStrategy implements PrincipalExtractio
 
     Map<String, String> claimMappings = authProperties.userClaimMappings();
 
-    // Standard OAuth2 user extraction using dynamic claims
-    String identifierClaim = authProperties.principalIdentifierClaim();
-    String identifier = Optional.ofNullable(oauth2User.getAttribute(identifierClaim))
-        .map(String::valueOf).filter(value -> !value.isBlank())
-        .orElseThrow(() -> new MissingPrincipalIdentifierException(identifierClaim));
+    String identifier = Optional.ofNullable(oauth2User.getName()).filter(value -> !value.isBlank())
+        .orElseThrow(() -> new MissingPrincipalIdentifierException("name"));
 
     String preferredUsernameClaim = claimMappings.getOrDefault(PREFERRED_USERNAME,
         PREFERRED_USERNAME);
@@ -96,10 +93,8 @@ public class OAuth2UserPrincipalExtractionStrategy implements PrincipalExtractio
   /// is accurately extracted from OIDC claims, which are standardized across
   /// compliant identity providers.
   private PrincipalInfo extractFromOidcUser(OidcUser oidcUser) {
-    String identifierClaim = authProperties.principalIdentifierClaim();
-    String identifier = Optional.ofNullable(oidcUser.getAttribute(identifierClaim))
-        .map(String::valueOf).filter(value -> !value.isBlank())
-        .orElseThrow(() -> new MissingPrincipalIdentifierException(identifierClaim));
+    String identifier = Optional.ofNullable(oidcUser.getSubject()).filter(value -> !value.isBlank())
+        .orElseThrow(() -> new MissingPrincipalIdentifierException("sub"));
 
     String name = Optional.ofNullable(oidcUser.getFullName())
         .or(() -> Optional.ofNullable(oidcUser.getGivenName()))

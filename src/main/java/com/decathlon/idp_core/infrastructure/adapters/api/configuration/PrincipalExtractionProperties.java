@@ -14,7 +14,7 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
  * @param machine
  *          machine principal identifier and namespace configuration
  */
-@ConfigurationProperties(prefix = "idp.auth.principal-extraction")
+@ConfigurationProperties(prefix = "app.security.authentication.principal-extraction")
 public record PrincipalExtractionProperties(List<String> humanIndicatorClaims, Human human,
     Machine machine) {
 
