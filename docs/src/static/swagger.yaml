@@ -1009,6 +1009,12 @@ paths:
             "*/*":
               schema:
                 "$ref": "#/components/schemas/EntityGraphFlatDtoOut"
+        '400':
+          description: Invalid graph query parameter value
+          content:
+            "*/*":
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
         '404':
           description: Entity not found with the provided identifier
           content:
