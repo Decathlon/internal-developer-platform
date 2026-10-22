@@ -14,6 +14,8 @@ tags:
   description: Entity relationship graph operations
 - name: Inbound Webhook Management
   description: Operations for managing inbound webhook connector configurations
+- name: Principals
+  description: Principal identity and profile management
 - name: Entities Management
   description: Operations related to entity management
 - name: Audit
@@ -51,9 +53,9 @@ paths:
         '404':
           description: Webhook connector not found with the provided identifier
           content:
-            "*/*":
+            application/problem+json:
               schema:
-                "$ref": "#/components/schemas/ErrorResponse"
+                "$ref": "#/components/schemas/ProblemDetail"
     put:
       tags:
       - Inbound Webhook Management
@@ -83,21 +85,21 @@ paths:
         '400':
           description: Invalid request payload
           content:
-            "*/*":
+            application/problem+json:
               schema:
-                "$ref": "#/components/schemas/ErrorResponse"
+                "$ref": "#/components/schemas/ProblemDetail"
         '404':
           description: Webhook connector not found with the provided identifier
           content:
-            "*/*":
+            application/problem+json:
               schema:
-                "$ref": "#/components/schemas/ErrorResponse"
+                "$ref": "#/components/schemas/ProblemDetail"
         '409':
           description: Webhook connector name already exists
           content:
-            "*/*":
+            application/problem+json:
               schema:
-                "$ref": "#/components/schemas/ErrorResponse"
+                "$ref": "#/components/schemas/ProblemDetail"
     delete:
       tags:
       - Inbound Webhook Management
@@ -116,9 +118,9 @@ paths:
         '404':
           description: Webhook connector not found with the provided identifier
           content:
-            "*/*":
+            application/problem+json:
               schema:
-                "$ref": "#/components/schemas/ErrorResponse"
+                "$ref": "#/components/schemas/ProblemDetail"
   "/api/v1/entity_dynamic_mappings/{identifier}":
     get:
       tags:
@@ -142,9 +144,9 @@ paths:
         '404':
           description: Entity dynamic mapping not found with the provided identifier
           content:
-            "*/*":
+            application/problem+json:
               schema:
-                "$ref": "#/components/schemas/ErrorResponse"
+                "$ref": "#/components/schemas/ProblemDetail"
     put:
       tags:
       - Entity dynamic mapping
@@ -175,21 +177,21 @@ paths:
           description: Entity template identifier is mandatory or target entity template
             not found
           content:
-            "*/*":
+            application/problem+json:
               schema:
-                "$ref": "#/components/schemas/ErrorResponse"
+                "$ref": "#/components/schemas/ProblemDetail"
         '404':
           description: Entity dynamic mapping not found with the provided identifier
           content:
-            "*/*":
+            application/problem+json:
               schema:
-                "$ref": "#/components/schemas/ErrorResponse"
+                "$ref": "#/components/schemas/ProblemDetail"
         '409':
           description: Target entity template not found or identifier already exists
           content:
-            "*/*":
+            application/problem+json:
               schema:
-                "$ref": "#/components/schemas/ErrorResponse"
+                "$ref": "#/components/schemas/ProblemDetail"
     delete:
       tags:
       - Entity dynamic mapping
@@ -208,9 +210,9 @@ paths:
         '404':
           description: Entity dynamic mapping not found with the provided identifier
           content:
-            "*/*":
+            application/problem+json:
               schema:
-                "$ref": "#/components/schemas/ErrorResponse"
+                "$ref": "#/components/schemas/ProblemDetail"
   "/api/v1/entity-templates/{identifier}":
     get:
       tags:
@@ -234,9 +236,9 @@ paths:
         '404':
           description: Template not found with the provided identifier
           content:
-            "*/*":
+            application/problem+json:
               schema:
-                "$ref": "#/components/schemas/ErrorResponse"
+                "$ref": "#/components/schemas/ProblemDetail"
     put:
       tags:
       - Entities Templates Management
@@ -266,9 +268,9 @@ paths:
         '404':
           description: Template not found with the provided identifier
           content:
-            "*/*":
+            application/problem+json:
               schema:
-                "$ref": "#/components/schemas/ErrorResponse"
+                "$ref": "#/components/schemas/ProblemDetail"
     delete:
       tags:
       - Entities Templates Management
@@ -287,15 +289,15 @@ paths:
         '400':
           description: 'Cannot delete template: it is a target for other relations'
           content:
-            "*/*":
+            application/problem+json:
               schema:
-                "$ref": "#/components/schemas/ErrorResponse"
+                "$ref": "#/components/schemas/ProblemDetail"
         '404':
           description: Template not found with the provided identifier
           content:
-            "*/*":
+            application/problem+json:
               schema:
-                "$ref": "#/components/schemas/ErrorResponse"
+                "$ref": "#/components/schemas/ProblemDetail"
   "/api/v1/entities/{templateIdentifier}/{entityIdentifier}":
     get:
       tags:
@@ -346,9 +348,9 @@ paths:
         '404':
           description: Entity not found with the provided identifier
           content:
-            "*/*":
+            application/problem+json:
               schema:
-                "$ref": "#/components/schemas/ErrorResponse"
+                "$ref": "#/components/schemas/ProblemDetail"
     put:
       tags:
       - Entities Management
@@ -384,9 +386,9 @@ paths:
         '400':
           description: Invalid entity data provided
           content:
-            "*/*":
+            application/problem+json:
               schema:
-                "$ref": "#/components/schemas/ErrorResponse"
+                "$ref": "#/components/schemas/ProblemDetail"
         '401':
           description: Unauthorized - Missing or invalid token
         '403':
@@ -394,15 +396,15 @@ paths:
         '404':
           description: Entity not found with the provided identifier
           content:
-            "*/*":
+            application/problem+json:
               schema:
-                "$ref": "#/components/schemas/ErrorResponse"
+                "$ref": "#/components/schemas/ProblemDetail"
         '500':
           description: Unexpected server-side failure
           content:
-            "*/*":
+            application/problem+json:
               schema:
-                "$ref": "#/components/schemas/ErrorResponse"
+                "$ref": "#/components/schemas/ProblemDetail"
     patch:
       tags:
       - Entities Management
@@ -438,9 +440,9 @@ paths:
         '400':
           description: Invalid entity data provided
           content:
-            "*/*":
+            application/problem+json:
               schema:
-                "$ref": "#/components/schemas/ErrorResponse"
+                "$ref": "#/components/schemas/ProblemDetail"
         '401':
           description: Unauthorized - Missing or invalid token
         '403':
@@ -448,15 +450,15 @@ paths:
         '404':
           description: Entity not found with the provided identifier
           content:
-            "*/*":
+            application/problem+json:
               schema:
-                "$ref": "#/components/schemas/ErrorResponse"
+                "$ref": "#/components/schemas/ProblemDetail"
         '500':
           description: Unexpected server-side failure
           content:
-            "*/*":
+            application/problem+json:
               schema:
-                "$ref": "#/components/schemas/ErrorResponse"
+                "$ref": "#/components/schemas/ProblemDetail"
     delete:
       tags:
       - Entities Management
@@ -484,9 +486,9 @@ paths:
         '400':
           description: Invalid entity data provided
           content:
-            "*/*":
+            application/problem+json:
               schema:
-                "$ref": "#/components/schemas/ErrorResponse"
+                "$ref": "#/components/schemas/ProblemDetail"
         '401':
           description: Unauthorized - Missing or invalid token
         '403':
@@ -494,21 +496,21 @@ paths:
         '404':
           description: Entity not found with the provided identifier
           content:
-            "*/*":
+            application/problem+json:
               schema:
-                "$ref": "#/components/schemas/ErrorResponse"
+                "$ref": "#/components/schemas/ProblemDetail"
         '409':
           description: Target entity has required relations
           content:
-            "*/*":
+            application/problem+json:
               schema:
-                "$ref": "#/components/schemas/ErrorResponse"
+                "$ref": "#/components/schemas/ProblemDetail"
         '500':
           description: Unexpected server-side failure
           content:
-            "*/*":
+            application/problem+json:
               schema:
-                "$ref": "#/components/schemas/ErrorResponse"
+                "$ref": "#/components/schemas/ProblemDetail"
   "/webhooks/{webhookIdentifier}":
     post:
       tags:
@@ -560,9 +562,9 @@ paths:
         '400':
           description: Invalid pagination parameters
           content:
-            "*/*":
+            application/problem+json:
               schema:
-                "$ref": "#/components/schemas/ErrorResponse"
+                "$ref": "#/components/schemas/ProblemDetail"
     post:
       tags:
       - Inbound Webhook Management
@@ -639,9 +641,9 @@ paths:
         '400':
           description: Invalid pagination parameters
           content:
-            "*/*":
+            application/problem+json:
               schema:
-                "$ref": "#/components/schemas/ErrorResponse"
+                "$ref": "#/components/schemas/ProblemDetail"
     post:
       tags:
       - Entity dynamic mapping
@@ -698,22 +700,22 @@ paths:
         '400':
           description: Invalid entity dynamic mapping data provided
           content:
-            "*/*":
+            application/problem+json:
               schema:
-                "$ref": "#/components/schemas/ErrorResponse"
+                "$ref": "#/components/schemas/ProblemDetail"
         '404':
           description: Entity template not found with the provided identifier
           content:
-            "*/*":
+            application/problem+json:
               schema:
-                "$ref": "#/components/schemas/ErrorResponse"
+                "$ref": "#/components/schemas/ProblemDetail"
         '422':
           description: Mapping validation, template validation or expression evaluation
             error
           content:
-            "*/*":
+            application/problem+json:
               schema:
-                "$ref": "#/components/schemas/ErrorResponse"
+                "$ref": "#/components/schemas/ProblemDetail"
   "/api/v1/entity-templates":
     get:
       tags:
@@ -757,9 +759,9 @@ paths:
         '400':
           description: Invalid pagination parameters
           content:
-            "*/*":
+            application/problem+json:
               schema:
-                "$ref": "#/components/schemas/ErrorResponse"
+                "$ref": "#/components/schemas/ProblemDetail"
     post:
       tags:
       - Entities Templates Management
@@ -782,9 +784,9 @@ paths:
         '400':
           description: Invalid template data provided
           content:
-            "*/*":
+            application/problem+json:
               schema:
-                "$ref": "#/components/schemas/ErrorResponse"
+                "$ref": "#/components/schemas/ProblemDetail"
   "/api/v1/entities/{templateIdentifier}":
     get:
       tags:
@@ -847,9 +849,9 @@ paths:
         '400':
           description: Invalid filter query syntax
           content:
-            "*/*":
+            application/problem+json:
               schema:
-                "$ref": "#/components/schemas/ErrorResponse"
+                "$ref": "#/components/schemas/ProblemDetail"
     post:
       tags:
       - Entities Management
@@ -879,31 +881,31 @@ paths:
         '400':
           description: Invalid entity data provided
           content:
-            "*/*":
+            application/problem+json:
               schema:
-                "$ref": "#/components/schemas/ErrorResponse"
+                "$ref": "#/components/schemas/ProblemDetail"
         '401':
           description: Unauthorized - Missing or invalid token
         '403':
           description: Insufficient rights
-        '404':
-          description: Template not found with the provided identifier
-          content:
-            "*/*":
-              schema:
-                "$ref": "#/components/schemas/ErrorResponse"
         '409':
           description: Entity already exists in this template
           content:
-            "*/*":
+            application/problem+json:
               schema:
-                "$ref": "#/components/schemas/ErrorResponse"
+                "$ref": "#/components/schemas/ProblemDetail"
+        '404':
+          description: Template not found with the provided identifier
+          content:
+            application/problem+json:
+              schema:
+                "$ref": "#/components/schemas/ProblemDetail"
         '500':
           description: Unexpected server-side failure
           content:
-            "*/*":
+            application/problem+json:
               schema:
-                "$ref": "#/components/schemas/ErrorResponse"
+                "$ref": "#/components/schemas/ProblemDetail"
   "/api/v1/entities/search":
     post:
       tags:
@@ -929,9 +931,9 @@ paths:
         '400':
           description: Invalid search filter
           content:
-            "*/*":
+            application/problem+json:
               schema:
-                "$ref": "#/components/schemas/ErrorResponse"
+                "$ref": "#/components/schemas/ProblemDetail"
   "/api/v1/entities/{templateIdentifier}/{entityIdentifier}/graph":
     get:
       tags:
@@ -1012,9 +1014,61 @@ paths:
         '404':
           description: Entity not found with the provided identifier
           content:
-            "*/*":
+            application/problem+json:
               schema:
-                "$ref": "#/components/schemas/ErrorResponse"
+                "$ref": "#/components/schemas/ProblemDetail"
+  "/api/v1/entities/principals/me":
+    get:
+      tags:
+      - Principals
+      summary: Get current authenticated principal
+      description: |
+        Returns the Principal entity of the currently authenticated actor (human or service account).
+        The principal is automatically provisioned via JIT if this is the first authentication.
+
+        **Response includes:**
+        - Principal identifier (unique ID)
+        - Display name
+        - Principal kind (HUMAN or SERVICE_ACCOUNT)
+        - Attributes (email, client_id, etc.)
+        - Group memberships (via relations)
+
+        **Use cases:**
+        - Profile inspection: "Who am I?"
+        - Authorization context retrieval
+        - Service account validation
+      operationId: getCurrentPrincipal
+      responses:
+        '200':
+          description: Principal entity retrieved successfully
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/EntityDtoOut"
+        '401':
+          description: Unauthorized - Missing or invalid token
+          content:
+            application/problem+json:
+              schema:
+                "$ref": "#/components/schemas/ProblemDetail"
+        '403':
+          description: Insufficient rights
+          content:
+            application/problem+json:
+              schema:
+                "$ref": "#/components/schemas/ProblemDetail"
+        '404':
+          description: Principal not found in catalog (JIT provisioning may have failed)
+          content:
+            application/problem+json:
+              schema:
+                "$ref": "#/components/schemas/ProblemDetail"
+        '500':
+          description: Unexpected server-side failure
+          content:
+            application/problem+json:
+              schema:
+                "$ref": "#/components/schemas/ProblemDetail"
   "/api/v1/audit/entities/{templateIdentifier}/{entityIdentifier}":
     get:
       tags:
@@ -1048,9 +1102,9 @@ paths:
         '400':
           description: Invalid template or entity identifier
           content:
-            "*/*":
+            application/problem+json:
               schema:
-                "$ref": "#/components/schemas/ErrorResponse"
+                "$ref": "#/components/schemas/ProblemDetail"
         '401':
           description: Unauthorized - Missing or invalid token
         '403':
@@ -1059,15 +1113,15 @@ paths:
           description: Template not found with the provided identifier or Entity not
             found with the provided identifier
           content:
-            "*/*":
+            application/problem+json:
               schema:
-                "$ref": "#/components/schemas/ErrorResponse"
+                "$ref": "#/components/schemas/ProblemDetail"
         '500':
           description: Unexpected server-side failure
           content:
-            "*/*":
+            application/problem+json:
               schema:
-                "$ref": "#/components/schemas/ErrorResponse"
+                "$ref": "#/components/schemas/ProblemDetail"
   "/actuator":
     get:
       tags:
@@ -1224,13 +1278,32 @@ components:
           type: array
           items:
             type: string
-    ErrorResponse:
+    ProblemDetail:
       type: object
       properties:
+        type:
+          type: string
+          format: uri
+        title:
+          type: string
+        status:
+          type: integer
+          format: int32
+        detail:
+          type: string
+        instance:
+          type: string
+          format: uri
         error:
           type: string
+          description: HTTP status name, e.g. NOT_FOUND
         error_description:
           type: string
+          description: Human-readable description of the error
+        timestamp:
+          type: string
+          format: date-time
+          description: Instant at which the error occurred
     EntityDynamicMappingRelationDtoIn:
       type: object
       properties:
@@ -1569,7 +1642,7 @@ components:
       - name
     EntityPatchDtoIn:
       type: object
-      description: Input DTO for partially updating an entity. Omitted fields remain unchanged.
+      description: Input DTO for partially updating an entity
       properties:
         name:
           type: string
@@ -1579,10 +1652,12 @@ components:
           type: object
           additionalProperties:
             type: string
-          description: Properties to merge with the existing entity properties
+          description: Map of property name to value for this entity
+          example:
+            port: '8080'
         relations:
           type: array
-          description: Relations to merge with the existing entity relations
+          description: List of relations for this entity
           items:
             "$ref": "#/components/schemas/RelationDtoIn"
     RelationDtoIn:
@@ -1973,11 +2048,11 @@ components:
           type: boolean
         sort:
           "$ref": "#/components/schemas/SortObject"
-        first:
-          type: boolean
         numberOfElements:
           type: integer
           format: int32
+        first:
+          type: boolean
         size:
           type: integer
           format: int32

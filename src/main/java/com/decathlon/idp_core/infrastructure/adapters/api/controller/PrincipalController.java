@@ -10,6 +10,7 @@ import static com.decathlon.idp_core.infrastructure.adapters.api.configuration.S
 import static com.decathlon.idp_core.infrastructure.adapters.api.configuration.SwaggerDescription.UNAUTHORIZED_CODE;
 import static org.springframework.http.HttpStatus.OK;
 
+import org.springframework.http.ProblemDetail;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -23,7 +24,6 @@ import com.decathlon.idp_core.domain.service.principal.PrincipalProvisioningServ
 import com.decathlon.idp_core.infrastructure.adapters.api.dto.out.entity.EntityDtoOut;
 import com.decathlon.idp_core.infrastructure.adapters.api.mapper.entity.EntityDtoOutMapper;
 import com.decathlon.idp_core.infrastructure.adapters.api.principal.PrincipalExtractor;
-import com.decathlon.idp_core.infrastructure.adapters.common.model.ErrorResponse;
 
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Content;
@@ -71,10 +71,10 @@ public class PrincipalController {
       - Service account validation
       """)
   @ApiResponse(responseCode = OK_CODE, description = "Principal entity retrieved successfully", content = @Content(mediaType = "application/json", schema = @Schema(implementation = EntityDtoOut.class)))
-  @ApiResponse(responseCode = UNAUTHORIZED_CODE, description = RESPONSE_UNAUTHORIZED, content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponse.class)))
-  @ApiResponse(responseCode = FORBIDDEN_CODE, description = RESPONSE_INSUFFICIENT_RIGHTS, content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponse.class)))
-  @ApiResponse(responseCode = NOT_FOUND_CODE, description = "Principal not found in catalog (JIT provisioning may have failed)", content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponse.class)))
-  @ApiResponse(responseCode = INTERNAL_SERVER_ERROR_CODE, description = RESPONSE_UNEXPECTED_SERVER_ERROR, content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponse.class)))
+  @ApiResponse(responseCode = UNAUTHORIZED_CODE, description = RESPONSE_UNAUTHORIZED, content = @Content(mediaType = org.springframework.http.MediaType.APPLICATION_PROBLEM_JSON_VALUE, schema = @Schema(implementation = ProblemDetail.class)))
+  @ApiResponse(responseCode = FORBIDDEN_CODE, description = RESPONSE_INSUFFICIENT_RIGHTS, content = @Content(mediaType = org.springframework.http.MediaType.APPLICATION_PROBLEM_JSON_VALUE, schema = @Schema(implementation = ProblemDetail.class)))
+  @ApiResponse(responseCode = NOT_FOUND_CODE, description = "Principal not found in catalog (JIT provisioning may have failed)", content = @Content(mediaType = org.springframework.http.MediaType.APPLICATION_PROBLEM_JSON_VALUE, schema = @Schema(implementation = ProblemDetail.class)))
+  @ApiResponse(responseCode = INTERNAL_SERVER_ERROR_CODE, description = RESPONSE_UNEXPECTED_SERVER_ERROR, content = @Content(mediaType = org.springframework.http.MediaType.APPLICATION_PROBLEM_JSON_VALUE, schema = @Schema(implementation = ProblemDetail.class)))
   public EntityDtoOut getCurrentPrincipal(Authentication authentication) {
     PrincipalInfo principalInfo = principalExtractor.extractPrincipalInfo(authentication);
 
