@@ -2,6 +2,7 @@ package com.decathlon.idp_core.infrastructure.adapters.api.handler;
 
 import static org.springframework.http.HttpStatus.NOT_FOUND;
 
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.regex.Matcher;
@@ -20,6 +21,7 @@ import org.springframework.web.bind.MissingPathVariableException;
 import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.method.annotation.HandlerMethodValidationException;
+import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 import org.springframework.web.servlet.NoHandlerFoundException;
 
 import com.decathlon.idp_core.domain.exception.entity.EntityAlreadyExistsException;
@@ -293,6 +295,22 @@ public class ApiExceptionHandler {
         .map(org.springframework.context.MessageSourceResolvable::getDefaultMessage)
         .collect(Collectors.joining(", "));
 
+    return createErrorResponse(HttpStatus.BAD_REQUEST, errorMessage);
+  }
+
+  /// Handles invalid request parameter types, including unknown enum values.
+  @ExceptionHandler(MethodArgumentTypeMismatchException.class)
+  public ResponseEntity<ErrorResponse> handleMethodArgumentTypeMismatchException(
+      MethodArgumentTypeMismatchException ex) {
+    String errorMessage = "Invalid value '%s' for parameter '%s'.".formatted(ex.getValue(),
+        ex.getName());
+    Class<?> requiredType = ex.getRequiredType();
+    if (requiredType != null && requiredType.isEnum()) {
+      errorMessage += " Allowed values: " + Arrays.toString(requiredType.getEnumConstants()) + ".";
+    } else if (requiredType != null) {
+      errorMessage += " Expected type: " + requiredType.getSimpleName() + ".";
+    }
+    log.warn("Request parameter type mismatch: {}", errorMessage);
     return createErrorResponse(HttpStatus.BAD_REQUEST, errorMessage);
   }
 
@@ -606,7 +624,6 @@ public class ApiExceptionHandler {
   }
 
   /// Handles creation of a dynamic mapping whose identifier already exists.
-  ///
   /// HTTP mapping: Maps EntityDynamicMappingAlreadyExistsException to HTTP 409
   /// Conflict, surfacing the uniqueness violation with business meaning.
   @ExceptionHandler(EntityDynamicMappingAlreadyExistsException.class)
