@@ -394,4 +394,4 @@ permissions.
 
 ## Next Steps
 
-- **[Webhook Security](webhooks.md#security-strategies)** - Connector-level security for inbound webhooks
+- **[Webhook Security](../features/data-integration.md##Security)** - Connector-level security for inbound webhooks
