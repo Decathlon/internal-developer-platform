@@ -59,12 +59,12 @@ app:
         enabled: false
       principal-extraction:
         human-indicator-claims:
-          - email
+          - ${IDP_AUTH_JWT_HUMAN_INDICATOR_CLAIM:email}
         human:
-          id-claim: email
+          id-claim: ${IDP_AUTH_JWT_HUMAN_ID_CLAIM:email}
         machine:
-          id-claim: client_id
-          id-prefix: ""
+          id-claim: ${IDP_AUTH_JWT_MACHINE_ID_CLAIM:client_id}
+          id-prefix: ${IDP_AUTH_JWT_MACHINE_ID_PREFIX:}
       user-claim-mappings:
         preferred_username: login
         name: name

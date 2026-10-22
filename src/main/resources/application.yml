@@ -140,12 +140,12 @@ app:
       # JWT kind-specific identifier claims and human-token indicators.
       principal-extraction:
         human-indicator-claims:
-          - email
+          - ${IDP_AUTH_JWT_HUMAN_INDICATOR_CLAIM:email}
         human:
-          id-claim: email
+          id-claim: ${IDP_AUTH_JWT_HUMAN_ID_CLAIM:email}
         machine:
-          id-claim: client_id
-          id-prefix: ""
+          id-claim: ${IDP_AUTH_JWT_MACHINE_ID_CLAIM:client_id}
+          id-prefix: ${IDP_AUTH_JWT_MACHINE_ID_PREFIX:}
 
       # JWT claim mappings for different Identity Providers (Auth0, Keycloak, Azure AD, etc.)
       # See docs/src/concepts/authentication.md - JWT Claim Mappings section
