@@ -151,13 +151,22 @@ public class ApiExceptionHandler {
   @ExceptionHandler(MethodArgumentTypeMismatchException.class)
   public ResponseEntity<ErrorResponse> handleMethodArgumentTypeMismatchException(
       MethodArgumentTypeMismatchException ex) {
-    String message = switch (ex.getName()) {
+    String errorMessage = switch (ex.getName()) {
       case "page" -> ValidationMessages.PAGE_INDEX_NOT_INTEGER;
       case "size" -> ValidationMessages.PAGE_SIZE_NOT_INTEGER;
-      default -> "Invalid value for parameter '%s'".formatted(ex.getName());
+      default -> "Invalid value '%s' for parameter '%s'.".formatted(ex.getValue(), ex.getName());
     };
-    log.warn("Type mismatch for parameter '{}': {}", ex.getName(), ex.getValue());
-    return createErrorResponse(HttpStatus.BAD_REQUEST, message);
+    if (!"page".equals(ex.getName()) && !"size".equals(ex.getName())) {
+      Class<?> requiredType = ex.getRequiredType();
+      if (requiredType != null && requiredType.isEnum()) {
+        errorMessage += " Allowed values: " + Arrays.toString(requiredType.getEnumConstants())
+            + ".";
+      } else if (requiredType != null) {
+        errorMessage += " Expected type: " + requiredType.getSimpleName() + ".";
+      }
+    }
+    log.warn("Request parameter type mismatch: {}", errorMessage);
+    return createErrorResponse(HttpStatus.BAD_REQUEST, errorMessage);
   }
 
   /// Handles domain exception for wrong entity entityTemplateIdentifier property
@@ -312,22 +321,6 @@ public class ApiExceptionHandler {
         .map(org.springframework.context.MessageSourceResolvable::getDefaultMessage)
         .collect(Collectors.joining(", "));
 
-    return createErrorResponse(HttpStatus.BAD_REQUEST, errorMessage);
-  }
-
-  /// Handles invalid request parameter types, including unknown enum values.
-  @ExceptionHandler(MethodArgumentTypeMismatchException.class)
-  public ResponseEntity<ErrorResponse> handleMethodArgumentTypeMismatchException(
-      MethodArgumentTypeMismatchException ex) {
-    String errorMessage = "Invalid value '%s' for parameter '%s'.".formatted(ex.getValue(),
-        ex.getName());
-    Class<?> requiredType = ex.getRequiredType();
-    if (requiredType != null && requiredType.isEnum()) {
-      errorMessage += " Allowed values: " + Arrays.toString(requiredType.getEnumConstants()) + ".";
-    } else if (requiredType != null) {
-      errorMessage += " Expected type: " + requiredType.getSimpleName() + ".";
-    }
-    log.warn("Request parameter type mismatch: {}", errorMessage);
     return createErrorResponse(HttpStatus.BAD_REQUEST, errorMessage);
   }
 
