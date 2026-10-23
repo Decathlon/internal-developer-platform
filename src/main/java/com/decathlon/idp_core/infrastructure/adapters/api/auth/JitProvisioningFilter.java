@@ -108,8 +108,7 @@ public class JitProvisioningFilter extends OncePerRequestFilter {
   /// @param request current HTTP request
   /// @param response current HTTP response
   /// @param authentication Spring Security authentication
-  /// @return {@code true} when principal verification succeeds; otherwise {@code
-  /// false}
+  /// @return `true` when principal verification succeeds; otherwise `false`
   /// @throws IOException if writing an error response fails
   private boolean provisionPrincipalSafely(HttpServletRequest request, HttpServletResponse response,
       Authentication authentication) throws IOException {
@@ -184,7 +183,7 @@ public class JitProvisioningFilter extends OncePerRequestFilter {
   /// Checks whether the supplied authentication represents an anonymous user.
   ///
   /// @param authentication Spring Security authentication to inspect
-  /// @return {@code true} when the authentication is anonymous
+  /// @return `true` when the authentication is anonymous
   private boolean isAnonymous(Authentication authentication) {
     return authentication instanceof org.springframework.security.authentication.AnonymousAuthenticationToken;
   }
@@ -192,7 +191,7 @@ public class JitProvisioningFilter extends OncePerRequestFilter {
   /// Excludes configured public paths from principal provisioning.
   ///
   /// @param request current HTTP request
-  /// @return {@code true} when the request path matches a configured exclusion
+  /// @return `true` when the request path matches a configured exclusion
   /// pattern
   @Override
   protected boolean shouldNotFilter(@NonNull HttpServletRequest request) {
