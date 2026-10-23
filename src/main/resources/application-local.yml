@@ -69,7 +69,6 @@ app:
         preferred_username: login
         name: name
         email: email
-idp:
 logging:
   level:
     # Application log level, defaults to INFO. Override per environment via LOG_LEVEL env var.

@@ -84,6 +84,9 @@ public class ValidationMessages {
   // Principal provisioning validation messages
   public static final String PRINCIPAL_CREATION_FAILED = "Failed to create principal with identifier '%s'. The principal provider is currently unavailable. The system will automatically retry provisioning on the next request.";
 
+  // Authorization validation messages
+  public static final String AUTHORIZATION_VALUE_MUST_NOT_BE_NULL = "%s must not be null";
+
   // Helper method to construct rules incompatibility message
   public static String rulesAreIncompatible(String rule1, String rule2) {
     return PROPERTY_RULES_MUTUALLY_EXCLUSIVE.replace("{rule1}", rule1).replace("{rule2}", rule2);
@@ -98,6 +101,10 @@ public class ValidationMessages {
   // Helper method to construct min/max constraint violation message
   public static String minMaxConstraintViolated(String constraint) {
     return PROPERTY_RULES_MIN_MAX_CONSTRAINT_VIOLATED.replace("{constraint}", constraint);
+  }
+
+  public static String authorizationValueMustNotBeNull(String fieldName) {
+    return AUTHORIZATION_VALUE_MUST_NOT_BE_NULL.formatted(fieldName);
   }
 
   // Filter query validation messages

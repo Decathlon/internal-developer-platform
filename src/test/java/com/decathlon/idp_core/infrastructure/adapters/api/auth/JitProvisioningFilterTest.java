@@ -194,11 +194,10 @@ class JitProvisioningFilterTest {
     verify(errorResponseWriter, never()).write(any(), any(), any());
   }
 
-  @ParameterizedTest(name = "{0} {1} {2}")
+  @ParameterizedTest(name = "{0} {1} wrongKind={2}")
   @MethodSource("principalLinkScenarios")
-  void doFilterInternal_appliesProvisioningModeForBothActorKinds(String scenario,
-      PrincipalProvisioningMode mode, PrincipalKind kind, boolean existingWrongKind)
-      throws ServletException, IOException {
+  void doFilterInternal_appliesProvisioningModeForBothActorKinds(PrincipalProvisioningMode mode,
+      PrincipalKind kind, boolean existingWrongKind) throws ServletException, IOException {
     Authentication auth = mock(Authentication.class);
     when(auth.isAuthenticated()).thenReturn(true);
     SecurityContextHolder.getContext().setAuthentication(auth);
@@ -247,8 +246,8 @@ class JitProvisioningFilterTest {
     Stream.Builder<Arguments> scenarios = Stream.builder();
     for (PrincipalKind kind : PrincipalKind.values()) {
       for (PrincipalProvisioningMode mode : PrincipalProvisioningMode.values()) {
-        scenarios.add(Arguments.of("missing principal", mode, kind, false));
-        scenarios.add(Arguments.of("wrong-kind principal", mode, kind, true));
+        scenarios.add(Arguments.of(mode, kind, false));
+        scenarios.add(Arguments.of(mode, kind, true));
       }
     }
     return scenarios.build();

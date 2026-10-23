@@ -47,11 +47,10 @@ class GlobalAuthorizationServiceTest {
     humanPrincipal = principal(PRINCIPAL_IDENTIFIER, PrincipalKind.HUMAN);
   }
 
-  @ParameterizedTest(name = "{0}")
+  @ParameterizedTest(name = "{1} {2} allowed={4}")
   @MethodSource("authorizationMatrix")
-  void shouldApplyGlobalAuthorizationMatrix(String scenario, PrincipalInfo principal,
-      AuthorizationAction action, AuthorizationResource resource, Optional<Entity> principalEntity,
-      boolean allowed) {
+  void shouldApplyGlobalAuthorizationMatrix(PrincipalInfo principal, AuthorizationAction action,
+      AuthorizationResource resource, Optional<Entity> principalEntity, boolean allowed) {
     var request = request(principal, action, resource, principalEntity);
 
     if (allowed) {
@@ -103,26 +102,22 @@ class GlobalAuthorizationServiceTest {
     Stream.Builder<Arguments> cases = Stream.builder();
     for (AuthorizationAction action : actions) {
       for (AuthorizationResource resource : readOnlyResources) {
-        cases.add(Arguments.of("human " + action + " " + resource.type(), human, action, resource,
-            Optional.of(activeHuman), action == AuthorizationAction.READ));
-        cases.add(Arguments.of("M2M " + action + " " + resource.type(), serviceAccount, action,
-            resource, Optional.of(servicePrincipal), action == AuthorizationAction.READ));
-        cases.add(Arguments.of("admin " + action + " " + resource.type(), admin, action, resource,
-            Optional.of(adminPrincipal), true));
+        cases.add(Arguments.of(human, action, resource, Optional.of(activeHuman),
+            action == AuthorizationAction.READ));
+        cases.add(Arguments.of(serviceAccount, action, resource, Optional.of(servicePrincipal),
+            action == AuthorizationAction.READ));
+        cases.add(Arguments.of(admin, action, resource, Optional.of(adminPrincipal), true));
       }
       for (AuthorizationResource resource : deniedResources) {
-        cases.add(Arguments.of("human " + action + " " + resource.type(), human, action, resource,
-            Optional.of(activeHuman), false));
-        cases.add(Arguments.of("M2M " + action + " " + resource.type(), serviceAccount, action,
-            resource, Optional.of(servicePrincipal), false));
-        cases.add(Arguments.of("admin " + action + " " + resource.type(), admin, action, resource,
-            Optional.of(adminPrincipal), true));
+        cases.add(Arguments.of(human, action, resource, Optional.of(activeHuman), false));
+        cases.add(
+            Arguments.of(serviceAccount, action, resource, Optional.of(servicePrincipal), false));
+        cases.add(Arguments.of(admin, action, resource, Optional.of(adminPrincipal), true));
       }
     }
-    cases.add(Arguments.of("inactive human reads entity", human, AuthorizationAction.READ, entity,
-        Optional.of(inactiveHuman), false));
-    cases.add(Arguments.of("missing human principal reads entity", human, AuthorizationAction.READ,
-        entity, Optional.empty(), false));
+    cases.add(
+        Arguments.of(human, AuthorizationAction.READ, entity, Optional.of(inactiveHuman), false));
+    cases.add(Arguments.of(human, AuthorizationAction.READ, entity, Optional.empty(), false));
     return cases.build();
   }
 

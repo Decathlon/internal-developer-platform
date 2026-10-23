@@ -6,6 +6,8 @@ import java.util.Optional;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 
+import com.decathlon.idp_core.domain.constant.ValidationMessages;
+
 /// Identifies the resource and optional parent context for an authorization request.
 public record AuthorizationResource(@NotBlank String type, @NotNull Optional<String> identifier,
     @NotNull Optional<String> parentIdentifier) {
@@ -17,8 +19,10 @@ public record AuthorizationResource(@NotBlank String type, @NotNull Optional<Str
   public static final String PRINCIPAL_SELF = "principal_self";
 
   public AuthorizationResource {
-    Objects.requireNonNull(type, "type must not be null");
-    Objects.requireNonNull(identifier, "identifier must not be null");
-    Objects.requireNonNull(parentIdentifier, "parentIdentifier must not be null");
+    Objects.requireNonNull(type, ValidationMessages.authorizationValueMustNotBeNull("type"));
+    Objects.requireNonNull(identifier,
+        ValidationMessages.authorizationValueMustNotBeNull("identifier"));
+    Objects.requireNonNull(parentIdentifier,
+        ValidationMessages.authorizationValueMustNotBeNull("parentIdentifier"));
   }
 }

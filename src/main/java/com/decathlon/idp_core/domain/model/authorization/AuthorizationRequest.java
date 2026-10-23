@@ -5,6 +5,7 @@ import java.util.Optional;
 
 import jakarta.validation.constraints.NotNull;
 
+import com.decathlon.idp_core.domain.constant.ValidationMessages;
 import com.decathlon.idp_core.domain.model.entity.Entity;
 import com.decathlon.idp_core.domain.model.principal.PrincipalInfo;
 
@@ -14,9 +15,12 @@ public record AuthorizationRequest(@NotNull PrincipalInfo principal,
     @NotNull AuthorizationResource resource) {
 
   public AuthorizationRequest {
-    Objects.requireNonNull(principal, "principal must not be null");
-    Objects.requireNonNull(principalEntity, "principalEntity must not be null");
-    Objects.requireNonNull(action, "action must not be null");
-    Objects.requireNonNull(resource, "resource must not be null");
+    Objects.requireNonNull(principal,
+        ValidationMessages.authorizationValueMustNotBeNull("principal"));
+    Objects.requireNonNull(principalEntity,
+        ValidationMessages.authorizationValueMustNotBeNull("principalEntity"));
+    Objects.requireNonNull(action, ValidationMessages.authorizationValueMustNotBeNull("action"));
+    Objects.requireNonNull(resource,
+        ValidationMessages.authorizationValueMustNotBeNull("resource"));
   }
 }

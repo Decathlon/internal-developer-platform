@@ -6,8 +6,10 @@ import java.util.Set;
 import org.springframework.stereotype.Component;
 
 import com.decathlon.idp_core.domain.exception.entity.EntityNotFoundException;
+import com.decathlon.idp_core.domain.model.authorization.AuthorizationResource;
 import com.decathlon.idp_core.domain.model.entity.Entity;
 import com.decathlon.idp_core.domain.model.entity.EntityPatch;
+import com.decathlon.idp_core.domain.model.entity.Property;
 import com.decathlon.idp_core.domain.model.entity_mapping.EntityDynamicMapping;
 import com.decathlon.idp_core.domain.model.inbound_connectors.webhook.WebhookConnector;
 import com.decathlon.idp_core.domain.port.MappingEnginePort;
@@ -80,12 +82,11 @@ public class IngestionProcessor {
   }
 
   private Entity protectPrincipalProperties(Entity entity) {
-    if (!"principal".equals(entity.templateIdentifier())) {
+    if (!AuthorizationResource.PRINCIPAL_TEMPLATE_IDENTIFIER.equals(entity.templateIdentifier())) {
       return entity;
     }
-    List<com.decathlon.idp_core.domain.model.entity.Property> properties = entity.properties()
-        .stream().filter(property -> !PROTECTED_PRINCIPAL_PROPERTIES.contains(property.name()))
-        .toList();
+    List<Property> properties = entity.properties().stream()
+        .filter(property -> !PROTECTED_PRINCIPAL_PROPERTIES.contains(property.name())).toList();
     return new Entity(entity.id(), entity.templateIdentifier(), entity.name(), entity.identifier(),
         properties, entity.relations());
   }
