@@ -34,8 +34,7 @@ compatibility fields:
   "detail": "Template with ID 'invalid-id' not found",
   "instance": "/api/v1/entity-templates/invalid-id",
   "error": "NOT_FOUND",
-  "error_description": "Template with ID 'invalid-id' not found",
-  "timestamp": "2025-11-28T10:30:00Z"
+  "error_description": "Template with ID 'invalid-id' not found"
 }
 ```
 

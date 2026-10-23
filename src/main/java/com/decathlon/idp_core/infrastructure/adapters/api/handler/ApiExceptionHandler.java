@@ -37,6 +37,7 @@ import org.springframework.web.servlet.NoHandlerFoundException;
 import org.springframework.web.servlet.mvc.method.annotation.ResponseEntityExceptionHandler;
 
 import com.decathlon.idp_core.domain.constant.ValidationMessages;
+import com.decathlon.idp_core.domain.exception.authorization.PrincipalNotAuthorizedException;
 import com.decathlon.idp_core.domain.exception.entity.EntityAlreadyExistsException;
 import com.decathlon.idp_core.domain.exception.entity.EntityDeletionBlockedException;
 import com.decathlon.idp_core.domain.exception.entity.EntityNotFoundException;

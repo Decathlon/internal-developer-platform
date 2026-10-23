@@ -110,7 +110,6 @@ public class EntityTemplateMapper {
   /// This is a convenience method for bulk conversion operations, particularly
   /// useful
   /// for paginated results and list endpoints.
-  /// </p>
   ///
   /// @param entities the list of domain entities to convert, may be null
   /// @return a list of converted EntityTemplateDtoOut objects, empty list if

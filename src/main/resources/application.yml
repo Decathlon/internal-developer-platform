@@ -120,9 +120,14 @@ app:
   # Base URL of this service, used to build self-referencing links.
   idp-core-prefix-url: ${IDP_CORE_PREFIX_URL}
   security:
-    roles:
-      # Baseline role assigned to all authenticated principals during V1 phase.
-      baseline-role: ${APP_SECURITY_ROLES_BASELINE_ROLE:*}
+    principal-provisioning:
+      mode: ${IDP_PRINCIPAL_PROVISIONING_MODE:LINK_ONLY}
+    authorization:
+      mode: GLOBAL
+      # Comma-separated immutable principal identifiers for emergency access
+      global-principal-identifiers: ${IDP_SUPER_ADMIN_IDENTIFIER:},${IDP_PLATFORM_ADMIN_IDENTIFIER:}
+      # Optional human-access gate; when set, the given boolean property in the user's Principal must be true.
+      required-principal-property: ${IDP_REQUIRED_PRINCIPAL_PROPERTY:}
 
     # Authentication configuration - externalized for multi-IdP support
     # See docs/src/concepts/authentication.md for comprehensive documentation
@@ -134,10 +139,19 @@ app:
       mock:
         enabled: false
 
+      # JWT kind-specific identifier claims and human-token indicators.
+      principal-extraction:
+        human-indicator-claims:
+          - ${IDP_AUTH_JWT_HUMAN_INDICATOR_CLAIM:email}
+        human:
+          id-claim: ${IDP_AUTH_JWT_HUMAN_ID_CLAIM:email}
+        machine:
+          id-claim: ${IDP_AUTH_JWT_MACHINE_ID_CLAIM:client_id}
+          id-prefix: ${IDP_AUTH_JWT_MACHINE_ID_PREFIX:}
+
       # JWT claim mappings for different Identity Providers (Auth0, Keycloak, Azure AD, etc.)
       # See docs/src/concepts/authentication.md - JWT Claim Mappings section
       user-claim-mappings:
-        sub: sub
         preferred_username: preferred_username
         name: name
         email: email
@@ -148,19 +162,7 @@ app:
         gty: gty
         service_name: service_name
 
-      # Service account detection - identify M2M vs. human user tokens
-      # See docs/src/concepts/authentication.md - Service Account Detection section
-      service-account-detection:
-        enabled: true
-        mode: legacy
-        definitive-claim-name: token_type
-        definitive-claim-value: m2m
-        # Simplified list binding. Overriding via env var requires a comma-separated string:
-        # export APP_SECURITY_AUTHENTICATION_SERVICE_ACCOUNT_DETECTION_LEGACY_FALLBACK_CLAIMS="grant_type,service_name,client_id"
-        legacy-fallback-claims: grant_type,service_name,client_id
-        # JIT Provisioning excluded paths
-        # Simplified list binding. Overriding via env var requires a comma-separated string:
-        # export APP_SECURITY_AUTHENTICATION_JIT_PROVISIONING_EXCLUDED_PATHS="/,/actuator/**,/swagger-ui/**,/swagger-ui.html,/v3/api-docs/**"
+      # JIT Provisioning excluded paths. Override with a comma-separated environment value.
       jit-provisioning-excluded-paths: /,/actuator/**,/swagger-ui/**,/swagger-ui.html,/v3/api-docs/**
 
 idp:
