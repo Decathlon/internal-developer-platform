@@ -68,6 +68,19 @@ public class JitProvisioningFilter extends OncePerRequestFilter {
   private final AuthorizationPolicy authorizationPolicy;
   private final ApiErrorResponseWriter errorResponseWriter;
 
+  /// Verifies an authenticated principal before allowing the request to continue.
+  ///
+  /// Unauthenticated and anonymous requests pass through for the configured
+  /// security
+  /// chain to handle. Authenticated requests stop here if extraction or
+  /// provisioning
+  /// fails, or if the principal cannot be linked.
+  ///
+  /// @param request current HTTP request
+  /// @param response current HTTP response
+  /// @param filterChain remaining filters and request handler
+  /// @throws ServletException if a downstream filter fails
+  /// @throws IOException if request processing fails
   @Override
   protected void doFilterInternal(@NonNull HttpServletRequest request,
       @NonNull HttpServletResponse response, @NonNull FilterChain filterChain)
@@ -83,6 +96,21 @@ public class JitProvisioningFilter extends OncePerRequestFilter {
     filterChain.doFilter(request, response);
   }
 
+  /// Extracts the authenticated identity and applies the configured
+  /// principal-linking mode.
+  ///
+  /// On success, stores the verified principal context on the request for
+  /// authorization.
+  /// Missing links are rejected, while unexpected provisioning failures return a
+  /// service
+  /// unavailable response and prevent the request from continuing.
+  ///
+  /// @param request current HTTP request
+  /// @param response current HTTP response
+  /// @param authentication Spring Security authentication
+  /// @return {@code true} when principal verification succeeds; otherwise {@code
+  /// false}
+  /// @throws IOException if writing an error response fails
   private boolean provisionPrincipalSafely(HttpServletRequest request, HttpServletResponse response,
       Authentication authentication) throws IOException {
     PrincipalInfo principalInfo;
@@ -153,10 +181,19 @@ public class JitProvisioningFilter extends OncePerRequestFilter {
     }
   }
 
+  /// Checks whether the supplied authentication represents an anonymous user.
+  ///
+  /// @param authentication Spring Security authentication to inspect
+  /// @return {@code true} when the authentication is anonymous
   private boolean isAnonymous(Authentication authentication) {
     return authentication instanceof org.springframework.security.authentication.AnonymousAuthenticationToken;
   }
 
+  /// Excludes configured public paths from principal provisioning.
+  ///
+  /// @param request current HTTP request
+  /// @return {@code true} when the request path matches a configured exclusion
+  /// pattern
   @Override
   protected boolean shouldNotFilter(@NonNull HttpServletRequest request) {
     String path = request.getRequestURI();
