@@ -38,7 +38,9 @@ import org.springframework.web.context.request.ServletWebRequest;
 import org.springframework.web.context.request.WebRequest;
 import org.springframework.web.method.annotation.ExceptionHandlerMethodResolver;
 import org.springframework.web.method.annotation.HandlerMethodValidationException;
+import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 
+import com.decathlon.idp_core.domain.constant.ValidationMessages;
 import com.decathlon.idp_core.domain.exception.entity.EntityAlreadyExistsException;
 import com.decathlon.idp_core.domain.exception.entity.EntityDeletionBlockedException;
 import com.decathlon.idp_core.domain.exception.entity.EntityNotFoundException;
@@ -163,6 +165,32 @@ class ApiExceptionHandlerTest {
 
     assertEquals(HttpStatus.BAD_REQUEST, response.getStatusCode());
     assertProblemDetail(body, HttpStatus.BAD_REQUEST, "Parameter is invalid", "BAD_REQUEST");
+  }
+
+  @Test
+  void shouldHandlePageTypeMismatchViaFrameworkOverride() {
+    MethodArgumentTypeMismatchException ex = new MethodArgumentTypeMismatchException("1.5",
+        Integer.class, "page", null, null);
+
+    ResponseEntity<Object> response = exceptionHandler.handleTypeMismatch(ex, new HttpHeaders(),
+        HttpStatus.BAD_REQUEST, mockWebRequest());
+
+    assertEquals(HttpStatus.BAD_REQUEST, response.getStatusCode());
+    assertProblemDetail((ProblemDetail) response.getBody(), HttpStatus.BAD_REQUEST,
+        ValidationMessages.PAGE_INDEX_NOT_INTEGER, "BAD_REQUEST");
+  }
+
+  @Test
+  void shouldHandleSizeTypeMismatchViaFrameworkOverride() {
+    MethodArgumentTypeMismatchException ex = new MethodArgumentTypeMismatchException("abc",
+        Integer.class, "size", null, null);
+
+    ResponseEntity<Object> response = exceptionHandler.handleTypeMismatch(ex, new HttpHeaders(),
+        HttpStatus.BAD_REQUEST, mockWebRequest());
+
+    assertEquals(HttpStatus.BAD_REQUEST, response.getStatusCode());
+    assertProblemDetail((ProblemDetail) response.getBody(), HttpStatus.BAD_REQUEST,
+        ValidationMessages.PAGE_SIZE_NOT_INTEGER, "BAD_REQUEST");
   }
 
   @Test

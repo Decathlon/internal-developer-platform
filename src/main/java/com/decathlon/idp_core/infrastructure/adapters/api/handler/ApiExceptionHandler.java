@@ -16,6 +16,7 @@ import java.util.stream.Collectors;
 import jakarta.validation.ConstraintViolation;
 import jakarta.validation.ConstraintViolationException;
 
+import org.springframework.beans.TypeMismatchException;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
@@ -203,6 +204,24 @@ public class ApiExceptionHandler extends ResponseEntityExceptionHandler {
         .collect(Collectors.joining(", "));
     return ResponseEntity.status(HttpStatus.BAD_REQUEST).headers(headers)
         .body(buildProblemDetail(HttpStatus.BAD_REQUEST, errorMessage, request));
+  }
+
+  @Override
+  protected ResponseEntity<Object> handleTypeMismatch(TypeMismatchException ex, HttpHeaders headers,
+      HttpStatusCode statusCode, WebRequest request) {
+    if (ex instanceof MethodArgumentTypeMismatchException mismatch) {
+      String errorMessage = switch (mismatch.getName()) {
+        case "page" -> ValidationMessages.PAGE_INDEX_NOT_INTEGER;
+        case "size" -> ValidationMessages.PAGE_SIZE_NOT_INTEGER;
+        default -> null;
+      };
+      if (errorMessage != null) {
+        log.warn("Request parameter type mismatch: {}", ex.getMessage());
+        return ResponseEntity.status(statusCode).headers(headers)
+            .body(buildProblemDetail(HttpStatus.BAD_REQUEST, errorMessage, request));
+      }
+    }
+    return super.handleTypeMismatch(ex, headers, statusCode, request);
   }
 
   @ExceptionHandler(ConstraintViolationException.class)
