@@ -96,7 +96,8 @@ public class JitProvisioningFilter extends OncePerRequestFilter {
     try {
       if (provisioningProperties != null
           && provisioningProperties.mode() == PrincipalProvisioningMode.LINK_ONLY) {
-        Optional<Entity> linkedPrincipal = provisioningService.getPrincipalFor(principalInfo);
+        Optional<Entity> linkedPrincipal = provisioningService
+            .findPrincipalWithSameKind(principalInfo);
         if (linkedPrincipal.isEmpty()) {
           if (authorizationPolicy.mode() == AuthorizationMode.GLOBAL && authorizationPolicy
               .globalPrincipalIdentifiers().contains(principalInfo.identifier())) {
@@ -126,7 +127,8 @@ public class JitProvisioningFilter extends OncePerRequestFilter {
       }
 
       provisioningService.provisionPrincipal(principalInfo);
-      Optional<Entity> matchingPrincipal = provisioningService.getPrincipalFor(principalInfo);
+      Optional<Entity> matchingPrincipal = provisioningService
+          .findPrincipalWithSameKind(principalInfo);
       if (matchingPrincipal.isEmpty()) {
         log.debug("Principal evaluation rejected: mode={}, principal={}, kind={}, linked=false",
             PrincipalProvisioningMode.JIT, principalInfo.identifier(), principalInfo.kind());

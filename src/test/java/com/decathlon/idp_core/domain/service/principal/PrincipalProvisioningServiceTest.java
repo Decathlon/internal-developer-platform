@@ -233,7 +233,7 @@ class PrincipalProvisioningServiceTest {
         .thenReturn(Optional.of(principal));
 
     // When: Retrieve principal
-    Optional<Entity> result = provisioningService.getPrincipal("alice");
+    Optional<Entity> result = provisioningService.findPrincipal("alice");
 
     // Then: Principal returned
     assertThat(result).isPresent();
@@ -247,7 +247,7 @@ class PrincipalProvisioningServiceTest {
         .thenReturn(Optional.empty());
 
     // When: Retrieve non-existent principal
-    Optional<Entity> result = provisioningService.getPrincipal("unknown");
+    Optional<Entity> result = provisioningService.findPrincipal("unknown");
 
     // Then: Empty optional returned
     assertThat(result).isEmpty();
@@ -262,6 +262,6 @@ class PrincipalProvisioningServiceTest {
     when(entityRepository.findByTemplateIdentifierAndIdentifier("principal", "alice"))
         .thenReturn(Optional.of(serviceAccount));
 
-    assertThat(provisioningService.getPrincipalFor(human)).isEmpty();
+    assertThat(provisioningService.findPrincipalWithSameKind(human)).isEmpty();
   }
 }

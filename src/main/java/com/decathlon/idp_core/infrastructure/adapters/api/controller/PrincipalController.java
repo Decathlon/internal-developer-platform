@@ -82,7 +82,7 @@ public class PrincipalController {
   public EntityDtoOut getCurrentPrincipal(Authentication authentication) {
     PrincipalInfo principalInfo = principalExtractor.extractPrincipalInfo(authentication);
 
-    Entity principal = provisioningService.getPrincipal(principalInfo.identifier())
+    Entity principal = provisioningService.findPrincipal(principalInfo.identifier())
         .orElseThrow(() -> new PrincipalNotFoundException(principalInfo.identifier()));
 
     return entityDtoOutMapper.fromEntity(principal);

@@ -71,7 +71,7 @@ class GlobalAuthorizationFilterTest {
     when(authentication.isAuthenticated()).thenReturn(true);
     SecurityContextHolder.getContext().setAuthentication(authentication);
     when(principalExtractor.extractPrincipalInfo(authentication)).thenReturn(principal);
-    when(provisioningService.getPrincipalFor(principal)).thenReturn(Optional.empty());
+    when(provisioningService.findPrincipalWithSameKind(principal)).thenReturn(Optional.empty());
   }
 
   @AfterEach
@@ -137,7 +137,7 @@ class GlobalAuthorizationFilterTest {
     });
 
     verify(principalExtractor, never()).extractPrincipalInfo(any());
-    verify(provisioningService, never()).getPrincipalFor(any());
+    verify(provisioningService, never()).findPrincipalWithSameKind(any());
     var requestCaptor = org.mockito.ArgumentCaptor.forClass(AuthorizationRequest.class);
     verify(authorizationService).authorize(requestCaptor.capture(), any(AuthorizationPolicy.class));
     assertThat(requestCaptor.getValue().principalEntity()).contains(principalEntity);
@@ -199,7 +199,7 @@ class GlobalAuthorizationFilterTest {
     var request = new MockHttpServletRequest("POST", "/api/v1/entities");
     var response = new MockHttpServletResponse();
     FilterChain chain = mock(FilterChain.class);
-    when(provisioningService.getPrincipalFor(principal))
+    when(provisioningService.findPrincipalWithSameKind(principal))
         .thenThrow(new IllegalStateException("catalog unavailable"));
 
     assertThatThrownBy(() -> filter.doFilter(request, response, chain))

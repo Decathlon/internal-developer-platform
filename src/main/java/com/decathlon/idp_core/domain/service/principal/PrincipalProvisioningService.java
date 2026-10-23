@@ -91,7 +91,7 @@ public class PrincipalProvisioningService {
   /// @param identifier unique principal identifier
   /// @return optional containing the principal entity
   @Transactional(readOnly = true)
-  public Optional<Entity> getPrincipal(String identifier) {
+  public Optional<Entity> findPrincipal(String identifier) {
     return entityRepository.findByTemplateIdentifierAndIdentifier(PRINCIPAL_TEMPLATE_IDENTIFIER,
         identifier);
   }
@@ -103,8 +103,10 @@ public class PrincipalProvisioningService {
   /// @return matching principal entity, or empty when missing or of a different
   /// kind
   @Transactional(readOnly = true)
-  public Optional<Entity> getPrincipalFor(PrincipalInfo principalInfo) {
-    return getPrincipal(principalInfo.identifier())
+  public Optional<Entity> findPrincipalWithSameKind(PrincipalInfo principalInfo) {
+    return entityRepository
+        .findByTemplateIdentifierAndIdentifier(PRINCIPAL_TEMPLATE_IDENTIFIER,
+            principalInfo.identifier())
         .filter(entity -> hasMatchingKind(entity, principalInfo.kind()));
   }
 

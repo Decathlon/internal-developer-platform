@@ -108,7 +108,7 @@ class JitProvisioningFilterTest {
         List.of(new com.decathlon.idp_core.domain.model.entity.Property(null, "kind", "HUMAN")),
         List.of());
     when(provisioningService.provisionPrincipal(principalInfo)).thenReturn(principalEntity);
-    when(provisioningService.getPrincipalFor(principalInfo))
+    when(provisioningService.findPrincipalWithSameKind(principalInfo))
         .thenReturn(Optional.of(principalEntity));
 
     // Act
@@ -135,7 +135,7 @@ class JitProvisioningFilterTest {
         List.of());
     when(provisioningProperties.mode()).thenReturn(PrincipalProvisioningMode.LINK_ONLY);
     when(principalExtractor.extractPrincipalInfo(auth)).thenReturn(principalInfo);
-    when(provisioningService.getPrincipalFor(principalInfo))
+    when(provisioningService.findPrincipalWithSameKind(principalInfo))
         .thenReturn(Optional.of(principalEntity));
 
     jitProvisioningFilter.doFilterInternal(request, response, filterChain);
@@ -178,7 +178,7 @@ class JitProvisioningFilterTest {
     when(authorizationPolicy.globalPrincipalIdentifiers())
         .thenReturn(java.util.Set.of("global-user"));
     when(principalExtractor.extractPrincipalInfo(auth)).thenReturn(principalInfo);
-    when(provisioningService.getPrincipalFor(principalInfo)).thenReturn(Optional.empty());
+    when(provisioningService.findPrincipalWithSameKind(principalInfo)).thenReturn(Optional.empty());
     Entity principalEntity = new Entity(null, "principal", "User", "global-user",
         List.of(new com.decathlon.idp_core.domain.model.entity.Property(null, "kind", "HUMAN")),
         List.of());
@@ -208,7 +208,8 @@ class JitProvisioningFilterTest {
 
     boolean shouldContinue = mode == PrincipalProvisioningMode.JIT && !existingWrongKind;
     if (mode == PrincipalProvisioningMode.LINK_ONLY) {
-      when(provisioningService.getPrincipalFor(principalInfo)).thenReturn(Optional.empty());
+      when(provisioningService.findPrincipalWithSameKind(principalInfo))
+          .thenReturn(Optional.empty());
     } else if (existingWrongKind) {
       String storedKind = kind == PrincipalKind.HUMAN ? "SERVICE_ACCOUNT" : "HUMAN";
       Entity wrongKindPrincipal = new Entity(null, "principal", "Actor", "linked-identity",
@@ -216,14 +217,15 @@ class JitProvisioningFilterTest {
               new com.decathlon.idp_core.domain.model.entity.Property(null, "kind", storedKind)),
           List.of());
       when(provisioningService.provisionPrincipal(principalInfo)).thenReturn(wrongKindPrincipal);
-      when(provisioningService.getPrincipalFor(principalInfo)).thenReturn(Optional.empty());
+      when(provisioningService.findPrincipalWithSameKind(principalInfo))
+          .thenReturn(Optional.empty());
     } else {
       Entity matchingPrincipal = new Entity(null, "principal", "Actor", "linked-identity",
           List.of(
               new com.decathlon.idp_core.domain.model.entity.Property(null, "kind", kind.name())),
           List.of());
       when(provisioningService.provisionPrincipal(principalInfo)).thenReturn(matchingPrincipal);
-      when(provisioningService.getPrincipalFor(principalInfo))
+      when(provisioningService.findPrincipalWithSameKind(principalInfo))
           .thenReturn(Optional.of(matchingPrincipal));
     }
 

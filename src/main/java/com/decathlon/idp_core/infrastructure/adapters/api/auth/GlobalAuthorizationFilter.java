@@ -89,7 +89,7 @@ public class GlobalAuthorizationFilter extends OncePerRequestFilter {
     PrincipalInfo principal = principalInfo.orElseThrow();
     var principalEntity = principalContext != null
         ? principalContext.principalEntity()
-        : provisioningService.getPrincipalFor(principal);
+        : provisioningService.findPrincipalWithSameKind(principal);
     AuthorizationRequest authorizationRequest = authorizationRequestFactory.create(request,
         principal, principalEntity);
 
