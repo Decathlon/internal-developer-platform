@@ -655,16 +655,7 @@ public class EntityService {
   }
 
   private void validatePaginationCriteria(PaginationCriteria criteria) {
-    if (criteria.page() < 0) {
-      throw new InvalidSearchQueryException(ValidationMessages.SEARCH_PAGE_INVALID);
-    }
-    if (criteria.size() <= 0) {
-      throw new InvalidSearchQueryException(ValidationMessages.SEARCH_SIZE_INVALID);
-    }
-    if (criteria.size() > SearchConstraints.MAX_PAGE_SIZE) {
-      throw new InvalidSearchQueryException(
-          ValidationMessages.SEARCH_PAGE_SIZE_TOO_LARGE.formatted(SearchConstraints.MAX_PAGE_SIZE));
-    }
+    criteria.validateBounds();
     String sort = criteria.sort();
     if (sort != null && !sort.isBlank()) {
       validateSortExpression(sort);

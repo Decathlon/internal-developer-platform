@@ -172,11 +172,10 @@ public class EntityController {
   public Page<EntityDtoOut> getEntities(@RequestParam(defaultValue = "0") int page,
       @RequestParam(defaultValue = "20") int size, @PathVariable String templateIdentifier,
       @RequestParam(required = false) String q) {
-    Pageable pageable = PageRequest.of(page, size);
     EntityFilter filter = entityFilterDslParser.parse(q);
     // Single transaction: pagination + batch relation fetch in one DB round trip
-    Page<EntityGraphNode> graphNodes = entityGraphService.getEntityGraphPageByTemplate(pageable,
-        templateIdentifier, filter, 1);
+    Page<EntityGraphNode> graphNodes = entityGraphService.getEntityGraphPageByTemplate(
+        new PaginationCriteria(page, size, null), templateIdentifier, filter, 1);
     return entityDtoOutFromEntityNodeMapper.toPageDto(graphNodes, templateIdentifier, 1);
   }
 

@@ -274,6 +274,8 @@ Retrieve a paginated list of entities for a given template:
 GET /api/v1/entities/{templateIdentifier}?page=0&size=20&sort=identifier,asc
 ```
 
+`size` must be between 1 and 500, values outside this range return `400 Bad Request`.
+
 ### Get Entity by Identifier
 
 Retrieve a specific entity using its template and entity identifiers:
