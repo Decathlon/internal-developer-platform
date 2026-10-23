@@ -139,6 +139,7 @@ public class ApiExceptionHandler extends ResponseEntityExceptionHandler {
           entry(EntityDynamicMappingHasNoRelationsException.class, UNPROCESSABLE_CONTENT),
           entry(PrincipalCreationException.class, INTERNAL_SERVER_ERROR),
           entry(WebhookConfigurationMissingException.class, INTERNAL_SERVER_ERROR),
+          entry(PrincipalNotAuthorizedException.class, FORBIDDEN),
           entry(WebhookDisabledException.class, FORBIDDEN));
 
   /**

@@ -41,6 +41,7 @@ import org.springframework.web.method.annotation.HandlerMethodValidationExceptio
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 
 import com.decathlon.idp_core.domain.constant.ValidationMessages;
+import com.decathlon.idp_core.domain.exception.authorization.PrincipalNotAuthorizedException;
 import com.decathlon.idp_core.domain.exception.entity.EntityAlreadyExistsException;
 import com.decathlon.idp_core.domain.exception.entity.EntityDeletionBlockedException;
 import com.decathlon.idp_core.domain.exception.entity.EntityNotFoundException;
@@ -353,6 +354,16 @@ class ApiExceptionHandlerTest {
     ProblemDetail body = exceptionHandler.handleDomainException(ex);
 
     assertProblemDetail(body, HttpStatus.NOT_FOUND, ex.getMessage(), "NOT_FOUND");
+  }
+
+  @Test
+  void shouldHandlePrincipalNotAuthorizedException() {
+    PrincipalNotAuthorizedException ex = new PrincipalNotAuthorizedException(
+        "unauthorized-principal");
+
+    ProblemDetail body = exceptionHandler.handleDomainException(ex);
+
+    assertProblemDetail(body, HttpStatus.FORBIDDEN, ex.getMessage(), "FORBIDDEN");
   }
 
   @Test
