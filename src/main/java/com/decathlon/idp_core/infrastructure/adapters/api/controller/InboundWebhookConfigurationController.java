@@ -10,8 +10,10 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.web.bind.annotation.*;
 
+import com.decathlon.idp_core.domain.model.authorization.AuthorizationResource;
 import com.decathlon.idp_core.domain.model.inbound_connectors.webhook.WebhookConnector;
 import com.decathlon.idp_core.domain.service.webhook.WebhookConnectorService;
+import com.decathlon.idp_core.infrastructure.adapters.api.auth.AuthorizedResource;
 import com.decathlon.idp_core.infrastructure.adapters.api.configuration.SwaggerConfiguration;
 import com.decathlon.idp_core.infrastructure.adapters.api.dto.in.InboundWebhookCreateDtoIn;
 import com.decathlon.idp_core.infrastructure.adapters.api.dto.in.InboundWebhookUpdateDtoIn;
@@ -30,6 +32,7 @@ import lombok.RequiredArgsConstructor;
 
 /// REST controller exposing inbound webhook configuration management endpoints.
 @RestController
+@AuthorizedResource(AuthorizationResource.INBOUND_WEBHOOK_CONFIGURATION)
 @RequiredArgsConstructor
 @RequestMapping("/api/v1/inbound_webhooks")
 @Tag(name = "Inbound Webhook Management", description = "Operations for managing inbound webhook connector configurations")

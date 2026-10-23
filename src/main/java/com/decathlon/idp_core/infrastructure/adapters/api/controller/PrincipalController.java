@@ -17,9 +17,11 @@ import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.decathlon.idp_core.domain.exception.principal.PrincipalNotFoundException;
+import com.decathlon.idp_core.domain.model.authorization.AuthorizationResource;
 import com.decathlon.idp_core.domain.model.entity.Entity;
 import com.decathlon.idp_core.domain.model.principal.PrincipalInfo;
 import com.decathlon.idp_core.domain.service.principal.PrincipalProvisioningService;
+import com.decathlon.idp_core.infrastructure.adapters.api.auth.AuthorizedResource;
 import com.decathlon.idp_core.infrastructure.adapters.api.dto.out.entity.EntityDtoOut;
 import com.decathlon.idp_core.infrastructure.adapters.api.mapper.entity.EntityDtoOutMapper;
 import com.decathlon.idp_core.infrastructure.adapters.api.principal.PrincipalExtractor;
@@ -43,6 +45,7 @@ import lombok.RequiredArgsConstructor;
 /// **Design rationale:** Separates principal self-service from general entity
 /// management. Uses dedicated `/principals/me` path to clearly signal intent.
 @RestController
+@AuthorizedResource("principal")
 @RequestMapping("/api/v1/entities/principals")
 @RequiredArgsConstructor
 @Tag(name = "Principals", description = "Principal identity and profile management")
@@ -53,6 +56,7 @@ public class PrincipalController {
   private final EntityDtoOutMapper entityDtoOutMapper;
 
   @GetMapping("/me")
+  @AuthorizedResource(AuthorizationResource.PRINCIPAL_SELF)
   @ResponseStatus(OK)
   @Operation(summary = "Get current authenticated principal", description = """
       Returns the Principal entity of the currently authenticated actor (human or service account).
@@ -78,7 +82,7 @@ public class PrincipalController {
   public EntityDtoOut getCurrentPrincipal(Authentication authentication) {
     PrincipalInfo principalInfo = principalExtractor.extractPrincipalInfo(authentication);
 
-    Entity principal = provisioningService.getPrincipal(principalInfo.identifier())
+    Entity principal = provisioningService.findPrincipal(principalInfo.identifier())
         .orElseThrow(() -> new PrincipalNotFoundException(principalInfo.identifier()));
 
     return entityDtoOutMapper.fromEntity(principal);

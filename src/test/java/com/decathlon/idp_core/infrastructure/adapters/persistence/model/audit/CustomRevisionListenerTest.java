@@ -12,7 +12,7 @@ import org.mockito.Mock;
 import org.mockito.MockedStatic;
 import org.mockito.junit.jupiter.MockitoExtension;
 
-import com.decathlon.idp_core.infrastructure.adapters.api.auth.UserIdentityProvider;
+import com.decathlon.idp_core.domain.port.audit.AuditIdentityProviderPort;
 
 /**
  * Unit tests for CustomRevisionListener.
@@ -25,7 +25,7 @@ import com.decathlon.idp_core.infrastructure.adapters.api.auth.UserIdentityProvi
 class CustomRevisionListenerTest {
 
   @Mock
-  private UserIdentityProvider userIdentityProvider;
+  private AuditIdentityProviderPort userIdentityProvider;
 
   @Mock
   private CustomRevisionEntity revisionEntity;

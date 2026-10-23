@@ -29,8 +29,8 @@ spring:
 # Added App Security configuration
 app:
   security:
-    roles:
-      baseline-role: "*"
+    principal-provisioning:
+      mode: JIT
     authentication:
       jwt:
         enabled: true
@@ -38,14 +38,17 @@ app:
         enabled: false
       mock:
         enabled: false
+      principal-extraction:
+        human-indicator-claims:
+          - sub
+        human:
+          id-claim: sub
+        machine:
+          id-claim: client_id
+          id-prefix: "machine:"
       user-claim-mappings:
         sub: "sub"
         preferred_username: "preferred_username"
-      service-account-detection:
-        enabled: true
-        mode: "legacy"
-        legacy-fallback-claims: "grant_type,service_name,client_id"
-      # ✅ Un-indented: Now properly binds to app.security.authentication.jit-provisioning-excluded-paths
       jit-provisioning-excluded-paths: "/,/actuator/**,/swagger-ui/**,/swagger-ui.html,/v3/api-docs/**"
   ingestion:
     webhook:

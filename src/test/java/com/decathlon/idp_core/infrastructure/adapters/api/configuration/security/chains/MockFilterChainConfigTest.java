@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import java.io.IOException;
@@ -32,6 +33,7 @@ import org.springframework.security.web.DefaultSecurityFilterChain;
 import org.springframework.security.web.SecurityFilterChain;
 
 import com.decathlon.idp_core.domain.exception.mock.MockSecurityConfigurationException;
+import com.decathlon.idp_core.infrastructure.adapters.api.auth.GlobalAuthorizationFilter;
 import com.decathlon.idp_core.infrastructure.adapters.api.auth.JitProvisioningFilter;
 
 /// Unit tests for MockFilterChainConfig and MockJwtAuthenticationFilter.
@@ -78,11 +80,17 @@ class MockFilterChainConfigTest {
   private final ApplicationContextRunner contextRunner = new ApplicationContextRunner()
       .withConfiguration(AutoConfigurations.of(MockFilterChainConfig.class))
       .withBean(JitProvisioningFilter.class, () -> mock(JitProvisioningFilter.class))
+      .withBean(GlobalAuthorizationFilter.class, () -> mock(GlobalAuthorizationFilter.class))
       .withBean(HttpSecurity.class, this::httpSecurity);
 
   private HttpSecurity httpSecurity() {
     HttpSecurity http = mock(HttpSecurity.class, org.mockito.Answers.RETURNS_DEEP_STUBS);
     when(http.build()).thenReturn(securityFilterChain);
+    when(http.sessionManagement(any())).thenReturn(http);
+    when(http.cors(any())).thenReturn(http);
+    when(http.authorizeHttpRequests(any())).thenReturn(http);
+    when(http.addFilterBefore(any(), any())).thenReturn(http);
+    when(http.addFilterAfter(any(), any())).thenReturn(http);
     return http;
   }
 
@@ -113,7 +121,8 @@ class MockFilterChainConfigTest {
   void shouldThrowMockFilterChainConfigExceptionWhenHttpConfigFails() {
     // Given
     JitProvisioningFilter jitProvisioningFilterMock = mock(JitProvisioningFilter.class);
-    MockFilterChainConfig configuration = new MockFilterChainConfig(jitProvisioningFilterMock);
+    MockFilterChainConfig configuration = new MockFilterChainConfig(jitProvisioningFilterMock,
+        mock(GlobalAuthorizationFilter.class));
     HttpSecurity httpSecurityMock = mock(HttpSecurity.class);
     RuntimeException simulatedError = new RuntimeException("Internal simulated Error");
     when(httpSecurityMock.sessionManagement(any())).thenThrow(simulatedError);
@@ -127,6 +136,18 @@ class MockFilterChainConfigTest {
   @Nested
   @DisplayName("JWT Token Creation Tests")
   class JwtTokenCreationTests {
+
+    @Test
+    void shouldRegisterGlobalAuthorizationAfterJitProvisioning() {
+      var jitFilter = mock(JitProvisioningFilter.class);
+      var authorizationFilter = mock(GlobalAuthorizationFilter.class);
+      var configuration = new MockFilterChainConfig(jitFilter, authorizationFilter);
+      HttpSecurity http = httpSecurity();
+
+      configuration.mockSecurityFilterChain(http);
+
+      verify(http).addFilterAfter(authorizationFilter, JitProvisioningFilter.class);
+    }
 
     @Test
     @DisplayName("Should create mock JWT with correct subject")
