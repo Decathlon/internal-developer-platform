@@ -1,5 +1,6 @@
 package com.decathlon.idp_core.infrastructure.adapters.api.controller;
 
+import static com.decathlon.idp_core.infrastructure.adapters.api.configuration.SwaggerDescription.BAD_REQUEST_CODE;
 import static com.decathlon.idp_core.infrastructure.adapters.api.configuration.SwaggerDescription.ENDPOINT_GET_ENTITY_GRAPH_FLAT_DESCRIPTION;
 import static com.decathlon.idp_core.infrastructure.adapters.api.configuration.SwaggerDescription.ENDPOINT_GET_ENTITY_GRAPH_FLAT_SUMMARY;
 import static com.decathlon.idp_core.infrastructure.adapters.api.configuration.SwaggerDescription.NOT_FOUND_CODE;
@@ -11,6 +12,7 @@ import static com.decathlon.idp_core.infrastructure.adapters.api.configuration.S
 import static com.decathlon.idp_core.infrastructure.adapters.api.configuration.SwaggerDescription.PARAM_TRAVERSAL_MODE_DESCRIPTION;
 import static com.decathlon.idp_core.infrastructure.adapters.api.configuration.SwaggerDescription.RESPONSE_ENTITY_GRAPH_FLAT_SUCCESS;
 import static com.decathlon.idp_core.infrastructure.adapters.api.configuration.SwaggerDescription.RESPONSE_ENTITY_NOT_FOUND_IDENTIFIER;
+import static com.decathlon.idp_core.infrastructure.adapters.api.configuration.SwaggerDescription.RESPONSE_INVALID_GRAPH_QUERY;
 import static org.springframework.http.HttpStatus.OK;
 
 import java.util.List;

@@ -1,6 +1,13 @@
 package com.decathlon.idp_core.infrastructure.adapters.api.handler;
 
+import static java.util.Map.entry;
+import static org.springframework.http.HttpStatus.BAD_REQUEST;
+import static org.springframework.http.HttpStatus.CONFLICT;
+import static org.springframework.http.HttpStatus.FORBIDDEN;
+import static org.springframework.http.HttpStatus.INTERNAL_SERVER_ERROR;
 import static org.springframework.http.HttpStatus.NOT_FOUND;
+import static org.springframework.http.HttpStatus.UNAUTHORIZED;
+import static org.springframework.http.HttpStatus.UNPROCESSABLE_CONTENT;
 
 import java.time.Instant;
 import java.util.Map;
@@ -24,9 +31,11 @@ import org.springframework.web.context.request.ServletRequestAttributes;
 import org.springframework.web.context.request.ServletWebRequest;
 import org.springframework.web.context.request.WebRequest;
 import org.springframework.web.method.annotation.HandlerMethodValidationException;
+import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 import org.springframework.web.servlet.NoHandlerFoundException;
 import org.springframework.web.servlet.mvc.method.annotation.ResponseEntityExceptionHandler;
 
+import com.decathlon.idp_core.domain.constant.ValidationMessages;
 import com.decathlon.idp_core.domain.exception.entity.EntityAlreadyExistsException;
 import com.decathlon.idp_core.domain.exception.entity.EntityDeletionBlockedException;
 import com.decathlon.idp_core.domain.exception.entity.EntityNotFoundException;
@@ -55,12 +64,17 @@ import com.decathlon.idp_core.domain.exception.entity_template.RelationNameNotFo
 import com.decathlon.idp_core.domain.exception.entity_template.RelationTargetTemplateChangeException;
 import com.decathlon.idp_core.domain.exception.entity_template.TargetTemplateNotFoundException;
 import com.decathlon.idp_core.domain.exception.filter.InvalidFilterDslException;
+import com.decathlon.idp_core.domain.exception.mock.MockSecurityConfigurationException;
+import com.decathlon.idp_core.domain.exception.principal.PrincipalCreationException;
 import com.decathlon.idp_core.domain.exception.principal.PrincipalNotFoundException;
 import com.decathlon.idp_core.domain.exception.search.InvalidSearchQueryException;
 import com.decathlon.idp_core.domain.exception.webhook.WebhookAuthenticationException;
+import com.decathlon.idp_core.domain.exception.webhook.WebhookConfigurationMissingException;
 import com.decathlon.idp_core.domain.exception.webhook.WebhookConnectorAlreadyExistException;
+import com.decathlon.idp_core.domain.exception.webhook.WebhookConnectorConfigurationException;
 import com.decathlon.idp_core.domain.exception.webhook.WebhookConnectorNotFoundException;
 import com.decathlon.idp_core.domain.exception.webhook.WebhookConnectorTitleAlreadyExistsException;
+import com.decathlon.idp_core.domain.exception.webhook.WebhookDisabledException;
 import com.decathlon.idp_core.domain.exception.webhook.WebhookSecurityConfigurationException;
 
 import lombok.extern.slf4j.Slf4j;
@@ -76,6 +90,54 @@ public class ApiExceptionHandler extends ResponseEntityExceptionHandler {
   private static final String PROPERTY_ERROR = "error";
   private static final String PROPERTY_ERROR_DESCRIPTION = "error_description";
   private static final String PROPERTY_TIMESTAMP = "timestamp";
+  private static final String GENERIC_ERROR_DETAIL = "An unexpected error occurred. Please try again later.";
+
+  /// Maps domain exceptions to HTTP statuses without placing HTTP semantics in
+  /// the domain layer.
+  private static final Map<Class<? extends RuntimeException>, HttpStatus> STATUS_BY_EXCEPTION = Map
+      .ofEntries(entry(InvalidFilterDslException.class, BAD_REQUEST),
+          entry(InvalidSearchQueryException.class, BAD_REQUEST),
+          entry(EntityTemplateIdentifierCannotChangeException.class, BAD_REQUEST),
+          entry(PropertyDefinitionRulesConflictException.class, BAD_REQUEST),
+          entry(
+              com.decathlon.idp_core.domain.exception.property.PropertyDefinitionRulesConflictException.class,
+              BAD_REQUEST),
+          entry(PropertyNameAlreadyExistsException.class, BAD_REQUEST),
+          entry(RelationNameAlreadyExistsException.class, BAD_REQUEST),
+          entry(TargetTemplateNotFoundException.class, BAD_REQUEST),
+          entry(EntityTemplateIsRelationTargetException.class, BAD_REQUEST),
+          entry(PropertyTypeChangeException.class, BAD_REQUEST),
+          entry(RelationTargetTemplateChangeException.class, BAD_REQUEST),
+          entry(RelationCannotTargetItselfException.class, BAD_REQUEST),
+          entry(EntityValidationException.class, BAD_REQUEST),
+          entry(EntityDynamicMappingConfigurationException.class, BAD_REQUEST),
+          entry(PropertyNameNotFoundEntityTemplatePropertiesException.class, UNPROCESSABLE_CONTENT),
+          entry(WebhookSecurityConfigurationException.class, BAD_REQUEST),
+          entry(WebhookConnectorConfigurationException.class, BAD_REQUEST),
+          entry(MockSecurityConfigurationException.class, BAD_REQUEST),
+          entry(WebhookAuthenticationException.class, UNAUTHORIZED),
+          entry(EntityTemplateNotFoundException.class, NOT_FOUND),
+          entry(EntityNotFoundException.class, NOT_FOUND),
+          entry(PrincipalNotFoundException.class, NOT_FOUND),
+          entry(WebhookConnectorNotFoundException.class, NOT_FOUND),
+          entry(EntityDynamicMappingNotFoundException.class, NOT_FOUND),
+          entry(EntityTemplateAlreadyExistsException.class, CONFLICT),
+          entry(EntityTemplateNameAlreadyExistsException.class, CONFLICT),
+          entry(EntityAlreadyExistsException.class, CONFLICT),
+          entry(EntityDeletionBlockedException.class, CONFLICT),
+          entry(EntityDynamicMappingAlreadyExistsException.class, CONFLICT),
+          entry(EntityDynamicMappingAlreadyInUseException.class, CONFLICT),
+          entry(WebhookConnectorAlreadyExistException.class, CONFLICT),
+          entry(EntityTemplateUsedByDynamicMappingException.class, CONFLICT),
+          entry(WebhookConnectorTitleAlreadyExistsException.class, CONFLICT),
+          entry(ExpressionEvaluationFailedException.class, UNPROCESSABLE_CONTENT),
+          entry(EntityDynamicMappingJsltErrorException.class, UNPROCESSABLE_CONTENT),
+          entry(RelationNameNotFoundEntityTemplateRelationsException.class, UNPROCESSABLE_CONTENT),
+          entry(EntityDynamicMappingHasNoPropertiesException.class, UNPROCESSABLE_CONTENT),
+          entry(EntityDynamicMappingHasNoRelationsException.class, UNPROCESSABLE_CONTENT),
+          entry(PrincipalCreationException.class, INTERNAL_SERVER_ERROR),
+          entry(WebhookConfigurationMissingException.class, INTERNAL_SERVER_ERROR),
+          entry(WebhookDisabledException.class, FORBIDDEN));
 
   /**
    * Prevents direct instantiation because Spring manages this exception handler.
@@ -119,125 +181,18 @@ public class ApiExceptionHandler extends ResponseEntityExceptionHandler {
         HttpStatus.NOT_FOUND, "Malformed request URL or missing path variable.", request));
   }
 
-  /** Maps a missing entity template to an HTTP 404 problem detail. */
-  @ExceptionHandler(EntityTemplateNotFoundException.class)
-  public ProblemDetail handleTemplateNotFoundException(EntityTemplateNotFoundException ex) {
-    log.warn("Template not found: {}", ex.getMessage());
-    return buildProblemDetail(NOT_FOUND, ex.getMessage(), null);
+  /** Maps registered domain exceptions to ProblemDetail responses. */
+  @ExceptionHandler(RuntimeException.class)
+  public ProblemDetail handleDomainException(RuntimeException ex) {
+    HttpStatus status = STATUS_BY_EXCEPTION.get(ex.getClass());
+    if (status == null || status.is5xxServerError()) {
+      return handleUnexpectedException(ex);
+    }
+    log.warn("{}: {}", ex.getClass().getSimpleName(), ex.getMessage());
+    return buildProblemDetail(status, ex.getMessage(), null);
   }
 
-  /** Maps an invalid filter expression to an HTTP 400 problem detail. */
-  @ExceptionHandler(InvalidFilterDslException.class)
-  public ProblemDetail handleInvalidFilterDslException(InvalidFilterDslException ex) {
-    log.warn("Invalid filter query: {}", ex.getMessage());
-    return buildProblemDetail(HttpStatus.BAD_REQUEST, ex.getMessage(), null);
-  }
-
-  /** Maps an invalid search query to an HTTP 400 problem detail. */
-  @ExceptionHandler(InvalidSearchQueryException.class)
-  public ProblemDetail handleInvalidSearchQueryException(InvalidSearchQueryException ex) {
-    log.warn("Invalid search query: {}", ex.getMessage());
-    return buildProblemDetail(HttpStatus.BAD_REQUEST, ex.getMessage(), null);
-  }
-
-  /**
-   * Maps a duplicate entity template identifier to an HTTP 409 problem detail.
-   */
-  @ExceptionHandler(EntityTemplateAlreadyExistsException.class)
-  public ProblemDetail handleEntityTemplateAlreadyExistsException(
-      EntityTemplateAlreadyExistsException ex) {
-    log.warn("Entity entityTemplateIdentifier already exists: {}", ex.getMessage());
-    return buildProblemDetail(HttpStatus.CONFLICT, ex.getMessage(), null);
-  }
-
-  /** Maps a duplicate entity template name to an HTTP 409 problem detail. */
-  @ExceptionHandler(EntityTemplateNameAlreadyExistsException.class)
-  public ProblemDetail handleEntityTemplateNameAlreadyExistsException(
-      EntityTemplateNameAlreadyExistsException ex) {
-    log.warn("Entity entityTemplateIdentifier name already exists: {}", ex.getMessage());
-    return buildProblemDetail(HttpStatus.CONFLICT, ex.getMessage(), null);
-  }
-
-  /** Reports an attempt to change an immutable entity template identifier. */
-  @ExceptionHandler(EntityTemplateIdentifierCannotChangeException.class)
-  public ProblemDetail handleEntityTemplateIdentifierCannotChangeException(
-      EntityTemplateIdentifierCannotChangeException ex) {
-    log.warn("Entity entityTemplateIdentifier identifier cannot be changed: {}", ex.getMessage());
-    return buildProblemDetail(HttpStatus.BAD_REQUEST, ex.getMessage(), null);
-  }
-
-  /**
-   * Reports conflicting validation rules in an entity template property
-   * definition.
-   */
-  @ExceptionHandler(PropertyDefinitionRulesConflictException.class)
-  public ProblemDetail handleWrongPropertyRulesException(
-      PropertyDefinitionRulesConflictException ex) {
-    log.warn("Wrong Entity entityTemplateIdentifier property rules: {}", ex.getMessage());
-    return buildProblemDetail(HttpStatus.BAD_REQUEST, ex.getMessage(), null);
-  }
-
-  /** Reports a duplicate property name in an entity template. */
-  @ExceptionHandler(PropertyNameAlreadyExistsException.class)
-  public ProblemDetail handlePropertyNameAlreadyExistsException(
-      PropertyNameAlreadyExistsException ex) {
-    log.warn("Duplicate property name: {}", ex.getMessage());
-    return buildProblemDetail(HttpStatus.BAD_REQUEST, ex.getMessage(), null);
-  }
-
-  /** Reports a duplicate relation name in an entity template. */
-  @ExceptionHandler(RelationNameAlreadyExistsException.class)
-  public ProblemDetail handleRelationNameAlreadyExistsException(
-      RelationNameAlreadyExistsException ex) {
-    log.warn("Duplicate relation name: {}", ex.getMessage());
-    return buildProblemDetail(HttpStatus.BAD_REQUEST, ex.getMessage(), null);
-  }
-
-  /** Reports a relation whose target entity template does not exist. */
-  @ExceptionHandler(TargetTemplateNotFoundException.class)
-  public ProblemDetail handleTargetTemplateNotFoundException(TargetTemplateNotFoundException ex) {
-    log.warn("Target entityTemplateIdentifier not found: {}", ex.getMessage());
-    return buildProblemDetail(HttpStatus.BAD_REQUEST, ex.getMessage(), null);
-  }
-
-  /**
-   * Reports that an entity template cannot be deleted while targeted by a
-   * relation.
-   */
-  @ExceptionHandler(EntityTemplateIsRelationTargetException.class)
-  public ProblemDetail handleEntityTemplateIsRelationTargetException(
-      EntityTemplateIsRelationTargetException ex) {
-    log.warn("Template deletion blocked – still a relation target: {}", ex.getMessage());
-    return buildProblemDetail(HttpStatus.BAD_REQUEST, ex.getMessage(), null);
-  }
-
-  /** Reports an unsupported change to an entity template property type. */
-  @ExceptionHandler(PropertyTypeChangeException.class)
-  public ProblemDetail handleTypeChangeException(PropertyTypeChangeException ex) {
-    log.warn("Type change error: {}", ex.getMessage());
-    return buildProblemDetail(HttpStatus.BAD_REQUEST, ex.getMessage(), null);
-  }
-
-  /** Reports an unsupported change to the target of an existing relation. */
-  @ExceptionHandler(RelationTargetTemplateChangeException.class)
-  public ProblemDetail handleRelationTargetTemplateChangeException(
-      RelationTargetTemplateChangeException ex) {
-    log.warn("Relation target entityTemplateIdentifier change error: {}", ex.getMessage());
-    return buildProblemDetail(HttpStatus.BAD_REQUEST, ex.getMessage(), null);
-  }
-
-  /** Reports a relation that illegally targets its own entity template. */
-  @ExceptionHandler(RelationCannotTargetItselfException.class)
-  public ProblemDetail handleRelationCannotTargetItselfException(
-      RelationCannotTargetItselfException ex) {
-    log.warn("Relation self-reference error: {}", ex.getMessage());
-    return buildProblemDetail(HttpStatus.BAD_REQUEST, ex.getMessage(), null);
-  }
-
-  /**
-   * Converts method-parameter validation failures into a structured error
-   * response.
-   */
+  /** Converts method-parameter validation failures into a structured response. */
   @Override
   protected ResponseEntity<Object> handleHandlerMethodValidationException(
       HandlerMethodValidationException ex, HttpHeaders headers, HttpStatusCode statusCode,
@@ -250,104 +205,6 @@ public class ApiExceptionHandler extends ResponseEntityExceptionHandler {
         .body(buildProblemDetail(HttpStatus.BAD_REQUEST, errorMessage, request));
   }
 
-  /** Maps a duplicate entity to an HTTP 409 problem detail. */
-  @ExceptionHandler(EntityAlreadyExistsException.class)
-  public ProblemDetail handleEntityAlreadyExistsException(EntityAlreadyExistsException ex) {
-    log.warn("Entity already exists: {}", ex.getMessage());
-    return buildProblemDetail(HttpStatus.CONFLICT, ex.getMessage(), null);
-  }
-
-  /** Maps semantic entity validation failures to an HTTP 400 problem detail. */
-  @ExceptionHandler(EntityValidationException.class)
-  public ProblemDetail handleEntityValidationException(EntityValidationException ex) {
-    log.warn("Entity validation failed: {}", ex.getMessage());
-    return buildProblemDetail(HttpStatus.BAD_REQUEST, ex.getMessage(), null);
-  }
-
-  /** Reports an invalid dynamic-mapping configuration. */
-  @ExceptionHandler(EntityDynamicMappingConfigurationException.class)
-  public ProblemDetail handleEntityDynamicMappingConfigurationException(
-      EntityDynamicMappingConfigurationException ex) {
-    log.warn("Invalid entity dynamic mapping configuration: {}", ex.getMessage());
-    return buildProblemDetail(HttpStatus.BAD_REQUEST, ex.getMessage(), null);
-  }
-
-  /** Reports a dynamic-mapping expression that could not be evaluated. */
-  @ExceptionHandler(ExpressionEvaluationFailedException.class)
-  public ProblemDetail handleExpressionEvaluationFailedException(
-      ExpressionEvaluationFailedException ex) {
-    log.warn("Expression evaluation failed for '{}': {}", ex.getExpression(), ex.getReason());
-    return buildProblemDetail(HttpStatus.UNPROCESSABLE_CONTENT, ex.getMessage(), null);
-  }
-
-  /** Reports a JSLT transformation error in a dynamic mapping. */
-  @ExceptionHandler(EntityDynamicMappingJsltErrorException.class)
-  public ProblemDetail handleEntityDynamicMappingJsltErrorException(
-      EntityDynamicMappingJsltErrorException ex) {
-    log.warn("JSLT error in entity dynamic mapping: {}", ex.getMessage());
-    return buildProblemDetail(HttpStatus.UNPROCESSABLE_CONTENT, ex.getMessage(), null);
-  }
-
-  /** Reports a webhook mapping that references an unknown template property. */
-  @ExceptionHandler(PropertyNameNotFoundEntityTemplatePropertiesException.class)
-  public ProblemDetail handlePropertyNameNotFoundEntityTemplatePropertiesException(
-      PropertyNameNotFoundEntityTemplatePropertiesException ex) {
-    log.warn("Webhook mapping references unknown property: {}", ex.getMessage());
-    return buildProblemDetail(HttpStatus.UNPROCESSABLE_CONTENT, ex.getMessage(), null);
-  }
-
-  /** Reports a webhook mapping that references an unknown template relation. */
-  @ExceptionHandler(RelationNameNotFoundEntityTemplateRelationsException.class)
-  public ProblemDetail handleRelationNameNotFoundEntityTemplateRelationsException(
-      RelationNameNotFoundEntityTemplateRelationsException ex) {
-    log.warn("Webhook mapping references unknown relation: {}", ex.getMessage());
-    return buildProblemDetail(HttpStatus.UNPROCESSABLE_CONTENT, ex.getMessage(), null);
-  }
-
-  /** Reports a dynamic mapping that does not define any property mapping. */
-  @ExceptionHandler(EntityDynamicMappingHasNoPropertiesException.class)
-  public ProblemDetail handleEntityDynamicMappingHasNoPropertiesException(
-      EntityDynamicMappingHasNoPropertiesException ex) {
-    log.warn("Dynamic mapping is missing required properties: {}", ex.getMessage());
-    return buildProblemDetail(HttpStatus.UNPROCESSABLE_CONTENT, ex.getMessage(), null);
-  }
-
-  /** Reports a dynamic mapping that does not define any relation mapping. */
-  @ExceptionHandler(EntityDynamicMappingHasNoRelationsException.class)
-  public ProblemDetail handleEntityDynamicMappingHasNoRelationsException(
-      EntityDynamicMappingHasNoRelationsException ex) {
-    log.warn("Dynamic mapping is missing required relations: {}", ex.getMessage());
-    return buildProblemDetail(HttpStatus.UNPROCESSABLE_CONTENT, ex.getMessage(), null);
-  }
-
-  /** Reports invalid security settings for a webhook connector. */
-  @ExceptionHandler(WebhookSecurityConfigurationException.class)
-  public ProblemDetail handleWebhookSecurityConfigurationException(
-      WebhookSecurityConfigurationException ex) {
-    log.warn("Invalid webhook security configuration: {}", ex.getMessage());
-    return buildProblemDetail(HttpStatus.BAD_REQUEST, ex.getMessage(), null);
-  }
-
-  /** Maps a missing catalog entity to an HTTP 404 problem detail. */
-  @ExceptionHandler(EntityNotFoundException.class)
-  public ProblemDetail handleEntityNotFoundException(EntityNotFoundException ex) {
-    return buildProblemDetail(NOT_FOUND, ex.getMessage(), null);
-  }
-
-  /// Handles principal not found exception when JIT provisioning fails.
-  ///
-  /// **HTTP mapping:** Maps PrincipalNotFoundException to HTTP 404 status
-  /// indicating the authenticated principal does not have a catalog entry.
-  @ExceptionHandler(PrincipalNotFoundException.class)
-  public ProblemDetail handlePrincipalNotFoundException(PrincipalNotFoundException ex) {
-    log.warn("Principal not found: {}", ex.getMessage());
-    return buildProblemDetail(NOT_FOUND, ex.getMessage(), null);
-  }
-
-  /// Handles Bean Validation constraint violations from domain model validation.
-  ///
-  /// **Error aggregation:** Combines multiple constraint violation messages into
-  /// single user-friendly response with HTTP 400 status for client correction.
   @ExceptionHandler(ConstraintViolationException.class)
   public ProblemDetail handleConstraintViolationException(ConstraintViolationException ex) {
     log.warn("Validation constraint violation: {}", ex.getMessage());
@@ -356,101 +213,23 @@ public class ApiExceptionHandler extends ResponseEntityExceptionHandler {
     return buildProblemDetail(HttpStatus.BAD_REQUEST, errorMessage, null);
   }
 
-  /** Maps a blocked entity deletion to an HTTP 409 problem detail. */
-  @ExceptionHandler(EntityDeletionBlockedException.class)
-  public ProblemDetail handleEntityDeletionBlockedException(EntityDeletionBlockedException ex) {
-    log.warn("Entity deletion blocked: {}", ex.getMessage());
-    return buildProblemDetail(HttpStatus.CONFLICT, ex.getMessage(), null);
-  }
-
-  /** Maps failed webhook authentication to an HTTP 401 problem detail. */
-  @ExceptionHandler(WebhookAuthenticationException.class)
-  public ProblemDetail handleWebhookAuthenticationException(WebhookAuthenticationException ex) {
-    log.warn("Webhook authentication failed: {}", ex.getMessage());
-    return buildProblemDetail(HttpStatus.UNAUTHORIZED, ex.getMessage(), null);
-  }
-
-  /** Maps a missing webhook connector to an HTTP 404 problem detail. */
-  @ExceptionHandler(WebhookConnectorNotFoundException.class)
-  public ProblemDetail handleWebhookConnectorNotFoundException(
-      WebhookConnectorNotFoundException ex) {
-    log.warn("Webhook connector not found: {}", ex.getMessage());
-    return buildProblemDetail(NOT_FOUND, ex.getMessage(), null);
-  }
-
-  /** Maps a missing entity dynamic mapping to an HTTP 404 problem detail. */
-  @ExceptionHandler(EntityDynamicMappingNotFoundException.class)
-  public ProblemDetail handleEntityDynamicMappingNotFoundException(
-      EntityDynamicMappingNotFoundException ex) {
-    log.warn("Referenced entity dynamic mapping not found: {}", ex.getMessage());
-    return buildProblemDetail(NOT_FOUND, ex.getMessage(), null);
-  }
-
-  /** Maps a duplicate entity dynamic mapping to an HTTP 409 problem detail. */
-  @ExceptionHandler(EntityDynamicMappingAlreadyExistsException.class)
-  public ProblemDetail handleEntityDynamicMappingAlreadyExistsException(
-      EntityDynamicMappingAlreadyExistsException ex) {
-    log.warn("Entity dynamic mapping identifier conflict: {}", ex.getMessage());
-    return buildProblemDetail(HttpStatus.CONFLICT, ex.getMessage(), null);
-  }
-
-  /** Reports an entity dynamic mapping that cannot be changed while in use. */
-  @ExceptionHandler(EntityDynamicMappingAlreadyInUseException.class)
-  public ProblemDetail handleEntityDynamicMappingAlreadyInUseException(
-      EntityDynamicMappingAlreadyInUseException ex) {
-    log.warn("Entity dynamic mapping already in use: {}", ex.getMessage());
-    return buildProblemDetail(HttpStatus.CONFLICT, ex.getMessage(), null);
-  }
-
-  /**
-   * Maps a duplicate webhook connector identifier to an HTTP 409 problem detail.
-   */
-  @ExceptionHandler(WebhookConnectorAlreadyExistException.class)
-  public ProblemDetail handleWebhookConnectorAlreadyExistException(
-      WebhookConnectorAlreadyExistException ex) {
-    log.warn("Webhook connector identifier conflict: {}", ex.getMessage());
-    return buildProblemDetail(HttpStatus.CONFLICT, ex.getMessage(), null);
-  }
-
-  /**
-   * Maps an entity template used by a dynamic mapping to an HTTP 409 problem
-   * detail.
-   */
-  @ExceptionHandler(EntityTemplateUsedByDynamicMappingException.class)
-  public ProblemDetail handleTemplateAlreadyMappedInWebhookConfiguration(
-      EntityTemplateUsedByDynamicMappingException ex) {
-    log.warn("Entity entityTemplateIdentifier in use by webhook mapping conflict: {}",
-        ex.getMessage());
-    return buildProblemDetail(HttpStatus.CONFLICT, ex.getMessage(), null);
-  }
-
-  /** Maps a duplicate webhook connector title to an HTTP 409 problem detail. */
-  @ExceptionHandler(WebhookConnectorTitleAlreadyExistsException.class)
-  public ProblemDetail handleWebhookConnectorTitleAlreadyExistsException(
-      WebhookConnectorTitleAlreadyExistsException ex) {
-    log.warn("Webhook connector name conflict: {}", ex.getMessage());
-    return buildProblemDetail(HttpStatus.CONFLICT, ex.getMessage(), null);
-  }
-
   /** Converts database integrity conflicts into a safe HTTP 409 response. */
-  @ExceptionHandler(org.springframework.dao.DataIntegrityViolationException.class)
+  @ExceptionHandler(DataIntegrityViolationException.class)
   public ProblemDetail handleDataIntegrityViolationException(DataIntegrityViolationException ex) {
     log.warn("Data integrity violation: {}", ex.getMostSpecificCause().getMessage());
-
     return buildProblemDetail(HttpStatus.CONFLICT,
         "The request conflicts with the current state of the resource", null);
   }
 
-  /**
-   * Converts unexpected failures into a safe response without exposing internal
-   * details.
-   */
+  /** Returns a safe response for checked or otherwise unexpected exceptions. */
   @ExceptionHandler(Exception.class)
   public ProblemDetail handleGenericException(Exception ex) {
-    log.error("Unexpected error occurred: {}", ex.getMessage(), ex);
+    return handleUnexpectedException(ex);
+  }
 
-    return buildProblemDetail(HttpStatus.INTERNAL_SERVER_ERROR,
-        "An unexpected error occurred. Please try again later.", null);
+  private ProblemDetail handleUnexpectedException(Exception ex) {
+    log.error("Unexpected error occurred: {}", ex.getMessage(), ex);
+    return buildProblemDetail(INTERNAL_SERVER_ERROR, GENERIC_ERROR_DETAIL, null);
   }
 
   /**

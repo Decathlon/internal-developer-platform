@@ -75,16 +75,11 @@ Configure CORS if your frontend loads from a different origin or if no API gatew
 spring:
   web:
     cors:
-      allowed-origins:
-        - http://localhost:3000
-        - https://your-frontend.com
-      allowed-methods:
-        - GET
-        - POST
-        - PUT
-        - DELETE
-      allowed-headers: "*"
+      allowed-origins: http://localhost:3000,https://your-frontend.com
+      allowed-origin-patterns: https://*.your-domain.com
 ```
+
+Set exact origins with `spring.web.cors.allowed-origins` or the `SPRING_WEB_CORS_ALLOWED_ORIGINS` environment variable. Set wildcard origin patterns with `spring.web.cors.allowed-origin-patterns` or the `SPRING_WEB_CORS_ALLOWED_ORIGIN_PATTERNS` environment variable. Separate multiple values with commas.
 
 ---
 
@@ -153,6 +148,7 @@ All configuration can be overridden using environment variables:
 | `SPRING_DATASOURCE_PASSWORD` | DB password | `secret` |
 | `SERVER_PORT` | HTTP port | `8084` |
 | `LOGGING_LEVEL_ROOT` | Log level | `INFO` |
+| `MAX_PAGE_SIZE` | Maximum `size` accepted by search and listing endpoints (default `500`) | `1000` |
 
 ### Naming Convention
 

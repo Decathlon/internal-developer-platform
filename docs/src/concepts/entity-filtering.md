@@ -183,7 +183,7 @@ Request shape (`EntitySearchRequestDtoIn`):
 - `filter` is a tree of group nodes and criterion nodes. A group node has `connector` (one of `AND`,`OR`) and a non-empty `criteria` array. A criterion node must include `field`, `operation` and `value`.
 - Supported `operation` values: `EQ`, `NEQ`, `CONTAINS`, `NOT_CONTAINS`, `STARTS_WITH`, `ENDS_WITH`, `GT`, `GTE`, `LT`, `LTE`.
 - Free-text `query` (optional) performs a case-insensitive contains search across identifier, name, template identifier and all property values.
-- Pagination: `page` is zero-based, `size` defaults to 20. Maximum allowed `size` is 500.
+- Pagination: `page` is zero-based, `size` defaults to 20. Maximum allowed `size` is 500 by default (configurable with `MAX_PAGE_SIZE`).
 
 ### What it does
 
@@ -202,7 +202,7 @@ curl -sS -X POST "http://localhost:8084/api/v1/entities/search" \
 
 - `query` (optional): free-text string (max 255 chars) searched case-insensitively in `identifier`, `name`, `templateIdentifier`, and property values.
 - `filter` (optional): nested `FilterNodeDtoIn` JSON structure. Use a `template` criterion to scope results to a specific template when needed.
-- `page` / `size`: pagination (zero-based `page`). `size` defaults to 20 and the server enforces a maximum of 500.
+- `page` / `size`: pagination (zero-based `page`). `size` defaults to 20 and the server enforces a maximum of 500 by default (configurable with `MAX_PAGE_SIZE`).
 - `sort`: `field:asc|desc`. Allowed sort fields: `identifier`, `name`, `templateIdentifier`.
 
 ### Operator semantics
@@ -221,7 +221,7 @@ curl -sS -X POST "http://localhost:8084/api/v1/entities/search" \
 - Maximum filter nesting depth: 5 levels. Requests exceeding this fail with `400 Bad Request` and a descriptive error message.
 - Maximum total criterion count across the tree: 50. Requests exceeding this fail with `400 Bad Request`.
 - Maximum `query` length: 255 characters.
-- Maximum `size` (page size): 500.
+- Maximum `size` (page size): 500 by default, configurable with `MAX_PAGE_SIZE`.
 
 ## Next Steps
 

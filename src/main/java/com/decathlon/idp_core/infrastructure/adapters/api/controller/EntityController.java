@@ -77,6 +77,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.decathlon.idp_core.domain.constant.SearchConstraints;
 import com.decathlon.idp_core.domain.model.entity.Entity;
 import com.decathlon.idp_core.domain.model.entity.EntityFilter;
 import com.decathlon.idp_core.domain.model.entity.EntityPatch;
@@ -91,6 +92,7 @@ import com.decathlon.idp_core.domain.service.entity.EntityService;
 import com.decathlon.idp_core.domain.service.entity_graph.EntityGraphService;
 import com.decathlon.idp_core.domain.service.filter.EntityFilterDslParser;
 import com.decathlon.idp_core.domain.service.search.SearchFilterParser;
+import com.decathlon.idp_core.infrastructure.adapters.api.configuration.SearchProperties;
 import com.decathlon.idp_core.infrastructure.adapters.api.configuration.SwaggerConfiguration.EntityPageResponse;
 import com.decathlon.idp_core.infrastructure.adapters.api.dto.in.EntityCreateDtoIn;
 import com.decathlon.idp_core.infrastructure.adapters.api.dto.in.EntityPatchDtoIn;
@@ -134,6 +136,7 @@ public class EntityController {
   private final SearchFilterMapper searchFilterMapper;
   private final SearchFilterParser searchFilterParser;
   private final EntityGraphService entityGraphService;
+  private final SearchProperties searchProperties;
 
   // Validation message constants for relations_depth parameter
   private static final int RELATIONS_DEPTH_MIN = 1;
@@ -171,13 +174,14 @@ public class EntityController {
   @ResponseStatus(OK)
   @GetMapping("/{templateIdentifier}")
   public Page<EntityDtoOut> getEntities(@RequestParam(defaultValue = "0") int page,
-      @RequestParam(defaultValue = "20") int size, @PathVariable String templateIdentifier,
+      @RequestParam(required = false) Integer size, @PathVariable String templateIdentifier,
       @RequestParam(required = false) String q) {
-    Pageable pageable = PageRequest.of(page, size);
+    PaginationCriteria paginationCriteria = new PaginationCriteria(page, resolvePageSize(size),
+        null);
     EntityFilter filter = entityFilterDslParser.parse(q);
     // Single transaction: pagination + batch relation fetch in one DB round trip
-    Page<EntityGraphNode> graphNodes = entityGraphService.getEntityGraphPageByTemplate(pageable,
-        templateIdentifier, filter, 1);
+    Page<EntityGraphNode> graphNodes = entityGraphService.getEntityGraphPageByTemplate(
+        paginationCriteria, templateIdentifier, filter, 1, searchProperties.maxPageSize());
     return entityDtoOutFromEntityNodeMapper.toPageDto(graphNodes, templateIdentifier, 1);
   }
 
@@ -378,10 +382,11 @@ public class EntityController {
     RawSearchFilterNode rawFilter = searchFilterMapper.toRaw(searchRequest.filter());
     SearchFilterNode filter = searchFilterParser.parse(rawFilter);
     PaginationCriteria paginationCriteria = new PaginationCriteria(searchRequest.page(),
-        searchRequest.size(), searchRequest.sort());
+        resolvePageSize(searchRequest.size()), searchRequest.sort());
+    paginationCriteria.validateBounds(searchProperties.maxPageSize());
 
     PaginatedResult<Entity> result = entityService.searchEntities(filter, searchRequest.query(),
-        paginationCriteria);
+        paginationCriteria, searchProperties.maxPageSize());
     Page<Entity> page = toPageResponse(result.content(), paginationCriteria,
         result.totalElements());
     return entityDtoOutMapper.fromEntitiesSearchPageToDtoPage(page);
@@ -391,5 +396,13 @@ public class EntityController {
       long totalElements) {
     Pageable pageable = PageRequest.of(criteria.page(), criteria.size());
     return new PageImpl<>(content, pageable, totalElements);
+  }
+
+  /// Uses the requested size when present; otherwise the default size, capped at
+  /// the configured maximum so that omitting `size` never fails validation.
+  private int resolvePageSize(Integer requestedSize) {
+    return requestedSize != null
+        ? requestedSize
+        : Math.min(SearchConstraints.DEFAULT_PAGE_SIZE, searchProperties.maxPageSize());
   }
 }

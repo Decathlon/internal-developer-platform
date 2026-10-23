@@ -3,6 +3,8 @@ package com.decathlon.idp_core.infrastructure.adapters.api.handler;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 import java.lang.reflect.Constructor;
@@ -98,14 +100,14 @@ class ApiExceptionHandlerTest {
   @Test
   void shouldHandleEntityTemplateNotFoundException() {
     ProblemDetail body = exceptionHandler
-        .handleTemplateNotFoundException(new EntityTemplateNotFoundException("missing"));
+        .handleDomainException(new EntityTemplateNotFoundException("missing"));
     assertProblemDetail(body, HttpStatus.NOT_FOUND, "missing", "NOT_FOUND");
   }
 
   @Test
   void shouldHandleEntityTemplateAlreadyExistsException() {
-    ProblemDetail body = exceptionHandler.handleEntityTemplateAlreadyExistsException(
-        new EntityTemplateAlreadyExistsException("duplicate-id"));
+    ProblemDetail body = exceptionHandler
+        .handleDomainException(new EntityTemplateAlreadyExistsException("duplicate-id"));
     assertProblemDetail(body, HttpStatus.CONFLICT,
         "An Entity Template already exists with the same identifier:duplicate-id", "CONFLICT");
   }
@@ -113,14 +115,14 @@ class ApiExceptionHandlerTest {
   @Test
   void shouldHandleEntityAlreadyExistsException() {
     ProblemDetail body = exceptionHandler
-        .handleEntityAlreadyExistsException(new EntityAlreadyExistsException("a", "b"));
+        .handleDomainException(new EntityAlreadyExistsException("a", "b"));
     assertProblemDetail(body, HttpStatus.CONFLICT,
         "Entity with name 'b' already exists for template 'a'", "CONFLICT");
   }
 
   @Test
   void shouldHandleEntityValidationException() {
-    ProblemDetail body = exceptionHandler.handleEntityValidationException(
+    ProblemDetail body = exceptionHandler.handleDomainException(
         new EntityValidationException(java.util.List.of("Invalid property")));
     assertProblemDetail(body, HttpStatus.BAD_REQUEST, "Entity validation failed: Invalid property",
         "BAD_REQUEST");
@@ -197,7 +199,7 @@ class ApiExceptionHandlerTest {
         new org.springframework.web.context.request.ServletRequestAttributes(servletRequest));
     try {
       ProblemDetail body = exceptionHandler
-          .handleEntityAlreadyExistsException(new EntityAlreadyExistsException("a", "b"));
+          .handleDomainException(new EntityAlreadyExistsException("a", "b"));
       assertEquals("/api/v1/entities/x", String.valueOf(body.getInstance()));
     } finally {
       org.springframework.web.context.request.RequestContextHolder.resetRequestAttributes();
@@ -207,7 +209,7 @@ class ApiExceptionHandlerTest {
   @Test
   void shouldHandleGenericExceptionWithoutExposingInternalDetails() {
     ProblemDetail body = exceptionHandler
-        .handleGenericException(new RuntimeException("Sensitive internal details"));
+        .handleDomainException(new RuntimeException("Sensitive internal details"));
 
     assertProblemDetail(body, HttpStatus.INTERNAL_SERVER_ERROR,
         "An unexpected error occurred. Please try again later.", "INTERNAL_SERVER_ERROR");
@@ -320,7 +322,7 @@ class ApiExceptionHandlerTest {
   void shouldHandlePrincipalNotFoundException() {
     PrincipalNotFoundException ex = new PrincipalNotFoundException("missing-principal");
 
-    ProblemDetail body = exceptionHandler.handlePrincipalNotFoundException(ex);
+    ProblemDetail body = exceptionHandler.handleDomainException(ex);
 
     assertProblemDetail(body, HttpStatus.NOT_FOUND, ex.getMessage(), "NOT_FOUND");
   }
@@ -351,36 +353,36 @@ class ApiExceptionHandlerTest {
   @Test
   void shouldHandleInvalidFilterDslException() {
     ProblemDetail body = exceptionHandler
-        .handleInvalidFilterDslException(new InvalidFilterDslException("bad filter"));
+        .handleDomainException(new InvalidFilterDslException("bad filter"));
     assertProblemDetail(body, HttpStatus.BAD_REQUEST, "bad filter", "BAD_REQUEST");
   }
 
   @Test
   void shouldHandleInvalidSearchQueryException() {
     ProblemDetail body = exceptionHandler
-        .handleInvalidSearchQueryException(new InvalidSearchQueryException("bad query"));
+        .handleDomainException(new InvalidSearchQueryException("bad query"));
     assertProblemDetail(body, HttpStatus.BAD_REQUEST, "bad query", "BAD_REQUEST");
   }
 
   @Test
   void shouldHandleEntityTemplateNameAlreadyExistsException() {
-    ProblemDetail body = exceptionHandler.handleEntityTemplateNameAlreadyExistsException(
-        new EntityTemplateNameAlreadyExistsException("duplicate-name"));
+    ProblemDetail body = exceptionHandler
+        .handleDomainException(new EntityTemplateNameAlreadyExistsException("duplicate-name"));
     assertEquals(HttpStatus.CONFLICT.value(), body.getStatus());
     assertEquals("CONFLICT", body.getProperties().get("error"));
   }
 
   @Test
   void shouldHandleEntityTemplateIdentifierCannotChangeException() {
-    ProblemDetail body = exceptionHandler.handleEntityTemplateIdentifierCannotChangeException(
-        new EntityTemplateIdentifierCannotChangeException("template-id"));
+    ProblemDetail body = exceptionHandler
+        .handleDomainException(new EntityTemplateIdentifierCannotChangeException("template-id"));
     assertEquals(HttpStatus.BAD_REQUEST.value(), body.getStatus());
     assertEquals("BAD_REQUEST", body.getProperties().get("error"));
   }
 
   @Test
   void shouldHandleWrongPropertyRulesException() {
-    ProblemDetail body = exceptionHandler.handleWrongPropertyRulesException(
+    ProblemDetail body = exceptionHandler.handleDomainException(
         new PropertyDefinitionRulesConflictException("property-test", "STRING", "not allowed"));
     assertEquals(HttpStatus.BAD_REQUEST.value(), body.getStatus());
     assertEquals("BAD_REQUEST", body.getProperties().get("error"));
@@ -388,16 +390,16 @@ class ApiExceptionHandlerTest {
 
   @Test
   void shouldHandlePropertyNameAlreadyExistsException() {
-    ProblemDetail body = exceptionHandler.handlePropertyNameAlreadyExistsException(
-        new PropertyNameAlreadyExistsException("property-test"));
+    ProblemDetail body = exceptionHandler
+        .handleDomainException(new PropertyNameAlreadyExistsException("property-test"));
     assertEquals(HttpStatus.BAD_REQUEST.value(), body.getStatus());
     assertEquals("BAD_REQUEST", body.getProperties().get("error"));
   }
 
   @Test
   void shouldHandleRelationNameAlreadyExistsException() {
-    ProblemDetail body = exceptionHandler.handleRelationNameAlreadyExistsException(
-        new RelationNameAlreadyExistsException("belongsto"));
+    ProblemDetail body = exceptionHandler
+        .handleDomainException(new RelationNameAlreadyExistsException("belongsto"));
     assertEquals(HttpStatus.BAD_REQUEST.value(), body.getStatus());
     assertEquals("BAD_REQUEST", body.getProperties().get("error"));
   }
@@ -405,15 +407,15 @@ class ApiExceptionHandlerTest {
   @Test
   void shouldHandleTargetTemplateNotFoundException() {
     ProblemDetail body = exceptionHandler
-        .handleTargetTemplateNotFoundException(new TargetTemplateNotFoundException("non-existent"));
+        .handleDomainException(new TargetTemplateNotFoundException("non-existent"));
     assertEquals(HttpStatus.BAD_REQUEST.value(), body.getStatus());
     assertEquals("BAD_REQUEST", body.getProperties().get("error"));
   }
 
   @Test
   void shouldHandleEntityTemplateIsRelationTargetException() {
-    ProblemDetail body = exceptionHandler.handleEntityTemplateIsRelationTargetException(
-        new EntityTemplateIsRelationTargetException("microservice"));
+    ProblemDetail body = exceptionHandler
+        .handleDomainException(new EntityTemplateIsRelationTargetException("microservice"));
     assertEquals(HttpStatus.BAD_REQUEST.value(), body.getStatus());
     assertEquals("BAD_REQUEST", body.getProperties().get("error"));
   }
@@ -421,14 +423,14 @@ class ApiExceptionHandlerTest {
   @Test
   void shouldHandleTypeChangeException() {
     ProblemDetail body = exceptionHandler
-        .handleTypeChangeException(new PropertyTypeChangeException("name", "STRING", "NUMBER"));
+        .handleDomainException(new PropertyTypeChangeException("name", "STRING", "NUMBER"));
     assertEquals(HttpStatus.BAD_REQUEST.value(), body.getStatus());
     assertEquals("BAD_REQUEST", body.getProperties().get("error"));
   }
 
   @Test
   void shouldHandleRelationTargetTemplateChangeException() {
-    ProblemDetail body = exceptionHandler.handleRelationTargetTemplateChangeException(
+    ProblemDetail body = exceptionHandler.handleDomainException(
         new RelationTargetTemplateChangeException("dependencies", "service", "service-modified"));
     assertEquals(HttpStatus.BAD_REQUEST.value(), body.getStatus());
     assertEquals("BAD_REQUEST", body.getProperties().get("error"));
@@ -436,7 +438,7 @@ class ApiExceptionHandlerTest {
 
   @Test
   void shouldHandleRelationCannotTargetItselfException() {
-    ProblemDetail body = exceptionHandler.handleRelationCannotTargetItselfException(
+    ProblemDetail body = exceptionHandler.handleDomainException(
         new RelationCannotTargetItselfException("circular", "self-ref-template"));
     assertEquals(HttpStatus.BAD_REQUEST.value(), body.getStatus());
     assertEquals("BAD_REQUEST", body.getProperties().get("error"));
@@ -444,14 +446,14 @@ class ApiExceptionHandlerTest {
 
   @Test
   void shouldHandleEntityDynamicMappingConfigurationException() {
-    ProblemDetail body = exceptionHandler.handleEntityDynamicMappingConfigurationException(
+    ProblemDetail body = exceptionHandler.handleDomainException(
         new EntityDynamicMappingConfigurationException("invalid configuration"));
     assertProblemDetail(body, HttpStatus.BAD_REQUEST, "invalid configuration", "BAD_REQUEST");
   }
 
   @Test
   void shouldHandleExpressionEvaluationFailedException() {
-    ProblemDetail body = exceptionHandler.handleExpressionEvaluationFailedException(
+    ProblemDetail body = exceptionHandler.handleDomainException(
         new ExpressionEvaluationFailedException(".foo", "syntax error", null));
     assertEquals(HttpStatus.UNPROCESSABLE_CONTENT.value(), body.getStatus());
     assertEquals("UNPROCESSABLE_CONTENT", body.getProperties().get("error"));
@@ -459,33 +461,31 @@ class ApiExceptionHandlerTest {
 
   @Test
   void shouldHandleEntityDynamicMappingJsltErrorException() {
-    ProblemDetail body = exceptionHandler.handleEntityDynamicMappingJsltErrorException(
-        new EntityDynamicMappingJsltErrorException("jslt failed"));
+    ProblemDetail body = exceptionHandler
+        .handleDomainException(new EntityDynamicMappingJsltErrorException("jslt failed"));
     assertProblemDetail(body, HttpStatus.UNPROCESSABLE_CONTENT, "jslt failed",
         "UNPROCESSABLE_CONTENT");
   }
 
   @Test
   void shouldHandlePropertyNameNotFoundEntityTemplatePropertiesException() {
-    ProblemDetail body = exceptionHandler
-        .handlePropertyNameNotFoundEntityTemplatePropertiesException(
-            new PropertyNameNotFoundEntityTemplatePropertiesException("unknown property"));
+    ProblemDetail body = exceptionHandler.handleDomainException(
+        new PropertyNameNotFoundEntityTemplatePropertiesException("unknown property"));
     assertProblemDetail(body, HttpStatus.UNPROCESSABLE_CONTENT, "unknown property",
         "UNPROCESSABLE_CONTENT");
   }
 
   @Test
   void shouldHandleRelationNameNotFoundEntityTemplateRelationsException() {
-    ProblemDetail body = exceptionHandler
-        .handleRelationNameNotFoundEntityTemplateRelationsException(
-            new RelationNameNotFoundEntityTemplateRelationsException("unknown relation"));
+    ProblemDetail body = exceptionHandler.handleDomainException(
+        new RelationNameNotFoundEntityTemplateRelationsException("unknown relation"));
     assertProblemDetail(body, HttpStatus.UNPROCESSABLE_CONTENT, "unknown relation",
         "UNPROCESSABLE_CONTENT");
   }
 
   @Test
   void shouldHandleEntityDynamicMappingHasNoPropertiesException() {
-    ProblemDetail body = exceptionHandler.handleEntityDynamicMappingHasNoPropertiesException(
+    ProblemDetail body = exceptionHandler.handleDomainException(
         new EntityDynamicMappingHasNoPropertiesException("missing properties"));
     assertProblemDetail(body, HttpStatus.UNPROCESSABLE_CONTENT, "missing properties",
         "UNPROCESSABLE_CONTENT");
@@ -493,7 +493,7 @@ class ApiExceptionHandlerTest {
 
   @Test
   void shouldHandleEntityDynamicMappingHasNoRelationsException() {
-    ProblemDetail body = exceptionHandler.handleEntityDynamicMappingHasNoRelationsException(
+    ProblemDetail body = exceptionHandler.handleDomainException(
         new EntityDynamicMappingHasNoRelationsException("missing relations"));
     assertProblemDetail(body, HttpStatus.UNPROCESSABLE_CONTENT, "missing relations",
         "UNPROCESSABLE_CONTENT");
@@ -501,22 +501,22 @@ class ApiExceptionHandlerTest {
 
   @Test
   void shouldHandleWebhookSecurityConfigurationException() {
-    ProblemDetail body = exceptionHandler.handleWebhookSecurityConfigurationException(
-        new WebhookSecurityConfigurationException("invalid security"));
+    ProblemDetail body = exceptionHandler
+        .handleDomainException(new WebhookSecurityConfigurationException("invalid security"));
     assertProblemDetail(body, HttpStatus.BAD_REQUEST, "invalid security", "BAD_REQUEST");
   }
 
   @Test
   void shouldHandleEntityNotFoundException() {
     ProblemDetail body = exceptionHandler
-        .handleEntityNotFoundException(new EntityNotFoundException("template", "entity-id"));
+        .handleDomainException(new EntityNotFoundException("template", "entity-id"));
     assertEquals(HttpStatus.NOT_FOUND.value(), body.getStatus());
     assertEquals("NOT_FOUND", body.getProperties().get("error"));
   }
 
   @Test
   void shouldHandleEntityDeletionBlockedException() {
-    ProblemDetail body = exceptionHandler.handleEntityDeletionBlockedException(
+    ProblemDetail body = exceptionHandler.handleDomainException(
         new EntityDeletionBlockedException("template", "entity-id", List.of("child-id")));
     assertEquals(HttpStatus.CONFLICT.value(), body.getStatus());
     assertEquals("CONFLICT", body.getProperties().get("error"));
@@ -524,38 +524,38 @@ class ApiExceptionHandlerTest {
 
   @Test
   void shouldHandleWebhookAuthenticationException() {
-    ProblemDetail body = exceptionHandler.handleWebhookAuthenticationException(
-        new WebhookAuthenticationException("invalid signature"));
+    ProblemDetail body = exceptionHandler
+        .handleDomainException(new WebhookAuthenticationException("invalid signature"));
     assertProblemDetail(body, HttpStatus.UNAUTHORIZED, "invalid signature", "UNAUTHORIZED");
   }
 
   @Test
   void shouldHandleWebhookConnectorNotFoundException() {
-    ProblemDetail body = exceptionHandler.handleWebhookConnectorNotFoundException(
-        new WebhookConnectorNotFoundException("connector-id"));
+    ProblemDetail body = exceptionHandler
+        .handleDomainException(new WebhookConnectorNotFoundException("connector-id"));
     assertEquals(HttpStatus.NOT_FOUND.value(), body.getStatus());
     assertEquals("NOT_FOUND", body.getProperties().get("error"));
   }
 
   @Test
   void shouldHandleEntityDynamicMappingNotFoundException() {
-    ProblemDetail body = exceptionHandler.handleEntityDynamicMappingNotFoundException(
-        new EntityDynamicMappingNotFoundException("mapping-id"));
+    ProblemDetail body = exceptionHandler
+        .handleDomainException(new EntityDynamicMappingNotFoundException("mapping-id"));
     assertEquals(HttpStatus.NOT_FOUND.value(), body.getStatus());
     assertEquals("NOT_FOUND", body.getProperties().get("error"));
   }
 
   @Test
   void shouldHandleEntityDynamicMappingAlreadyExistsException() {
-    ProblemDetail body = exceptionHandler.handleEntityDynamicMappingAlreadyExistsException(
-        new EntityDynamicMappingAlreadyExistsException("mapping-id"));
+    ProblemDetail body = exceptionHandler
+        .handleDomainException(new EntityDynamicMappingAlreadyExistsException("mapping-id"));
     assertEquals(HttpStatus.CONFLICT.value(), body.getStatus());
     assertEquals("CONFLICT", body.getProperties().get("error"));
   }
 
   @Test
   void shouldHandleEntityDynamicMappingAlreadyInUseException() {
-    ProblemDetail body = exceptionHandler.handleEntityDynamicMappingAlreadyInUseException(
+    ProblemDetail body = exceptionHandler.handleDomainException(
         new EntityDynamicMappingAlreadyInUseException(List.of("mapping-id")));
     assertEquals(HttpStatus.CONFLICT.value(), body.getStatus());
     assertEquals("CONFLICT", body.getProperties().get("error"));
@@ -563,23 +563,23 @@ class ApiExceptionHandlerTest {
 
   @Test
   void shouldHandleWebhookConnectorAlreadyExistException() {
-    ProblemDetail body = exceptionHandler.handleWebhookConnectorAlreadyExistException(
-        new WebhookConnectorAlreadyExistException("connector-id"));
+    ProblemDetail body = exceptionHandler
+        .handleDomainException(new WebhookConnectorAlreadyExistException("connector-id"));
     assertEquals(HttpStatus.CONFLICT.value(), body.getStatus());
     assertEquals("CONFLICT", body.getProperties().get("error"));
   }
 
   @Test
   void shouldHandleTemplateAlreadyMappedInWebhookConfiguration() {
-    ProblemDetail body = exceptionHandler.handleTemplateAlreadyMappedInWebhookConfiguration(
-        new EntityTemplateUsedByDynamicMappingException("template in use"));
+    ProblemDetail body = exceptionHandler
+        .handleDomainException(new EntityTemplateUsedByDynamicMappingException("template in use"));
     assertProblemDetail(body, HttpStatus.CONFLICT, "template in use", "CONFLICT");
   }
 
   @Test
   void shouldHandleWebhookConnectorTitleAlreadyExistsException() {
-    ProblemDetail body = exceptionHandler.handleWebhookConnectorTitleAlreadyExistsException(
-        new WebhookConnectorTitleAlreadyExistsException("connector-name"));
+    ProblemDetail body = exceptionHandler
+        .handleDomainException(new WebhookConnectorTitleAlreadyExistsException("connector-name"));
     assertEquals(HttpStatus.CONFLICT.value(), body.getStatus());
     assertEquals("CONFLICT", body.getProperties().get("error"));
   }
