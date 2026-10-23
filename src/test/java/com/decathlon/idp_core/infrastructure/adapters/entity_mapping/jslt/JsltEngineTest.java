@@ -37,8 +37,9 @@ class JsltEngineTest {
   @DisplayName("Should reject an expression longer than the maximum length on validation")
   void shouldRejectOversizedExpressionOnValidation() {
     var engine = new JsltEngine(List.of());
+    String expression = oversizedExpression();
 
-    assertThatThrownBy(() -> engine.validateExpression(oversizedExpression()))
+    assertThatThrownBy(() -> engine.validateExpression(expression))
         .isInstanceOf(EntityDynamicMappingJsltErrorException.class)
         .hasMessageContaining("maximum length");
   }
@@ -48,8 +49,9 @@ class JsltEngineTest {
   void shouldRejectOversizedExpressionOnEvaluation() throws Exception {
     var engine = new JsltEngine(List.of());
     JsonNode payload = objectMapper.readTree("{}");
+    String expression = oversizedExpression();
 
-    assertThatThrownBy(() -> engine.evaluate(oversizedExpression(), payload))
+    assertThatThrownBy(() -> engine.evaluate(expression, payload))
         .isInstanceOf(EntityDynamicMappingJsltErrorException.class)
         .hasMessageContaining("maximum length");
   }
