@@ -636,9 +636,9 @@ public class EntityService {
   /// @throws InvalidSearchQueryException when pagination parameters are invalid
   @Transactional(readOnly = true)
   public PaginatedResult<Entity> searchEntities(SearchFilterNode filter, String query,
-      PaginationCriteria paginationCriteria) {
+      PaginationCriteria paginationCriteria, int maxPageSize) {
     searchFilterValidationService.validate(filter, query);
-    validatePaginationCriteria(paginationCriteria);
+    validatePaginationCriteria(paginationCriteria, maxPageSize);
     return entityRepository.search(filter, query, paginationCriteria);
   }
 
@@ -654,8 +654,8 @@ public class EntityService {
         .findByTemplateIdentifierAndIdentifier(templateIdentifier, entityIdentifier).isPresent();
   }
 
-  private void validatePaginationCriteria(PaginationCriteria criteria) {
-    criteria.validateBounds();
+  private void validatePaginationCriteria(PaginationCriteria criteria, int maxPageSize) {
+    criteria.validateBounds(maxPageSize);
     String sort = criteria.sort();
     if (sort != null && !sort.isBlank()) {
       validateSortExpression(sort);

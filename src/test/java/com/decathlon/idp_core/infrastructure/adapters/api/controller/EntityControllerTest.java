@@ -30,6 +30,7 @@ import org.springframework.test.web.servlet.request.MockMvcRequestBuilders;
 
 import com.decathlon.idp_core.AbstractIntegrationTest;
 import com.decathlon.idp_core.domain.constant.SearchConstraints;
+import com.decathlon.idp_core.domain.constant.ValidationMessages;
 
 /// Integration tests for the EntityController REST API endpoints. These tests
 /// verify the behavior of entity retrieval endpoints, including pagination,
@@ -119,6 +120,28 @@ public class EntityControllerTest extends AbstractIntegrationTest {
     }
 
     @Test
+    @DisplayName("Should return 400 when size is not a number")
+    @WithMockUser
+    void getEntities_nonNumericSize_400() throws Exception {
+      mockMvc
+          .perform(get(ENTITIES_BY_TEMPLATE_IDENTIFIER_PATH, TEMPLATE_IDENTIFIER).param("page", "0")
+              .param("size", "abc").accept(APPLICATION_JSON))
+          .andExpect(status().isBadRequest()).andExpect(
+              jsonPath("$.error_description").value(ValidationMessages.PAGE_SIZE_NOT_INTEGER));
+    }
+
+    @Test
+    @DisplayName("Should return 400 when page is not an integer")
+    @WithMockUser
+    void getEntities_nonIntegerPage_400() throws Exception {
+      mockMvc
+          .perform(get(ENTITIES_BY_TEMPLATE_IDENTIFIER_PATH, TEMPLATE_IDENTIFIER)
+              .param("page", "1.5").param("size", "10").accept(APPLICATION_JSON))
+          .andExpect(status().isBadRequest()).andExpect(
+              jsonPath("$.error_description").value(ValidationMessages.PAGE_INDEX_NOT_INTEGER));
+    }
+
+    @Test
     @DisplayName("Should return 404 when template does not exist")
     @WithMockUser
     void getEntities_paginated_404_when_non_existent_template() throws Exception {
@@ -163,7 +186,7 @@ public class EntityControllerTest extends AbstractIntegrationTest {
     @Test
     @DisplayName("Should return paginated entities with default pagination")
     @WithMockUser
-    void getEntities_invalid_pagination_200() throws Exception {
+    void getEntities_defaultPagination_200() throws Exception {
       mockMvc
           .perform(get(ENTITIES_BY_TEMPLATE_IDENTIFIER_PATH, TEMPLATE_IDENTIFIER)
               .accept(APPLICATION_JSON))
@@ -1674,8 +1697,8 @@ public class EntityControllerTest extends AbstractIntegrationTest {
               .accept(APPLICATION_JSON).with(csrf()).content("""
                   { "page": 0, "size": 501 }
                   """))
-          .andExpect(status().isBadRequest()).andExpect(jsonPath("$.error_description")
-              .value("Page size must not exceed %d".formatted(SearchConstraints.MAX_PAGE_SIZE)));
+          .andExpect(status().isBadRequest()).andExpect(jsonPath("$.error_description").value(
+              "Page size must not exceed %d".formatted(SearchConstraints.DEFAULT_MAX_PAGE_SIZE)));
     }
 
     @Test

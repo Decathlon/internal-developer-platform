@@ -123,21 +123,22 @@ public class EntityGraphService {
   /// produce
   /// unified `relations` DTOs without any further DB calls.
   ///
-  /// @param paginationCriteria zero-based page, page size (1 to MAX_PAGE_SIZE),
-  /// and the sort is not applied
+  /// @param paginationCriteria zero-based page and page size, validated against
+  /// `maxPageSize`; the sort is not applied
   /// @param templateIdentifier template to scope the entity list
   /// @param entityFilter optional filter criteria; `null` means no filtering
   /// @param depth the maximum relationship depth used for each page entity's
   /// graph traversal
   /// @return paginated graph nodes with outbound and inbound relations resolved
+  /// @param maxPageSize the largest page size accepted
   /// @throws EntityTemplateNotFoundException when the template does not exist
   /// @throws InvalidSearchQueryException when page or size is out of bounds
   @SuppressWarnings("null")
   @Transactional(readOnly = true)
   public Page<EntityGraphNode> getEntityGraphPageByTemplate(PaginationCriteria paginationCriteria,
-      String templateIdentifier, EntityFilter entityFilter, int depth) {
+      String templateIdentifier, EntityFilter entityFilter, int depth, int maxPageSize) {
 
-    paginationCriteria.validateBounds();
+    paginationCriteria.validateBounds(maxPageSize);
     Pageable pageable = PageRequest.of(paginationCriteria.page(), paginationCriteria.size());
 
     // Fetch paginated entities — template existence is validated inside this call

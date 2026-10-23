@@ -12,7 +12,6 @@ import java.util.stream.Collectors;
 import jakarta.validation.ConstraintViolation;
 import jakarta.validation.ConstraintViolationException;
 
-import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
@@ -24,6 +23,7 @@ import org.springframework.web.method.annotation.HandlerMethodValidationExceptio
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 import org.springframework.web.servlet.NoHandlerFoundException;
 
+import com.decathlon.idp_core.domain.constant.ValidationMessages;
 import com.decathlon.idp_core.domain.exception.entity.EntityAlreadyExistsException;
 import com.decathlon.idp_core.domain.exception.entity.EntityDeletionBlockedException;
 import com.decathlon.idp_core.domain.exception.entity.EntityNotFoundException;
@@ -141,6 +141,23 @@ public class ApiExceptionHandler {
     log.warn("Entity entityTemplateIdentifier identifier cannot be changed: {}", ex.getMessage());
     ErrorResponse errorResponse = new ErrorResponse(HttpStatus.BAD_REQUEST.name(), ex.getMessage());
     return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(errorResponse);
+  }
+
+  /// Handles non-integer query or path parameters, such as `size=abc`.
+  ///
+  /// **HTTP mapping:** Maps Spring MethodArgumentTypeMismatchException to HTTP
+  /// 400 with a message naming the offending parameter, instead of the generic
+  /// HTTP 500 fallback.
+  @ExceptionHandler(MethodArgumentTypeMismatchException.class)
+  public ResponseEntity<ErrorResponse> handleMethodArgumentTypeMismatchException(
+      MethodArgumentTypeMismatchException ex) {
+    String message = switch (ex.getName()) {
+      case "page" -> ValidationMessages.PAGE_INDEX_NOT_INTEGER;
+      case "size" -> ValidationMessages.PAGE_SIZE_NOT_INTEGER;
+      default -> "Invalid value for parameter '%s'".formatted(ex.getName());
+    };
+    log.warn("Type mismatch for parameter '{}': {}", ex.getName(), ex.getValue());
+    return createErrorResponse(HttpStatus.BAD_REQUEST, message);
   }
 
   /// Handles domain exception for wrong entity entityTemplateIdentifier property
