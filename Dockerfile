@@ -11,6 +11,6 @@ WORKDIR /opt
 COPY ./target/idp-core*.jar /opt/app.jar
 
 HEALTHCHECK --interval=30s --timeout=5s --start-period=25s --retries=3 \
-    CMD wget --no-verbose --tries=1 --spider http://localhost:$PORT/actuator/health || exit 1
+    CMD wget -q --spider "http://localhost:${SERVER_PORT:-8080}/actuator/health" || exit 1
 
 ENTRYPOINT ["java", "-jar", "/opt/app.jar"]
