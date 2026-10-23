@@ -79,6 +79,7 @@ public class EntityGraphController {
   @ResponseStatus(OK)
   @Operation(summary = ENDPOINT_GET_ENTITY_GRAPH_FLAT_SUMMARY, description = ENDPOINT_GET_ENTITY_GRAPH_FLAT_DESCRIPTION, responses = {
       @ApiResponse(responseCode = OK_CODE, description = RESPONSE_ENTITY_GRAPH_FLAT_SUCCESS, content = @Content(schema = @Schema(implementation = EntityGraphFlatDtoOut.class))),
+      @ApiResponse(responseCode = BAD_REQUEST_CODE, description = RESPONSE_INVALID_GRAPH_QUERY, content = @Content(mediaType = org.springframework.http.MediaType.APPLICATION_PROBLEM_JSON_VALUE, schema = @Schema(implementation = ProblemDetail.class))),
       @ApiResponse(responseCode = NOT_FOUND_CODE, description = RESPONSE_ENTITY_NOT_FOUND_IDENTIFIER, content = @Content(mediaType = org.springframework.http.MediaType.APPLICATION_PROBLEM_JSON_VALUE, schema = @Schema(implementation = ProblemDetail.class)))})
   public EntityGraphFlatDtoOut getEntityGraph(@PathVariable @NotBlank String templateIdentifier,
       @PathVariable @NotBlank String entityIdentifier,

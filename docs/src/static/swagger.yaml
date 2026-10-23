@@ -1014,9 +1014,9 @@ paths:
         '400':
           description: Invalid graph query parameter value
           content:
-            "*/*":
+            application/problem+json:
               schema:
-                "$ref": "#/components/schemas/ErrorResponse"
+                "$ref": "#/components/schemas/ProblemDetail"
         '404':
           description: Entity not found with the provided identifier
           content:
