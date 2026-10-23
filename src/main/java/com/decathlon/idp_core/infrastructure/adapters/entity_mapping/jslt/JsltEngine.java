@@ -51,6 +51,25 @@ public class JsltEngine implements ExpressionEngine {
     }
   }
 
+  /**
+   * Evaluates a JSLT transformation expression against an input JSON payload.
+   * <p>
+   * Validates that the expression does not exceed
+   * {@link JsltConstraints#MAX_EXPRESSION_LENGTH} and executes the evaluation
+   * asynchronously within a configured timeout
+   * ({@link JsltConstraints#EVALUATION_TIMEOUT_MS} ms). If the execution exceeds
+   * the timeout, fails, or is interrupted, the underlying task is cancelled.
+   *
+   * @param expression
+   *          the JSLT expression to compile and apply
+   * @param payload
+   *          the target {@link JsonNode} payload to be transformed
+   * @return the transformed {@link JsonNode} result
+   * @throws EntityDynamicMappingJsltErrorException
+   *           if the expression length exceeds the maximum limit, the evaluation
+   *           times out, compilation/execution fails, or the operation is
+   *           interrupted
+   */
   @Override
   public JsonNode evaluate(String expression, JsonNode payload) {
     checkExpressionLength(expression);
