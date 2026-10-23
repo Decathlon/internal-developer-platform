@@ -23,8 +23,8 @@ import org.springframework.web.method.annotation.HandlerMethodValidationExceptio
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 import org.springframework.web.servlet.NoHandlerFoundException;
 
-import com.decathlon.idp_core.domain.exception.authorization.PrincipalNotAuthorizedException;
 import com.decathlon.idp_core.domain.constant.ValidationMessages;
+import com.decathlon.idp_core.domain.exception.authorization.PrincipalNotAuthorizedException;
 import com.decathlon.idp_core.domain.exception.entity.EntityAlreadyExistsException;
 import com.decathlon.idp_core.domain.exception.entity.EntityDeletionBlockedException;
 import com.decathlon.idp_core.domain.exception.entity.EntityNotFoundException;
