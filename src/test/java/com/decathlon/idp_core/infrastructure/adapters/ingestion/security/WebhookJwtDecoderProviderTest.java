@@ -31,7 +31,7 @@ class WebhookJwtDecoderProviderTest {
   @DisplayName("accepts an allow-listed localhost JWKS host at runtime")
   void get_acceptsAllowListedLocalhost() {
     WebhookJwtDecoderProvider provider = new WebhookJwtDecoderProvider(
-        new WebhookSecurityProperties(Set.of("localhost")));
+        new WebhookSecurityProperties(Set.of("localhost"), false));
 
     assertThatCode(() -> provider.get("https://localhost/.well-known/jwks.json"))
         .doesNotThrowAnyException();
@@ -41,7 +41,7 @@ class WebhookJwtDecoderProviderTest {
   @DisplayName("rejects a runtime JWKS host that is not allow-listed")
   void get_rejectsNonAllowListedHost() {
     WebhookJwtDecoderProvider provider = new WebhookJwtDecoderProvider(
-        new WebhookSecurityProperties(Set.of("auth.decathlon.com")));
+        new WebhookSecurityProperties(Set.of("auth.decathlon.com"), false));
 
     assertThatThrownBy(() -> provider.get("https://github.com/.well-known/jwks.json"))
         .isInstanceOf(WebhookJwksHostForbiddenException.class);

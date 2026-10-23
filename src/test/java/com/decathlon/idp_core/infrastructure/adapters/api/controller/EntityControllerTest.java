@@ -1671,7 +1671,7 @@ public class EntityControllerTest extends AbstractIntegrationTest {
     void search_200_noPageOrSize_usesDefaults() throws Exception {
       // Omitting page and size must not cause a 400 JSON parse error (primitive int
       // vs null).
-      // The record defaults should kick in: page=0, size=20.
+      // The controller defaults should kick in: page=0, size=20.
       mockMvc
           .perform(MockMvcRequestBuilders.post(SEARCH_PATH).contentType(APPLICATION_JSON)
               .accept(APPLICATION_JSON).with(csrf()).content("""

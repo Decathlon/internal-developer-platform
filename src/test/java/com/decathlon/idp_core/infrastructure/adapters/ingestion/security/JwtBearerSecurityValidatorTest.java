@@ -135,7 +135,7 @@ class JwtBearerSecurityValidatorTest {
     @DisplayName("Should accept a host when it is allow-listed in security properties")
     void shouldAcceptAllowListedHost() {
       JwtBearerSecurityValidator safeValidator = new JwtBearerSecurityValidator(jwtDecoderProvider,
-          new WebhookSecurityProperties(Set.of("github.com"))) {
+          new WebhookSecurityProperties(Set.of("github.com"), false)) {
         @Override
         protected InetAddress[] resolveHostAddresses(String host) {
           throw new AssertionError("JWKS host validation should not run for allow-listed hosts");
@@ -152,7 +152,7 @@ class JwtBearerSecurityValidatorTest {
     @DisplayName("Should reject a host when it is not allow-listed in security properties")
     void shouldRejectNonAllowListedHost() {
       JwtBearerSecurityValidator safeValidator = new JwtBearerSecurityValidator(jwtDecoderProvider,
-          new WebhookSecurityProperties(Set.of("auth.decathlon.com"))) {
+          new WebhookSecurityProperties(Set.of("auth.decathlon.com"), false)) {
         @Override
         protected InetAddress[] resolveHostAddresses(String host) {
           throw new AssertionError(

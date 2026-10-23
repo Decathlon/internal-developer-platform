@@ -10,7 +10,7 @@ USER idp-core-user:idp-core-group
 WORKDIR /opt
 COPY ./target/idp-core*.jar /opt/app.jar
 
-HEALTHCHECK --interval=30s --timeout=5s --start-period=5s --retries=3 \
-    CMD curl -f http://localhost:$PORT/actuator/health || exit 1
+HEALTHCHECK --interval=30s --timeout=5s --start-period=25s --retries=3 \
+    CMD wget --no-verbose --tries=1 --spider http://localhost:$PORT/actuator/health || exit 1
 
 ENTRYPOINT ["java", "-jar", "/opt/app.jar"]
