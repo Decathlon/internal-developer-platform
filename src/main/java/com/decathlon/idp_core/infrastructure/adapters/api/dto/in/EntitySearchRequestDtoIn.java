@@ -44,9 +44,6 @@ public record EntitySearchRequestDtoIn(
 
     @Schema(description = SwaggerDescription.PARAM_SORT_DESCRIPTION, example = "identifier:asc") String sort) {
   public EntitySearchRequestDtoIn {
-    if (size == null) {
-      size = 20;
-    }
     if (page == null) {
       page = 0;
     }

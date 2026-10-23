@@ -22,6 +22,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import com.decathlon.idp_core.domain.exception.webhook.WebhookSecurityConfigurationException;
 import com.decathlon.idp_core.domain.model.enums.WebhookSecurityType;
 import com.decathlon.idp_core.domain.model.inbound_connectors.webhook.WebhookSecurity;
+import com.decathlon.idp_core.domain.model.inbound_connectors.webhook.WebhookSecurityValidationPolicy;
 import com.decathlon.idp_core.domain.port.WebhookSecurityStrategy;
 
 @DisplayName("WebhookSecurityValidationService Tests")
@@ -36,7 +37,8 @@ class WebhookSecurityValidationServiceTest {
   @BeforeEach
   void setUp() {
     lenient().when(hmacCreationValidator.supports(HMAC_SHA256)).thenReturn(true);
-    service = new WebhookSecurityValidationService(List.of(hmacCreationValidator));
+    service = new WebhookSecurityValidationService(List.of(hmacCreationValidator),
+        new WebhookSecurityValidationPolicy(true));
   }
 
   @Nested
@@ -114,6 +116,40 @@ class WebhookSecurityValidationServiceTest {
       assertThatThrownBy(() -> service.validateForCreation(security))
           .isInstanceOf(WebhookSecurityConfigurationException.class)
           .hasMessageContaining("must be empty when type is NONE");
+    }
+
+    @Test
+    @DisplayName("Should reject NONE type when the allow-none flag is disabled")
+    void shouldRejectNoneTypeWhenDisabled() {
+      var disabled = new WebhookSecurityValidationService(List.of(hmacCreationValidator),
+          new WebhookSecurityValidationPolicy(false));
+      var security = new WebhookSecurity(WebhookSecurityType.NONE, Map.of());
+
+      assertThatThrownBy(() -> disabled.validateForCreation(security))
+          .isInstanceOf(WebhookSecurityConfigurationException.class)
+          .hasMessageContaining("IDP_WEBHOOK_SECURITY_ALLOW_NONE");
+    }
+
+    @Test
+    @DisplayName("Should reject implicit NONE (null config normalized) when the flag is disabled")
+    void shouldRejectImplicitNoneWhenDisabled() {
+      var disabled = new WebhookSecurityValidationService(List.of(hmacCreationValidator),
+          new WebhookSecurityValidationPolicy(false));
+      var security = new WebhookSecurity(WebhookSecurityType.NONE, null);
+
+      assertThatThrownBy(() -> disabled.validateForCreation(security))
+          .isInstanceOf(WebhookSecurityConfigurationException.class);
+    }
+
+    @Test
+    @DisplayName("Should still validate other security types when the flag is disabled")
+    void shouldAllowHmacWhenNoneDisabled() {
+      var disabled = new WebhookSecurityValidationService(List.of(hmacCreationValidator),
+          new WebhookSecurityValidationPolicy(false));
+      var config = Map.of("header_name", "X-Hub-Signature-256", "secret_alias", "MY_SECRET");
+
+      assertThatCode(() -> disabled.validateForCreation(new WebhookSecurity(HMAC_SHA256, config)))
+          .doesNotThrowAnyException();
     }
   }
 

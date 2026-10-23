@@ -137,6 +137,35 @@ class EntityDynamicMappingControllerTest extends AbstractIntegrationTest {
           .andExpect(jsonPath("$.page.size").value(5))
           .andExpect(jsonPath("$.page.number").value(0));
     }
+
+    @Test
+    @WithMockUser
+    @DisplayName("Should return 400 when page size exceeds 500")
+    void getMappings_400_size_above_500() throws Exception {
+      mockMvc
+          .perform(
+              get(MAPPING_PATH).param("page", "0").param("size", "501").accept(APPLICATION_JSON))
+          .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    @WithMockUser
+    @DisplayName("Should return 400 when page size is zero")
+    void getMappings_400_size_zero() throws Exception {
+      mockMvc
+          .perform(get(MAPPING_PATH).param("page", "0").param("size", "0").accept(APPLICATION_JSON))
+          .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    @WithMockUser
+    @DisplayName("Should return 400 when page size is not an integer")
+    void getMappings_400_size_not_integer() throws Exception {
+      mockMvc
+          .perform(
+              get(MAPPING_PATH).param("page", "0").param("size", "abc").accept(APPLICATION_JSON))
+          .andExpect(status().isBadRequest());
+    }
   }
 
   @Nested

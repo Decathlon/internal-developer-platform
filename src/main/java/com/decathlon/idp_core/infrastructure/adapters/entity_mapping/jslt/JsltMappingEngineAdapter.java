@@ -1,5 +1,7 @@
 package com.decathlon.idp_core.infrastructure.adapters.entity_mapping.jslt;
 
+import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -10,6 +12,7 @@ import java.util.stream.StreamSupport;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 
+import com.decathlon.idp_core.domain.constant.JsltConstraints;
 import com.decathlon.idp_core.domain.exception.entity_dynamic_mapping.EntityDynamicMappingConfigurationException;
 import com.decathlon.idp_core.domain.model.entity.Entity;
 import com.decathlon.idp_core.domain.model.entity.Property;
@@ -17,7 +20,9 @@ import com.decathlon.idp_core.domain.model.entity.Relation;
 import com.decathlon.idp_core.domain.model.entity_mapping.EntityDynamicMapping;
 import com.decathlon.idp_core.domain.model.entity_mapping.RelationMapping;
 import com.decathlon.idp_core.domain.port.MappingEnginePort;
+import com.fasterxml.jackson.core.JsonParser;
 import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.core.JsonToken;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
@@ -216,11 +221,51 @@ public class JsltMappingEngineAdapter implements MappingEnginePort {
         .collect(Collectors.toUnmodifiableMap(Property::name, Property::value));
   }
 
-  /// Parses raw JSON and translates parsing failures to a domain exception.
+  /// Enforces payload limits, then parses raw JSON and translates parsing
+  /// failures
+  /// to a domain exception. Size and depth are checked before the tree is built
+  /// so
+  /// oversized or deeply nested input is rejected cheaply.
   private JsonNode parsePayload(String rawPayload) {
+    checkPayloadSize(rawPayload);
+    checkJsonDepth(rawPayload);
     try {
       return objectMapper.readTree(rawPayload);
     } catch (JsonProcessingException e) {
+      throw new EntityDynamicMappingConfigurationException("Failed to parse JSON payload", e);
+    }
+  }
+
+  /// Rejects payloads whose UTF-8 encoding exceeds the configured maximum size.
+  private void checkPayloadSize(String rawPayload) {
+    if (rawPayload != null
+        && rawPayload.getBytes(StandardCharsets.UTF_8).length > JsltConstraints.MAX_PAYLOAD_BYTES) {
+      throw new EntityDynamicMappingConfigurationException(
+          "JSON payload exceeds maximum size of " + JsltConstraints.MAX_PAYLOAD_BYTES + " bytes");
+    }
+  }
+
+  /// Streams over the payload tokens and rejects nesting deeper than the
+  /// configured
+  /// maximum, without materializing the tree.
+  private void checkJsonDepth(String rawPayload) {
+    if (rawPayload == null) {
+      return;
+    }
+    try (JsonParser parser = objectMapper.getFactory().createParser(rawPayload)) {
+      int depth = 0;
+      for (JsonToken token = parser.nextToken(); token != null; token = parser.nextToken()) {
+        if (token.isStructStart()) {
+          depth++;
+          if (depth > JsltConstraints.MAX_JSON_DEPTH) {
+            throw new EntityDynamicMappingConfigurationException(
+                "JSON payload exceeds maximum depth of " + JsltConstraints.MAX_JSON_DEPTH);
+          }
+        } else if (token.isStructEnd()) {
+          depth--;
+        }
+      }
+    } catch (IOException e) {
       throw new EntityDynamicMappingConfigurationException("Failed to parse JSON payload", e);
     }
   }
