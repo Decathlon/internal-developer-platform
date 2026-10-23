@@ -88,3 +88,4 @@ idp:
       # Comma-separated allow-list for trusted JWKS hosts.
       # Example: ALLOWED_JWKS_HOSTS=github.com,auth.decathlon.com
       allowed-jwks-hosts: github.com,www.googleapis.com
+      allow-none: true

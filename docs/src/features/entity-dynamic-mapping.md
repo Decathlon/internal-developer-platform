@@ -199,6 +199,17 @@ if (.is_private == true) "PRIVATE_" + .name else .name
 }
 ```
 
+### JSLT Execution Limits
+
+To protect the platform against denial-of-service, JSLT processing is bounded:
+
+| Limit              | Value                    | Exceeded behavior                       |
+| ------------------ | ------------------------ | --------------------------------------- |
+| Payload size       | 1 MB (UTF-8 bytes)       | Rejected before parsing (400)           |
+| JSON nesting depth | 64 levels                | Rejected before the tree is built (400) |
+| Expression length  | 10,000 characters        | Rejected at validation (422)            |
+| Evaluation timeout | 5 seconds per evaluation | Evaluation aborted (422)                |
+
 > [!TIP]
 > Use the **dry-run endpoint** (POST `/api/v1/entity_dynamic_mappings/dry-run`) to test
 > your JSLT expressions before deploying them to production. This helps catch syntax

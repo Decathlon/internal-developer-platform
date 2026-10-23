@@ -168,6 +168,30 @@ class InboundWebhookManagementControllerTest extends AbstractIntegrationTest {
           .andExpect(jsonPath("$.content[*].identifier", containsInAnyOrder("github-dora-connector",
               "github-dora-connector-success", "public-connector", "token-connector")));
     }
+
+    @Test
+    @WithMockUser
+    @DisplayName("Should return 400 when page size exceeds 500")
+    void getWebhooks_400_size_above_500() throws Exception {
+      mockMvc.perform(get(WEBHOOK_PATH).param("size", "501").accept(APPLICATION_JSON))
+          .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    @WithMockUser
+    @DisplayName("Should return 400 when page size is zero")
+    void getWebhooks_400_size_zero() throws Exception {
+      mockMvc.perform(get(WEBHOOK_PATH).param("size", "0").accept(APPLICATION_JSON))
+          .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    @WithMockUser
+    @DisplayName("Should return 400 when page size is not an integer")
+    void getWebhooks_400_size_not_integer() throws Exception {
+      mockMvc.perform(get(WEBHOOK_PATH).param("size", "abc").accept(APPLICATION_JSON))
+          .andExpect(status().isBadRequest());
+    }
   }
 
   @Nested

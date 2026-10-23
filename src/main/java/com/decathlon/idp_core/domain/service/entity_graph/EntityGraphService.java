@@ -7,12 +7,14 @@ import java.util.Set;
 import java.util.UUID;
 
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.decathlon.idp_core.domain.exception.entity.EntityNotFoundException;
 import com.decathlon.idp_core.domain.exception.entity_template.EntityTemplateNotFoundException;
+import com.decathlon.idp_core.domain.exception.search.InvalidSearchQueryException;
 import com.decathlon.idp_core.domain.model.entity.Entity;
 import com.decathlon.idp_core.domain.model.entity.EntityCompositeKey;
 import com.decathlon.idp_core.domain.model.entity.EntityFilter;
@@ -20,6 +22,7 @@ import com.decathlon.idp_core.domain.model.entity.EntitySummary;
 import com.decathlon.idp_core.domain.model.entity_graph.EntityGraphNode;
 import com.decathlon.idp_core.domain.model.entity_graph.EntityGraphQueryOptions;
 import com.decathlon.idp_core.domain.model.entity_graph.EntityGraphTraversalMode;
+import com.decathlon.idp_core.domain.model.search.PaginationCriteria;
 import com.decathlon.idp_core.domain.port.EntityGraphRepositoryPort;
 import com.decathlon.idp_core.domain.port.EntityRepositoryPort;
 import com.decathlon.idp_core.domain.service.entity.EntityService;
@@ -120,17 +123,23 @@ public class EntityGraphService {
   /// produce
   /// unified `relations` DTOs without any further DB calls.
   ///
-  /// @param pageable pagination and sorting configuration
+  /// @param paginationCriteria zero-based page and page size, validated against
+  /// `maxPageSize`; the sort is not applied
   /// @param templateIdentifier template to scope the entity list
   /// @param entityFilter optional filter criteria; `null` means no filtering
   /// @param depth the maximum relationship depth used for each page entity's
   /// graph traversal
   /// @return paginated graph nodes with outbound and inbound relations resolved
+  /// @param maxPageSize the largest page size accepted
   /// @throws EntityTemplateNotFoundException when the template does not exist
+  /// @throws InvalidSearchQueryException when page or size is out of bounds
   @SuppressWarnings("null")
   @Transactional(readOnly = true)
-  public Page<EntityGraphNode> getEntityGraphPageByTemplate(Pageable pageable,
-      String templateIdentifier, EntityFilter entityFilter, int depth) {
+  public Page<EntityGraphNode> getEntityGraphPageByTemplate(PaginationCriteria paginationCriteria,
+      String templateIdentifier, EntityFilter entityFilter, int depth, int maxPageSize) {
+
+    paginationCriteria.validateBounds(maxPageSize);
+    Pageable pageable = PageRequest.of(paginationCriteria.page(), paginationCriteria.size());
 
     // Fetch paginated entities — template existence is validated inside this call
     Page<Entity> entityPage = entityService.getEntitiesByTemplateIdentifier(pageable,

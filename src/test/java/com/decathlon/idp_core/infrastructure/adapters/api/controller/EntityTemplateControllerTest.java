@@ -141,6 +141,55 @@ class EntityTemplateControllerTest extends AbstractIntegrationTest {
           .andExpect(jsonPath("$.page.number").value(1));
     }
 
+    /// Tests that Pageable endpoints reject `size` values above 500 instead of
+    /// clamping them.
+    /// @throws Exception if the MockMvc request fails
+    @Test
+    @DisplayName("Should return 400 when page size exceeds 500 on Pageable endpoints")
+    @WithMockUser
+    void getTemplates_paginated_400_size_above_500() throws Exception {
+
+      mockMvc.perform(get("/api/v1/entity-templates").param("page", "0").param("size", "501")
+          .accept(APPLICATION_JSON)).andExpect(status().isBadRequest());
+    }
+
+    /// Tests that Pageable endpoints reject `size` values below 1 instead of
+    /// silently replacing them with a default.
+    /// @throws Exception if the MockMvc request fails
+    @Test
+    @DisplayName("Should return 400 when page size is zero on Pageable endpoints")
+    @WithMockUser
+    void getTemplates_paginated_400_size_zero() throws Exception {
+
+      mockMvc.perform(get("/api/v1/entity-templates").param("page", "0").param("size", "0")
+          .accept(APPLICATION_JSON)).andExpect(status().isBadRequest());
+    }
+
+    /// Tests that Pageable endpoints reject non-numeric `size` values.
+    /// @throws Exception if the MockMvc request fails
+    @Test
+    @DisplayName("Should return 400 when page size is not an integer on Pageable endpoints")
+    @WithMockUser
+    void getTemplates_paginated_400_size_not_integer() throws Exception {
+
+      mockMvc.perform(get("/api/v1/entity-templates").param("page", "0").param("size", "abc")
+          .accept(APPLICATION_JSON)).andExpect(status().isBadRequest());
+    }
+
+    /// Tests that the maximum allowed page size of 500 is accepted on Pageable
+    /// endpoints.
+    /// @throws Exception if the MockMvc request fails
+    @Test
+    @DisplayName("Should accept page size of exactly 500 on Pageable endpoints")
+    @WithMockUser
+    void getTemplates_paginated_200_size_500() throws Exception {
+
+      mockMvc
+          .perform(get("/api/v1/entity-templates").param("page", "0").param("size", "500")
+              .accept(APPLICATION_JSON))
+          .andExpect(status().isOk()).andExpect(jsonPath("$.page.size").value(500));
+    }
+
     /// Tests the GET /api/v1/entity-templates/{identifier} endpoint for
     /// retrieving a specific template.
     /// This test verifies that:

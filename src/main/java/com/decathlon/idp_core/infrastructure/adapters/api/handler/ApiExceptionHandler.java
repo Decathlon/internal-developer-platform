@@ -24,6 +24,7 @@ import org.springframework.web.method.annotation.MethodArgumentTypeMismatchExcep
 import org.springframework.web.servlet.NoHandlerFoundException;
 
 import com.decathlon.idp_core.domain.exception.authorization.PrincipalNotAuthorizedException;
+import com.decathlon.idp_core.domain.constant.ValidationMessages;
 import com.decathlon.idp_core.domain.exception.entity.EntityAlreadyExistsException;
 import com.decathlon.idp_core.domain.exception.entity.EntityDeletionBlockedException;
 import com.decathlon.idp_core.domain.exception.entity.EntityNotFoundException;
@@ -151,6 +152,32 @@ public class ApiExceptionHandler {
     log.warn("Entity entityTemplateIdentifier identifier cannot be changed: {}", ex.getMessage());
     ErrorResponse errorResponse = new ErrorResponse(HttpStatus.BAD_REQUEST.name(), ex.getMessage());
     return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(errorResponse);
+  }
+
+  /// Handles non-integer query or path parameters, such as `size=abc`.
+  ///
+  /// **HTTP mapping:** Maps Spring MethodArgumentTypeMismatchException to HTTP
+  /// 400 with a message naming the offending parameter, instead of the generic
+  /// HTTP 500 fallback.
+  @ExceptionHandler(MethodArgumentTypeMismatchException.class)
+  public ResponseEntity<ErrorResponse> handleMethodArgumentTypeMismatchException(
+      MethodArgumentTypeMismatchException ex) {
+    String errorMessage = switch (ex.getName()) {
+      case "page" -> ValidationMessages.PAGE_INDEX_NOT_INTEGER;
+      case "size" -> ValidationMessages.PAGE_SIZE_NOT_INTEGER;
+      default -> "Invalid value '%s' for parameter '%s'.".formatted(ex.getValue(), ex.getName());
+    };
+    if (!"page".equals(ex.getName()) && !"size".equals(ex.getName())) {
+      Class<?> requiredType = ex.getRequiredType();
+      if (requiredType != null && requiredType.isEnum()) {
+        errorMessage += " Allowed values: " + Arrays.toString(requiredType.getEnumConstants())
+            + ".";
+      } else if (requiredType != null) {
+        errorMessage += " Expected type: " + requiredType.getSimpleName() + ".";
+      }
+    }
+    log.warn("Request parameter type mismatch: {}", errorMessage);
+    return createErrorResponse(HttpStatus.BAD_REQUEST, errorMessage);
   }
 
   /// Handles domain exception for wrong entity entityTemplateIdentifier property
@@ -305,22 +332,6 @@ public class ApiExceptionHandler {
         .map(org.springframework.context.MessageSourceResolvable::getDefaultMessage)
         .collect(Collectors.joining(", "));
 
-    return createErrorResponse(HttpStatus.BAD_REQUEST, errorMessage);
-  }
-
-  /// Handles invalid request parameter types, including unknown enum values.
-  @ExceptionHandler(MethodArgumentTypeMismatchException.class)
-  public ResponseEntity<ErrorResponse> handleMethodArgumentTypeMismatchException(
-      MethodArgumentTypeMismatchException ex) {
-    String errorMessage = "Invalid value '%s' for parameter '%s'.".formatted(ex.getValue(),
-        ex.getName());
-    Class<?> requiredType = ex.getRequiredType();
-    if (requiredType != null && requiredType.isEnum()) {
-      errorMessage += " Allowed values: " + Arrays.toString(requiredType.getEnumConstants()) + ".";
-    } else if (requiredType != null) {
-      errorMessage += " Expected type: " + requiredType.getSimpleName() + ".";
-    }
-    log.warn("Request parameter type mismatch: {}", errorMessage);
     return createErrorResponse(HttpStatus.BAD_REQUEST, errorMessage);
   }
 
