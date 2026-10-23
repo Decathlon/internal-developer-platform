@@ -43,7 +43,8 @@ import lombok.extern.slf4j.Slf4j;
 ///
 /// **Design rationale:** Positioned after Spring Security authentication but before
 /// controllers, ensuring JIT provisioning happens transparently for all API endpoints.
-/// Failures are logged but don't block the request (fail-open for availability).
+/// Provisioning failures reject the request so authorization cannot proceed without a
+/// verified principal link.
 ///
 /// **Excluded Paths:** Public endpoints (health checks, documentation, etc.) are excluded
 /// from JIT provisioning to avoid unnecessary database queries and log pollution.
@@ -145,9 +146,10 @@ public class JitProvisioningFilter extends OncePerRequestFilter {
           principalInfo.identifier(), principalInfo.kind());
       return true;
     } catch (Exception e) {
-      // Provisioning failures remain fail-open; extraction failures propagate.
       log.warn("JIT provisioning failed for authenticated principal: {}", e.getMessage(), e);
-      return true;
+      errorResponseWriter.write(response, HttpStatus.SERVICE_UNAVAILABLE,
+          "Unable to verify your access at this time. Please try again later.");
+      return false;
     }
   }
 

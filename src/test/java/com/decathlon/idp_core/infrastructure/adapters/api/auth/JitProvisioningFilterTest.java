@@ -304,7 +304,7 @@ class JitProvisioningFilterTest {
   }
 
   @Test
-  void doFilterInternal_whenProvisioningThrowsException_failsOpenAndContinuesChain()
+  void doFilterInternal_whenProvisioningThrowsException_failsClosed()
       throws ServletException, IOException {
     // Arrange
     Authentication auth = mock(Authentication.class);
@@ -319,7 +319,29 @@ class JitProvisioningFilterTest {
     // Act & Assert (Should not throw exception)
     jitProvisioningFilter.doFilterInternal(request, response, filterChain);
 
-    verify(filterChain).doFilter(request, response);
+    verify(errorResponseWriter).write(response, HttpStatus.SERVICE_UNAVAILABLE,
+        "Unable to verify your access at this time. Please try again later.");
+    verify(filterChain, never()).doFilter(any(), any());
+  }
+
+  @Test
+  void doFilterInternal_inLinkOnlyMode_whenPrincipalLookupThrowsException_failsClosed()
+      throws ServletException, IOException {
+    Authentication auth = mock(Authentication.class);
+    when(auth.isAuthenticated()).thenReturn(true);
+    SecurityContextHolder.getContext().setAuthentication(auth);
+    PrincipalInfo principalInfo = new PrincipalInfo("unlinked", PrincipalKind.HUMAN, "User",
+        java.util.Map.of(), List.of());
+    when(provisioningProperties.mode()).thenReturn(PrincipalProvisioningMode.LINK_ONLY);
+    when(principalExtractor.extractPrincipalInfo(auth)).thenReturn(principalInfo);
+    when(provisioningService.findPrincipalWithSameKind(principalInfo))
+        .thenThrow(new RuntimeException("Catalog service unavailable"));
+
+    jitProvisioningFilter.doFilterInternal(request, response, filterChain);
+
+    verify(errorResponseWriter).write(response, HttpStatus.SERVICE_UNAVAILABLE,
+        "Unable to verify your access at this time. Please try again later.");
+    verify(filterChain, never()).doFilter(any(), any());
   }
 
   @Test
