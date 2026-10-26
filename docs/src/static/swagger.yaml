@@ -336,6 +336,13 @@ paths:
         required: false
         schema:
           type: array
+      - name: show_relations_properties
+        in: query
+        description: When true, include property values for related entities. Defaults to false.
+        required: false
+        schema:
+          type: boolean
+          default: false
       responses:
         '200':
           description: Entity found
@@ -1638,6 +1645,9 @@ components:
           type: string
         template_identifier:
           type: string
+        properties:
+          type: object
+          additionalProperties: {}
     InboundWebhookCreateDtoIn:
       type: object
       properties:
