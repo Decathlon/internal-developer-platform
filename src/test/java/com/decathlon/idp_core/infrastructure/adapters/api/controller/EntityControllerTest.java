@@ -475,12 +475,12 @@ public class EntityControllerTest extends AbstractIntegrationTest {
     }
 
     @Test
-    @DisplayName("Should include relation properties when show_relations_properties=true")
+    @DisplayName("Should include relation properties when include_relations_properties=true")
     @WithMockUser
-    void getEntity_showRelationsProperties() throws Exception {
+    void getEntity_includeRelationsProperties() throws Exception {
       mockMvc
           .perform(get(ENTITIES_BY_IDENTIFIER_PATH, TEMPLATE_IDENTIFIER, "graph-svc-a")
-              .param("show_relations_properties", "true").accept(APPLICATION_JSON))
+              .param("include_relations_properties", "true").accept(APPLICATION_JSON))
           .andExpect(status().isOk())
           .andExpect(jsonPath("$.relations.uses[0].identifier").value("graph-svc-b"))
           .andExpect(jsonPath("$.relations.uses[0].properties.tier").value("silver"))

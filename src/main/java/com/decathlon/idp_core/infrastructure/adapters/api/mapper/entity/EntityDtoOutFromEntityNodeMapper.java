@@ -73,11 +73,11 @@ public class EntityDtoOutFromEntityNodeMapper {
   /// @param entityTemplateIdentifier the template key used for root property
   /// definitions
   /// @param maxDepth the maximum depth for relationship collection
-  /// @param showRelationsProperties whether related entities include their
+  /// @param includeRelationsProperties whether related entities include their
   /// property values
   /// @return the mapped entity DTO, or null when the root is null
   public EntityDtoOut toDto(EntityGraphNode root, String entityTemplateIdentifier, int maxDepth,
-      boolean showRelationsProperties) {
+      boolean includeRelationsProperties) {
     if (root == null) {
       return null;
     }
@@ -85,7 +85,7 @@ public class EntityDtoOutFromEntityNodeMapper {
     EntityTemplate entityTemplate = entityTemplateService
         .getEntityTemplateByIdentifier(entityTemplateIdentifier);
 
-    return toDto(root, entityTemplate, maxDepth, showRelationsProperties);
+    return toDto(root, entityTemplate, maxDepth, includeRelationsProperties);
   }
 
   /// Internal orchestrator handling property conversions and initiating
@@ -95,7 +95,7 @@ public class EntityDtoOutFromEntityNodeMapper {
   }
 
   private EntityDtoOut toDto(EntityGraphNode root, EntityTemplate entityTemplate, int maxDepth,
-      boolean showRelationsProperties) {
+      boolean includeRelationsProperties) {
     if (root == null) {
       return null;
     }
@@ -105,7 +105,7 @@ public class EntityDtoOutFromEntityNodeMapper {
     Map<String, EntityTemplate> templatesByIdentifier = new HashMap<>();
     templatesByIdentifier.put(entityTemplate.identifier(), entityTemplate);
     var state = new TraversalState(root.identifier(), new HashMap<>(), new HashMap<>(),
-        new HashMap<>(), new HashSet<>(), showRelationsProperties, templatesByIdentifier,
+        new HashMap<>(), new HashSet<>(), includeRelationsProperties, templatesByIdentifier,
         new HashMap<>());
 
     // Initiate directional traversals independently starting from root at depth 0
@@ -244,7 +244,7 @@ public class EntityDtoOutFromEntityNodeMapper {
   }
 
   private EntitySummaryDto toSummaryDto(EntityGraphNode node, TraversalState state) {
-    if (!state.showRelationsProperties()) {
+    if (!state.includeRelationsProperties()) {
       return new EntitySummaryDto(node.identifier(), node.name(), node.templateIdentifier());
     }
 
@@ -295,7 +295,7 @@ public class EntityDtoOutFromEntityNodeMapper {
   private record TraversalState(String rootIdentifier,
       Map<String, Set<EntitySummaryDto>> relationsMap, Map<String, Integer> visitedOutboundDepths,
       Map<String, Integer> visitedInboundDepths, Set<String> emittedEdgeSignatures,
-      boolean showRelationsProperties, Map<String, EntityTemplate> templatesByIdentifier,
+      boolean includeRelationsProperties, Map<String, EntityTemplate> templatesByIdentifier,
       Map<String, EntitySummaryDto> relatedEntitiesByNodeId) {
   }
 }

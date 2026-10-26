@@ -285,11 +285,11 @@ GET /api/v1/entities/{templateIdentifier}/{entityIdentifier}
 ```
 
 By default, relation objects include only the related entity's identifier, name, and template identifier. Add
-`show_relations_properties=true` to include each related entity's typed properties. The root entity's properties are
+`include_relations_properties=true` to include each related entity's typed properties. The root entity's properties are
 returned as usual, and omitting the flag keeps the existing relation response shape.
 
 ```text
-GET /api/v1/entities/{templateIdentifier}/{entityIdentifier}?show_relations_properties=true
+GET /api/v1/entities/{templateIdentifier}/{entityIdentifier}?include_relations_properties=true
 ```
 
 With the flag enabled, a relation object also includes a `properties` map:

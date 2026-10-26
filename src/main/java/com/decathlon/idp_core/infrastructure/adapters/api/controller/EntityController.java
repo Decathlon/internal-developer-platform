@@ -18,6 +18,7 @@ import static com.decathlon.idp_core.infrastructure.adapters.api.configuration.S
 import static com.decathlon.idp_core.infrastructure.adapters.api.configuration.SwaggerDescription.ENDPOINT_PUT_ENTITY_DESCRIPTION;
 import static com.decathlon.idp_core.infrastructure.adapters.api.configuration.SwaggerDescription.ENDPOINT_PUT_ENTITY_SUMMARY;
 import static com.decathlon.idp_core.infrastructure.adapters.api.configuration.SwaggerDescription.FORBIDDEN_CODE;
+import static com.decathlon.idp_core.infrastructure.adapters.api.configuration.SwaggerDescription.INCLUDE_RELATIONS_PROPERTIES_DESCRIPTION;
 import static com.decathlon.idp_core.infrastructure.adapters.api.configuration.SwaggerDescription.INTERNAL_SERVER_ERROR_CODE;
 import static com.decathlon.idp_core.infrastructure.adapters.api.configuration.SwaggerDescription.NOT_FOUND_CODE;
 import static com.decathlon.idp_core.infrastructure.adapters.api.configuration.SwaggerDescription.NO_CONTENT_CODE;
@@ -45,7 +46,6 @@ import static com.decathlon.idp_core.infrastructure.adapters.api.configuration.S
 import static com.decathlon.idp_core.infrastructure.adapters.api.configuration.SwaggerDescription.RESPONSE_TEMPLATE_NOT_FOUND_IDENTIFIER;
 import static com.decathlon.idp_core.infrastructure.adapters.api.configuration.SwaggerDescription.RESPONSE_UNAUTHORIZED;
 import static com.decathlon.idp_core.infrastructure.adapters.api.configuration.SwaggerDescription.RESPONSE_UNEXPECTED_SERVER_ERROR;
-import static com.decathlon.idp_core.infrastructure.adapters.api.configuration.SwaggerDescription.SHOW_RELATIONS_PROPERTIES_DESCRIPTION;
 import static com.decathlon.idp_core.infrastructure.adapters.api.configuration.SwaggerDescription.UNAUTHORIZED_CODE;
 import static org.springframework.http.HttpStatus.CREATED;
 import static org.springframework.http.HttpStatus.NO_CONTENT;
@@ -213,7 +213,7 @@ public class EntityController {
    *          to 1)
    * @param relationsToDisplay
    *          optional set of relation names to include; omit to include all
-   * @param showRelationsProperties
+   * @param includeRelationsProperties
    *          whether to include property values for related entities
    * @return entity DTO with full property and relationship data
    */
@@ -224,22 +224,22 @@ public class EntityController {
       @Content(schema = @Schema(implementation = ErrorResponse.class))})
   @Parameter(name = "relations_depth", description = RELATIONS_DEPTH_DESCRIPTION, in = ParameterIn.QUERY, schema = @Schema(type = "integer", defaultValue = "1", minimum = "1", maximum = "6"))
   @Parameter(name = "relations_to_display", description = RELATIONS_TO_DISPLAY_DESCRIPTION, in = ParameterIn.QUERY, schema = @Schema(type = "array"))
-  @Parameter(name = "show_relations_properties", description = SHOW_RELATIONS_PROPERTIES_DESCRIPTION, in = ParameterIn.QUERY, schema = @Schema(type = "boolean", defaultValue = "false"))
+  @Parameter(name = "include_relations_properties", description = INCLUDE_RELATIONS_PROPERTIES_DESCRIPTION, in = ParameterIn.QUERY, schema = @Schema(type = "boolean", defaultValue = "false"))
   @GetMapping("/{templateIdentifier}/{entityIdentifier}")
   @ResponseStatus(OK)
   public EntityDtoOut getEntity(@PathVariable String templateIdentifier,
       @PathVariable String entityIdentifier,
       @Min(value = RELATIONS_DEPTH_MIN, message = RELATIONS_DEPTH_MIN_MESSAGE) @Max(value = RELATIONS_DEPTH_MAX, message = RELATIONS_DEPTH_MAX_MESSAGE) @RequestParam(name = "relations_depth", required = false, defaultValue = "1") Integer relationsDepth,
       @RequestParam(name = "relations_to_display", required = false) Set<String> relationsToDisplay,
-      @RequestParam(name = "show_relations_properties", defaultValue = "false") boolean showRelationsProperties) {
+      @RequestParam(name = "include_relations_properties", defaultValue = "false") boolean includeRelationsProperties) {
 
     EntityGraphNode entityGraphNode = entityGraphService.getEntityGraph(templateIdentifier,
         entityIdentifier,
-        new EntityGraphQueryOptions(relationsDepth, showRelationsProperties, true,
+        new EntityGraphQueryOptions(relationsDepth, includeRelationsProperties, true,
             relationsToDisplay == null ? Set.of() : relationsToDisplay, Set.of(),
             EntityGraphTraversalMode.DIRECT_LINEAGE));
     return entityDtoOutFromEntityNodeMapper.toDto(entityGraphNode, templateIdentifier,
-        relationsDepth, showRelationsProperties);
+        relationsDepth, includeRelationsProperties);
   }
 
   /// Creates a new entity for the specified template with validation.
