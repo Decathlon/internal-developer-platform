@@ -24,7 +24,7 @@
   },
   "mounts": [
     "source=idp-core-m2,target=/home/vscode/.m2,type=volume",
-    "source=idp-core-dind,target=/var/lib/docker,type=volume"
+    "source=idp-core-dind-${devcontainerId},target=/var/lib/docker,type=volume"
   ],
   "customizations": {
     "vscode": {
