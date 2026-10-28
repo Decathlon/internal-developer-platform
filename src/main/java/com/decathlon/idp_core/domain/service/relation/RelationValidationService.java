@@ -35,9 +35,10 @@ import lombok.RequiredArgsConstructor;
 ///    relation names exist in the template and required relations are mapped.
 ///    Used by dynamic mapping validation.
 /// 2. **Full relation validation**
-///    ([#validateAndNormalizeRelationsAgainstTemplate]): validates [Relation]
-///    objects, removes unresolved optional targets, and checks cardinality and
-///    target templates. Used by entity write validation.
+///    ([#validateAndNormalizeRelationsAgainstTemplate]): filters target identifiers
+///    not found in the repository from optional relations, omits relations left
+///    without targets, and validates required relations, cardinality, and target
+///    templates. Used by entity write validation.
 @Service
 @RequiredArgsConstructor
 public class RelationValidationService {
@@ -87,7 +88,8 @@ public class RelationValidationService {
       return;
     }
 
-    Set<String> definedRelationNames = getDefinedRelationNames(template);
+    Set<String> definedRelationNames = template.relationsDefinitions().stream()
+        .map(RelationDefinition::name).collect(Collectors.toSet());
 
     relationNames.stream().filter(name -> !definedRelationNames.contains(name)).findFirst()
         .ifPresent(name -> {
@@ -115,14 +117,6 @@ public class RelationValidationService {
     }
   }
 
-  private Set<String> getDefinedRelationNames(EntityTemplate template) {
-    if (template.relationsDefinitions().isEmpty()) {
-      return Set.of();
-    }
-    return template.relationsDefinitions().stream().map(RelationDefinition::name)
-        .collect(Collectors.toSet());
-  }
-
   /// Validates entity relations against the template's relation definitions,
   /// enforcing required relations and cardinality constraints.
   /// @param template the entity template whose relation definitions are used for
@@ -136,29 +130,32 @@ public class RelationValidationService {
     validateRelationsAgainstTemplate(template, providedRelations, violations, false, false);
   }
 
-  /// Validates relations and removes unresolved targets from optional relations.
+  /// Validates relations and filters out target identifiers that do not resolve
+  /// to entities in the repository from optional relations. Omits an optional
+  /// relation if no targets remain.
   ///
-  /// Required relations and targets with an incompatible template remain
-  /// validation errors. The returned relations contain only resolved targets
-  /// for optional relations.
+  /// Missing targets on required relations and existing targets with an
+  /// incompatible template remain validation errors. The returned relations
+  /// retain all resolved targets.
   ///
   /// @param template the entity template whose relation definitions are used
-  /// @param providedRelations the relations to validate and normalize
+  /// @param providedRelations the relations and target identifiers to validate
   /// @param violations the accumulator for validation violations
-  /// @return normalized relations suitable for persistence
+  /// @return relations with repository-missing target identifiers filtered out
+  /// and optional relations with no targets omitted
   public List<Relation> validateAndNormalizeRelationsAgainstTemplate(EntityTemplate template,
       List<Relation> providedRelations, Violations violations) {
     return validateRelationsAgainstTemplate(template, providedRelations, violations, false, true);
   }
 
-  /// Internal unified relation validation used by both normal and dry-run
-  /// workflows.
+  /// Validates relation names, target entities, required relations, and
+  /// cardinality for normal and dry-run workflows.
   ///
-  /// @param skipDatabaseChecks when true, skips target-entity existence checks
-  /// in repository-backed validation
-  /// @param omitMissingOptionalTargets when true, unresolved targets on optional
-  /// relations are removed instead of reported
-  /// @return relations after optional target normalization
+  /// @param skipDatabaseChecks when true, skips repository lookups for target
+  /// existence and target-template compatibility
+  /// @param omitMissingOptionalTargets when true, filters repository-missing
+  /// identifiers from optional relations and omits relations left empty
+  /// @return relations with tolerated missing optional targets filtered out
   private List<Relation> validateRelationsAgainstTemplate(EntityTemplate template,
       List<Relation> providedRelations, Violations violations, boolean skipDatabaseChecks,
       boolean omitMissingOptionalTargets) {
@@ -176,7 +173,8 @@ public class RelationValidationService {
         .collect(Collectors.toMap(Relation::name, rel -> rel, (existing, replacement) -> existing));
 
     Map<String, List<String>> targetIdentifiersByName = new HashMap<>();
-    var options = new RelationValidationOptions(skipDatabaseChecks, omitMissingOptionalTargets);
+    RelationValidationOptions options = new RelationValidationOptions(skipDatabaseChecks,
+        omitMissingOptionalTargets);
     List<Relation> normalizedRelations = normalizeRelations(template.identifier(), relations,
         definitionsByName, targetIdentifiersByName, violations, options);
 
@@ -185,6 +183,17 @@ public class RelationValidationService {
     return normalizedRelations;
   }
 
+  /// Filters repository-missing identifiers from optional relations when enabled
+  /// and records the remaining identifiers for required and cardinality checks.
+  ///
+  /// @param templateIdentifier the identifier of the source entity template
+  /// @param relations the relations and their target identifiers to validate
+  /// @param definitionsByName the template relation definitions indexed by name
+  /// @param targetIdentifiersByName receives the identifiers remaining after
+  /// filtering
+  /// @param violations the accumulator for validation violations
+  /// @param options the relation validation options
+  /// @return relations with tolerated missing optional targets filtered out
   private List<Relation> normalizeRelations(String templateIdentifier, List<Relation> relations,
       Map<String, RelationDefinition> definitionsByName,
       Map<String, List<String>> targetIdentifiersByName, Violations violations,
@@ -203,6 +212,17 @@ public class RelationValidationService {
     return normalizedRelations;
   }
 
+  /// Validates one relation and filters repository-missing target identifiers
+  /// from optional relations when enabled. Omits the relation if no targets
+  /// remain, but retains undefined relations so their name violations are
+  /// reported.
+  ///
+  /// @param templateIdentifier the identifier of the source entity template
+  /// @param relation the relation and target identifiers to validate
+  /// @param definitionsByName the template relation definitions indexed by name
+  /// @param violations the accumulator for validation violations
+  /// @param options the relation validation options
+  /// @return the filtered relation, if any, and its remaining target identifiers
   private RelationNormalization normalizeRelation(String templateIdentifier, Relation relation,
       Map<String, RelationDefinition> definitionsByName, Violations violations,
       RelationValidationOptions options) {
@@ -214,10 +234,12 @@ public class RelationValidationService {
 
     RelationDefinition definition = definitionsByName.get(relation.name());
     List<String> targetIdentifiers = extractValidTargetIdentifiers(relation);
-    List<String> normalizedTargetIdentifiers = normalizeTargetIdentifiers(relation, definition,
-        targetIdentifiers, violations, options);
+    boolean omitUnresolvedTargets = options.omitMissingOptionalTargets() && definition != null
+        && !definition.required();
+    List<String> normalizedTargetIdentifiers = normalizeTargetIdentifiers(relation,
+        targetIdentifiers, violations, options.skipDatabaseChecks(), omitUnresolvedTargets);
 
-    if (omitsEmptyOptionalRelation(definition, normalizedTargetIdentifiers, options)) {
+    if (omitUnresolvedTargets && normalizedTargetIdentifiers.isEmpty()) {
       return new RelationNormalization(Optional.empty(), normalizedTargetIdentifiers);
     }
 
@@ -226,38 +248,66 @@ public class RelationValidationService {
     return new RelationNormalization(Optional.of(normalizedRelation), normalizedTargetIdentifiers);
   }
 
-  private List<String> normalizeTargetIdentifiers(Relation relation, RelationDefinition definition,
-      List<String> targetIdentifiers, Violations violations, RelationValidationOptions options) {
-    if (options.skipDatabaseChecks() || targetIdentifiers.isEmpty()) {
+  /// Looks up target identifiers, reports missing targets unless optional
+  /// filtering is enabled, and checks the templates of found entities. In
+  /// optional filtering mode, removes identifiers that have no repository match.
+  ///
+  /// @param relation the relation whose targets are checked
+  /// @param targetIdentifiers the non-blank target identifiers to validate
+  /// @param violations the accumulator for validation violations
+  /// @param skipDatabaseChecks whether to skip the repository lookup and target
+  /// template checks
+  /// @param omitUnresolvedTargets whether repository-missing identifiers should
+  /// be filtered without adding missing-target violations
+  /// @return target identifiers remaining after optional filtering
+  private List<String> normalizeTargetIdentifiers(Relation relation, List<String> targetIdentifiers,
+      Violations violations, boolean skipDatabaseChecks, boolean omitUnresolvedTargets) {
+    if (skipDatabaseChecks || targetIdentifiers.isEmpty()) {
       return targetIdentifiers;
     }
 
-    var existingEntities = entityRepository.findByIdentifierIn(targetIdentifiers);
+    List<EntitySummary> existingEntities = entityRepository.findByIdentifierIn(targetIdentifiers);
     Set<String> existingIdentifiers = existingEntities.stream().map(EntitySummary::identifier)
         .collect(Collectors.toSet());
 
-    validateTargetExistence(relation, definition, targetIdentifiers, existingIdentifiers,
-        violations, options);
+    validateTargetExistence(relation, targetIdentifiers, existingIdentifiers, violations,
+        omitUnresolvedTargets);
     validateRelationTargetTemplates(relation, existingEntities, violations);
 
-    if (omitsUnresolvedOptionalTargets(definition, options)) {
+    if (omitUnresolvedTargets) {
       return targetIdentifiers.stream().filter(existingIdentifiers::contains).toList();
     }
 
     return targetIdentifiers;
   }
 
-  private void validateTargetExistence(Relation relation, RelationDefinition definition,
-      List<String> targetIdentifiers, Set<String> existingIdentifiers, Violations violations,
-      RelationValidationOptions options) {
+  /// Adds a missing-target violation for each identifier absent from the
+  /// repository unless optional filtering is enabled.
+  ///
+  /// @param relation the relation being validated
+  /// @param targetIdentifiers the non-blank target identifiers to check
+  /// @param existingIdentifiers the identifiers found in the repository
+  /// @param violations the accumulator for validation violations
+  /// @param omitUnresolvedTargets whether repository-missing identifiers should
+  /// be tolerated without a violation
+  private void validateTargetExistence(Relation relation, List<String> targetIdentifiers,
+      Set<String> existingIdentifiers, Violations violations, boolean omitUnresolvedTargets) {
     for (String identifier : targetIdentifiers) {
-      if (!existingIdentifiers.contains(identifier)
-          && !omitsUnresolvedOptionalTargets(definition, options)) {
+      if (!existingIdentifiers.contains(identifier) && !omitUnresolvedTargets) {
         violations.add(RELATION_TARGET_ENTITY_NOT_FOUND, relation.name(), identifier);
       }
     }
   }
 
+  /// Reports missing required relations and multiple targets on single-target
+  /// relations using identifiers remaining after optional filtering.
+  ///
+  /// @param templateIdentifier the identifier of the source entity template
+  /// @param definitions the relation definitions to validate
+  /// @param relationsByName the provided relations indexed by name
+  /// @param targetIdentifiersByName the target identifiers remaining after
+  /// optional filtering, indexed by relation name
+  /// @param violations the accumulator for validation violations
   private void validateRelationDefinitions(String templateIdentifier,
       List<RelationDefinition> definitions, Map<String, Relation> relationsByName,
       Map<String, List<String>> targetIdentifiersByName, Violations violations) {
@@ -278,21 +328,11 @@ public class RelationValidationService {
     }
   }
 
-  private boolean omitsUnresolvedOptionalTargets(RelationDefinition definition,
-      RelationValidationOptions options) {
-    return options.omitMissingOptionalTargets() && definition != null && !definition.required();
-  }
-
-  private boolean omitsEmptyOptionalRelation(RelationDefinition definition,
-      List<String> targetIdentifiers, RelationValidationOptions options) {
-    return omitsUnresolvedOptionalTargets(definition, options) && targetIdentifiers.isEmpty();
-  }
-
   /// Validates entity relations for dry-run executions.
   ///
-  /// Keeps structural validation (relation names, required relations,
-  /// cardinality)
-  /// and skips database existence checks for target entity identifiers.
+  /// Keeps structural validation (relation names, required relations, and
+  /// cardinality) while skipping repository-backed target existence and template
+  /// compatibility checks.
   ///
   /// This method is intentionally additive and does not change the behavior of
   /// [#validateRelationsAgainstTemplate].
