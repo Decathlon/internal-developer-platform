@@ -112,7 +112,7 @@ class IngestionProcessorTest {
 
   @ParameterizedTest
   @MethodSource("principalMappingOperations")
-  void ingest_doesNotApplyProtectedPrincipalProperties(MappingAction action, boolean exists) {
+  void ingest_appliesMappedPrincipalProperties(MappingAction action, boolean exists) {
     String payload = "{\"action\": \"pushed\"}";
     EntityDynamicMapping mapping = createTestMapping(action);
     WebhookConnector connector = createWebhookConnector("principal-connector", List.of(mapping));
@@ -129,10 +129,10 @@ class IngestionProcessorTest {
 
     if (exists) {
       verify(entityService).patchEntity(eq("principal"), eq("mapped-user"),
-          argThat(patch -> containsOnlyUnprotectedProperties(patch.properties())));
+          argThat(patch -> containsAllMappedPrincipalProperties(patch.properties())));
     } else {
-      verify(entityService)
-          .createEntity(argThat(entity -> containsOnlyUnprotectedProperties(entity.properties())));
+      verify(entityService).createEntity(
+          argThat(entity -> containsAllMappedPrincipalProperties(entity.properties())));
     }
   }
 
@@ -141,10 +141,12 @@ class IngestionProcessorTest {
         .flatMap(action -> Stream.of(false, true).map(exists -> Arguments.of(action, exists)));
   }
 
-  private static boolean containsOnlyUnprotectedProperties(List<Property> properties) {
-    return properties.stream()
-        .noneMatch(property -> List.of("kind", "is_admin", "is_idp_user").contains(property.name()))
-        && properties.stream().anyMatch(property -> "display_name".equals(property.name()));
+  private static boolean containsAllMappedPrincipalProperties(List<Property> properties) {
+    List<Property> expectedProperties = List.of(new Property(null, "kind", "SERVICE_ACCOUNT"),
+        new Property(null, "is_admin", "true"), new Property(null, "is_idp_user", "true"),
+        new Property(null, "display_name", "Mapped User"));
+    return properties.size() == expectedProperties.size()
+        && properties.containsAll(expectedProperties);
   }
 
   @Nested
