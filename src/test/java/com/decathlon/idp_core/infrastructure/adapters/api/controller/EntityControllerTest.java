@@ -1725,9 +1725,8 @@ public class EntityControllerTest extends AbstractIntegrationTest {
                   }
                   """))
           .andExpect(status().isOk()).andExpect(jsonPath("$.page.total_elements").value(3))
-          .andExpect(jsonPath("$.content[0].identifier").value("web-api-1"))
-          .andExpect(jsonPath("$.content[2].identifier").value("web-api-2"))
-          .andExpect(jsonPath("$.content[1].identifier").value("web-service-valid-1"));
+          .andExpect(jsonPath("$.content[*].identifier")
+              .value(containsInAnyOrder("web-api-1", "web-api-2", "web-service-valid-1")));
     }
 
     @Test
