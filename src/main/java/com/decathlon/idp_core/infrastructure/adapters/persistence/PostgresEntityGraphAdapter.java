@@ -109,6 +109,7 @@ public class PostgresEntityGraphAdapter implements EntityGraphRepositoryPort {
         discoveredIds, rootIds, includeProperties, includeRootEntityProperties);
     Map<UUID, Entity> entities = HashMap.newHashMap(projections.size());
     Span.current().addEvent("entity_graph.projection_mapping");
+
     for (EntityGraphJsonProjection projection : projections) {
       Entity entity = mapProjectionToDomain(projection);
       if (entities.putIfAbsent(entity.id(), entity) != null) {
