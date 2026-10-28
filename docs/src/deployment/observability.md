@@ -150,9 +150,11 @@ These attributes support trace correlation in Datadog APM and allow support team
 
 ### Entity lookup traces
 
-The `GET /api/v1/entities/{templateIdentifier}/{entityIdentifier}` and `/graph` endpoints reuse the Spring MVC server span as the trace parent. Each request adds an `EntityGraphService.getEntityGraph` span and persistence spans for the entity summary and graph lookup through the starter's `@WithSpan` support. JDBC instrumentation adds child spans for the database statements; set `OTEL_INSTRUMENTATION_JDBC_ENABLED=false` to disable those spans.
+The `GET /api/v1/entities/{templateIdentifier}/{entityIdentifier}` and `/graph` endpoints reuse the Spring MVC server span as the trace parent. Before the controller runs, JIT principal provisioning and authorization can also query the entity catalog. `PrincipalProvisioningService` and `PostgresEntityAdapter.findByTemplateIdentifierAndIdentifier` create spans around those lookups, including lazy loading of `entity_properties`. `EntityGraphService.getEntityGraph` creates a service span, and `EntityGraphHelper.buildGraphNodesForEntityIds` creates a child span for graph-node construction. The service also records fixed-name events for root-summary lookup, graph loading, empty results, and node construction.
 
-Application spans do not attach entity identifiers or query parameters as span attributes. The starter records errors and their status through its `@WithSpan` instrumentation. The Spring OpenTelemetry starter exports the trace through the configured OTLP endpoint; Datadog visibility depends on the collector or Agent receiving and routing OTLP traces.
+The summary and graph persistence adapters create their own spans. The graph adapter records fixed-name events for its ID query, projection query, and projection mapping. JDBC instrumentation adds child spans for database statements; set `OTEL_INSTRUMENTATION_JDBC_ENABLED=false` to disable those spans. The entity response mapper and graph flat-response mapper also create spans after the service returns, under the HTTP server span.
+
+These spans use the active trace context, so service, helper, persistence, JDBC, and response-mapping work stays in the same trace. Application spans do not attach entity identifiers or query parameters as span attributes. The starter records errors and their status through its `@WithSpan` instrumentation. The Spring OpenTelemetry starter exports the trace through the configured OTLP endpoint; Datadog visibility depends on the collector or Agent receiving and routing OTLP traces.
 
 ## Health checks
 

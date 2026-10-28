@@ -27,6 +27,7 @@ import com.decathlon.idp_core.domain.port.EntityGraphRepositoryPort;
 import com.decathlon.idp_core.domain.port.EntityRepositoryPort;
 import com.decathlon.idp_core.domain.service.entity.EntityService;
 
+import io.opentelemetry.api.trace.Span;
 import io.opentelemetry.instrumentation.annotations.WithSpan;
 import lombok.RequiredArgsConstructor;
 
@@ -88,23 +89,30 @@ public class EntityGraphService {
 
     int effectiveDepth = Math.clamp(options.depth(), 1, MAX_DEPTH);
 
+    // Step 1 : Load the root entity summary (validates existence and template)
+    Span.current().addEvent("entity_graph.root_summary.lookup");
     EntitySummary rootEntity = entityRepositoryPort
         .findSummariesByCompositeKeys(
             List.of(new EntityCompositeKey(templateIdentifier, entityIdentifier)))
         .stream().findFirst()
         .orElseThrow(() -> new EntityNotFoundException(templateIdentifier, entityIdentifier));
+    Span.current().addEvent("entity_graph.root_summary.loaded");
 
     // 2. Load the graph footprint via optimized DB calls
+    Span.current().addEvent("entity_graph.footprint.load");
     Map<UUID, Entity> entityMap = entityGraphRepositoryPort.findEntityGraph(Set.of(rootEntity.id()),
         effectiveDepth, options.includeProperties(), options.includeRootEntityProperties(),
         options.mode());
+    Span.current().addEvent("entity_graph.footprint.loaded");
 
     if (entityMap == null || entityMap.isEmpty()) {
+      Span.current().addEvent("entity_graph.empty_fallback");
       return new EntityGraphNode(rootEntity.templateIdentifier(), rootEntity.identifier(),
           rootEntity.name(), List.of(), List.of(), List.of());
     }
 
     // 3. Delegate to helper for graph building
+    Span.current().addEvent("entity_graph.nodes.build");
     Map<UUID, EntityGraphNode> graphNodes = entityGraphHelper.buildGraphNodesForEntityIds(entityMap,
         options.relationFilter(), options.propertyFilter(), options.mode(), effectiveDepth);
 

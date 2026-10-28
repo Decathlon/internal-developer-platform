@@ -23,6 +23,7 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.ObjectReader;
 
+import io.opentelemetry.api.trace.Span;
 import io.opentelemetry.instrumentation.annotations.WithSpan;
 
 /// Persistence adapter dedicated to entity relationship graph traversal.
@@ -96,15 +97,18 @@ public class PostgresEntityGraphAdapter implements EntityGraphRepositoryPort {
     if (rootIds == null || rootIds.isEmpty() || mode == null || depth < 1) {
       return Map.of();
     }
+    Span.current().addEvent("entity_graph.database.find_entity_ids");
     List<UUID> discoveredIds = jpaEntityRepository.findEntityIdsInGraph(rootIds, depth,
         mode.name());
     if (discoveredIds.isEmpty()) {
       return Map.of();
     }
 
+    Span.current().addEvent("entity_graph.database.find_graph_data");
     List<EntityGraphJsonProjection> projections = jpaEntityRepository.findEntityGraphDataByIds(
         discoveredIds, rootIds, includeProperties, includeRootEntityProperties);
     Map<UUID, Entity> entities = HashMap.newHashMap(projections.size());
+    Span.current().addEvent("entity_graph.projection_mapping");
     for (EntityGraphJsonProjection projection : projections) {
       Entity entity = mapProjectionToDomain(projection);
       if (entities.putIfAbsent(entity.id(), entity) != null) {

@@ -60,6 +60,7 @@ public class PostgresEntityAdapter implements EntityRepositoryPort {
   }
 
   @Override
+  @WithSpan("PostgresEntityAdapter.findByTemplateIdentifierAndIdentifier")
   public Optional<Entity> findByTemplateIdentifierAndIdentifier(String templateIdentifier,
       String identifier) {
     return jpaEntityRepository.findByTemplateIdentifierAndIdentifier(templateIdentifier, identifier)
