@@ -148,6 +148,12 @@ Examples:
 
 These attributes support trace correlation in Datadog APM and allow support teams to trace a request across route execution, security validation, and mapping.
 
+### Entity lookup traces
+
+The `GET /api/v1/entities/{templateIdentifier}/{entityIdentifier}` and `/graph` endpoints reuse the Spring MVC server span as the trace parent. Each request adds an `EntityGraphService.getEntityGraph` span and persistence spans for the entity summary and graph lookup through the starter's `@WithSpan` support. JDBC instrumentation adds child spans for the database statements; set `OTEL_INSTRUMENTATION_JDBC_ENABLED=false` to disable those spans.
+
+Application spans do not attach entity identifiers or query parameters as span attributes. The starter records errors and their status through its `@WithSpan` instrumentation. The Spring OpenTelemetry starter exports the trace through the configured OTLP endpoint; Datadog visibility depends on the collector or Agent receiving and routing OTLP traces.
+
 ## Health checks
 
 The app exposes health endpoints used by Docker and Kubernetes.

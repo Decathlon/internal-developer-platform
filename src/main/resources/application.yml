@@ -239,9 +239,9 @@ otel:
       enabled: true
     spring-webmvc:
       enabled: true
-    # OTEL_INSTRUMENTATION_JDBC_ENABLED=true to add database spans.
+    # JDBC spans are enabled by default; set OTEL_INSTRUMENTATION_JDBC_ENABLED=false to disable.
     jdbc:
-      enabled: ${OTEL_INSTRUMENTATION_JDBC_ENABLED:false}
+      enabled: ${OTEL_INSTRUMENTATION_JDBC_ENABLED:true}
 
 management:
   endpoints:

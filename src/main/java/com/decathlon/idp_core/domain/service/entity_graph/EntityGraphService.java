@@ -24,6 +24,7 @@ import com.decathlon.idp_core.domain.port.EntityGraphRepositoryPort;
 import com.decathlon.idp_core.domain.port.EntityRepositoryPort;
 import com.decathlon.idp_core.domain.service.entity.EntityService;
 
+import io.opentelemetry.instrumentation.annotations.WithSpan;
 import lombok.RequiredArgsConstructor;
 
 /// Domain service for building entity relationship graphs.
@@ -78,6 +79,7 @@ public class EntityGraphService {
   /// identifiers
 
   @Transactional(readOnly = true)
+  @WithSpan("EntityGraphService.getEntityGraph")
   public EntityGraphNode getEntityGraph(String templateIdentifier, String entityIdentifier,
       EntityGraphQueryOptions options) {
 

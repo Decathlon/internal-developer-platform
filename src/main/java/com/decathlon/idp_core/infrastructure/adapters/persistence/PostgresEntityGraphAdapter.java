@@ -23,6 +23,8 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.ObjectReader;
 
+import io.opentelemetry.instrumentation.annotations.WithSpan;
+
 /// Persistence adapter dedicated to entity relationship graph traversal.
 ///
 /// Separated from [PostgresEntityAdapter] because graph queries use a distinct
@@ -85,6 +87,7 @@ public class PostgresEntityGraphAdapter implements EntityGraphRepositoryPort {
   /// are discovered
   @Override
   @Transactional(readOnly = true)
+  @WithSpan("PostgresEntityGraphAdapter.findEntityGraph")
   public Map<UUID, Entity> findEntityGraph(Collection<UUID> rootIds, int depth,
       boolean includeProperties, boolean includeRootEntityProperties,
       EntityGraphTraversalMode mode) {
