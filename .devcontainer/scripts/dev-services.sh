@@ -33,12 +33,26 @@ is_healthy() {
   [ "$code" = "200" ]
 }
 
+# Prints the start time (clock ticks since boot) of a process that is still
+# its own process group leader. Fields are read after the last ")" because
+# the command name in /proc/<pid>/stat may contain spaces or parentheses.
+leader_start_time() {
+  local stat fields
+  stat="$(cat "/proc/$1/stat" 2>/dev/null)" || return 1
+  read -r -a fields <<<"${stat##*) }"
+  [ "${fields[2]:-}" = "$1" ] && [ -n "${fields[19]:-}" ] && echo "${fields[19]}"
+}
+
 # Each service is launched under job control so it gets its own process
-# group (pgid == its pid): signalling "-$pid" reaches the whole group.
+# group (pgid == its pid): signalling "-$pid" reaches the whole group. The PID
+# file also stores the leader's start time so a reused PID/PGID left behind by
+# an abrupt stop is never mistaken for (and signalled as) a managed service.
 running_pid() {
-  local pid
-  pid="$(cat "$IDP_STATE_DIR/$1.pid" 2>/dev/null)" || return 1
-  [ -n "$pid" ] && kill -0 "-$pid" 2>/dev/null && echo "$pid"
+  local pid start
+  read -r pid start 2>/dev/null <"$IDP_STATE_DIR/$1.pid" || return 1
+  [ -n "$pid" ] && [ -n "$start" ] || return 1
+  [ "$(leader_start_time "$pid")" = "$start" ] || return 1
+  kill -0 "-$pid" 2>/dev/null && echo "$pid"
 }
 
 svc_status() {
@@ -61,7 +75,7 @@ svc_status() {
 }
 
 svc_start() {
-  local name="$1" deadline
+  local name="$1" deadline pid
   (
     flock -x 200
     if running_pid "$name" >/dev/null || port_occupied "${PORT[$name]}"; then
@@ -75,7 +89,8 @@ svc_start() {
     # otherwise keep the flock held forever through its inherited copy.
     set -m
     bash -c "exec ${COMMAND[$name]}" >"$IDP_STATE_DIR/$name.log" 2>&1 200>&- &
-    echo "$!" >"$IDP_STATE_DIR/$name.pid"
+    pid="$!"
+    echo "$pid $(leader_start_time "$pid" || true)" >"$IDP_STATE_DIR/$name.pid"
     disown
   ) 200>"$IDP_STATE_DIR/$name.lock"
 
