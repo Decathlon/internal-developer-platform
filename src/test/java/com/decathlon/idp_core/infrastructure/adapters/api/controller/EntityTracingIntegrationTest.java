@@ -6,28 +6,25 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.anyCollection;
 import static org.mockito.ArgumentMatchers.anyInt;
-import static org.mockito.ArgumentMatchers.anyString;
-import static org.mockito.Mockito.when;
+import static org.mockito.ArgumentMatchers.anyList;
+import static org.mockito.Mockito.doAnswer;
 import static org.springframework.http.MediaType.APPLICATION_JSON;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-import java.util.List;
-import java.util.UUID;
 import java.util.concurrent.atomic.AtomicReference;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.test.context.support.WithMockUser;
-import org.springframework.test.context.bean.override.mockito.MockitoBean;
+import org.springframework.test.context.bean.override.mockito.MockitoSpyBean;
+import org.springframework.test.context.jdbc.Sql;
 import org.springframework.test.web.servlet.MockMvc;
 
 import com.decathlon.idp_core.AbstractIntegrationTest;
-import com.decathlon.idp_core.domain.model.entity.EntitySummary;
 import com.decathlon.idp_core.domain.service.entity_graph.EntityGraphService;
 import com.decathlon.idp_core.infrastructure.adapters.persistence.PostgresEntityAdapter;
 import com.decathlon.idp_core.infrastructure.adapters.persistence.PostgresEntityGraphAdapter;
-import com.decathlon.idp_core.infrastructure.adapters.persistence.repository.JpaEntityRepository;
 
 import io.opentelemetry.api.trace.Span;
 import io.opentelemetry.api.trace.SpanContext;
@@ -35,6 +32,7 @@ import io.opentelemetry.instrumentation.annotations.WithSpan;
 
 /// Verifies annotated service and persistence spans keep the incoming trace
 /// context when requests reach repository calls.
+@Sql(scripts = "/db/test/R__3_Insert_graph_entities_test_data.sql", executionPhase = Sql.ExecutionPhase.BEFORE_TEST_CLASS)
 class EntityTracingIntegrationTest extends AbstractIntegrationTest {
 
   private static final String GRAPH_PATH = "/api/v1/entities/{templateId}/{entityId}/graph";
@@ -45,8 +43,11 @@ class EntityTracingIntegrationTest extends AbstractIntegrationTest {
   @Autowired
   private MockMvc mockMvc;
 
-  @MockitoBean
-  private JpaEntityRepository jpaEntityRepository;
+  @MockitoSpyBean
+  private PostgresEntityAdapter postgresEntityAdapter;
+
+  @MockitoSpyBean
+  private PostgresEntityGraphAdapter postgresEntityGraphAdapter;
 
   @Test
   @WithMockUser
@@ -100,33 +101,22 @@ class EntityTracingIntegrationTest extends AbstractIntegrationTest {
   private SpanContext captureRepositoryContexts(ThrowingRequest request) throws Exception {
     AtomicReference<SpanContext> summaryContext = new AtomicReference<>();
     AtomicReference<SpanContext> graphContext = new AtomicReference<>();
-    AtomicReference<SpanContext> graphDataContext = new AtomicReference<>();
-    UUID rootId = UUID.fromString("6e1d467a-667d-45d7-9e03-b34d5dc1b587");
 
-    when(jpaEntityRepository.findByCompositeKeys(any(String[].class), any(String[].class)))
-        .thenAnswer(invocation -> {
-          summaryContext.set(Span.current().getSpanContext());
-          return List
-              .of(new EntitySummary(rootId, "graph-svc-a", "Graph Service A", "web-service"));
-        });
-    when(jpaEntityRepository.findEntityIdsInGraph(anyCollection(), anyInt(), anyString()))
-        .thenAnswer(invocation -> {
-          graphContext.set(Span.current().getSpanContext());
-          return List.of(rootId);
-        });
-    when(jpaEntityRepository.findEntityGraphDataByIds(anyCollection(), anyCollection(),
-        anyBoolean(), anyBoolean())).thenAnswer(invocation -> {
-          graphDataContext.set(Span.current().getSpanContext());
-          return List.of();
-        });
+    doAnswer(invocation -> {
+      summaryContext.set(Span.current().getSpanContext());
+      return invocation.callRealMethod();
+    }).when(postgresEntityAdapter).findSummariesByCompositeKeys(anyList());
+    doAnswer(invocation -> {
+      graphContext.set(Span.current().getSpanContext());
+      return invocation.callRealMethod();
+    }).when(postgresEntityGraphAdapter).findEntityGraph(anyCollection(), anyInt(), anyBoolean(),
+        anyBoolean(), any());
 
     request.perform();
 
     assertTrue(summaryContext.get().isValid());
     assertTrue(graphContext.get().isValid());
-    assertTrue(graphDataContext.get().isValid());
     assertEquals(summaryContext.get().getTraceId(), graphContext.get().getTraceId());
-    assertEquals(graphContext.get().getTraceId(), graphDataContext.get().getTraceId());
     return graphContext.get();
   }
 
