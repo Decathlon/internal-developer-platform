@@ -629,17 +629,51 @@ public class EntityControllerTest extends AbstractIntegrationTest {
 
     @Test
     @WithMockUser()
-    @DisplayName("Should return 400 when relation target entity does not exist")
-    void postEntity_400_when_relation_target_entity_does_not_exist() throws Exception {
+    @DisplayName("Should omit unresolved targets from optional relations")
+    void postEntity_201_omitsUnresolvedOptionalRelationTargets() throws Exception {
+      String entityIdentifier = "web-service-missing-relation-target-"
+          + java.util.UUID.randomUUID();
+      String payload = getJsonTestFileContent(
+          ENTITY_JSON_FILES_TEST_PATH + "postEntity_optional_missing_relation_target.json")
+              .replace("web-service-missing-relation-target", entityIdentifier);
+
+      try {
+        mockMvc
+            .perform(MockMvcRequestBuilders
+                .post(ENTITIES_BY_TEMPLATE_IDENTIFIER_PATH, TEMPLATE_IDENTIFIER)
+                .contentType(APPLICATION_JSON).accept(APPLICATION_JSON).with(csrf())
+                .content(payload))
+            .andExpect(status().isCreated())
+            .andExpect(jsonPath("$.identifier").value(entityIdentifier))
+            .andExpect(jsonPath("$.properties.applicationName").value("catalog-api"))
+            .andExpect(jsonPath("$.relations.database").doesNotExist());
+      } finally {
+        mockMvc.perform(delete(ENTITIES_BY_IDENTIFIER_PATH, TEMPLATE_IDENTIFIER, entityIdentifier)
+            .accept(APPLICATION_JSON).with(csrf())).andExpect(status().isNoContent());
+      }
+    }
+
+    @Test
+    @WithMockUser
+    @DisplayName("Should reject an unresolved target on a required relation")
+    void postEntity_400_when_required_relation_target_is_unresolved() throws Exception {
       mockMvc
-          .perform(
-              MockMvcRequestBuilders.post(ENTITIES_BY_TEMPLATE_IDENTIFIER_PATH, TEMPLATE_IDENTIFIER)
-                  .contentType(APPLICATION_JSON).accept(APPLICATION_JSON).with(csrf())
-                  .content(getJsonTestFileContent(ENTITY_JSON_FILES_TEST_PATH
-                      + "postEntity_400_relation_target_entity_does_not_exist.json")))
-          .andExpect(status().isBadRequest()).andExpect(jsonPath("$.error").value("BAD_REQUEST"))
+          .perform(post(ENTITIES_BY_TEMPLATE_IDENTIFIER_PATH, "support")
+              .contentType(APPLICATION_JSON).accept(APPLICATION_JSON).with(csrf()).content("""
+                  {
+                    "name": "Support Entity",
+                    "identifier": "support-missing-required-team",
+                    "relations": [
+                      {
+                        "name": "required_team",
+                        "target_entity_identifiers": ["missing-team"]
+                      }
+                    ]
+                  }
+                  """))
+          .andExpect(status().isBadRequest())
           .andExpect(jsonPath("$.error_description").value(org.hamcrest.Matchers.containsString(
-              "Relation 'database': target entity 'missing-database' does not exist")));
+              "Relation 'required_team': target entity 'missing-team' does not exist")));
     }
 
   }
@@ -736,8 +770,9 @@ public class EntityControllerTest extends AbstractIntegrationTest {
 
     @Test
     @WithMockUser
-    @DisplayName("Should return 400 when update contains a property not defined in template and a missing relation target")
-    void putEntity_400_when_property_not_defined_and_relation_target_missing() throws Exception {
+    @DisplayName("Should ignore unresolved optional relation targets while rejecting invalid properties")
+    void putEntity_400_when_property_not_defined_and_optional_relation_target_missing()
+        throws Exception {
       mockMvc
           .perform(put(ENTITIES_BY_IDENTIFIER_PATH, TEMPLATE_IDENTIFIER, ENTITY_IDENTIFIER)
               .contentType(APPLICATION_JSON).accept(APPLICATION_JSON).with(csrf())
@@ -747,8 +782,8 @@ public class EntityControllerTest extends AbstractIntegrationTest {
           .andExpect(jsonPath("$.error_description").value(org.hamcrest.Matchers.allOf(
               org.hamcrest.Matchers
                   .containsString("Property 'status' is not defined in template 'web-service'"),
-              org.hamcrest.Matchers.containsString(
-                  "Relation 'database': target entity 'missing-database' does not exist"))));
+              org.hamcrest.Matchers.not(org.hamcrest.Matchers.containsString(
+                  "Relation 'database': target entity 'missing-database' does not exist")))));
     }
 
     @Test
@@ -831,6 +866,61 @@ public class EntityControllerTest extends AbstractIntegrationTest {
         mockMvc.perform(
             delete(ENTITIES_BY_IDENTIFIER_PATH, PATCH_TEMPLATE_IDENTIFIER, entityIdentifier)
                 .accept(APPLICATION_JSON).with(csrf()));
+      }
+    }
+
+    @Test
+    @WithMockUser
+    @DisplayName("Should omit unresolved optional targets when patching relations")
+    void patchEntity_200_omitsUnresolvedOptionalRelationTargets() throws Exception {
+      String entityIdentifier = "relation-patch-" + java.util.UUID.randomUUID();
+      String createPayload = """
+          {
+            "name": "Relation Patch Entity",
+            "identifier": "%s",
+            "properties": {
+              "applicationName": "catalog-api",
+              "ownerEmail": "owner@example.com",
+              "environment": "DEV",
+              "version": "1.2.3",
+              "teamName": "platform-team",
+              "baseUrl": "https://catalog.example.com",
+              "port": "8080",
+              "protocol": "HTTP",
+              "programmingLanguage": "JAVA"
+            },
+            "relations": [
+              {
+                "name": "database",
+                "target_entity_identifiers": ["database-service-1"]
+              }
+            ]
+          }
+          """.formatted(entityIdentifier);
+
+      try {
+        mockMvc.perform(post(ENTITIES_BY_TEMPLATE_IDENTIFIER_PATH, TEMPLATE_IDENTIFIER)
+            .contentType(APPLICATION_JSON).accept(APPLICATION_JSON).with(csrf())
+            .content(createPayload)).andExpect(status().isCreated());
+
+        mockMvc
+            .perform(patch(ENTITIES_BY_IDENTIFIER_PATH, TEMPLATE_IDENTIFIER, entityIdentifier)
+                .contentType(APPLICATION_JSON).accept(APPLICATION_JSON).with(csrf()).content("""
+                    {
+                      "relations": [
+                        {
+                          "name": "database",
+                          "target_entity_identifiers": ["missing-database"]
+                        }
+                      ]
+                    }
+                    """))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.properties.applicationName").value("catalog-api"))
+            .andExpect(jsonPath("$.relations.database").doesNotExist());
+      } finally {
+        mockMvc.perform(delete(ENTITIES_BY_IDENTIFIER_PATH, TEMPLATE_IDENTIFIER, entityIdentifier)
+            .accept(APPLICATION_JSON).with(csrf())).andExpect(status().isNoContent());
       }
     }
 
@@ -1636,8 +1726,8 @@ public class EntityControllerTest extends AbstractIntegrationTest {
                   """))
           .andExpect(status().isOk()).andExpect(jsonPath("$.page.total_elements").value(3))
           .andExpect(jsonPath("$.content[0].identifier").value("web-api-1"))
-          .andExpect(jsonPath("$.content[1].identifier").value("web-service-valid-1"))
-          .andExpect(jsonPath("$.content[2].identifier").value("web-api-2"));
+          .andExpect(jsonPath("$.content[2].identifier").value("web-api-2"))
+          .andExpect(jsonPath("$.content[1].identifier").value("web-service-valid-1"));
     }
 
     @Test

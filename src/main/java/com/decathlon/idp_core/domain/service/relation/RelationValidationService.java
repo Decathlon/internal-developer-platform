@@ -7,8 +7,11 @@ import static com.decathlon.idp_core.domain.constant.ValidationMessages.RELATION
 import static com.decathlon.idp_core.domain.constant.ValidationMessages.RELATION_TARGET_TEMPLATE_MISMATCH;
 import static com.decathlon.idp_core.domain.constant.ValidationMessages.RELATION_TOO_MANY_TARGETS;
 
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -31,11 +34,21 @@ import lombok.RequiredArgsConstructor;
 /// 1. **Mapping validation** ([#validateMappingRelationsAgainstTemplate]): validates that
 ///    relation names exist in the template and required relations are mapped.
 ///    Used by dynamic mapping validation.
-/// 2. **Full relation validation** ([#validateRelationsAgainstTemplate]): validates complete
-///    [Relation] objects including cardinality and target existence. Used by entity validation.
+/// 2. **Full relation validation**
+///    ([#validateAndNormalizeRelationsAgainstTemplate]): validates [Relation]
+///    objects, removes unresolved optional targets, and checks cardinality and
+///    target templates. Used by entity write validation.
 @Service
 @RequiredArgsConstructor
 public class RelationValidationService {
+
+  private record RelationValidationOptions(boolean skipDatabaseChecks,
+      boolean omitMissingOptionalTargets) {
+  }
+
+  private record RelationNormalization(Optional<Relation> relation,
+      List<String> targetIdentifiers) {
+  }
 
   private final EntityRepositoryPort entityRepository;
 
@@ -120,7 +133,22 @@ public class RelationValidationService {
   /// the process
   public void validateRelationsAgainstTemplate(EntityTemplate template,
       List<Relation> providedRelations, Violations violations) {
-    validateRelationsAgainstTemplate(template, providedRelations, violations, false);
+    validateRelationsAgainstTemplate(template, providedRelations, violations, false, false);
+  }
+
+  /// Validates relations and removes unresolved targets from optional relations.
+  ///
+  /// Required relations and targets with an incompatible template remain
+  /// validation errors. The returned relations contain only resolved targets
+  /// for optional relations.
+  ///
+  /// @param template the entity template whose relation definitions are used
+  /// @param providedRelations the relations to validate and normalize
+  /// @param violations the accumulator for validation violations
+  /// @return normalized relations suitable for persistence
+  public List<Relation> validateAndNormalizeRelationsAgainstTemplate(EntityTemplate template,
+      List<Relation> providedRelations, Violations violations) {
+    return validateRelationsAgainstTemplate(template, providedRelations, violations, false, true);
   }
 
   /// Internal unified relation validation used by both normal and dry-run
@@ -128,8 +156,12 @@ public class RelationValidationService {
   ///
   /// @param skipDatabaseChecks when true, skips target-entity existence checks
   /// in repository-backed validation
-  private void validateRelationsAgainstTemplate(EntityTemplate template,
-      List<Relation> providedRelations, Violations violations, boolean skipDatabaseChecks) {
+  /// @param omitMissingOptionalTargets when true, unresolved targets on optional
+  /// relations are removed instead of reported
+  /// @return relations after optional target normalization
+  private List<Relation> validateRelationsAgainstTemplate(EntityTemplate template,
+      List<Relation> providedRelations, Violations violations, boolean skipDatabaseChecks,
+      boolean omitMissingOptionalTargets) {
 
     List<RelationDefinition> definitions = template.relationsDefinitions() != null
         ? template.relationsDefinitions()
@@ -143,26 +175,117 @@ public class RelationValidationService {
     Map<String, Relation> relationsByName = relations.stream().filter(rel -> rel.name() != null)
         .collect(Collectors.toMap(Relation::name, rel -> rel, (existing, replacement) -> existing));
 
+    Map<String, List<String>> targetIdentifiersByName = new HashMap<>();
+    var options = new RelationValidationOptions(skipDatabaseChecks, omitMissingOptionalTargets);
+    List<Relation> normalizedRelations = normalizeRelations(template.identifier(), relations,
+        definitionsByName, targetIdentifiersByName, violations, options);
+
+    validateRelationDefinitions(template.identifier(), definitions, relationsByName,
+        targetIdentifiersByName, violations);
+    return normalizedRelations;
+  }
+
+  private List<Relation> normalizeRelations(String templateIdentifier, List<Relation> relations,
+      Map<String, RelationDefinition> definitionsByName,
+      Map<String, List<String>> targetIdentifiersByName, Violations violations,
+      RelationValidationOptions options) {
+    List<Relation> normalizedRelations = new ArrayList<>();
+
     for (Relation relation : relations) {
-      if (relation.name() != null && !definitionsByName.containsKey(relation.name())) {
-        violations.add(RELATION_NOT_DEFINED_IN_TEMPLATE, relation.name(), template.identifier());
-      } else if (!skipDatabaseChecks) {
-        validateRelationTargetEntityExistence(relation, violations);
+      RelationNormalization normalization = normalizeRelation(templateIdentifier, relation,
+          definitionsByName, violations, options);
+      if (relation.name() != null && definitionsByName.containsKey(relation.name())) {
+        targetIdentifiersByName.putIfAbsent(relation.name(), normalization.targetIdentifiers());
       }
+      normalization.relation().ifPresent(normalizedRelations::add);
     }
 
+    return normalizedRelations;
+  }
+
+  private RelationNormalization normalizeRelation(String templateIdentifier, Relation relation,
+      Map<String, RelationDefinition> definitionsByName, Violations violations,
+      RelationValidationOptions options) {
+    if (relation.name() != null && !definitionsByName.containsKey(relation.name())) {
+      violations.add(RELATION_NOT_DEFINED_IN_TEMPLATE, relation.name(), templateIdentifier);
+      return new RelationNormalization(Optional.of(relation),
+          extractValidTargetIdentifiers(relation));
+    }
+
+    RelationDefinition definition = definitionsByName.get(relation.name());
+    List<String> targetIdentifiers = extractValidTargetIdentifiers(relation);
+    List<String> normalizedTargetIdentifiers = normalizeTargetIdentifiers(relation, definition,
+        targetIdentifiers, violations, options);
+
+    if (omitsEmptyOptionalRelation(definition, normalizedTargetIdentifiers, options)) {
+      return new RelationNormalization(Optional.empty(), normalizedTargetIdentifiers);
+    }
+
+    Relation normalizedRelation = new Relation(relation.id(), relation.name(),
+        relation.targetTemplateIdentifier(), normalizedTargetIdentifiers);
+    return new RelationNormalization(Optional.of(normalizedRelation), normalizedTargetIdentifiers);
+  }
+
+  private List<String> normalizeTargetIdentifiers(Relation relation, RelationDefinition definition,
+      List<String> targetIdentifiers, Violations violations, RelationValidationOptions options) {
+    if (options.skipDatabaseChecks() || targetIdentifiers.isEmpty()) {
+      return targetIdentifiers;
+    }
+
+    var existingEntities = entityRepository.findByIdentifierIn(targetIdentifiers);
+    Set<String> existingIdentifiers = existingEntities.stream().map(EntitySummary::identifier)
+        .collect(Collectors.toSet());
+
+    validateTargetExistence(relation, definition, targetIdentifiers, existingIdentifiers,
+        violations, options);
+    validateRelationTargetTemplates(relation, existingEntities, violations);
+
+    if (omitsUnresolvedOptionalTargets(definition, options)) {
+      return targetIdentifiers.stream().filter(existingIdentifiers::contains).toList();
+    }
+
+    return targetIdentifiers;
+  }
+
+  private void validateTargetExistence(Relation relation, RelationDefinition definition,
+      List<String> targetIdentifiers, Set<String> existingIdentifiers, Violations violations,
+      RelationValidationOptions options) {
+    for (String identifier : targetIdentifiers) {
+      if (!existingIdentifiers.contains(identifier)
+          && !omitsUnresolvedOptionalTargets(definition, options)) {
+        violations.add(RELATION_TARGET_ENTITY_NOT_FOUND, relation.name(), identifier);
+      }
+    }
+  }
+
+  private void validateRelationDefinitions(String templateIdentifier,
+      List<RelationDefinition> definitions, Map<String, Relation> relationsByName,
+      Map<String, List<String>> targetIdentifiersByName, Violations violations) {
     for (RelationDefinition definition : definitions) {
       Relation relation = relationsByName.get(definition.name());
-      List<String> validTargets = extractValidTargetIdentifiers(relation);
+      List<String> validTargets = relation == null
+          ? List.of()
+          : targetIdentifiersByName.getOrDefault(relation.name(),
+              extractValidTargetIdentifiers(relation));
 
       if (definition.required() && validTargets.isEmpty()) {
-        violations.add(RELATION_REQUIRED_MISSING, definition.name(), template.identifier());
+        violations.add(RELATION_REQUIRED_MISSING, definition.name(), templateIdentifier);
       }
 
       if (relation != null && !definition.toMany() && validTargets.size() > 1) {
-        violations.add(RELATION_TOO_MANY_TARGETS, definition.name(), template.identifier());
+        violations.add(RELATION_TOO_MANY_TARGETS, definition.name(), templateIdentifier);
       }
     }
+  }
+
+  private boolean omitsUnresolvedOptionalTargets(RelationDefinition definition,
+      RelationValidationOptions options) {
+    return options.omitMissingOptionalTargets() && definition != null && !definition.required();
+  }
+
+  private boolean omitsEmptyOptionalRelation(RelationDefinition definition,
+      List<String> targetIdentifiers, RelationValidationOptions options) {
+    return omitsUnresolvedOptionalTargets(definition, options) && targetIdentifiers.isEmpty();
   }
 
   /// Validates entity relations for dry-run executions.
@@ -181,35 +304,7 @@ public class RelationValidationService {
   /// the process
   public void validateRelationsAgainstTemplateForDryRun(EntityTemplate template,
       List<Relation> providedRelations, Violations violations) {
-    validateRelationsAgainstTemplate(template, providedRelations, violations, true);
-  }
-
-  /// Validates that all target entity identifiers in the relation actually exist
-  /// in the database and match the expected target template.
-  ///
-  /// @param relation the relation whose target entity identifiers are to be
-  /// validated
-  /// @param violations the accumulator for any validation violations found during
-  /// the process
-  private void validateRelationTargetEntityExistence(Relation relation, Violations violations) {
-    List<String> targetIdentifiers = extractValidTargetIdentifiers(relation);
-
-    if (targetIdentifiers.isEmpty()) {
-      return;
-    }
-
-    var existingEntities = entityRepository.findByIdentifierIn(targetIdentifiers);
-    Set<String> existingIdentifiers = existingEntities.stream().map(EntitySummary::identifier)
-        .collect(Collectors.toSet());
-
-    for (String identifier : targetIdentifiers) {
-      if (!existingIdentifiers.contains(identifier)) {
-        violations.add(RELATION_TARGET_ENTITY_NOT_FOUND, relation.name(), identifier);
-      }
-    }
-
-    // Validate that target entities match the expected target template
-    validateRelationTargetTemplates(relation, existingEntities, violations);
+    validateRelationsAgainstTemplate(template, providedRelations, violations, true, false);
   }
 
   /// Validates that all target entities have the expected target template

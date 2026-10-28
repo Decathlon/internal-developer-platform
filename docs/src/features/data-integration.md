@@ -213,6 +213,10 @@ sequenceDiagram
     Route-->>Client: 201 Created
 ```
 
+> [!TIP]
+> If a `filter` expression returns `false`, the payload is silently
+> skipped for that mapping. Other mappings on the same connector continue to run.
+
 Each step in the pipeline is isolated in its own Camel sub-route:
 
 | Step | Route ID | Responsibility |
@@ -223,8 +227,8 @@ Each step in the pipeline is isolated in its own Camel sub-route:
 | **C** | `ingest-payload` | Apply each `EntityDynamicMapping` and persist entities |
 
 > [!TIP]
-> If a `filter` expression returns `false`, the payload is silently
-> skipped for that mapping. Other mappings on the same connector continue to run.
+> Webhook ingestion use the same relation validation as direct entity API writes. When an optional relation includes an unresolved target identifier, IDP-Core omits that target from persistence. If a target list includes both existing and unresolved entities, IDP-Core keeps the existing targets and omits the unresolved ones. If no targets resolve, IDP-Core omits the optional relation.
+> Required relations fail when any target is missing or unresolved, and existing targets must match the configured target template. The ingestion pipeline validates relation cardinality after removing unresolved optional targets. A relation validation failure returns `422 Unprocessable Content` from the webhook endpoint.
 
 ---
 

@@ -112,6 +112,14 @@ Each entity can link to **multiple** target entities.
 
 ---
 
+## Unresolved identifiers for relations
+
+The platform validates relation targets on every entity create, update, and patch, whether you use the REST API or webhook ingestion. For an optional relation, it omits target identifiers that do not resolve to an entity. If a target list contains both existing and unresolved entities, the platform keeps the existing targets; if none resolve, it omits the whole relation from persistence.
+
+Required relations fail validation when any target is missing or unresolved. Existing targets must also belong to the configured target template. The platform checks the existing `required` and `to_many` cardinality constraints after removing unresolved optional targets. REST entity writes return `400 Bad Request` for validation failures, while webhook ingestion returns `422 Unprocessable Content`.
+
+---
+
 ## Example: Complete Data Model
 
 Here's a complete example with multiple templates and relations:

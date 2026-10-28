@@ -5,6 +5,7 @@ import static com.decathlon.idp_core.domain.constant.ValidationMessages.RELATION
 import static com.decathlon.idp_core.domain.constant.ValidationMessages.RELATION_TARGET_ENTITY_NOT_FOUND;
 import static com.decathlon.idp_core.domain.constant.ValidationMessages.RELATION_TARGET_TEMPLATE_MISMATCH;
 import static com.decathlon.idp_core.domain.constant.ValidationMessages.RELATION_TOO_MANY_TARGETS;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
@@ -149,6 +150,97 @@ class RelationValidationServiceTest {
       verifyNoInteractions(entityRepository);
       verifyNoInteractions(violations);
     }
+
+    @Test
+    @DisplayName("Should omit unresolved targets from optional relations")
+    void shouldOmitUnresolvedOptionalTargets() {
+      when(entityRepository.findByIdentifierIn(any())).thenReturn(List.of());
+      var definition = definition("depends-on", "service", false, true);
+      var template = template("system-template", List.of(definition));
+      var relation = relation("depends-on", "service", List.of("missing-service"));
+      var violations = mock(Violations.class);
+
+      var normalized = service.validateAndNormalizeRelationsAgainstTemplate(template,
+          List.of(relation), violations);
+
+      assertEquals(List.of(), normalized);
+      verifyNoInteractions(violations);
+    }
+
+    @Test
+    @DisplayName("Should preserve existing targets and omit unresolved targets")
+    void shouldPreserveResolvedOptionalTargets() {
+      when(entityRepository.findByIdentifierIn(any()))
+          .thenReturn(List.of(entitySummary("service-a", "service")));
+      var definition = definition("depends-on", "service", false, true);
+      var template = template("system-template", List.of(definition));
+      var relation = relation("depends-on", "service", List.of("service-a", "missing-service"));
+      var violations = mock(Violations.class);
+
+      var normalized = service.validateAndNormalizeRelationsAgainstTemplate(template,
+          List.of(relation), violations);
+
+      assertEquals(List.of("service-a"), normalized.getFirst().targetEntityIdentifiers());
+      verifyNoInteractions(violations);
+    }
+
+    @Test
+    @DisplayName("Should omit unresolved optional targets before checking single-target cardinality")
+    void shouldCheckCardinalityAfterOmittingUnresolvedOptionalTargets() {
+      when(entityRepository.findByIdentifierIn(any()))
+          .thenReturn(List.of(entitySummary("team-a", "team")));
+      var definition = definition("owned-by", "team", false, false);
+      var template = template("system-template", List.of(definition));
+      var relation = relation("owned-by", "team", List.of("team-a", "missing-team"));
+      var violations = mock(Violations.class);
+
+      var normalized = service.validateAndNormalizeRelationsAgainstTemplate(template,
+          List.of(relation), violations);
+
+      assertEquals(List.of("team-a"), normalized.getFirst().targetEntityIdentifiers());
+      verifyNoInteractions(violations);
+    }
+
+    @Test
+    @DisplayName("Should report unresolved targets for required relations")
+    void shouldRejectUnresolvedRequiredTargets() {
+      when(entityRepository.findByIdentifierIn(any())).thenReturn(List.of());
+      var definition = definition("owned-by", "team", true, false);
+      var template = template("system-template", List.of(definition));
+      var relation = relation("owned-by", "team", List.of("missing-team"));
+      var violations = mock(Violations.class);
+
+      service.validateAndNormalizeRelationsAgainstTemplate(template, List.of(relation), violations);
+
+      verify(violations).add(RELATION_TARGET_ENTITY_NOT_FOUND, "owned-by", "missing-team");
+    }
+
+    @Test
+    @DisplayName("Should reject a required relation that has no targets")
+    void shouldRejectMissingRequiredRelation() {
+      var definition = definition("owned-by", "team", true, false);
+      var template = template("system-template", List.of(definition));
+      var violations = mock(Violations.class);
+
+      service.validateAndNormalizeRelationsAgainstTemplate(template, List.of(), violations);
+
+      verify(violations).add(RELATION_REQUIRED_MISSING, "owned-by", "system-template");
+    }
+
+    @Test
+    @DisplayName("Should reject unresolved targets in a partially resolved required relation")
+    void shouldRejectPartiallyResolvedRequiredTargets() {
+      when(entityRepository.findByIdentifierIn(any()))
+          .thenReturn(List.of(entitySummary("team-a", "team")));
+      var definition = definition("owned-by", "team", true, true);
+      var template = template("system-template", List.of(definition));
+      var relation = relation("owned-by", "team", List.of("team-a", "missing-team"));
+      var violations = mock(Violations.class);
+
+      service.validateAndNormalizeRelationsAgainstTemplate(template, List.of(relation), violations);
+
+      verify(violations).add(RELATION_TARGET_ENTITY_NOT_FOUND, "owned-by", "missing-team");
+    }
   }
 
   @Nested
@@ -270,6 +362,22 @@ class RelationValidationServiceTest {
       verify(violations).add(RELATION_TARGET_TEMPLATE_MISMATCH, "owned-by", "team", "team-a",
           "group");
       verifyNoMoreInteractions(violations);
+    }
+
+    @Test
+    @DisplayName("Should still report template mismatch for resolved optional targets")
+    void shouldRejectOptionalTargetWithIncompatibleTemplate() {
+      when(entityRepository.findByIdentifierIn(any()))
+          .thenReturn(List.of(entitySummary("team-a", "group")));
+      var definition = definition("owned-by", "team", false, false);
+      var template = template("system-template", List.of(definition));
+      var relation = relation("owned-by", "team", List.of("team-a"));
+      var violations = mock(Violations.class);
+
+      service.validateAndNormalizeRelationsAgainstTemplate(template, List.of(relation), violations);
+
+      verify(violations).add(RELATION_TARGET_TEMPLATE_MISMATCH, "owned-by", "team", "team-a",
+          "group");
     }
 
     @Test

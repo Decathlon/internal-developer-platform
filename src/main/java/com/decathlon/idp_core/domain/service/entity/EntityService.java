@@ -162,9 +162,9 @@ public class EntityService {
     // Enrich relations with target template identifiers from template definition
     Entity enrichedEntity = enrichRelationsWithTargetTemplates(entity, template);
 
-    entityValidationService.validateForCreation(enrichedEntity, template);
+    Entity validatedEntity = entityValidationService.validateForCreation(enrichedEntity, template);
 
-    return entityRepository.save(enrichedEntity);
+    return entityRepository.save(validatedEntity);
   }
 
   /// Updates an existing entity identified by template and entity identifiers.
@@ -194,11 +194,11 @@ public class EntityService {
     // Enrich relations with target template identifiers from template definition
     Entity enrichedEntity = enrichRelationsWithTargetTemplates(entityToSave, template);
 
-    entityValidationService.validateForUpdate(enrichedEntity, template);
+    Entity validatedEntity = entityValidationService.validateForUpdate(enrichedEntity, template);
 
     // Only save if there are actual changes to avoid unnecessary audit records
-    if (hasEntityChanged(existingEntity, enrichedEntity)) {
-      return entityRepository.save(enrichedEntity);
+    if (hasEntityChanged(existingEntity, validatedEntity)) {
+      return entityRepository.save(validatedEntity);
     }
 
     return existingEntity;
@@ -247,10 +247,10 @@ public class EntityService {
         new ArrayList<>(mergedProperties.values()), new ArrayList<>(mergedRelations.values()));
 
     Entity updatedEntity = enrichRelationsWithTargetTemplates(entityToSave, template);
-    entityValidationService.validateForUpdate(updatedEntity, template);
+    Entity validatedEntity = entityValidationService.validateForUpdate(updatedEntity, template);
 
-    if (hasEntityChanged(existingEntity, updatedEntity)) {
-      return entityRepository.save(updatedEntity);
+    if (hasEntityChanged(existingEntity, validatedEntity)) {
+      return entityRepository.save(validatedEntity);
     }
 
     return existingEntity;
