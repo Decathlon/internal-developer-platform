@@ -41,15 +41,31 @@ app:
   # ${app.idp-core-prefix-url}/login/oauth2/code/github in the OAuth app settings.
   idp-core-prefix-url: http://localhost:8084
   security:
+    principal-provisioning:
+      mode: ${IDP_PRINCIPAL_PROVISIONING_MODE:LINK_ONLY}
+    authorization:
+      mode: GLOBAL
+      # Comma-separated immutable principal identifiers for emergency access, even before JIT provisioning.
+      global-principal-identifiers: ${IDP_SUPER_ADMIN_IDENTIFIER:},${IDP_PLATFORM_ADMIN_IDENTIFIER:}
+      # Optional human-access gate; when set, the named principal property must be true.
+      required-principal-property: ${IDP_REQUIRED_PRINCIPAL_PROPERTY:}
     authentication:
       jwt:
-        enabled: false
+        # Enable to take in custom JWT tokens for authentication in local development
+        enabled: true
       oauth2-login:
         enabled: true
       mock:
         enabled: false
+      principal-extraction:
+        human-indicator-claims:
+          - ${IDP_AUTH_JWT_HUMAN_INDICATOR_CLAIM:email}
+        human:
+          id-claim: ${IDP_AUTH_JWT_HUMAN_ID_CLAIM:email}
+        machine:
+          id-claim: ${IDP_AUTH_JWT_MACHINE_ID_CLAIM:client_id}
+          id-prefix: ${IDP_AUTH_JWT_MACHINE_ID_PREFIX:}
       user-claim-mappings:
-        sub: id
         preferred_username: login
         name: name
         email: email
@@ -57,18 +73,14 @@ logging:
   level:
     # Application log level, defaults to INFO. Override per environment via LOG_LEVEL env var.
     com.decathlon: ${LOG_LEVEL:DEBUG}
+    com.decathlon.idp_core.infrastructure.adapters.api.auth: DEBUG
     # Suppresses noisy Spring context startup logs at WARN level.
-    org.springframework.context.support: WARN
+    org.springframework.context.support: DEBUG
     # Suppresses a specific repetitive bean registration delegate log line.
     org.springframework.context.support.PostProcessorRegistrationDelegate: ERROR
     org.hibernate.SQL: INFO
     org.hibernate.stat: WARN
     org.hibernate.type.descriptor.sql.BasicBinder: TRACE
-
-camel:
-  component:
-    platform-http:
-      engine: "servlet"
 
 management:
   tracing:

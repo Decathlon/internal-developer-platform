@@ -86,7 +86,7 @@ again at runtime.
 | `STATIC_TOKEN`   | `header_name`, `secret_alias`                       | Compares a header value with a secret loaded from the environment                                |
 | `BASIC_AUTH`     | `username`, `secret_alias`                          | Compares the `Authorization: Basic ...` header with the configured username and secret           |
 | `JWT_BEARER`     | `jwks_uri`, `client_id_field`, `client_id_values`   | Validates the bearer token against a JWKS endpoint, then checks caller identity claim allow-list |
-| `NONE`           | none (`config` is optional)                         | Skips authentication                                                                             |
+| `NONE`           | none (`config` is optional)                         | Skips authentication. Disabled unless `IDP_WEBHOOK_SECURITY_ALLOW_NONE=true`                     |
 
 > [!IMPORTANT]
 > Configuration keys accept `snake_case` and `camelCase` variants where supported. HMAC prefix uses the `prefix` key and has a default set to `sha256=`.
@@ -156,6 +156,8 @@ value in the connector configuration.
     ```
 
     For `NONE`, you can omit `config`, set it to `null`, or pass `{}`. Any non-empty `config` is rejected.
+
+    `NONE` is disabled by default. Set the `IDP_WEBHOOK_SECURITY_ALLOW_NONE` environment variable to `true` to allow creating or updating connectors with `NONE`. When the flag is off, a request with `NONE` or with the `security` section omitted is rejected with `400 Bad Request`. Connectors that already use `NONE` continue to ingest events.
 
 ### JWT_BEARER Configuration Reference
 

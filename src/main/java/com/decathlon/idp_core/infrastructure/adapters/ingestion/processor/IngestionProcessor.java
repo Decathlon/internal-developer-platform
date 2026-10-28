@@ -3,6 +3,7 @@ package com.decathlon.idp_core.infrastructure.adapters.ingestion.processor;
 import static com.decathlon.idp_core.infrastructure.adapters.ingestion.configuration.IngestionObservabilityConstants.*;
 
 import java.util.List;
+import java.util.Set;
 
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Component;
@@ -12,6 +13,7 @@ import com.decathlon.idp_core.domain.exception.entity.EntityNotFoundException;
 import com.decathlon.idp_core.domain.exception.entity.EntityValidationException;
 import com.decathlon.idp_core.domain.model.entity.Entity;
 import com.decathlon.idp_core.domain.model.entity.EntityPatch;
+import com.decathlon.idp_core.domain.model.entity.Property;
 import com.decathlon.idp_core.domain.model.entity_mapping.EntityDynamicMapping;
 import com.decathlon.idp_core.domain.model.inbound_connectors.webhook.WebhookConnector;
 import com.decathlon.idp_core.domain.port.MappingEnginePort;

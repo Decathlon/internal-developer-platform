@@ -35,8 +35,8 @@ import lombok.extern.slf4j.Slf4j;
 /// for all CRUD operations on inbound webhook connectors.
 @DisplayName("InboundWebhookManagementController Integration Tests")
 @TestClassOrder(ClassOrderer.OrderAnnotation.class)
-@Sql(scripts = {"/db/test/R__1_Insert_test_data.sql",
-    "/db/test/R__4_insert_webhook_test_data.sql"}, executionPhase = Sql.ExecutionPhase.BEFORE_TEST_METHOD)
+@Sql(scripts = {"/db/test/R__1_Insert_test_data.sql", "/db/test/R__4_insert_webhook_test_data.sql",
+    "/db/test/R__6_insert_principal_user_for_test.sql"}, executionPhase = Sql.ExecutionPhase.BEFORE_TEST_METHOD)
 @Slf4j
 class InboundWebhookManagementControllerTest extends AbstractIntegrationTest {
 
@@ -168,6 +168,30 @@ class InboundWebhookManagementControllerTest extends AbstractIntegrationTest {
           .andExpect(jsonPath("$.content[*].identifier", containsInAnyOrder("github-dora-connector",
               "github-dora-connector-success", "public-connector", "token-connector")));
     }
+
+    @Test
+    @WithMockUser
+    @DisplayName("Should return 400 when page size exceeds 500")
+    void getWebhooks_400_size_above_500() throws Exception {
+      mockMvc.perform(get(WEBHOOK_PATH).param("size", "501").accept(APPLICATION_JSON))
+          .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    @WithMockUser
+    @DisplayName("Should return 400 when page size is zero")
+    void getWebhooks_400_size_zero() throws Exception {
+      mockMvc.perform(get(WEBHOOK_PATH).param("size", "0").accept(APPLICATION_JSON))
+          .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    @WithMockUser
+    @DisplayName("Should return 400 when page size is not an integer")
+    void getWebhooks_400_size_not_integer() throws Exception {
+      mockMvc.perform(get(WEBHOOK_PATH).param("size", "abc").accept(APPLICATION_JSON))
+          .andExpect(status().isBadRequest());
+    }
   }
 
   @Nested
@@ -183,6 +207,17 @@ class InboundWebhookManagementControllerTest extends AbstractIntegrationTest {
               .accept(APPLICATION_JSON).with(csrf())
               .content(getJsonTestFileContent(JSON_PATH + "postWebhook_201.json")))
           .andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    @WithMockUser(username = "standard-human-webhook-creator")
+    @DisplayName("Should forbid standard humans from creating webhook configurations")
+    void postWebhook_403_for_standard_human() throws Exception {
+      mockMvc
+          .perform(MockMvcRequestBuilders.post(WEBHOOK_PATH).contentType(APPLICATION_JSON)
+              .accept(APPLICATION_JSON).with(csrf())
+              .content(getJsonTestFileContent(JSON_PATH + "postWebhook_201.json")))
+          .andExpect(status().isForbidden());
     }
 
     @Test

@@ -22,12 +22,11 @@ description: Global exception handling strategy and error response formats for I
 
 ## Error Response Format
 
-At API level, always follow the same error response structure:
+At API level, always follow the same error response structure, including errors written directly by security filters:
 
 ```json
 {
   "error": "NOT_FOUND",
-  "error_description": "Template with ID 'invalid-id' not found",
-  "timestamp": "2025-11-28T10:30:00Z"
+  "error_description": "Template with ID 'invalid-id' not found"
 }
 ```
