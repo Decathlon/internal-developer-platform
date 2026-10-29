@@ -13,10 +13,10 @@ import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicReference;
 
-import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.api.extension.RegisterExtension;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
@@ -25,41 +25,29 @@ import com.decathlon.idp_core.infrastructure.adapters.persistence.model.entity.E
 import com.decathlon.idp_core.infrastructure.adapters.persistence.repository.JpaEntityRepository;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
-import io.opentelemetry.api.OpenTelemetry;
 import io.opentelemetry.api.trace.Span;
 import io.opentelemetry.api.trace.SpanContext;
 import io.opentelemetry.api.trace.StatusCode;
 import io.opentelemetry.context.Scope;
-import io.opentelemetry.sdk.OpenTelemetrySdk;
-import io.opentelemetry.sdk.testing.exporter.InMemorySpanExporter;
-import io.opentelemetry.sdk.trace.SdkTracerProvider;
+import io.opentelemetry.sdk.testing.junit5.OpenTelemetryExtension;
 import io.opentelemetry.sdk.trace.data.SpanData;
-import io.opentelemetry.sdk.trace.export.SimpleSpanProcessor;
 
 @ExtendWith(MockitoExtension.class)
 class PostgresEntityGraphAdapterTracingTest {
 
+  @RegisterExtension
+  private static final OpenTelemetryExtension OPEN_TELEMETRY_EXTENSION = OpenTelemetryExtension
+      .create();
+
   @Mock
   private JpaEntityRepository jpaEntityRepository;
 
-  private InMemorySpanExporter spanExporter;
-  private SdkTracerProvider tracerProvider;
   private PostgresEntityGraphAdapter adapter;
 
   @BeforeEach
   void setUp() {
-    spanExporter = InMemorySpanExporter.create();
-    tracerProvider = SdkTracerProvider.builder()
-        .addSpanProcessor(SimpleSpanProcessor.create(spanExporter)).build();
-    OpenTelemetry openTelemetry = OpenTelemetrySdk.builder().setTracerProvider(tracerProvider)
-        .build();
     adapter = new PostgresEntityGraphAdapter(jpaEntityRepository, new ObjectMapper(),
-        openTelemetry);
-  }
-
-  @AfterEach
-  void tearDown() {
-    tracerProvider.close();
+        OPEN_TELEMETRY_EXTENSION.getOpenTelemetry());
   }
 
   @Test
@@ -79,7 +67,8 @@ class PostgresEntityGraphAdapterTracingTest {
           return List.of(projection);
         });
 
-    Span parentSpan = tracerProvider.get("test").spanBuilder("test.request").startSpan();
+    Span parentSpan = OPEN_TELEMETRY_EXTENSION.getOpenTelemetry().getTracer("test")
+        .spanBuilder("test.request").startSpan();
     SpanContext parentContext = parentSpan.getSpanContext();
     try (Scope scope = parentSpan.makeCurrent()) {
       adapter.findEntityGraph(List.of(entityId), 2, true, false,
@@ -88,7 +77,7 @@ class PostgresEntityGraphAdapterTracingTest {
       parentSpan.end();
     }
 
-    List<SpanData> spans = spanExporter.getFinishedSpanItems();
+    List<SpanData> spans = OPEN_TELEMETRY_EXTENSION.getSpans();
     assertThat(spans).extracting(SpanData::getName).containsExactlyInAnyOrder("test.request",
         "entity_graph.database.find_entity_ids", "entity_graph.database.find_graph_data",
         "entity_graph.projection_mapping");
@@ -108,7 +97,7 @@ class PostgresEntityGraphAdapterTracingTest {
     assertThatThrownBy(() -> adapter.findEntityGraph(List.of(UUID.randomUUID()), 1, true, false,
         EntityGraphTraversalMode.OUTBOUND_ONLY)).isSameAs(databaseFailure);
 
-    SpanData failedSpan = spanExporter.getFinishedSpanItems().getFirst();
+    SpanData failedSpan = OPEN_TELEMETRY_EXTENSION.getSpans().getFirst();
     assertThat(failedSpan.getName()).isEqualTo("entity_graph.database.find_entity_ids");
     assertThat(failedSpan.getStatus().getStatusCode()).isEqualTo(StatusCode.ERROR);
     assertThat(failedSpan.getEvents())
