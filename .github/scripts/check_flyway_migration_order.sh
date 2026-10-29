@@ -58,7 +58,7 @@ MODIFIED_FILES=$(git diff --name-only --diff-filter=M "$BASE_REF" HEAD -- "$MIGR
 BASE_MAX_FILE=""
 BASE_MAX_KEY="0"
 while IFS= read -r file; do
-    [ -z "$file" ] && continue
+    [[ -z "$file" ]] && continue
     if [[ ! $(basename "$file") =~ $NAME_PATTERN ]]; then
         continue
     fi
@@ -69,13 +69,13 @@ while IFS= read -r file; do
     fi
 done <<< "$BASE_FILES"
 
-if [ -n "$BASE_MAX_FILE" ]; then
+if [[ -n "$BASE_MAX_FILE" ]]; then
     printf -- "Highest migration on %s: %s (version %s)\n" "$BASE_REF" "$(basename "$BASE_MAX_FILE")" "$(version_label "$BASE_MAX_FILE")"
 else
     printf -- "No migration found on %s\n" "$BASE_REF"
 fi
 
-if [ -z "$ADDED_FILES" ] && [ -z "$DELETED_FILES" ] && [ -z "$MODIFIED_FILES" ]; then
+if [[ -z "$ADDED_FILES" ]] && [[ -z "$DELETED_FILES" ]] && [[ -z "$MODIFIED_FILES" ]]; then
     printf -- "No migration change detected in this pull request.\n"
     : > "$REPORT_FILE"
     exit 0
@@ -83,13 +83,13 @@ fi
 
 # Rule 1: an already merged migration must never be modified or deleted
 while IFS= read -r file; do
-    [ -z "$file" ] && continue
+    [[ -z "$file" ]] && continue
     ERRORS+=("\`$file\` is modified. A migration already merged on \`$BASE_REF\` has been applied on running environments: its checksum is frozen. Create a new migration instead.")
     EXIT_CODE=1
 done <<< "$MODIFIED_FILES"
 
 while IFS= read -r file; do
-    [ -z "$file" ] && continue
+    [[ -z "$file" ]] && continue
     ERRORS+=("\`$file\` is deleted or renamed. A migration already merged on \`$BASE_REF\` must be kept as is. Create a new migration instead.")
     EXIT_CODE=1
 done <<< "$DELETED_FILES"
@@ -97,7 +97,7 @@ done <<< "$DELETED_FILES"
 # Rule 2: added migrations must be well named and strictly above the highest merged version
 SEEN_KEYS=()
 while IFS= read -r file; do
-    [ -z "$file" ] && continue
+    [[ -z "$file" ]] && continue
     name=$(basename "$file")
 
     if [[ ! $name =~ $NAME_PATTERN ]]; then
@@ -109,14 +109,14 @@ while IFS= read -r file; do
     key=$(version_key "$file")
     label=$(version_label "$file")
 
-    if [ -n "$BASE_MAX_FILE" ] && awk -v a="$key" -v b="$BASE_MAX_KEY" 'BEGIN { exit !(a <= b) }'; then
+    if [[ -n "$BASE_MAX_FILE" ]] && awk -v a="$key" -v b="$BASE_MAX_KEY" 'BEGIN { exit !(a <= b) }'; then
         ERRORS+=("\`$name\` (version \`$label\`) is lower than or equal to \`$(basename "$BASE_MAX_FILE")\` (version \`$(version_label "$BASE_MAX_FILE")\`) already merged on \`$BASE_REF\`. Renumber it above \`$(version_label "$BASE_MAX_FILE")\` so Flyway applies it on every environment.")
         EXIT_CODE=1
         continue
     fi
 
     for seen in ${SEEN_KEYS[@]+"${SEEN_KEYS[@]}"}; do
-        if [ "${seen%%:*}" = "$key" ]; then
+        if [[ "${seen%%:*}" = "$key" ]]; then
             ERRORS+=("\`$name\` uses version \`$label\` already used by \`${seen#*:}\` in this pull request. Flyway versions must be unique.")
             EXIT_CODE=1
         fi
@@ -128,11 +128,11 @@ done <<< "$ADDED_FILES"
 
 # Build the markdown report
 {
-    if [ "$EXIT_CODE" -eq 0 ]; then
+    if [[ "$EXIT_CODE" -eq 0 ]]; then
         printf -- "No Flyway migration ordering issue detected.\n\n"
         printf -- "| Added migration | Version |\n|---|---|\n"
         while IFS= read -r file; do
-            [ -z "$file" ] && continue
+            [[ -z "$file" ]] && continue
             printf -- "| \`%s\` | \`%s\` |\n" "$(basename "$file")" "$(version_label "$file")"
         done <<< "$ADDED_FILES"
     else
@@ -141,7 +141,7 @@ done <<< "$ADDED_FILES"
             printf -- "- %s\n" "$error"
         done
         printf -- "\nHighest migration currently on \`%s\`: " "$BASE_REF"
-        if [ -n "$BASE_MAX_FILE" ]; then
+        if [[ -n "$BASE_MAX_FILE" ]]; then
             printf -- "\`%s\`\n" "$(basename "$BASE_MAX_FILE")"
         else
             printf -- "none\n"
@@ -151,7 +151,7 @@ done <<< "$ADDED_FILES"
 
 cat "$REPORT_FILE"
 
-if [ "$EXIT_CODE" -ne 0 ]; then
+if [[ "$EXIT_CODE" -ne 0 ]]; then
     for error in "${ERRORS[@]}"; do
         printf -- "::error:: %s\n" "$(printf -- '%s' "$error" | tr -d '`')"
     done

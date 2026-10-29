@@ -13,6 +13,9 @@ An Entity Template defines:
 - **Properties** - Data fields with types and validation rules
 - **Relations** - Connections to other entity templates
 
+The `principal` template is protected because its entities determine access to IDP-Core. Only catalog administrators can
+create it.
+
 ```mermaid
 classDiagram
     class EntityTemplate {

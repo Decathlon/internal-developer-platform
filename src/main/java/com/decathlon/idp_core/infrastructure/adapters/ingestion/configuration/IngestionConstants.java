@@ -1,12 +1,9 @@
 package com.decathlon.idp_core.infrastructure.adapters.ingestion.configuration;
 
-/**
- * Shared constants for the ingestion infrastructure adapter.
- *
- * <p>
- * Centralizing these values avoids duplicated literals across route
- * configuration, processors, and exception mapping.
- */
+/// Shared constants for the ingestion infrastructure adapter.
+///
+/// Centralizing these values avoids duplicated literals across route
+/// configuration, processors, and exception mapping.
 public final class IngestionConstants {
 
   public static final String CONNECTOR_IDENTIFIER_PROPERTY = "connectorIdentifier";

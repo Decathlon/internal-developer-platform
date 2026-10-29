@@ -35,27 +35,11 @@ import lombok.RequiredArgsConstructor;
 /// IdP-specific claim names and this extractor's internal logic. Configure `app.security.authentication.user-claim-mappings`
 /// in `application.yml` to match your IdP's token structure.
 ///
-/// **Service Account Detection:**
-/// Detecting M2M tokens reliably is challenging because different IdPs signal M2M differently:
-/// - OAuth2 standard: `grant_type=client_credentials` (non-standard in JWT claims)
-/// - Auth0 custom: May include `gty` or explicit `service_name` claim
-/// - Keycloak custom: May use different claim structures
-///
-/// This extractor supports two modes configured via `app.security.authentication.service-account-detection.mode`:
-/// 1. **Strict Mode (Recommended):** Checks for a single, definitive claim (for example, `token_type=m2m`)
-///    - Prevents false positives where human users are misclassified as service accounts
-///    - Requires IdP or API gateway to inject a clear M2M indicator
-/// 2. **Legacy Mode:** Falls back to loose OR logic checking multiple claims
-///    - Maintains backwards compatibility with existing deployments
-///    - Prone to false positives (for example, human user with `client_id` present)
-///
-/// **Recommendation for production deployments:**
-/// - Configure a **definitive claim** in your IdP or API gateway that unambiguously identifies M2M tokens
-/// - Switch to **strict mode** to prevent security-critical misclassifications
-/// - Document the expected claim structure for your IdP in the configuration
+/// JWT kind and identifiers use the provider-specific
+/// `app.security.authentication.principal-extraction` configuration. OAuth2/OIDC
+/// user extraction continues to use `AuthenticationProperties`.
 ///
 /// @see AuthenticationProperties
-/// @see AuthenticationProperties.ServiceAccountDetection
 @Service
 @RequiredArgsConstructor
 public class PrincipalExtractor {

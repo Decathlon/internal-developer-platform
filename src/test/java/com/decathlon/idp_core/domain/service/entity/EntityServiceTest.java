@@ -33,7 +33,6 @@ import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
 import org.springframework.test.util.ReflectionTestUtils;
 
-import com.decathlon.idp_core.domain.constant.SearchConstraints;
 import com.decathlon.idp_core.domain.constant.ValidationMessages;
 import com.decathlon.idp_core.domain.exception.entity.EntityAlreadyExistsException;
 import com.decathlon.idp_core.domain.exception.entity.EntityDeletionBlockedException;
@@ -450,7 +449,7 @@ class EntityServiceTest {
   private void assertSearchThrows(PaginationCriteria paginationCriteria) {
     var filter = emptyFilter();
     assertThrows(InvalidSearchQueryException.class,
-        () -> entityService.searchEntities(filter, null, paginationCriteria));
+        () -> entityService.searchEntities(filter, null, paginationCriteria, 500));
   }
 
   private Property property(String name, String value) {
@@ -497,7 +496,8 @@ class EntityServiceTest {
     when(entityRepository.search(filter, "api", new PaginationCriteria(0, 20, null)))
         .thenReturn(paginatedResult);
 
-    var result = entityService.searchEntities(filter, "api", new PaginationCriteria(0, 20, null));
+    var result = entityService.searchEntities(filter, "api", new PaginationCriteria(0, 20, null),
+        500);
 
     assertEquals(paginatedResult, result);
     verify(searchFilterValidationService).validate(filter, "api");
@@ -514,27 +514,9 @@ class EntityServiceTest {
             .thenReturn(paginatedResult);
 
     var result = entityService.searchEntities(filter, null,
-        new PaginationCriteria(0, 10, "identifier:asc"));
+        new PaginationCriteria(0, 10, "identifier:asc"), 500);
 
     assertEquals(paginatedResult, result);
-  }
-
-  @Test
-  @DisplayName("Should reject page size exceeding maximum")
-  void shouldRejectPageSizeExceedingMaximum() {
-    assertSearchThrows(new PaginationCriteria(0, SearchConstraints.MAX_PAGE_SIZE + 1, null));
-  }
-
-  @Test
-  @DisplayName("Should reject negative page index")
-  void shouldRejectNegativePageIndex() {
-    assertSearchThrows(new PaginationCriteria(-1, 20, null));
-  }
-
-  @Test
-  @DisplayName("Should reject non-positive page size")
-  void shouldRejectNonPositivePageSize() {
-    assertSearchThrows(new PaginationCriteria(0, 0, null));
   }
 
   @Test

@@ -13,6 +13,7 @@ import com.decathlon.idp_core.domain.model.entity.Entity;
 import com.decathlon.idp_core.domain.model.entity.Property;
 import com.decathlon.idp_core.domain.model.entity.Relation;
 import com.decathlon.idp_core.domain.model.principal.PrincipalInfo;
+import com.decathlon.idp_core.domain.model.principal.PrincipalKind;
 import com.decathlon.idp_core.domain.port.EntityRepositoryPort;
 
 import lombok.RequiredArgsConstructor;
@@ -36,6 +37,8 @@ import lombok.RequiredArgsConstructor;
 public class PrincipalProvisioningService {
 
   private static final String PRINCIPAL_TEMPLATE_IDENTIFIER = "principal";
+  private static final String KIND_PROPERTY = "kind";
+  private static final String IS_ADMIN_PROPERTY = "is_admin";
 
   private final EntityRepositoryPort entityRepository;
 
@@ -57,6 +60,20 @@ public class PrincipalProvisioningService {
   /// @return the provisioned Principal entity
   @Transactional
   public Entity provisionPrincipal(PrincipalInfo principalInfo) {
+    return provisionPrincipal(principalInfo, false);
+  }
+
+  /// Provisions a globally configured administrator principal.
+  ///
+  /// @param principalInfo extracted authentication information for an
+  /// allow-listed principal
+  /// @return the provisioned Principal entity
+  @Transactional
+  public Entity provisionGlobalAdministrator(PrincipalInfo principalInfo) {
+    return provisionPrincipal(principalInfo, true);
+  }
+
+  private Entity provisionPrincipal(PrincipalInfo principalInfo, boolean isAdmin) {
     Optional<Entity> existingPrincipal = entityRepository.findByTemplateIdentifierAndIdentifier(
         PRINCIPAL_TEMPLATE_IDENTIFIER, principalInfo.identifier());
 
@@ -64,7 +81,7 @@ public class PrincipalProvisioningService {
       return existingPrincipal.get();
     }
 
-    return createNewPrincipal(principalInfo);
+    return createNewPrincipal(principalInfo, isAdmin);
   }
 
   /// Retrieves a Principal entity by its identifier.
@@ -74,9 +91,28 @@ public class PrincipalProvisioningService {
   /// @param identifier unique principal identifier
   /// @return optional containing the principal entity
   @Transactional(readOnly = true)
-  public Optional<Entity> getPrincipal(String identifier) {
+  public Optional<Entity> findPrincipal(String identifier) {
     return entityRepository.findByTemplateIdentifierAndIdentifier(PRINCIPAL_TEMPLATE_IDENTIFIER,
         identifier);
+  }
+
+  /// Retrieves a principal only when its stored kind matches the authenticated
+  /// actor.
+  ///
+  /// @param principalInfo authenticated principal identity
+  /// @return matching principal entity, or empty when missing or of a different
+  /// kind
+  @Transactional(readOnly = true)
+  public Optional<Entity> findPrincipalWithSameKind(PrincipalInfo principalInfo) {
+    return entityRepository
+        .findByTemplateIdentifierAndIdentifier(PRINCIPAL_TEMPLATE_IDENTIFIER,
+            principalInfo.identifier())
+        .filter(entity -> hasMatchingKind(entity, principalInfo.kind()));
+  }
+
+  private boolean hasMatchingKind(Entity entity, PrincipalKind kind) {
+    return entity.properties().stream().anyMatch(
+        property -> KIND_PROPERTY.equals(property.name()) && kind.name().equals(property.value()));
   }
 
   /// Creates a new Principal entity in the catalog.
@@ -87,9 +123,10 @@ public class PrincipalProvisioningService {
   ///
   /// @param principalInfo extracted authentication information
   /// @return the newly created or existing Principal entity
-  private Entity createNewPrincipal(PrincipalInfo principalInfo) {
+  private Entity createNewPrincipal(PrincipalInfo principalInfo, boolean isAdmin) {
     Entity newPrincipal = new Entity(null, PRINCIPAL_TEMPLATE_IDENTIFIER, principalInfo.name(),
-        principalInfo.identifier(), buildProperties(principalInfo), buildRelations(principalInfo));
+        principalInfo.identifier(), buildProperties(principalInfo, isAdmin),
+        buildRelations(principalInfo));
     try {
       return entityRepository.save(newPrincipal);
     } catch (EntityAlreadyExistsException _) {
@@ -110,12 +147,14 @@ public class PrincipalProvisioningService {
   ///
   /// @param principalInfo the principal information containing attributes
   /// @return list of properties for the principal entity
-  private List<Property> buildProperties(PrincipalInfo principalInfo) {
+  private List<Property> buildProperties(PrincipalInfo principalInfo, boolean isAdmin) {
     List<Property> properties = new ArrayList<>();
-    properties.add(new Property(null, "kind", principalInfo.kind().name()));
+    properties.add(new Property(null, KIND_PROPERTY, principalInfo.kind().name()));
+    properties.add(new Property(null, IS_ADMIN_PROPERTY, Boolean.toString(isAdmin)));
 
     principalInfo.attributes().forEach((key, value) -> {
-      if (value != null && !value.isBlank()) {
+      if (!KIND_PROPERTY.equalsIgnoreCase(key) && !IS_ADMIN_PROPERTY.equalsIgnoreCase(key)
+          && value != null && !value.isBlank()) {
         properties.add(new Property(null, key, value));
       }
     });

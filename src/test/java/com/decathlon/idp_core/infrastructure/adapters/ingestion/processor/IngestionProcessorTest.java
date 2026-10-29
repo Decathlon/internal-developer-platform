@@ -14,12 +14,16 @@ import static org.mockito.Mockito.when;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import java.util.stream.Stream;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.slf4j.LoggerFactory;
@@ -104,6 +108,43 @@ class IngestionProcessorTest {
         "Test webhook description", true, mappings,
         new WebhookSecurity(WebhookSecurityType.HMAC_SHA256,
             Map.of("header_name", "X-Hub-Signature-256", "secret_alias", "MY_SECRET")));
+  }
+
+  @ParameterizedTest
+  @MethodSource("principalMappingOperations")
+  void ingest_doesNotApplyProtectedPrincipalProperties(MappingAction action, boolean exists) {
+    String payload = "{\"action\": \"pushed\"}";
+    EntityDynamicMapping mapping = createTestMapping(action);
+    WebhookConnector connector = createWebhookConnector("principal-connector", List.of(mapping));
+    Entity mappedPrincipal = new Entity(UUID.randomUUID(), "principal", "Mapped Principal",
+        "mapped-user",
+        List.of(new Property(null, "kind", "SERVICE_ACCOUNT"),
+            new Property(null, "is_admin", "true"), new Property(null, "is_idp_user", "true"),
+            new Property(null, "display_name", "Mapped User")),
+        List.of());
+    when(mappingEngine.mapToEntity(payload, mapping)).thenReturn(mappedPrincipal);
+    when(entityService.entityExists("principal", "mapped-user")).thenReturn(exists);
+
+    ingestionProcessor.ingest(payload, connector);
+
+    if (exists) {
+      verify(entityService).patchEntity(eq("principal"), eq("mapped-user"),
+          argThat(patch -> containsOnlyUnprotectedProperties(patch.properties())));
+    } else {
+      verify(entityService)
+          .createEntity(argThat(entity -> containsOnlyUnprotectedProperties(entity.properties())));
+    }
+  }
+
+  private static Stream<Arguments> principalMappingOperations() {
+    return Stream.of(MappingAction.UPDATE_ENTITY, MappingAction.UPDATE_PROPERTIES)
+        .flatMap(action -> Stream.of(false, true).map(exists -> Arguments.of(action, exists)));
+  }
+
+  private static boolean containsOnlyUnprotectedProperties(List<Property> properties) {
+    return properties.stream()
+        .noneMatch(property -> List.of("kind", "is_admin", "is_idp_user").contains(property.name()))
+        && properties.stream().anyMatch(property -> "display_name".equals(property.name()));
   }
 
   @Nested

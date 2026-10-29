@@ -30,6 +30,7 @@ import org.springframework.test.web.servlet.request.MockMvcRequestBuilders;
 
 import com.decathlon.idp_core.AbstractIntegrationTest;
 import com.decathlon.idp_core.domain.constant.SearchConstraints;
+import com.decathlon.idp_core.domain.constant.ValidationMessages;
 
 /// Integration tests for the EntityController REST API endpoints. These tests
 /// verify the behavior of entity retrieval endpoints, including pagination,
@@ -68,6 +69,76 @@ public class EntityControllerTest extends AbstractIntegrationTest {
           .andExpect(jsonPath("$.page.size").value(15))
           .andExpect(jsonPath("$.page.number").value(0))
           .andExpect(jsonPath("$.content[0].template_identifier").value(TEMPLATE_IDENTIFIER));
+    }
+
+    @Test
+    @DisplayName("Should accept size at the minimum bound of 1")
+    @WithMockUser
+    void getEntities_sizeMinimum_200() throws Exception {
+      mockMvc
+          .perform(get(ENTITIES_BY_TEMPLATE_IDENTIFIER_PATH, TEMPLATE_IDENTIFIER).param("page", "0")
+              .param("size", "1").accept(APPLICATION_JSON))
+          .andExpect(status().isOk()).andExpect(jsonPath("$.page.size").value(1));
+    }
+
+    @Test
+    @DisplayName("Should accept size at the maximum bound of 500")
+    @WithMockUser
+    void getEntities_sizeMaximum_200() throws Exception {
+      mockMvc
+          .perform(get(ENTITIES_BY_TEMPLATE_IDENTIFIER_PATH, TEMPLATE_IDENTIFIER).param("page", "0")
+              .param("size", "500").accept(APPLICATION_JSON))
+          .andExpect(status().isOk()).andExpect(jsonPath("$.page.size").value(500));
+    }
+
+    @Test
+    @DisplayName("Should return 400 when size is zero")
+    @WithMockUser
+    void getEntities_sizeZero_400() throws Exception {
+      mockMvc.perform(get(ENTITIES_BY_TEMPLATE_IDENTIFIER_PATH, TEMPLATE_IDENTIFIER)
+          .param("page", "0").param("size", "0").accept(APPLICATION_JSON))
+          .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    @DisplayName("Should return 400 when size exceeds 500")
+    @WithMockUser
+    void getEntities_sizeAboveMaximum_400() throws Exception {
+      mockMvc.perform(get(ENTITIES_BY_TEMPLATE_IDENTIFIER_PATH, TEMPLATE_IDENTIFIER)
+          .param("page", "0").param("size", "501").accept(APPLICATION_JSON))
+          .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    @DisplayName("Should return 400 when page is negative")
+    @WithMockUser
+    void getEntities_negativePage_400() throws Exception {
+      mockMvc
+          .perform(get(ENTITIES_BY_TEMPLATE_IDENTIFIER_PATH, TEMPLATE_IDENTIFIER)
+              .param("page", "-1").param("size", "10").accept(APPLICATION_JSON))
+          .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    @DisplayName("Should return 400 when size is not a number")
+    @WithMockUser
+    void getEntities_nonNumericSize_400() throws Exception {
+      mockMvc
+          .perform(get(ENTITIES_BY_TEMPLATE_IDENTIFIER_PATH, TEMPLATE_IDENTIFIER).param("page", "0")
+              .param("size", "abc").accept(APPLICATION_JSON))
+          .andExpect(status().isBadRequest()).andExpect(
+              jsonPath("$.error_description").value(ValidationMessages.PAGE_SIZE_NOT_INTEGER));
+    }
+
+    @Test
+    @DisplayName("Should return 400 when page is not an integer")
+    @WithMockUser
+    void getEntities_nonIntegerPage_400() throws Exception {
+      mockMvc
+          .perform(get(ENTITIES_BY_TEMPLATE_IDENTIFIER_PATH, TEMPLATE_IDENTIFIER)
+              .param("page", "1.5").param("size", "10").accept(APPLICATION_JSON))
+          .andExpect(status().isBadRequest()).andExpect(
+              jsonPath("$.error_description").value(ValidationMessages.PAGE_INDEX_NOT_INTEGER));
     }
 
     @Test
@@ -115,7 +186,7 @@ public class EntityControllerTest extends AbstractIntegrationTest {
     @Test
     @DisplayName("Should return paginated entities with default pagination")
     @WithMockUser
-    void getEntities_invalid_pagination_200() throws Exception {
+    void getEntities_defaultPagination_200() throws Exception {
       mockMvc
           .perform(get(ENTITIES_BY_TEMPLATE_IDENTIFIER_PATH, TEMPLATE_IDENTIFIER)
               .accept(APPLICATION_JSON))
@@ -1600,7 +1671,7 @@ public class EntityControllerTest extends AbstractIntegrationTest {
     void search_200_noPageOrSize_usesDefaults() throws Exception {
       // Omitting page and size must not cause a 400 JSON parse error (primitive int
       // vs null).
-      // The record defaults should kick in: page=0, size=20.
+      // The controller defaults should kick in: page=0, size=20.
       mockMvc
           .perform(MockMvcRequestBuilders.post(SEARCH_PATH).contentType(APPLICATION_JSON)
               .accept(APPLICATION_JSON).with(csrf()).content("""
@@ -1626,8 +1697,8 @@ public class EntityControllerTest extends AbstractIntegrationTest {
               .accept(APPLICATION_JSON).with(csrf()).content("""
                   { "page": 0, "size": 501 }
                   """))
-          .andExpect(status().isBadRequest()).andExpect(jsonPath("$.error_description")
-              .value("Page size must not exceed %d".formatted(SearchConstraints.MAX_PAGE_SIZE)));
+          .andExpect(status().isBadRequest()).andExpect(jsonPath("$.error_description").value(
+              "Page size must not exceed %d".formatted(SearchConstraints.DEFAULT_MAX_PAGE_SIZE)));
     }
 
     @Test

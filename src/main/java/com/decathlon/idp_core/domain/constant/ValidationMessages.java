@@ -84,6 +84,9 @@ public class ValidationMessages {
   // Principal provisioning validation messages
   public static final String PRINCIPAL_CREATION_FAILED = "Failed to create principal with identifier '%s'. The principal provider is currently unavailable. The system will automatically retry provisioning on the next request.";
 
+  // Authorization validation messages
+  public static final String AUTHORIZATION_VALUE_MUST_NOT_BE_NULL = "%s must not be null";
+
   // Helper method to construct rules incompatibility message
   public static String rulesAreIncompatible(String rule1, String rule2) {
     return PROPERTY_RULES_MUTUALLY_EXCLUSIVE.replace("{rule1}", rule1).replace("{rule2}", rule2);
@@ -99,6 +102,14 @@ public class ValidationMessages {
   public static String minMaxConstraintViolated(String constraint) {
     return PROPERTY_RULES_MIN_MAX_CONSTRAINT_VIOLATED.replace("{constraint}", constraint);
   }
+
+  public static String authorizationValueMustNotBeNull(String fieldName) {
+    return AUTHORIZATION_VALUE_MUST_NOT_BE_NULL.formatted(fieldName);
+  }
+  // Pagination validation messages
+  public static final String PAGE_SIZE_TOO_LARGE = "Page size must not exceed %d";
+  public static final String PAGE_SIZE_NOT_INTEGER = "Page size must be an integer";
+  public static final String PAGE_INDEX_NOT_INTEGER = "Page index must be an integer";
 
   // Filter query validation messages
   public static final String FILTER_TOO_MANY_CRITERIA = "Filter query exceeds maximum of %d criteria";
@@ -124,7 +135,6 @@ public class ValidationMessages {
   public static final String SEARCH_NUMERIC_OPERATOR_REQUIRES_PROPERTY = "Operator '%s' is only valid for property.{name} fields";
   public static final String SEARCH_INVALID_SORT_FIELD = "Invalid sort field '%s'. Supported fields: identifier, name, templateIdentifier";
   public static final String SEARCH_INVALID_SORT_FORMAT = "Invalid sort expression '%s'. Expected format: field or field:asc|desc";
-  public static final String SEARCH_PAGE_SIZE_TOO_LARGE = "Page size must not exceed %d";
   public static final String SEARCH_PAGE_INVALID = "Page index must be 0 or greater";
   public static final String SEARCH_SIZE_INVALID = "Page size must be greater than 0";
   public static final String SEARCH_NUMERIC_OPERATOR_INVALID_VALUE = "Value '%s' is not a valid number for operator '%s'";

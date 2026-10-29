@@ -7,6 +7,10 @@ description: Understand Dynamic mappings and JSLT expressions.
 
 A mapping targets one Entity Template and describes how to derive entity fields from the incoming JSON payload with a JSLT filter and entity projections. It is linked to a data integration configuration (Webhook, Kafka, etc) as it describes how to transform incoming payloads.
 
+Only catalog administrators can create or update mappings that target the protected `principal` template. This
+restriction prevents an ingestion mapping from changing principal privileges. Webhook deliveries that use an already
+authorized mapping continue to run through the configured connector security strategy.
+
 ## Entity Dynamic Mapping Fields
 
 | Field                        | Required | Description                                                                                                          |
@@ -194,6 +198,17 @@ if (.is_private == true) "PRIVATE_" + .name else .name
   }
 }
 ```
+
+### JSLT Execution Limits
+
+To protect the platform against denial-of-service, JSLT processing is bounded:
+
+| Limit              | Value                    | Exceeded behavior                       |
+| ------------------ | ------------------------ | --------------------------------------- |
+| Payload size       | 1 MB (UTF-8 bytes)       | Rejected before parsing (400)           |
+| JSON nesting depth | 64 levels                | Rejected before the tree is built (400) |
+| Expression length  | 10,000 characters        | Rejected at validation (422)            |
+| Evaluation timeout | 5 seconds per evaluation | Evaluation aborted (422)                |
 
 > [!TIP]
 > Use the **dry-run endpoint** (POST `/api/v1/entity_dynamic_mappings/dry-run`) to test
