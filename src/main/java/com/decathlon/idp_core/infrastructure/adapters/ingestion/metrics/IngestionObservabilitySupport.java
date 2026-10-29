@@ -40,6 +40,7 @@ public final class IngestionObservabilitySupport {
         || attributeValue == null) {
       return;
     }
+    log.info(">>> [OTEL DEBUG] Set span attribute: " + attributeName + " = " + attributeValue);
     span.setAttribute(attributeName, attributeValue);
   }
 

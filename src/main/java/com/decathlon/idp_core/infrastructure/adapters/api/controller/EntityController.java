@@ -108,6 +108,7 @@ import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import io.opentelemetry.api.trace.Span;
 import lombok.RequiredArgsConstructor;
 
 /// REST API adapter providing entity management endpoints.
@@ -172,6 +173,12 @@ public class EntityController {
   public Page<EntityDtoOut> getEntities(@RequestParam(defaultValue = "0") int page,
       @RequestParam(defaultValue = "20") int size, @PathVariable String templateIdentifier,
       @RequestParam(required = false) String q) {
+    Span currentSpan = Span.current();
+    currentSpan.setAttribute("idp.entity.template", templateIdentifier);
+    currentSpan.setAttribute("idp.entity.page", page);
+    currentSpan.setAttribute("idp.entity.size", size);
+    currentSpan.setAttribute("idp.entity.filter.query", q == null ? "" : q);
+
     Pageable pageable = PageRequest.of(page, size);
     EntityFilter filter = entityFilterDslParser.parse(q);
     // Single transaction: pagination + batch relation fetch in one DB round trip

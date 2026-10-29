@@ -1,6 +1,7 @@
 package com.decathlon.idp_core.infrastructure.adapters.ingestion.route;
 
 import static com.decathlon.idp_core.infrastructure.adapters.ingestion.configuration.IngestionConstants.*;
+import static com.decathlon.idp_core.infrastructure.adapters.ingestion.configuration.IngestionObservabilityConstants.SPAN_ATTRIBUTE_WEBHOOK_IDENTIFIER;
 
 import java.util.stream.Collectors;
 
@@ -15,6 +16,7 @@ import com.decathlon.idp_core.domain.exception.webhook.WebhookDisabledException;
 import com.decathlon.idp_core.domain.model.inbound_connectors.webhook.WebhookConnector;
 import com.decathlon.idp_core.domain.service.webhook.WebhookConnectorService;
 import com.decathlon.idp_core.infrastructure.adapters.ingestion.exception_handler.WebhookExceptionRouteBuilder;
+import com.decathlon.idp_core.infrastructure.adapters.ingestion.metrics.IngestionObservabilitySupport;
 import com.decathlon.idp_core.infrastructure.adapters.ingestion.processor.IngestionProcessor;
 import com.decathlon.idp_core.infrastructure.adapters.ingestion.processor.PayloadValidationProcessor;
 import com.decathlon.idp_core.infrastructure.adapters.ingestion.processor.SecurityProcessor;
@@ -79,6 +81,7 @@ public class GenericInboundEventRouteBuilder extends RouteBuilder {
           if (webhookConnector == null) {
             throw new WebhookConfigurationMissingException(connectorIdentifier);
           }
+          IngestionObservabilitySupport.setSpanAttribute(Span.current(), SPAN_ATTRIBUTE_WEBHOOK_IDENTIFIER, webhookConnector.identifier());
           exchange.setProperty(WEBHOOK_CONFIG_PROPERTY, webhookConnector);
         });
 
