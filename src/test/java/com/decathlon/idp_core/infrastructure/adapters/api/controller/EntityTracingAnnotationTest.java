@@ -22,6 +22,9 @@ import com.decathlon.idp_core.infrastructure.adapters.api.mapper.entity.EntityDt
 import com.decathlon.idp_core.infrastructure.adapters.api.mapper.entity_graph.EntityGraphFlatDtoOutMapper;
 import com.decathlon.idp_core.infrastructure.adapters.persistence.PostgresEntityAdapter;
 import com.decathlon.idp_core.infrastructure.adapters.persistence.PostgresEntityGraphAdapter;
+import com.decathlon.idp_core.infrastructure.adapters.persistence.mapper.EntityPersistenceMapper;
+import com.decathlon.idp_core.infrastructure.adapters.persistence.model.entity.EntityJpaEntity;
+import com.decathlon.idp_core.infrastructure.adapters.persistence.repository.JpaEntityRepository;
 
 import io.opentelemetry.instrumentation.annotations.WithSpan;
 
@@ -39,6 +42,10 @@ class EntityTracingAnnotationTest {
         PrincipalInfo.class), "PrincipalProvisioningService.findPrincipalWithSameKind");
     assertSpan(PostgresEntityAdapter.class.getMethod("findByTemplateIdentifierAndIdentifier",
         String.class, String.class), "PostgresEntityAdapter.findByTemplateIdentifierAndIdentifier");
+    assertSpan(JpaEntityRepository.class.getMethod("findByTemplateIdentifierAndIdentifier",
+        String.class, String.class), "JpaEntityRepository.findByTemplateIdentifierAndIdentifier");
+    assertSpan(EntityPersistenceMapper.class.getMethod("toDomain", EntityJpaEntity.class),
+        "EntityPersistenceMapper.toDomain");
     assertSpan(PostgresEntityAdapter.class.getMethod("findSummariesByCompositeKeys", List.class),
         "PostgresEntityAdapter.findSummariesByCompositeKeys");
     assertSpan(
