@@ -1,4 +1,3 @@
----
 spring:
   web:
     resources:
@@ -6,7 +5,6 @@ spring:
       add-mappings: false
     cors:
       # Exact origins — set via SPRING_WEB_CORS_ALLOWED_ORIGINS env var (comma-separated).
-      # Use for known, fixed origins.
       allowed-origins: ${SPRING_WEB_CORS_ALLOWED_ORIGINS:}
       # Pattern-based origins — set via SPRING_WEB_CORS_ALLOWED_ORIGIN_PATTERNS env var (comma-separated).
       allowed-origin-patterns: ${SPRING_WEB_CORS_ALLOWED_ORIGIN_PATTERNS:}
@@ -114,6 +112,8 @@ app:
   # Maximum number of items returned per page by search and listing endpoints.
   max-page-size: ${MAX_PAGE_SIZE:500}
   ingestion:
+    # Enable temporary diagnostics to inspect Camel exchange telemetry context propagation.
+    tracing-diagnostic-enabled: ${APP_INGESTION_TRACING_DIAGNOSTIC_ENABLED:true}
     webhook:
       base-path: /webhooks
       identifier-path: /{webhookIdentifier}
@@ -176,6 +176,9 @@ idp:
       allow-none: ${IDP_WEBHOOK_SECURITY_ALLOW_NONE:false}
 
 logging:
+  pattern:
+    # Keep trace/span ids in logs with the OpenTelemetry starter.
+    correlation: "[%32X{traceId:-}-%16X{spanId:-}] "
   level:
     # Application log level, defaults to INFO. Override per environment via LOG_LEVEL env var.
     com.decathlon: ${LOG_LEVEL:INFO}
@@ -183,50 +186,78 @@ logging:
     org.springframework.context.support: WARN
     # Suppresses a specific repetitive bean registration delegate log line.
     org.springframework.context.support.PostProcessorRegistrationDelegate: ERROR
+    io.opentelemetry.sdk: DEBUG
+    io.opentelemetry.exporter.otlp: DEBUG
+    com.decathlon.idp_core.infrastructure.adapters.ingestion: DEBUG
+    io.opentelemetry: TRACE
+    io.opentelemetry.sdk.metrics: TRACE
+      # Affiche la création et l'envoi des Spans OTel
+    io.opentelemetry.sdk.trace: TRACE
+      # Affiche l'interception des requêtes par Camel OpenTelemetry
+    org.apache.camel.opentelemetry: TRACE
+    io.opentelemetry.exporter: TRACE
+    io.opentelemetry.exporter.sender.okhttp: TRACE
+    khttp3: TRACE
 
-
-management:
-  tracing:
-    sampling:
-      # Fraction of traces kept (1.0 = 100%). Standard OTel variable.
-      probability: ${OTEL_TRACES_SAMPLER_ARG:0.1}
-    export:
-      enabled: ${OTEL_TRACING_ENABLED:false}
-
-  # Trace OTLP export lives under management.opentelemetry.tracing.export.otlp.* (see below).
-  otlp:
-    metrics:
-      export:
-        # Metrics export is opt-in. Signal-specific variables win over the generic ones.
-        url: ${OTEL_EXPORTER_OTLP_METRICS_ENDPOINT:${OTEL_EXPORTER_OTLP_ENDPOINT:http://localhost:4318}/v1/metrics}
-        enabled: ${OTEL_METRICS_EXPORT_ENABLED:false}
-        transport: ${OTEL_EXPORTER_OTLP_METRICS_PROTOCOL:${OTEL_EXPORTER_OTLP_PROTOCOL:http/protobuf}}
-  opentelemetry:
-    tracing:
-      export:
-        otlp:
-          # Boot does not append /v1/traces itself: the full traces URL is required for HTTP.
-          endpoint: ${OTEL_EXPORTER_OTLP_TRACES_ENDPOINT:${OTEL_EXPORTER_OTLP_ENDPOINT:http://localhost:4318}/v1/traces}
-          # Boot's transport enum only accepts http or grpc (not the OTel value http/protobuf).
-          transport: ${OTEL_EXPORTER_OTLP_TRACES_TRANSPORT:${OTEL_EXPORTER_OTLP_PROTOCOL:http}}
-    # Extra attributes (for example X-Datadog-Org, X-Backend) are set by the user
-    # through OTEL_RESOURCE_ATTRIBUTES, not hard-coded here.
-    resource-attributes:
+# OpenTelemetry Spring Boot Starter Configuration
+otel:
+  register-global: true
+  service:
+    name: ${OTEL_SERVICE_NAME:internal-developer-platform}
+  resource:
+    attributes:
       deployment.environment: ${OTEL_ENV:local}
       service.namespace: ${OTEL_SERVICE_NAMESPACE:idp-core}
-      service.name: ${OTEL_SERVICE_NAME:internal-developer-platform}
 
+  metrics:
+    exporter: ${OTEL_METRICS_EXPORTER:otlp}
+
+  metric:
+    export:
+      interval: ${OTEL_METRIC_EXPORT_INTERVAL:60000}
+
+  traces:
+    exporter: ${OTEL_TRACES_EXPORTER:otlp}
+    sampler: ${OTEL_TRACES_SAMPLER:always_on}
+    sampler-arg: ${OTEL_TRACES_SAMPLER_ARG:1.0}
+
+  logs:
+    exporter: ${OTEL_LOGS_EXPORTER:none}
+
+  exporter:
+    otlp:
+      endpoint: ${OTEL_EXPORTER_OTLP_ENDPOINT:http://localhost:4318}
+      protocol: ${OTEL_EXPORTER_OTLP_PROTOCOL:http/protobuf}
+      metrics:
+        endpoint: ${OTEL_EXPORTER_OTLP_METRICS_ENDPOINT:${OTEL_EXPORTER_OTLP_ENDPOINT:http://localhost:4318}/v1/metrics}
+        protocol: ${OTEL_EXPORTER_OTLP_METRICS_PROTOCOL:${OTEL_EXPORTER_OTLP_PROTOCOL:http/protobuf}}
+      traces:
+        endpoint: ${OTEL_EXPORTER_OTLP_TRACES_ENDPOINT:${OTEL_EXPORTER_OTLP_ENDPOINT:http://localhost:4318}/v1/traces}
+        protocol: ${OTEL_EXPORTER_OTLP_TRACES_PROTOCOL:${OTEL_EXPORTER_OTLP_PROTOCOL:http/protobuf}}
+  instrumentation:
+    common:
+      logging:
+        # Spring log patterns use traceId/spanId while OTel defaults to trace_id/span_id.
+        trace-id-key: traceId
+        span-id-key: spanId
+    micrometer:
+      enabled: false
+    spring-web:
+      enabled: true
+    spring-webmvc:
+      enabled: true
+    # OTEL_INSTRUMENTATION_JDBC_ENABLED=true to add database spans.
+    jdbc:
+      enabled: ${OTEL_INSTRUMENTATION_JDBC_ENABLED:false}
+
+management:
   endpoints:
     web:
       exposure:
-        # Explicitly restrict exposed actuator endpoints to health only.
-        # Prevents accidental exposure of env, beans, configprops, etc.
         include: health
   endpoint:
     health:
       probes:
-        # Enables liveness (/actuator/health/liveness) and
-        # readiness (/actuator/health/readiness) probes.
         enabled: true
       group:
         liveness:
@@ -245,7 +276,10 @@ management:
       # Avoids leaking internal infrastructure info to unauthenticated callers.
       show-details: when_authorized
 
-
 camel:
   opentelemetry2:
     enabled: true
+    # Keep core route spans enabled; processor spans depend on them for active scope propagation.
+    disable-core-processors: false
+    # Keep processor-level spans (setHeader, setBody, processors...) for ingestion diagnostics.
+    trace-processors: true

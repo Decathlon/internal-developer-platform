@@ -104,6 +104,7 @@ import com.decathlon.idp_core.infrastructure.adapters.api.mapper.entity.EntityDt
 import com.decathlon.idp_core.infrastructure.adapters.api.mapper.entity.SearchFilterMapper;
 import com.decathlon.idp_core.infrastructure.adapters.common.model.ErrorResponse;
 
+import io.opentelemetry.api.trace.Span;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.enums.ParameterIn;
@@ -177,6 +178,13 @@ public class EntityController {
   public Page<EntityDtoOut> getEntities(@RequestParam(defaultValue = "0") int page,
       @RequestParam(required = false) Integer size, @PathVariable String templateIdentifier,
       @RequestParam(required = false) String q) {
+    Span currentSpan = Span.current();
+    currentSpan.setAttribute("idp.entity.template", templateIdentifier);
+    currentSpan.setAttribute("idp.entity.page", page);
+    currentSpan.setAttribute("idp.entity.size", size);
+    currentSpan.setAttribute("idp.entity.filter.query", q == null ? "" : q);
+
+    Pageable pageable = PageRequest.of(page, size);
     PaginationCriteria paginationCriteria = new PaginationCriteria(page, resolvePageSize(size),
         null);
     EntityFilter filter = entityFilterDslParser.parse(q);
