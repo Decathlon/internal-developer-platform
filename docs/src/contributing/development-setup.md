@@ -73,16 +73,23 @@ Maven and file watching.
 Zensical runs with `serve`, which watches documentation sources and refreshes
 the browser after changes. No separate watch command is required.
 
-Spring Boot starts with the `local` profile. Wait for VS Code to finish
-importing the Maven project, then save your Java changes. Java auto-build
-compiles them into `target/classes`, and DevTools restarts the app
-after successful compilation. Resolve compilation errors in the **Problems**
-panel before expecting a reload. Resource changes also trigger DevTools when
-the build copies them to the class path.
+Spring Boot starts with the `local,devcontainer,secret` profiles. Later
+profiles override earlier ones. The optional `secret` profile loads a
+Git-ignored `src/main/resources/application-secret.yml` file for local overrides.
+The `devcontainer` profile disables JWT and OAuth2 login unless your local
+overrides enable them. See
+[Authentication](../concepts/authentication.md) for the resulting
+authentication settings.
+
+Wait for VS Code to finish importing the Maven project, then save your Java
+changes. Java auto-build compiles them into `target/classes`, and DevTools
+restarts the app after successful compilation. Resolve compilation errors
+in the **Problems** panel before expecting a reload. Resource changes also
+trigger DevTools when the build copies them to the class path.
 
 This workflow depends on VS Code Java auto-build. For terminal-only editing,
-run `./mvnw compile` after changes. The separate `dev` profile retains its
-existing `.reloadtrigger` requirement; the automatic launch does not use it.
+run `./mvnw compile` after changes. The automatic launch does not use the
+separate `dev` profile, which requires changes to `.reloadtrigger` for restarts.
 Spring browser LiveReload is off for `local`; app restarts and
 Zensical browser refresh remain enabled.
 
