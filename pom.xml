@@ -6,7 +6,7 @@
   <parent>
     <groupId>org.springframework.boot</groupId>
     <artifactId>spring-boot-starter-parent</artifactId>
-    <version>4.1.1</version>
+    <version>4.1.2</version>
     <relativePath/>
   </parent>
 
@@ -76,7 +76,7 @@
       <dependency>
         <groupId>org.apache.camel.springboot</groupId>
         <artifactId>camel-spring-boot-bom</artifactId>
-        <version>4.22.1</version>
+        <version>4.23.0</version>
         <type>pom</type>
         <scope>import</scope>
       </dependency>
@@ -377,7 +377,7 @@
       <plugin>
         <groupId>org.flywaydb</groupId>
         <artifactId>flyway-maven-plugin</artifactId>
-        <version>13.10.0</version>
+        <version>13.11.1</version>
       </plugin>
 
       <plugin>
@@ -501,7 +501,7 @@
       <plugin>
         <groupId>com.github.spotbugs</groupId>
         <artifactId>spotbugs-maven-plugin</artifactId>
-        <version>4.10.4.1</version>
+        <version>4.10.5.0</version>
         <configuration>
           <xmlOutput>true</xmlOutput>
           <outputDirectory>${project.build.directory}</outputDirectory>
@@ -520,7 +520,7 @@
       <plugin>
         <groupId>com.github.codemonstur</groupId>
         <artifactId>maven-check-license</artifactId>
-        <version>1.2.0</version>
+        <version>1.3.0</version>
         <configuration>
           <failBuildOnViolation>true</failBuildOnViolation>
           <strategy>passOnMatch</strategy>
