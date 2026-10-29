@@ -18,7 +18,7 @@ declare -A URL_PATH=([docs]=/ [app]=/actuator/health)
 declare -A READY_TIMEOUT=([docs]=120 [app]=300)
 declare -A COMMAND=(
   [docs]="uv run --frozen --directory docs zensical serve --dev-addr 0.0.0.0:8000"
-  [app]="$root_dir/mvnw -B -ntp spring-boot:run -Dspring-boot.run.profiles=local,devcontainer"
+  [app]="$root_dir/mvnw -B -ntp spring-boot:run -Dspring-boot.run.profiles=local,devcontainer,secret"
 )
 
 port_occupied() {

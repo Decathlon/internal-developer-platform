@@ -30,9 +30,12 @@ bypass authentication.
 > [!WARNING]
 > Never enable mock authentication in production. It skips all token validation.
 
-The dev container activates the `devcontainer` profile alongside `local`, which disables JWT and OAuth2 login so API
-routes can be used without credentials. This profile is selected only by the dev-container service script; the
-project-wide default remains JWT authentication enabled.
+The dev-container service script starts the app with the `local,devcontainer,secret` profiles, in that order.
+Spring Boot gives later profiles precedence, so `devcontainer` disables JWT and OAuth2 login from `local`.
+API routes therefore accept requests without credentials unless you enable another authentication mode.
+The optional `secret` profile loads local overrides from `src/main/resources/application-secret.yml`;
+Git ignores `application-secret.*` files. These overrides take precedence over `devcontainer`, so check them if
+authentication remains enabled. The project-wide default keeps JWT authentication enabled.
 
 ### JWT resource server
 
