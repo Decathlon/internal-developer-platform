@@ -11,6 +11,7 @@ import org.springframework.stereotype.Component;
 import com.decathlon.idp_core.domain.exception.entity.EntityAlreadyExistsException;
 import com.decathlon.idp_core.domain.exception.entity.EntityNotFoundException;
 import com.decathlon.idp_core.domain.exception.entity.EntityValidationException;
+import com.decathlon.idp_core.domain.model.authorization.AuthorizationResource;
 import com.decathlon.idp_core.domain.model.entity.Entity;
 import com.decathlon.idp_core.domain.model.entity.EntityPatch;
 import com.decathlon.idp_core.domain.model.entity.Property;
@@ -28,6 +29,10 @@ import lombok.extern.slf4j.Slf4j;
 @Component
 @Slf4j
 public class IngestionProcessor {
+
+  private static final String SPAN_ATTRIBUTE_WEBHOOK_IDENTIFIER = "idp.webhook.identifier";
+  private static final Set<String> PROTECTED_PRINCIPAL_PROPERTIES = Set.of("kind", "is_admin",
+      "is_idp_user");
 
   private final MappingEnginePort mappingEngine;
   private final EntityService entityService;
