@@ -81,7 +81,8 @@ public class GenericInboundEventRouteBuilder extends RouteBuilder {
           if (webhookConnector == null) {
             throw new WebhookConfigurationMissingException(connectorIdentifier);
           }
-          IngestionObservabilitySupport.setSpanAttribute(Span.current(), SPAN_ATTRIBUTE_WEBHOOK_IDENTIFIER, webhookConnector.identifier());
+          IngestionObservabilitySupport.setSpanAttribute(Span.current(),
+              SPAN_ATTRIBUTE_WEBHOOK_IDENTIFIER, webhookConnector.identifier());
           exchange.setProperty(WEBHOOK_CONFIG_PROPERTY, webhookConnector);
         });
 
