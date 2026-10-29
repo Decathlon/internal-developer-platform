@@ -30,6 +30,10 @@ bypass authentication.
 > [!WARNING]
 > Never enable mock authentication in production. It skips all token validation.
 
+The dev container activates the `devcontainer` profile alongside `local`, which disables JWT and OAuth2 login so API
+routes can be used without credentials. This profile is selected only by the dev-container service script; the
+project-wide default remains JWT authentication enabled.
+
 ### JWT resource server
 
 The JWT chain validates `Authorization: Bearer <token>` requests as an OAuth2 resource server. It validates the
