@@ -122,18 +122,25 @@ public class InvalidIdentifierException extends DomainException {
 public class GlobalExceptionHandler {
 
     @ExceptionHandler(EntityNotFoundException.class)
-    public ResponseEntity<ErrorResponse> handleNotFound(EntityNotFoundException ex) {
-        return ResponseEntity.status(HttpStatus.NOT_FOUND)
-            .body(new ErrorResponse(ex.getCode(), ex.getMessage()));
+    public ProblemDetail handleNotFound(EntityNotFoundException ex) {
+        return buildProblemDetail(HttpStatus.NOT_FOUND, ex.getMessage());
     }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
-    public ResponseEntity<ErrorResponse> handleValidation(MethodArgumentNotValidException ex) {
+    public ProblemDetail handleValidation(MethodArgumentNotValidException ex) {
         var errors = ex.getBindingResult().getFieldErrors().stream()
             .map(e -> e.getField() + ": " + e.getDefaultMessage())
             .toList();
-        return ResponseEntity.badRequest()
-            .body(new ErrorResponse("VALIDATION_ERROR", String.join(", ", errors)));
+        return buildProblemDetail(HttpStatus.BAD_REQUEST, String.join(", ", errors));
+    }
+
+    private ProblemDetail buildProblemDetail(HttpStatus status, String detail) {
+        var problem = ProblemDetail.forStatusAndDetail(status, detail);
+        problem.setTitle(status.getReasonPhrase());
+        problem.setProperty("error", status.name());
+        problem.setProperty("error_description", detail);
+        problem.setProperty("timestamp", Instant.now());
+        return problem;
     }
 }
 ```
