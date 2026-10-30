@@ -24,6 +24,7 @@ import org.skyscreamer.jsonassert.JSONAssert;
 import org.skyscreamer.jsonassert.JSONCompareMode;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.test.context.support.WithMockUser;
+import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders;
@@ -35,6 +36,7 @@ import com.decathlon.idp_core.domain.constant.ValidationMessages;
 /// Integration tests for the EntityController REST API endpoints. These tests
 /// verify the behavior of entity retrieval endpoints, including pagination,
 /// authentication, and lookup by template identifier and entity identifier.
+@TestPropertySource(properties = "app.relations.target-validation-mode=TOLERANT")
 public class EntityControllerTest extends AbstractIntegrationTest {
 
   private static final String TEMPLATE_IDENTIFIER = "web-service";

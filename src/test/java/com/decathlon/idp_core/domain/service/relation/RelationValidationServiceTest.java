@@ -17,11 +17,11 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.UUID;
 
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
@@ -29,6 +29,7 @@ import com.decathlon.idp_core.domain.model.entity.EntitySummary;
 import com.decathlon.idp_core.domain.model.entity.Relation;
 import com.decathlon.idp_core.domain.model.entity_template.EntityTemplate;
 import com.decathlon.idp_core.domain.model.entity_template.RelationDefinition;
+import com.decathlon.idp_core.domain.model.enums.RelationTargetValidationMode;
 import com.decathlon.idp_core.domain.port.EntityRepositoryPort;
 import com.decathlon.idp_core.domain.service.entity.Violations;
 
@@ -39,8 +40,16 @@ class RelationValidationServiceTest {
   @Mock
   private EntityRepositoryPort entityRepository;
 
-  @InjectMocks
   private RelationValidationService service;
+
+  private RelationValidationService tolerantService;
+
+  @BeforeEach
+  void setUp() {
+    service = new RelationValidationService(entityRepository, RelationTargetValidationMode.STRICT);
+    tolerantService = new RelationValidationService(entityRepository,
+        RelationTargetValidationMode.TOLERANT);
+  }
 
   private void mockExistingEntities(String... identifiers) {
     var summaries = Arrays.stream(identifiers)
@@ -152,6 +161,20 @@ class RelationValidationServiceTest {
     }
 
     @Test
+    @DisplayName("Should reject unresolved optional targets in strict mode")
+    void shouldRejectUnresolvedOptionalTargetsInStrictMode() {
+      when(entityRepository.findByIdentifierIn(any())).thenReturn(List.of());
+      var definition = definition("depends-on", "service", false, true);
+      var template = template("system-template", List.of(definition));
+      var relation = relation("depends-on", "service", List.of("missing-service"));
+      var violations = mock(Violations.class);
+
+      service.validateAndNormalizeRelationsAgainstTemplate(template, List.of(relation), violations);
+
+      verify(violations).add(RELATION_TARGET_ENTITY_NOT_FOUND, "depends-on", "missing-service");
+    }
+
+    @Test
     @DisplayName("Should omit unresolved targets from optional relations")
     void shouldOmitUnresolvedOptionalTargets() {
       when(entityRepository.findByIdentifierIn(any())).thenReturn(List.of());
@@ -160,7 +183,7 @@ class RelationValidationServiceTest {
       var relation = relation("depends-on", "service", List.of("missing-service"));
       var violations = mock(Violations.class);
 
-      var normalized = service.validateAndNormalizeRelationsAgainstTemplate(template,
+      var normalized = tolerantService.validateAndNormalizeRelationsAgainstTemplate(template,
           List.of(relation), violations);
 
       assertEquals(List.of(), normalized);
@@ -177,7 +200,7 @@ class RelationValidationServiceTest {
       var relation = relation("depends-on", "service", List.of("service-a", "missing-service"));
       var violations = mock(Violations.class);
 
-      var normalized = service.validateAndNormalizeRelationsAgainstTemplate(template,
+      var normalized = tolerantService.validateAndNormalizeRelationsAgainstTemplate(template,
           List.of(relation), violations);
 
       assertEquals(List.of("service-a"), normalized.getFirst().targetEntityIdentifiers());
@@ -194,11 +217,28 @@ class RelationValidationServiceTest {
       var relation = relation("owned-by", "team", List.of("team-a", "missing-team"));
       var violations = mock(Violations.class);
 
-      var normalized = service.validateAndNormalizeRelationsAgainstTemplate(template,
+      var normalized = tolerantService.validateAndNormalizeRelationsAgainstTemplate(template,
           List.of(relation), violations);
 
       assertEquals(List.of("team-a"), normalized.getFirst().targetEntityIdentifiers());
       verifyNoInteractions(violations);
+    }
+
+    @Test
+    @DisplayName("Should enforce single-target cardinality in tolerant mode")
+    void shouldEnforceCardinalityInTolerantMode() {
+      when(entityRepository.findByIdentifierIn(any()))
+          .thenReturn(List.of(entitySummary("team-a", "team"), entitySummary("team-b", "team")));
+      var definition = definition("owned-by", "team", false, false);
+      var template = template("system-template", List.of(definition));
+      var relation = relation("owned-by", "team", List.of("team-a", "team-b"));
+      var violations = mock(Violations.class);
+
+      tolerantService.validateAndNormalizeRelationsAgainstTemplate(template, List.of(relation),
+          violations);
+
+      verify(violations).add(RELATION_TOO_MANY_TARGETS, "owned-by", "system-template");
+      verifyNoMoreInteractions(violations);
     }
 
     @Test
@@ -210,7 +250,8 @@ class RelationValidationServiceTest {
       var relation = relation("owned-by", "team", List.of("missing-team"));
       var violations = mock(Violations.class);
 
-      service.validateAndNormalizeRelationsAgainstTemplate(template, List.of(relation), violations);
+      tolerantService.validateAndNormalizeRelationsAgainstTemplate(template, List.of(relation),
+          violations);
 
       verify(violations).add(RELATION_TARGET_ENTITY_NOT_FOUND, "owned-by", "missing-team");
     }
@@ -222,7 +263,7 @@ class RelationValidationServiceTest {
       var template = template("system-template", List.of(definition));
       var violations = mock(Violations.class);
 
-      service.validateAndNormalizeRelationsAgainstTemplate(template, List.of(), violations);
+      tolerantService.validateAndNormalizeRelationsAgainstTemplate(template, List.of(), violations);
 
       verify(violations).add(RELATION_REQUIRED_MISSING, "owned-by", "system-template");
     }
@@ -237,7 +278,8 @@ class RelationValidationServiceTest {
       var relation = relation("owned-by", "team", List.of("team-a", "missing-team"));
       var violations = mock(Violations.class);
 
-      service.validateAndNormalizeRelationsAgainstTemplate(template, List.of(relation), violations);
+      tolerantService.validateAndNormalizeRelationsAgainstTemplate(template, List.of(relation),
+          violations);
 
       verify(violations).add(RELATION_TARGET_ENTITY_NOT_FOUND, "owned-by", "missing-team");
     }
@@ -374,10 +416,12 @@ class RelationValidationServiceTest {
       var relation = relation("owned-by", "team", List.of("team-a"));
       var violations = mock(Violations.class);
 
-      service.validateAndNormalizeRelationsAgainstTemplate(template, List.of(relation), violations);
+      tolerantService.validateAndNormalizeRelationsAgainstTemplate(template, List.of(relation),
+          violations);
 
       verify(violations).add(RELATION_TARGET_TEMPLATE_MISMATCH, "owned-by", "team", "team-a",
           "group");
+      verifyNoMoreInteractions(violations);
     }
 
     @Test
@@ -451,6 +495,22 @@ class RelationValidationServiceTest {
   @Nested
   @DisplayName("Relation Cardinality Checks")
   class CardinalityTests {
+
+    @Test
+    @DisplayName("Should enforce single-target cardinality in strict mode")
+    void shouldEnforceCardinalityInStrictMode() {
+      when(entityRepository.findByIdentifierIn(any()))
+          .thenReturn(List.of(entitySummary("team-a", "team"), entitySummary("team-b", "team")));
+      var definition = definition("owned-by", "team", false, false);
+      var template = template("system-template", List.of(definition));
+      var relation = relation("owned-by", "team", List.of("team-a", "team-b"));
+      var violations = mock(Violations.class);
+
+      service.validateAndNormalizeRelationsAgainstTemplate(template, List.of(relation), violations);
+
+      verify(violations).add(RELATION_TOO_MANY_TARGETS, "owned-by", "system-template");
+      verifyNoMoreInteractions(violations);
+    }
 
     @Test
     @DisplayName("Should report violation when a non-toMany relation has multiple valid targets")

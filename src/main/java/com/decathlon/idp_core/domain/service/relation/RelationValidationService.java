@@ -23,6 +23,7 @@ import com.decathlon.idp_core.domain.model.entity.EntitySummary;
 import com.decathlon.idp_core.domain.model.entity.Relation;
 import com.decathlon.idp_core.domain.model.entity_template.EntityTemplate;
 import com.decathlon.idp_core.domain.model.entity_template.RelationDefinition;
+import com.decathlon.idp_core.domain.model.enums.RelationTargetValidationMode;
 import com.decathlon.idp_core.domain.port.EntityRepositoryPort;
 import com.decathlon.idp_core.domain.service.entity.Violations;
 
@@ -52,6 +53,7 @@ public class RelationValidationService {
   }
 
   private final EntityRepositoryPort entityRepository;
+  private final RelationTargetValidationMode targetValidationMode;
 
   /// Validates mapping relation names against the template's relation
   /// definitions.
@@ -145,7 +147,9 @@ public class RelationValidationService {
   /// and optional relations with no targets omitted
   public List<Relation> validateAndNormalizeRelationsAgainstTemplate(EntityTemplate template,
       List<Relation> providedRelations, Violations violations) {
-    return validateRelationsAgainstTemplate(template, providedRelations, violations, false, true);
+    boolean omitMissingOptionalTargets = targetValidationMode == RelationTargetValidationMode.TOLERANT;
+    return validateRelationsAgainstTemplate(template, providedRelations, violations, false,
+        omitMissingOptionalTargets);
   }
 
   /// Validates relation names, target entities, required relations, and

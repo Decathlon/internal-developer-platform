@@ -227,8 +227,8 @@ Each step in the pipeline is isolated in its own Camel sub-route:
 | **C** | `ingest-payload` | Apply each `EntityDynamicMapping` and persist entities |
 
 > [!TIP]
-> Webhook ingestion use the same relation validation as direct entity API writes. When an optional relation includes an unresolved target identifier, IDP-Core omits that target from persistence. If a target list includes both existing and unresolved entities, IDP-Core keeps the existing targets and omits the unresolved ones. If no targets resolve, IDP-Core omits the optional relation.
-> Required relations fail when any target is missing or unresolved, and existing targets must match the configured target template. The ingestion pipeline validates relation cardinality after removing unresolved optional targets. A relation validation failure returns `422 Unprocessable Content` from the webhook endpoint.
+> Webhook ingestion uses the same relation validation mode as REST entity writes. `STRICT` is the default and rejects unresolved target identifiers. Set `APP_RELATIONS_TARGET_VALIDATION_MODE=TOLERANT` to filter unresolved identifiers from optional relations; IDP-Core keeps resolved targets and omits the relation if none resolve.
+> Both modes enforce required relations, target-template compatibility, and cardinality. Tolerant mode checks cardinality after filtering. A webhook relation validation failure returns `422 Unprocessable Content`.
 
 ---
 
