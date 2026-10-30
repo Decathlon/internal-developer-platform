@@ -471,8 +471,22 @@ public class EntityControllerTest extends AbstractIntegrationTest {
           .andExpect(status().isOk()).andExpect(jsonPath("$.identifier").value("graph-svc-a"))
           .andExpect(jsonPath("$.relations.uses", hasSize(1)))
           .andExpect(jsonPath("$.relations.uses[0].identifier").value("graph-svc-b"))
+          .andExpect(jsonPath("$.relations.uses[0].properties").doesNotExist())
           .andExpect(jsonPath("$.relations.monitors", hasSize(1)))
           .andExpect(jsonPath("$.relations.monitors[0].identifier").value("graph-svc-b"));
+    }
+
+    @Test
+    @DisplayName("Should include relation properties when include_relations_properties=true")
+    @WithMockUser
+    void getEntity_includeRelationsProperties() throws Exception {
+      mockMvc
+          .perform(get(ENTITIES_BY_IDENTIFIER_PATH, TEMPLATE_IDENTIFIER, "graph-svc-a")
+              .param("include_relations_properties", "true").accept(APPLICATION_JSON))
+          .andExpect(status().isOk())
+          .andExpect(jsonPath("$.relations.uses[0].identifier").value("graph-svc-b"))
+          .andExpect(jsonPath("$.relations.uses[0].properties.tier").value("silver"))
+          .andExpect(jsonPath("$.relations.uses[0].properties.version").value("2.0.0"));
     }
 
     @Test
