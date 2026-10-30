@@ -21,6 +21,7 @@ import com.decathlon.idp_core.domain.model.entity_graph.EntityGraphRelation;
 import com.decathlon.idp_core.domain.model.entity_graph.EntityGraphTraversalMode;
 import com.decathlon.idp_core.domain.model.entity_graph.FlowDirection;
 
+import io.opentelemetry.instrumentation.annotations.WithSpan;
 import lombok.RequiredArgsConstructor;
 
 @RequiredArgsConstructor
@@ -40,6 +41,7 @@ public class EntityGraphHelper {
   /// @param mode traversal direction controlling reachable nodes and relations
   /// @param depth maximum number of relationship steps from each root
   /// @return map keyed by each non-null root UUID, with its resolved graph node
+  @WithSpan("EntityGraphHelper.buildGraphNodesForEntityIds")
   @SuppressWarnings("null")
   public Map<UUID, EntityGraphNode> buildGraphNodesForEntityIds(Map<UUID, Entity> entityGraphs,
       Set<String> relationFilter, Set<String> propertyFilter, EntityGraphTraversalMode mode,

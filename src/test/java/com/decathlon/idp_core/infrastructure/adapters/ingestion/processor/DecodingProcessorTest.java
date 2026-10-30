@@ -20,6 +20,10 @@ import com.decathlon.idp_core.infrastructure.adapters.ingestion.configuration.In
 import com.decathlon.idp_core.infrastructure.adapters.ingestion.exception.WebhookDecodingException;
 import com.decathlon.idp_core.infrastructure.adapters.ingestion.processor.decoder.DecodingProcessor;
 
+import io.opentelemetry.api.metrics.Meter;
+import io.opentelemetry.sdk.OpenTelemetrySdk;
+import io.opentelemetry.sdk.metrics.SdkMeterProvider;
+
 @DisplayName("DecodingProcessor unit tests")
 class DecodingProcessorTest {
 
@@ -27,9 +31,13 @@ class DecodingProcessorTest {
   private static final byte[] CORRUPTED_GZIP_PAYLOAD = "not-a-gzip-stream"
       .getBytes(StandardCharsets.UTF_8);
 
+  private final Meter meter = OpenTelemetrySdk.builder()
+      .setMeterProvider(SdkMeterProvider.builder().build()).build()
+      .getMeter("com.decathlon.idp_core.tests");
+
   // Default processor with the production default limit (10 MB)
   private final DecodingProcessor decodingProcessor = new DecodingProcessor(
-      IngestionConstants.MAX_DECOMPRESSED_BYTES);
+      IngestionConstants.MAX_DECOMPRESSED_BYTES, meter);
 
   @ParameterizedTest(name = "[{index}]")
   @MethodSource("passThroughCases")
@@ -103,7 +111,7 @@ class DecodingProcessorTest {
   @DisplayName("Throws WebhookDecodingException when decompressed payload exceeds the configured size limit (Zip Bomb protection)")
   void decode_throwsWebhookDecodingException_whenDecompressedSizeExceedsLimit() throws Exception {
     // Processor with a very small limit of 10 bytes to trigger the zip bomb guard
-    DecodingProcessor restrictedProcessor = new DecodingProcessor(10L);
+    DecodingProcessor restrictedProcessor = new DecodingProcessor(10L, meter);
     byte[] gzipPayload = gzip("This payload will exceed the 10 bytes decompression limit");
 
     WebhookDecodingException exception = assertThrows(WebhookDecodingException.class,

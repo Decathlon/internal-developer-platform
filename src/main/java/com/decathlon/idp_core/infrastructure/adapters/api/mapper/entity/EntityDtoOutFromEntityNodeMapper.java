@@ -24,6 +24,7 @@ import com.decathlon.idp_core.domain.service.entity_template.EntityTemplateServi
 import com.decathlon.idp_core.infrastructure.adapters.api.dto.out.entity.EntityDtoOut;
 import com.decathlon.idp_core.infrastructure.adapters.api.dto.out.entity.EntitySummaryDto;
 
+import io.opentelemetry.instrumentation.annotations.WithSpan;
 import lombok.RequiredArgsConstructor;
 
 /// Adapter mapper for converting a recursive [EntityGraphNode] domain tree into
@@ -62,6 +63,7 @@ public class EntityDtoOutFromEntityNodeMapper {
   /// @param maxDepth the strict maximum depth layer allowed for
   /// relationship collection
   /// @return a fully mapped, flat [EntityDtoOut] object
+  @WithSpan("EntityDtoOutFromEntityNodeMapper.toDto")
   public EntityDtoOut toDto(EntityGraphNode root, String entityTemplateIdentifier, int maxDepth) {
     if (root == null) {
       return null;

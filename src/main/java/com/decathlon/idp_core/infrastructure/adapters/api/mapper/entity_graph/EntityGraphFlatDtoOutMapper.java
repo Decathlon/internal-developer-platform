@@ -10,6 +10,8 @@ import java.util.SequencedSet;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import org.springframework.stereotype.Component;
+
 import com.decathlon.idp_core.domain.model.entity.Property;
 import com.decathlon.idp_core.domain.model.entity_graph.EntityGraphNode;
 import com.decathlon.idp_core.domain.model.entity_graph.EntityGraphRelation;
@@ -17,6 +19,8 @@ import com.decathlon.idp_core.domain.service.entity_graph.EntityGraphService;
 import com.decathlon.idp_core.infrastructure.adapters.api.dto.out.entity_graph.EntityGraphEdgeDtoOut;
 import com.decathlon.idp_core.infrastructure.adapters.api.dto.out.entity_graph.EntityGraphFlatDtoOut;
 import com.decathlon.idp_core.infrastructure.adapters.api.dto.out.entity_graph.EntityGraphNodeFlatDtoOut;
+
+import io.opentelemetry.instrumentation.annotations.WithSpan;
 
 /// Mapper for converting a recursive [EntityGraphNode] domain tree into the flat
 /// nodes-and-edges representation expected by frontend visualization libraries
@@ -33,11 +37,8 @@ import com.decathlon.idp_core.infrastructure.adapters.api.dto.out.entity_graph.E
 ///   otherwise be emitted twice when both sides of a relation are traversed.
 /// - Filtering (relation names, property names) is a domain concern handled upstream by
 ///   [EntityGraphService]; this mapper only flattens the tree it receives.
-public final class EntityGraphFlatDtoOutMapper {
-
-  private EntityGraphFlatDtoOutMapper() {
-    // Utility class — not instantiable
-  }
+@Component
+public class EntityGraphFlatDtoOutMapper {
 
   /// Groups mutable traversal accumulators to stay within the method-parameter
   /// limit
@@ -54,7 +55,8 @@ public final class EntityGraphFlatDtoOutMapper {
   ///
   /// @param root the root [EntityGraphNode] returned by the domain service
   /// @return flat DTO with deduplicated nodes and directed edges
-  public static EntityGraphFlatDtoOut toFlatDto(EntityGraphNode root) {
+  @WithSpan("EntityGraphFlatDtoOutMapper.toFlatDto")
+  public EntityGraphFlatDtoOut toFlatDto(EntityGraphNode root) {
     if (root == null) {
       return new EntityGraphFlatDtoOut(List.of(), List.of());
     }
