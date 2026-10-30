@@ -9,6 +9,7 @@ import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.inOrder;
+import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -21,6 +22,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -86,6 +88,17 @@ class EntityServiceTest {
 
   @InjectMocks
   private EntityService entityService;
+
+  @BeforeEach
+  void returnValidatedEntitiesByDefault() {
+    lenient().when(
+        entityValidationService.validateForCreation(any(Entity.class), any(EntityTemplate.class)))
+        .thenAnswer(invocation -> invocation.getArgument(0));
+    lenient()
+        .when(
+            entityValidationService.validateForUpdate(any(Entity.class), any(EntityTemplate.class)))
+        .thenAnswer(invocation -> invocation.getArgument(0));
+  }
 
   @Test
   @DisplayName("Should return entities page by template identifier")
@@ -169,6 +182,27 @@ class EntityServiceTest {
   }
 
   @Test
+  @DisplayName("Should persist the entity returned by creation validation")
+  void shouldPersistNormalizedEntityOnCreate() {
+    var entity = new Entity(UUID.randomUUID(), "web-service", "Catalog API", "catalog-api",
+        List.of(), List.of(relation("database", "placeholder", "missing-database")));
+    var template = templateWithRelations("web-service",
+        relationDefinition("database", "database-service", false, false));
+    var normalized = new Entity(entity.id(), entity.templateIdentifier(), entity.name(),
+        entity.identifier(), entity.properties(), List.of());
+
+    when(entityTemplateService.getEntityTemplateByIdentifier("web-service")).thenReturn(template);
+    when(entityValidationService.validateForCreation(any(Entity.class), eq(template)))
+        .thenReturn(normalized);
+    when(entityRepository.save(normalized)).thenReturn(normalized);
+
+    var result = entityService.createEntity(entity);
+
+    assertSame(normalized, result);
+    verify(entityRepository).save(normalized);
+  }
+
+  @Test
   @DisplayName("Should not save when entity already exists")
   void shouldNotSaveWhenEntityAlreadyExists() {
     var entity = entity("web-service", "catalog-api", "Catalog API");
@@ -228,6 +262,31 @@ class EntityServiceTest {
         "web-api-2");
     inOrder.verify(entityValidationService).validateForUpdate(expectedSaved, template);
     inOrder.verify(entityRepository).save(expectedSaved);
+  }
+
+  @Test
+  @DisplayName("Should persist normalized relations when updating an entity")
+  void shouldPersistNormalizedEntityOnUpdate() {
+    var existing = new Entity(UUID.randomUUID(), "web-service", "Catalog API", "catalog-api",
+        List.of(), List.of(relation("database", "database-service", "database-service-1")));
+    var payload = new Entity(null, "web-service", "Catalog API", "catalog-api", List.of(),
+        List.of(relation("database", "placeholder", "missing-database")));
+    var template = templateWithRelations("web-service",
+        relationDefinition("database", "database-service", false, false));
+    var normalized = new Entity(existing.id(), "web-service", "Catalog API", "catalog-api",
+        List.of(), List.of());
+
+    when(entityTemplateService.getEntityTemplateByIdentifier("web-service")).thenReturn(template);
+    when(entityRepository.findByTemplateIdentifierAndIdentifier("web-service", "catalog-api"))
+        .thenReturn(Optional.of(existing));
+    when(entityValidationService.validateForUpdate(any(Entity.class), eq(template)))
+        .thenReturn(normalized);
+    when(entityRepository.save(normalized)).thenReturn(normalized);
+
+    var result = entityService.updateEntity("web-service", "catalog-api", payload);
+
+    assertSame(normalized, result);
+    verify(entityRepository).save(normalized);
   }
 
   @Test
@@ -1028,6 +1087,31 @@ class EntityServiceTest {
 
     verify(entityValidationService).validateForUpdate(entityCaptor.getValue(), template);
     verify(entityRepository).save(any(Entity.class));
+  }
+
+  @Test
+  @DisplayName("Should persist normalized relations when patching an entity")
+  void shouldPersistNormalizedEntityOnPatch() {
+    var existing = new Entity(UUID.randomUUID(), "web-service", "Catalog API", "catalog-api",
+        List.of(), List.of(relation("database", "database-service", "database-service-1")));
+    var patchData = new EntityPatch(null, null,
+        List.of(relation("database", "placeholder", "missing-database")));
+    var template = templateWithRelations("web-service",
+        relationDefinition("database", "database-service", false, false));
+    var normalized = new Entity(existing.id(), existing.templateIdentifier(), existing.name(),
+        existing.identifier(), existing.properties(), List.of());
+
+    when(entityTemplateService.getEntityTemplateByIdentifier("web-service")).thenReturn(template);
+    when(entityRepository.findByTemplateIdentifierAndIdentifier("web-service", "catalog-api"))
+        .thenReturn(Optional.of(existing));
+    when(entityValidationService.validateForUpdate(any(Entity.class), eq(template)))
+        .thenReturn(normalized);
+    when(entityRepository.save(normalized)).thenReturn(normalized);
+
+    var result = entityService.patchEntity("web-service", "catalog-api", patchData);
+
+    assertSame(normalized, result);
+    verify(entityRepository).save(normalized);
   }
 
   @Test

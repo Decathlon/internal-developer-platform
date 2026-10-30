@@ -13,6 +13,7 @@ import com.decathlon.idp_core.domain.exception.entity.EntityAlreadyExistsExcepti
 import com.decathlon.idp_core.domain.exception.entity.EntityValidationException;
 import com.decathlon.idp_core.domain.model.entity.Entity;
 import com.decathlon.idp_core.domain.model.entity.Property;
+import com.decathlon.idp_core.domain.model.entity.Relation;
 import com.decathlon.idp_core.domain.model.entity_template.EntityTemplate;
 import com.decathlon.idp_core.domain.model.entity_template.PropertyDefinition;
 import com.decathlon.idp_core.domain.port.EntityRepositoryPort;
@@ -45,13 +46,15 @@ public class EntityValidationService {
   ///
   /// @param entity the entity to validate
   /// @param template the already-resolved template the entity must conform to
+  /// @return the validated entity with unresolved optional relation targets
+  /// removed
   /// @throws EntityValidationException when one or more validation rules are
   /// violated
   /// @throws EntityAlreadyExistsException if an entity with the same identifier
   /// exists for the template
-  public void validateForCreation(Entity entity, EntityTemplate template) {
+  public Entity validateForCreation(Entity entity, EntityTemplate template) {
     validateUniqueness(entity);
-    validateAgainstTemplate(template, entity);
+    return validateAgainstTemplate(template, entity);
   }
 
   /// Validates entity data for update operations.
@@ -62,22 +65,26 @@ public class EntityValidationService {
   ///
   /// @param entity the entity payload to validate
   /// @param template the already-resolved template the entity must conform to
+  /// @return the validated entity with unresolved optional relation targets
+  /// removed
   /// @throws EntityValidationException when one or more validation rules are
   /// violated
-  void validateForUpdate(Entity entity, EntityTemplate template) {
-    validateAgainstTemplate(template, entity);
+  Entity validateForUpdate(Entity entity, EntityTemplate template) {
+    return validateAgainstTemplate(template, entity);
   }
 
-  /// Validates entity properties against the template's property definitions,
+  /// Validates entity data against template property and relation definitions,
   /// enforcing required fields and value rules.
   ///
   /// @param template the entity template whose property definitions are used for
   /// validation
   /// @param entity the entity being validated, containing the actual property
   /// values to check
+  /// @return the validated entity with unresolved optional relation targets
+  /// removed
   /// @throws EntityValidationException if any property validation rules are
   /// violated, including missing required properties
-  private void validateAgainstTemplate(EntityTemplate template, Entity entity) {
+  private Entity validateAgainstTemplate(EntityTemplate template, Entity entity) {
     Violations violations = new Violations();
     violations.addIfBlank(entity.name(), ENTITY_NAME_MANDATORY);
 
@@ -91,12 +98,15 @@ public class EntityValidationService {
     propertyValidationService.validatePropertiesAgainstTemplate(template, definitions,
         propertiesByName, violations);
 
-    relationValidationService.validateRelationsAgainstTemplate(template, entity.relations(),
-        violations);
+    List<Relation> normalizedRelations = relationValidationService
+        .validateAndNormalizeRelationsAgainstTemplate(template, entity.relations(), violations);
 
     if (!violations.isEmpty()) {
       throw new EntityValidationException(violations.asList());
     }
+
+    return new Entity(entity.id(), entity.templateIdentifier(), entity.name(), entity.identifier(),
+        entity.properties(), normalizedRelations);
   }
 
   /// Checks for existing entity with same template and identifier to prevent
