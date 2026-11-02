@@ -1,16 +1,27 @@
-FROM eclipse-temurin:25-jre-alpine
+FROM eclipse-temurin:25-jdk-jammy AS build
+WORKDIR /usr/app
 
-ENV PORT=8080
+COPY .mvn .mvn
+COPY mvnw pom.xml ./
+RUN chmod +x mvnw && ./mvnw dependency:go-offline -B
 
-RUN addgroup -S idp-core-group && \
-    adduser -S -D -H -G idp-core-group idp-core-user
+COPY src src
+RUN ./mvnw clean package -DskipTests
 
-USER idp-core-user:idp-core-group
-
+FROM eclipse-temurin:25-jre-jammy
 WORKDIR /opt
-COPY ./target/idp-core*.jar /opt/app.jar
+
+ENV SERVER_PORT=8080 \
+    PORT=8080
+
+RUN groupadd -r -g 1001 idp-core-group && \
+    useradd -r -u 1001 -g idp-core-group -s /bin/false idp-core-user
+
+COPY --from=build /usr/app/target/idp-core*.jar /opt/app.jar
+
+USER 1001:1001
 
 HEALTHCHECK --interval=30s --timeout=5s --start-period=25s --retries=3 \
-    CMD wget -q --spider "http://localhost:${SERVER_PORT:-8080}/actuator/health" || exit 1
+    CMD wget -q --spider "http://localhost:${SERVER_PORT}/actuator/health" || exit 1
 
 ENTRYPOINT ["java", "-jar", "/opt/app.jar"]
