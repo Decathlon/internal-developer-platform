@@ -20,7 +20,7 @@
     <java.version>25</java.version>
     <jakarta.version>2.2.55</jakarta.version>
     <lombok.version>1.18.48</lombok.version>
-    <mockserver.version>7.4.0</mockserver.version>
+    <mockserver.version>9.1.0</mockserver.version>
     <testcontainers.version>1.21.4</testcontainers.version>
     <maven-compiler.version>3.16.0</maven-compiler.version>
     <jacoco-maven.version>0.8.15</jacoco-maven.version>
