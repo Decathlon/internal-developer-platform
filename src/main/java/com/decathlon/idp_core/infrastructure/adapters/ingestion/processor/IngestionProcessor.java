@@ -126,12 +126,14 @@ public class IngestionProcessor {
   }
 
   private void handleUpdate(Entity entity, String connectorIdentifier) {
+    Entity sanitizedEntity = sanitizePrincipalEntity(entity);
+
     try {
       if (entityService.entityExists(entity.templateIdentifier(), entity.identifier())) {
         log.debug("Patching entity {} for template: {}", entity.identifier(),
             entity.templateIdentifier());
         entityService.patchEntity(entity.templateIdentifier(), entity.identifier(),
-            EntityPatch.fromEntity(entity));
+            EntityPatch.fromEntity(sanitizedEntity));
         incrementCounter(IngestionObservabilityConstants.ENTITY_PATCH_TOTAL, ATTRIBUTE_TEMPLATE,
             entity.templateIdentifier(), ATTRIBUTE_CONNECTOR, connectorIdentifier, ATTRIBUTE_ACTION,
             "UPDATE_ENTITY");
@@ -140,7 +142,7 @@ public class IngestionProcessor {
       } else {
         log.debug("Creating entity {} for template: {}", entity.identifier(),
             entity.templateIdentifier());
-        entityService.createEntity(entity);
+        entityService.createEntity(sanitizedEntity);
         incrementCounter(IngestionObservabilityConstants.ENTITY_CREATED_TOTAL, ATTRIBUTE_TEMPLATE,
             entity.templateIdentifier(), ATTRIBUTE_CONNECTOR, connectorIdentifier);
       }
@@ -151,7 +153,9 @@ public class IngestionProcessor {
   }
 
   private void handleUpdateProperties(Entity entity, String connectorIdentifier) {
-    EntityPatch propertiesPatch = new EntityPatch(entity.name(), entity.properties(), List.of());
+    Entity sanitizedEntity = sanitizePrincipalEntity(entity);
+    EntityPatch propertiesPatch = new EntityPatch(entity.name(), sanitizedEntity.properties(),
+        List.of());
 
     try {
       if (entityService.entityExists(entity.templateIdentifier(), entity.identifier())) {
@@ -164,7 +168,7 @@ public class IngestionProcessor {
             entity.templateIdentifier(), ATTRIBUTE_CONNECTOR, connectorIdentifier);
       } else {
         entityService.createEntity(new Entity(null, entity.templateIdentifier(), entity.name(),
-            entity.identifier(), entity.properties(), List.of()));
+            entity.identifier(), sanitizedEntity.properties(), List.of()));
         incrementCounter(IngestionObservabilityConstants.ENTITY_CREATED_TOTAL, ATTRIBUTE_TEMPLATE,
             entity.templateIdentifier(), ATTRIBUTE_CONNECTOR, connectorIdentifier);
       }
@@ -172,6 +176,18 @@ public class IngestionProcessor {
       recordEntityFailureMetrics(connectorIdentifier, exception, entity.templateIdentifier());
       throw exception;
     }
+  }
+
+  private Entity sanitizePrincipalEntity(Entity entity) {
+    if (!"principal".equals(entity.templateIdentifier())) {
+      return entity;
+    }
+
+    List<Property> sanitizedProperties = entity.properties().stream()
+        .filter(property -> !PROTECTED_PRINCIPAL_PROPERTIES.contains(property.name())).toList();
+
+    return new Entity(entity.id(), entity.templateIdentifier(), entity.name(), entity.identifier(),
+        sanitizedProperties, entity.relations());
   }
 
   private void handleUpdateRelations(Entity entity, String connectorIdentifier) {

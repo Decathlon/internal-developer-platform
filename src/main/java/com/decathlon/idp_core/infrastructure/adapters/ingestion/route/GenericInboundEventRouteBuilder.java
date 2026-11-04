@@ -125,8 +125,10 @@ public class GenericInboundEventRouteBuilder extends RouteBuilder {
             "Decoding payload for webhook ID: ${exchangeProperty.connectorIdentifier}")
         .process(exchange -> {
           byte[] rawPayload = exchange.getProperty(RAW_PAYLOAD_BODY_PROPERTY, byte[].class);
+          String connectorIdentifier = exchange.getProperty(CONNECTOR_IDENTIFIER_PROPERTY,
+              String.class);
           String decodedPayload = decodingProcessor.decode(rawPayload,
-              exchange.getIn().getHeaders());
+              exchange.getIn().getHeaders(), connectorIdentifier);
           exchange.getIn().setBody(decodedPayload);
           exchange.getIn().removeHeader(CONTENT_ENCODING_HEADER);
         });

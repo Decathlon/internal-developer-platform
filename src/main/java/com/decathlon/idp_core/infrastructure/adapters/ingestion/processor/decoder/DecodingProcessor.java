@@ -59,11 +59,21 @@ public class DecodingProcessor {
   /// headers. Accepts Object to support both byte[] and String from Camel.
   /// All conversions are validated against MAX_INPUT_PAYLOAD_BYTES.
   public String decode(Object encodedPayload, Map<String, Object> headers) {
+    return decode(encodedPayload, headers, UNKNOWN_VALUE);
+  }
+
+  /// Decodes incoming payload bytes or string representations based on request
+  /// headers and the resolved connector identifier. The connector is passed
+  /// explicitly
+  /// from the route so metrics are attributed to the actual webhook configuration
+  /// instead of a potentially spoofed request header.
+  public String decode(Object encodedPayload, Map<String, Object> headers,
+      String connectorIdentifier) {
     String contentEncoding = extractContentEncodingHeader(headers);
     List<String> encodingChain = parseEncodingChain(contentEncoding);
-    String connector = headers == null
-        ? "unknown"
-        : String.valueOf(headers.getOrDefault("connector", "unknown"));
+    String connector = connectorIdentifier == null || connectorIdentifier.isBlank()
+        ? UNKNOWN_VALUE
+        : connectorIdentifier;
 
     try {
       if (encodingChain.isEmpty()) {
@@ -101,6 +111,17 @@ public class DecodingProcessor {
     }
   }
 
+  private String resolveEncodingMetricLabel(List<String> encodingChain) {
+    if (encodingChain == null || encodingChain.isEmpty() || (encodingChain.size() == 1
+        && CONTENT_ENCODING_IDENTITY.equals(encodingChain.getFirst()))) {
+      return "identity";
+    }
+    if (encodingChain.size() == 1 && CONTENT_ENCODING_GZIP.equals(encodingChain.getFirst())) {
+      return "gzip";
+    }
+    return "chained";
+  }
+
   private String decodePayloadWithEncodingChain(byte[] decodedPayload, List<String> encodingChain,
       String contentEncoding, String connector) {
     try {
@@ -109,7 +130,7 @@ public class DecodingProcessor {
       }
       String result = new String(decodedPayload, StandardCharsets.UTF_8);
       recordPayloadSizeMetric(connector, decodedPayload.length);
-      incrementDecodedMetric(connector, String.join(",", encodingChain));
+      incrementDecodedMetric(connector, resolveEncodingMetricLabel(encodingChain));
       return result;
     } catch (ZipException e) {
       incrementDecodeErrorMetric(connector, "corrupted_gzip_payload");

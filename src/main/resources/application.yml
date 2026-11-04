@@ -251,6 +251,14 @@ otel:
       enabled: ${OTEL_INSTRUMENTATION_JDBC_ENABLED:false}
 
 management:
+  metrics:
+    # Keep Camel Micrometer route metrics active without turning Micrometer into the app-wide
+    # metrics backend. Custom application metrics remain OTel via io.opentelemetry.api.metrics.Meter.
+    enable:
+      all: false
+    export:
+      otlp:
+        enabled: false
   endpoints:
     web:
       exposure:

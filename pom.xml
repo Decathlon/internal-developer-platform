@@ -282,7 +282,7 @@
 
     <!-- JSLT: JVM-native JSON transformation language used as the DSL engine for dynamic mappings -->
     <!-- ADR 0004: JSLT chosen over JQ for performance, robust syntax checking and JVM-native
-            execution -->
+                execution -->
     <dependency>
       <groupId>com.schibsted.spt.data</groupId>
       <artifactId>jslt</artifactId>
@@ -360,6 +360,11 @@
     <dependency>
       <groupId>io.opentelemetry</groupId>
       <artifactId>opentelemetry-api</artifactId>
+    </dependency>
+
+    <dependency>
+      <groupId>org.apache.camel.springboot</groupId>
+      <artifactId>camel-micrometer-starter</artifactId>
     </dependency>
 
   </dependencies>
