@@ -63,8 +63,6 @@ public class IngestionProcessor {
     Span currentSpan = Span.current();
     IngestionObservabilitySupport.setSpanAttribute(currentSpan, SPAN_ATTRIBUTE_WEBHOOK_IDENTIFIER,
         connectorIdentifier);
-    log.info("span  id: {}, trace_id: {}", currentSpan.getSpanContext().getSpanId(),
-        currentSpan.getSpanContext().getTraceId());// todo todelete
     log.info("Starting ingestion for webhook connector: {}", connectorIdentifier);
     webhookConnectorConfiguration.mappings()
         .forEach(mapping -> applyMapping(payload, mapping, webhookConnectorConfiguration));
@@ -113,10 +111,6 @@ public class IngestionProcessor {
           "error_type", exception.getClass().getSimpleName());
       incrementCounter(MAPPING_RESULT,
           ATTRIBUTE_CONNECTOR, connectorIdentifier, ATTRIBUTE_MAPPING_ID, mappingId, ATTRIBUTE_RESULT, "ERROR");
-      incrementCounter(IngestionObservabilityConstants.FUNCTIONAL_VALIDATION_FAILED_TOTAL,
-          ATTRIBUTE_CONNECTOR, connectorIdentifier, "mapping_id", mappingId,
-          ATTRIBUTE_REASON, exception.getClass().getSimpleName());
-      recordEntityFailureMetrics(connectorIdentifier, exception);
       throw exception;
     } finally {
       long durationMs = (System.nanoTime() - startTimeNanos) / 1_000_000L;
@@ -222,15 +216,8 @@ public class IngestionProcessor {
     }
   }
 
-  private void recordEntityFailureMetrics(String connectorIdentifier, RuntimeException exception) {
-    recordEntityFailureMetrics(connectorIdentifier, exception, "unknown");
-  }
-
   private void recordEntityFailureMetrics(String connectorIdentifier, RuntimeException exception,
       String templateIdentifier) {
-    incrementCounter(IngestionObservabilityConstants.ENTITY_VALIDATION_ERRORS_TOTAL,
-        ATTRIBUTE_TEMPLATE, templateIdentifier, ATTRIBUTE_CONNECTOR, connectorIdentifier,
-        ATTRIBUTE_REASON, exception.getClass().getSimpleName());
     incrementCounter(IngestionObservabilityConstants.FUNCTIONAL_VALIDATION_FAILED_TOTAL,
         ATTRIBUTE_CONNECTOR, connectorIdentifier, ATTRIBUTE_TEMPLATE, templateIdentifier,
         ATTRIBUTE_REASON, exception.getClass().getSimpleName());

@@ -367,6 +367,11 @@
       <artifactId>camel-micrometer-starter</artifactId>
     </dependency>
 
+    <dependency>
+      <groupId>io.micrometer</groupId>
+      <artifactId>micrometer-registry-otlp</artifactId>
+    </dependency>
+
   </dependencies>
 
   <build>

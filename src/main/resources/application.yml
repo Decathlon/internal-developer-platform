@@ -251,18 +251,33 @@ otel:
       enabled: ${OTEL_INSTRUMENTATION_JDBC_ENABLED:false}
 
 management:
+  otlp:
+    metrics:
+      export:
+        # Micrometer OTLP export is intentionally opt-in and limited to Camel route meters.
+        # This keeps native OTel custom metrics/traces untouched while allowing camel.* metrics
+        # to be sent to the same OTLP collector used by the rest of the application.
+        enabled: ${MICROMETER_OTLP_EXPORT_ENABLED:true}
+        url: ${OTEL_EXPORTER_OTLP_METRICS_ENDPOINT:${OTEL_EXPORTER_OTLP_ENDPOINT:http://localhost:4318}/v1/metrics}
+        protocol: ${OTEL_EXPORTER_OTLP_METRICS_PROTOCOL:${OTEL_EXPORTER_OTLP_PROTOCOL:http/protobuf}}
+        step: ${OTEL_METRIC_EXPORT_INTERVAL:60000}
   metrics:
-    # Keep Camel Micrometer route metrics active without turning Micrometer into the app-wide
-    # metrics backend. Custom application metrics remain OTel via io.opentelemetry.api.metrics.Meter.
+    # Micrometer is intentionally restricted to Camel route metrics only.
+    # Custom application metrics remain emitted through the OTel Meter API and are not routed
+    # through the Micrometer backend. This avoids duplicate app-wide metric registries while
+    # still enabling Camel route counters/histograms such as camel.exchanges.total,
+    # camel.exchanges.failed, camel.exchanges.succeeded and route duration timers.
     enable:
       all: false
-    export:
-      otlp:
-        enabled: false
+      camel: true
+    distribution:
+      percentiles-histogram:
+        camel: true
+
   endpoints:
     web:
       exposure:
-        include: health
+        include: health,metrics
   endpoint:
     health:
       probes:

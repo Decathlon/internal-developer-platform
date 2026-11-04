@@ -1,7 +1,6 @@
 package com.decathlon.idp_core.infrastructure.adapters.ingestion.processor.decoder;
 
 import static com.decathlon.idp_core.infrastructure.adapters.ingestion.configuration.IngestionConstants.*;
-import static com.decathlon.idp_core.infrastructure.adapters.ingestion.configuration.IngestionObservabilityConstants.*;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
@@ -20,6 +19,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
 import com.decathlon.idp_core.infrastructure.adapters.ingestion.exception.WebhookDecodingException;
+import com.decathlon.idp_core.infrastructure.adapters.ingestion.metrics.IngestionObservabilitySupport;
 
 import io.opentelemetry.api.metrics.Meter;
 
@@ -41,6 +41,7 @@ public class DecodingProcessor {
   private static final int SANITIZED_HEADER_MAX_LENGTH = 128;
   private static final int DECOMPRESSION_BUFFER_SIZE = 8192;
   private static final long MAX_INPUT_PAYLOAD_BYTES = 10L * 1024 * 1024; // 10MB
+  private static final String BYTES_SUFFIX = " bytes";
 
   private final Map<String, PayloadDecoder> decoders;
   private final Meter meter;
@@ -64,9 +65,8 @@ public class DecodingProcessor {
 
   /// Decodes incoming payload bytes or string representations based on request
   /// headers and the resolved connector identifier. The connector is passed
-  /// explicitly
-  /// from the route so metrics are attributed to the actual webhook configuration
-  /// instead of a potentially spoofed request header.
+  /// explicitly from the route so metrics are attributed to the actual webhook
+  /// configuration instead of a potentially spoofed request header.
   public String decode(Object encodedPayload, Map<String, Object> headers,
       String connectorIdentifier) {
     String contentEncoding = extractContentEncodingHeader(headers);
@@ -77,25 +77,22 @@ public class DecodingProcessor {
 
     try {
       if (encodingChain.isEmpty()) {
-        String decoded = payloadToString(encodedPayload);
+        String decoded = payloadToString(encodedPayload, connector);
         recordPayloadSizeMetric(connector, decoded.getBytes(StandardCharsets.UTF_8).length);
         incrementDecodedMetric(connector, "identity");
         return decoded;
       }
 
-      // Reject unsupported encodings explicitly — silent pass-through risks silent
-      // data corruption.
       List<String> unsupported = encodingChain.stream()
           .filter(encoding -> !decoders.containsKey(encoding)).toList();
       if (!unsupported.isEmpty()) {
-        String reason = "unsupported_encoding";
-        incrementDecodeErrorMetric(connector, reason);
+        incrementDecodeErrorMetric(connector, "unsupported_encoding");
         throw new WebhookDecodingException(
             "Unsupported Content-Encoding: '" + sanitizeHeaderValue(contentEncoding)
                 + "'. Supported encodings: " + String.join(", ", decoders.keySet()));
       }
 
-      byte[] decodedPayload = toByteArray(encodedPayload);
+      byte[] decodedPayload = toByteArray(encodedPayload, connector);
       if (decodedPayload.length == 0 && encodingChain.contains(CONTENT_ENCODING_GZIP)) {
         incrementDecodeErrorMetric(connector, "empty_gzip_payload");
         throw new WebhookDecodingException("Empty payload cannot be decoded as gzip");
@@ -111,22 +108,34 @@ public class DecodingProcessor {
     }
   }
 
+  private byte[] decodeIdentity(byte[] payload) {
+    return payload;
+  }
+
   private String resolveEncodingMetricLabel(List<String> encodingChain) {
-    if (encodingChain == null || encodingChain.isEmpty() || (encodingChain.size() == 1
-        && CONTENT_ENCODING_IDENTITY.equals(encodingChain.getFirst()))) {
-      return "identity";
-    }
-    if (encodingChain.size() == 1 && CONTENT_ENCODING_GZIP.equals(encodingChain.getFirst())) {
-      return "gzip";
-    }
-    return "chained";
+    return IngestionObservabilitySupport.resolveEncodingMetricLabel(encodingChain);
+  }
+
+  private void throwPayloadSizeExceeded(String connector, String message) {
+    incrementDecodeErrorMetric(connector, "payload_too_large");
+    throw new WebhookDecodingException(message);
+  }
+
+  private void throwDecompressionLimitExceeded(String connector, String message) {
+    incrementDecodeErrorMetric(connector, "decompression_limit_exceeded");
+    throw new WebhookDecodingException(message);
   }
 
   private String decodePayloadWithEncodingChain(byte[] decodedPayload, List<String> encodingChain,
       String contentEncoding, String connector) {
     try {
       for (int i = encodingChain.size() - 1; i >= 0; i--) {
-        decodedPayload = decoders.get(encodingChain.get(i)).decode(decodedPayload);
+        String encoding = encodingChain.get(i);
+        if (CONTENT_ENCODING_GZIP.equals(encoding)) {
+          decodedPayload = decodeGzip(decodedPayload, connector);
+        } else {
+          decodedPayload = decoders.get(encoding).decode(decodedPayload);
+        }
       }
       String result = new String(decodedPayload, StandardCharsets.UTF_8);
       recordPayloadSizeMetric(connector, decodedPayload.length);
@@ -142,29 +151,125 @@ public class DecodingProcessor {
     }
   }
 
+  private byte[] decodeGzip(byte[] encodedPayload) throws IOException {
+    return decodeGzip(encodedPayload, UNKNOWN_VALUE);
+  }
+
+  private byte[] decodeGzip(byte[] encodedPayload, String connector) throws IOException {
+    try (GZIPInputStream gzipInput = new GZIPInputStream(new ByteArrayInputStream(encodedPayload));
+        ByteArrayOutputStream output = new ByteArrayOutputStream()) {
+      byte[] buffer = new byte[DECOMPRESSION_BUFFER_SIZE];
+      long totalBytesRead = 0;
+      int bytesRead;
+      while ((bytesRead = gzipInput.read(buffer)) != -1) {
+        totalBytesRead += bytesRead;
+        if (totalBytesRead > maxDecompressedBytes) {
+          String message = "Decompressed payload exceeds maximum allowed size of "
+              + maxDecompressedBytes + BYTES_SUFFIX;
+          throwDecompressionLimitExceeded(connector, message);
+        }
+        output.write(buffer, 0, bytesRead);
+      }
+      return output.toByteArray();
+    }
+  }
+
+  private String payloadToString(Object payload, String connector) {
+    if (payload == null) {
+      return "";
+    }
+
+    return switch (payload) {
+      case String s -> {
+        if (s.length() > MAX_INPUT_PAYLOAD_BYTES) {
+          throwPayloadSizeExceeded(connector,
+              "Input payload string length " + s.length() + " exceeds maximum allowed size of "
+                  + MAX_INPUT_PAYLOAD_BYTES + BYTES_SUFFIX);
+        }
+        yield s;
+      }
+      case byte[] b -> {
+        if (b.length > MAX_INPUT_PAYLOAD_BYTES) {
+          throwPayloadSizeExceeded(connector,
+              "Input payload size " + b.length + BYTES_SUFFIX
+                  + " exceeds maximum allowed size of " + MAX_INPUT_PAYLOAD_BYTES + BYTES_SUFFIX);
+        }
+        yield new String(b, StandardCharsets.UTF_8);
+      }
+      default -> {
+        String str = payload.toString();
+        if (str.length() > MAX_INPUT_PAYLOAD_BYTES) {
+          throwPayloadSizeExceeded(connector,
+              "Input payload string length " + str.length() + " exceeds maximum allowed size of "
+                  + MAX_INPUT_PAYLOAD_BYTES + BYTES_SUFFIX);
+        }
+        yield str;
+      }
+    };
+  }
+
+  private byte[] toByteArray(Object payload, String connector) {
+    if (payload == null) {
+      return new byte[0];
+    }
+
+    return switch (payload) {
+      case byte[] b -> {
+        if (b.length > MAX_INPUT_PAYLOAD_BYTES) {
+          throwPayloadSizeExceeded(connector,
+              "Input payload size " + b.length + BYTES_SUFFIX
+                  + " exceeds maximum allowed size of " + MAX_INPUT_PAYLOAD_BYTES + BYTES_SUFFIX);
+        }
+        yield b;
+      }
+      case String s -> {
+        if (s.length() > MAX_INPUT_PAYLOAD_BYTES) {
+          throwPayloadSizeExceeded(connector,
+              "Input payload string length " + s.length() + " exceeds maximum allowed size of "
+                  + MAX_INPUT_PAYLOAD_BYTES + BYTES_SUFFIX);
+        }
+        byte[] bytes = s.getBytes(StandardCharsets.UTF_8);
+        if (bytes.length > MAX_INPUT_PAYLOAD_BYTES) {
+          throwPayloadSizeExceeded(connector,
+              "Input payload size " + bytes.length + BYTES_SUFFIX
+                  + " exceeds maximum allowed size of " + MAX_INPUT_PAYLOAD_BYTES + BYTES_SUFFIX);
+        }
+        yield bytes;
+      }
+      default -> {
+        String str = payload.toString();
+        if (str.length() > MAX_INPUT_PAYLOAD_BYTES) {
+          throwPayloadSizeExceeded(connector,
+              "Input payload string length " + str.length() + " exceeds maximum allowed size of "
+                  + MAX_INPUT_PAYLOAD_BYTES + BYTES_SUFFIX);
+        }
+        byte[] bytes = str.getBytes(StandardCharsets.UTF_8);
+        if (bytes.length > MAX_INPUT_PAYLOAD_BYTES) {
+          throwPayloadSizeExceeded(connector,
+              "Input payload size " + bytes.length + BYTES_SUFFIX
+                  + " exceeds maximum allowed size of " + MAX_INPUT_PAYLOAD_BYTES + BYTES_SUFFIX);
+        }
+        yield bytes;
+      }
+    };
+  }
+
   private void recordPayloadSizeMetric(String connector, long payloadSizeBytes) {
-    meter.histogramBuilder(PAYLOAD_SIZE_BYTES).ofLongs().build().record(payloadSizeBytes,
-        io.opentelemetry.api.common.Attributes
-            .of(io.opentelemetry.api.common.AttributeKey.stringKey("connector"), connector));
+    IngestionObservabilitySupport.recordPayloadSizeMetric(meter, connector, payloadSizeBytes);
   }
 
   private void incrementDecodedMetric(String connector, String encoding) {
-    meter.counterBuilder(PAYLOAD_DECODED_TOTAL).build().add(1,
-        io.opentelemetry.api.common.Attributes.of(
-            io.opentelemetry.api.common.AttributeKey.stringKey(ATTRIBUTE_CONNECTOR), connector,
-            io.opentelemetry.api.common.AttributeKey.stringKey("encoding"), encoding));
+    IngestionObservabilitySupport.recordDecodedMetric(meter, connector, encoding);
   }
 
   private void incrementDecodeErrorMetric(String connector, String reason) {
-    meter.counterBuilder(PAYLOAD_DECODE_ERRORS_TOTAL).build().add(1,
-        io.opentelemetry.api.common.Attributes.of(
-            io.opentelemetry.api.common.AttributeKey.stringKey(ATTRIBUTE_CONNECTOR), connector,
-            io.opentelemetry.api.common.AttributeKey.stringKey("reason"), reason));
+    IngestionObservabilitySupport.recordDecodeErrorMetric(meter, connector, reason);
   }
 
   private String extractContentEncodingHeader(Map<String, Object> headers) {
-    if (headers == null)
+    if (headers == null) {
       return null;
+    }
 
     return headers.entrySet().stream()
         .filter(entry -> entry.getKey().equalsIgnoreCase(CONTENT_ENCODING_HEADER))
@@ -180,126 +285,14 @@ public class DecodingProcessor {
         .map(s -> s.toLowerCase(Locale.ROOT)).toList();
   }
 
-  private byte[] decodeIdentity(byte[] payload) {
-    return payload;
-  }
-
-  /// Decompresses a gzip payload with a hard upper bound to prevent Zip Bomb
-  /// (DoS) attacks.
-  ///
-  /// Reads in chunks and aborts with `WebhookDecodingException` if the
-  /// decompressed size exceeds `maxDecompressedBytes`.
-  private byte[] decodeGzip(byte[] encodedPayload) throws IOException {
-    try (GZIPInputStream gzipInput = new GZIPInputStream(new ByteArrayInputStream(encodedPayload));
-        ByteArrayOutputStream output = new ByteArrayOutputStream()) {
-      byte[] buffer = new byte[DECOMPRESSION_BUFFER_SIZE];
-      long totalBytesRead = 0;
-      int bytesRead;
-      while ((bytesRead = gzipInput.read(buffer)) != -1) {
-        totalBytesRead += bytesRead;
-        if (totalBytesRead > maxDecompressedBytes) {
-          throw new WebhookDecodingException("Decompressed payload exceeds maximum allowed size of "
-              + maxDecompressedBytes + " bytes");
-        }
-        output.write(buffer, 0, bytesRead);
-      }
-      return output.toByteArray();
-    }
-  }
-
-  /// Converts payload to String with validation against MAX_INPUT_PAYLOAD_BYTES.
-  /// Prevents unbounded byte[]→String allocations.
-  private String payloadToString(Object payload) {
-    if (payload == null) return "";
-
-    return switch (payload) {
-      case String s -> {
-        if (s.length() > MAX_INPUT_PAYLOAD_BYTES) {
-          throw new WebhookDecodingException(
-              "Input payload string length " + s.length() + " exceeds maximum allowed size of "
-                  + MAX_INPUT_PAYLOAD_BYTES + " bytes");
-        }
-        yield s;
-      }
-      case byte[] b -> {
-        // Validate array size before converting to string
-        if (b.length > MAX_INPUT_PAYLOAD_BYTES) {
-          throw new WebhookDecodingException(
-              "Input payload size " + b.length + " bytes exceeds maximum allowed size of "
-                  + MAX_INPUT_PAYLOAD_BYTES + " bytes");
-        }
-        yield new String(b, StandardCharsets.UTF_8);
-      }
-      default -> {
-        // For unknown types, convert via toString() and validate
-        String str = payload.toString();
-        if (str.length() > MAX_INPUT_PAYLOAD_BYTES) {
-          throw new WebhookDecodingException(
-              "Input payload string length " + str.length() + " exceeds maximum allowed size of "
-                  + MAX_INPUT_PAYLOAD_BYTES + " bytes");
-        }
-        yield str;
-      }
-    };
-  }
-
-  /// Converts payload to byte array with validation against
-  /// MAX_INPUT_PAYLOAD_BYTES.
-  /// Prevents unbounded String→byte[] and other conversions.
-  private byte[] toByteArray(Object payload) {
-    if (payload == null) return new byte[0];
-
-    return switch (payload) {
-      case byte[] b -> {
-        // Validate array size
-        if (b.length > MAX_INPUT_PAYLOAD_BYTES) {
-          throw new WebhookDecodingException(
-              "Input payload size " + b.length + " bytes exceeds maximum allowed size of "
-                  + MAX_INPUT_PAYLOAD_BYTES + " bytes");
-        }
-        yield b;
-      }
-      case String s -> {
-        if (s.length() > MAX_INPUT_PAYLOAD_BYTES) {
-          throw new WebhookDecodingException(
-              "Input payload string length " + s.length() + " exceeds maximum allowed size of "
-                  + MAX_INPUT_PAYLOAD_BYTES + " bytes");
-        }
-        byte[] bytes = s.getBytes(StandardCharsets.UTF_8);
-        if (bytes.length > MAX_INPUT_PAYLOAD_BYTES) {
-          throw new WebhookDecodingException(
-              "Input payload size " + bytes.length + " bytes exceeds maximum allowed size of "
-                  + MAX_INPUT_PAYLOAD_BYTES + " bytes");
-        }
-        yield bytes;
-      }
-      default -> {
-        // For unknown types, convert via toString() and validate
-        String str = payload.toString();
-        if (str.length() > MAX_INPUT_PAYLOAD_BYTES) {
-          throw new WebhookDecodingException(
-              "Input payload string length " + str.length() + " exceeds maximum allowed size of "
-                  + MAX_INPUT_PAYLOAD_BYTES + " bytes");
-        }
-        byte[] bytes = str.getBytes(StandardCharsets.UTF_8);
-        if (bytes.length > MAX_INPUT_PAYLOAD_BYTES) {
-          throw new WebhookDecodingException(
-              "Input payload size " + bytes.length + " bytes exceeds maximum allowed size of "
-                  + MAX_INPUT_PAYLOAD_BYTES + " bytes");
-        }
-        yield bytes;
-      }
-    };
-  }
-
-  /// Strips control characters (including CRLF) and truncates header values to
-  /// prevent log injection.
   private String sanitizeHeaderValue(String headerValue) {
-    if (headerValue == null)
+    if (headerValue == null) {
       return null;
+    }
     String sanitized = headerValue.replaceAll("[\\x00-\\x1F\\x7F]", "");
     return sanitized.length() > SANITIZED_HEADER_MAX_LENGTH
         ? sanitized.substring(0, SANITIZED_HEADER_MAX_LENGTH) + "..."
         : sanitized;
   }
+
 }

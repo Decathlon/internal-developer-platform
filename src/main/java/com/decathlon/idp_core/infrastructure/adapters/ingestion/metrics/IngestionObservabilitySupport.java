@@ -1,7 +1,14 @@
 package com.decathlon.idp_core.infrastructure.adapters.ingestion.metrics;
 
+import static com.decathlon.idp_core.infrastructure.adapters.ingestion.configuration.IngestionConstants.CONTENT_ENCODING_GZIP;
+import static com.decathlon.idp_core.infrastructure.adapters.ingestion.configuration.IngestionConstants.CONTENT_ENCODING_IDENTITY;
+import static com.decathlon.idp_core.infrastructure.adapters.ingestion.configuration.IngestionObservabilityConstants.ATTRIBUTE_CONNECTOR;
+import static com.decathlon.idp_core.infrastructure.adapters.ingestion.configuration.IngestionObservabilityConstants.PAYLOAD_DECODED_TOTAL;
+import static com.decathlon.idp_core.infrastructure.adapters.ingestion.configuration.IngestionObservabilityConstants.PAYLOAD_DECODE_ERRORS_TOTAL;
+import static com.decathlon.idp_core.infrastructure.adapters.ingestion.configuration.IngestionObservabilityConstants.PAYLOAD_SIZE_BYTES;
 import static reactor.netty.http.HttpConnectionLiveness.log;
 
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -33,6 +40,38 @@ public final class IngestionObservabilitySupport {
     LongHistogram histogram = HISTOGRAM_CACHE.computeIfAbsent(metricName,
         name -> meter.histogramBuilder(name).ofLongs().build());
     histogram.record(value, toAttributes(attributes));
+  }
+
+  public static String resolveEncodingMetricLabel(List<String> encodingChain) {
+    if (encodingChain == null || encodingChain.isEmpty() || (encodingChain.size() == 1
+        && CONTENT_ENCODING_IDENTITY.equals(encodingChain.getFirst()))) {
+      return "identity";
+    }
+    if (encodingChain.size() == 1 && CONTENT_ENCODING_GZIP.equals(encodingChain.getFirst())) {
+      return "gzip";
+    }
+    return "chained";
+  }
+
+  public static void recordPayloadSizeMetric(Meter meter, String connector, long payloadSizeBytes) {
+    LongHistogram histogram = HISTOGRAM_CACHE.computeIfAbsent(PAYLOAD_SIZE_BYTES,
+        name -> meter.histogramBuilder(name).ofLongs().build());
+    histogram.record(payloadSizeBytes,
+        Attributes.of(AttributeKey.stringKey(ATTRIBUTE_CONNECTOR), connector));
+  }
+
+  public static void recordDecodedMetric(Meter meter, String connector, String encoding) {
+    LongCounter counter = COUNTER_CACHE.computeIfAbsent(PAYLOAD_DECODED_TOTAL,
+        name -> meter.counterBuilder(name).build());
+    counter.add(1, Attributes.of(AttributeKey.stringKey(ATTRIBUTE_CONNECTOR), connector,
+        AttributeKey.stringKey("encoding"), encoding));
+  }
+
+  public static void recordDecodeErrorMetric(Meter meter, String connector, String reason) {
+    LongCounter counter = COUNTER_CACHE.computeIfAbsent(PAYLOAD_DECODE_ERRORS_TOTAL,
+        name -> meter.counterBuilder(name).build());
+    counter.add(1, Attributes.of(AttributeKey.stringKey(ATTRIBUTE_CONNECTOR), connector,
+        AttributeKey.stringKey("reason"), reason));
   }
 
   public static void setSpanAttribute(Span span, String attributeName, String attributeValue) {
