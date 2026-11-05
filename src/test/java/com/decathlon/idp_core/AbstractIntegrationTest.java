@@ -42,6 +42,7 @@ import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
+import org.springframework.test.web.servlet.ResultMatcher;
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders;
 import org.springframework.web.reactive.function.client.WebClient;
 import org.testcontainers.containers.JdbcDatabaseContainer;
@@ -75,6 +76,17 @@ public abstract class AbstractIntegrationTest {
   public static ClientAndServer clientAndServer;
 
   public static MockServerClient mockServerClient;
+
+  protected ResultMatcher problemDetailResponse(HttpStatus expectedStatus) {
+    return result -> {
+      jsonPath("$.title").value(expectedStatus.getReasonPhrase()).match(result);
+      jsonPath("$.status").value(expectedStatus.value()).match(result);
+      jsonPath("$.detail").isNotEmpty().match(result);
+      jsonPath("$.error").value(expectedStatus.name()).match(result);
+      jsonPath("$.error_description").isNotEmpty().match(result);
+      jsonPath("$.timestamp").isNotEmpty().match(result);
+    };
+  }
 
   protected AbstractIntegrationTest() {
     this.objectMapper = new ObjectMapper();
@@ -184,7 +196,8 @@ public abstract class AbstractIntegrationTest {
         .perform(
             MockMvcRequestBuilders.post(path).contentType(APPLICATION_JSON).accept(APPLICATION_JSON)
                 .with(csrf()).content(getJsonTestFileContent(jsonBodyfilePath)))
-        .andExpect(status().isBadRequest()).andExpect(jsonPath("$.error").value("BAD_REQUEST"))
+        .andExpect(status().isBadRequest()).andExpect(problemDetailResponse(HttpStatus.BAD_REQUEST))
+        .andExpect(jsonPath("$.error").value("BAD_REQUEST"))
         .andExpect(jsonPath("$.error_description").value(errorDescription)).andReturn();
 
   }
@@ -205,7 +218,8 @@ public abstract class AbstractIntegrationTest {
         .perform(
             MockMvcRequestBuilders.post(path).contentType(APPLICATION_JSON).accept(APPLICATION_JSON)
                 .with(csrf()).content(getJsonTestFileContent(jsonBodyfilePath)))
-        .andExpect(status().isBadRequest()).andExpect(jsonPath("$.error").value("BAD_REQUEST"))
+        .andExpect(status().isBadRequest()).andExpect(problemDetailResponse(HttpStatus.BAD_REQUEST))
+        .andExpect(jsonPath("$.error").value("BAD_REQUEST"))
         .andExpect(jsonPath("$.error_description").value(containsString(errorDescription)))
         .andReturn();
 
@@ -226,7 +240,8 @@ public abstract class AbstractIntegrationTest {
         .perform(
             MockMvcRequestBuilders.post(path).contentType(APPLICATION_JSON).accept(APPLICATION_JSON)
                 .with(csrf()).content(getJsonTestFileContent(jsonBodyfilePath)))
-        .andExpect(status().isConflict()).andExpect(jsonPath("$.error").value("CONFLICT"))
+        .andExpect(status().isConflict()).andExpect(problemDetailResponse(HttpStatus.CONFLICT))
+        .andExpect(jsonPath("$.error").value("CONFLICT"))
         .andExpect(jsonPath("$.error_description").value(containsString(errorDescription)))
         .andReturn();
 
