@@ -47,11 +47,10 @@ public class WebhookConnectorService {
 
   @Transactional
   public WebhookConnector createWebhookConnector(WebhookConnector connector) {
-    webhookConnectorValidationService.validateWebhookConnectorForCreation(connector);
-
     WebhookConnector connectorToSave = connector.mappings().isEmpty() && connector.enabled()
         ? connector.withEnabled(false)
         : connector;
+    webhookConnectorValidationService.validateWebhookConnectorForCreation(connectorToSave);
 
     return webhookConnectorRepositoryPort.save(connectorToSave);
   }
@@ -60,12 +59,15 @@ public class WebhookConnectorService {
   public WebhookConnector updateWebhookConnector(String identifier,
       @Valid WebhookConnector connectorToUpdate) {
     WebhookConnector webhookConnectorInDb = getWebhookConnector(identifier);
-    webhookConnectorValidationService.validateWebhookConnectorForUpdate(connectorToUpdate);
     boolean enabledValue = !connectorToUpdate.mappings().isEmpty() && connectorToUpdate.enabled();
+    WebhookConnector connectorToValidate = connectorToUpdate.enabled() == enabledValue
+        ? connectorToUpdate
+        : connectorToUpdate.withEnabled(enabledValue);
+    webhookConnectorValidationService.validateWebhookConnectorForUpdate(connectorToValidate);
     WebhookConnector mergedConnector = new WebhookConnector(webhookConnectorInDb.id(),
-        webhookConnectorInDb.identifier(), connectorToUpdate.name(),
-        connectorToUpdate.description(), enabledValue, connectorToUpdate.mappings(),
-        connectorToUpdate.security());
+        webhookConnectorInDb.identifier(), connectorToValidate.name(),
+        connectorToValidate.description(), connectorToValidate.enabled(),
+        connectorToValidate.mappings(), connectorToValidate.security());
 
     return webhookConnectorRepositoryPort.save(mergedConnector);
   }

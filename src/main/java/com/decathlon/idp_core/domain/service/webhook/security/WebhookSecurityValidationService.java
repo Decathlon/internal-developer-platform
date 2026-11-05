@@ -15,7 +15,8 @@ import com.decathlon.idp_core.domain.port.WebhookSecurityStrategy;
 ///
 /// This service ensures that the security configuration provided when creating or updating
 /// a webhook connector is valid before storing it in the database. The `NONE` security type
-/// (unauthenticated webhooks) is rejected unless `IDP_WEBHOOK_SECURITY_ALLOW_NONE` is enabled.
+/// (unauthenticated webhooks) is rejected for enabled connectors unless
+/// `IDP_WEBHOOK_SECURITY_ALLOW_NONE` is enabled.
 @Service
 public class WebhookSecurityValidationService {
 
@@ -31,9 +32,10 @@ public class WebhookSecurityValidationService {
   /// Validates webhook security configuration for creation or update.
   ///
   /// @param security the security configuration to validate
+  /// @param enabled whether the webhook connector is enabled
   /// @throws WebhookSecurityConfigurationException if the configuration is
   /// invalid
-  public void validateForCreation(WebhookSecurity security) {
+  public void validateForCreation(WebhookSecurity security, boolean enabled) {
     if (security == null) {
       throw new WebhookSecurityConfigurationException("Webhook security section is mandatory");
     }
@@ -41,11 +43,11 @@ public class WebhookSecurityValidationService {
     Map<String, String> config = security.config();
 
     if (security.type() == WebhookSecurityType.NONE) {
-      if (!policy.allowNone()) {
+      validateNoSecurityConfig(config);
+      if (enabled && !policy.allowNone()) {
         throw new WebhookSecurityConfigurationException(
             "Webhook security type NONE is disabled. Set IDP_WEBHOOK_SECURITY_ALLOW_NONE=true to allow it");
       }
-      validateNoSecurityConfig(config);
       return;
     }
 

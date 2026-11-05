@@ -5,6 +5,7 @@ import java.util.Map;
 
 import org.springframework.stereotype.Component;
 
+import com.decathlon.idp_core.domain.constant.ValidationMessages;
 import com.decathlon.idp_core.domain.exception.webhook.WebhookSecurityConfigurationException;
 import com.decathlon.idp_core.domain.model.entity_mapping.EntityDynamicMapping;
 import com.decathlon.idp_core.domain.model.enums.WebhookSecurityType;
@@ -36,7 +37,7 @@ public class InboundWebhookMapper {
   public WebhookConnector toDomain(InboundWebhookCreateDtoIn dto,
       List<EntityDynamicMapping> resolvedMappings) {
     return new WebhookConnector(null, dto.identifier(), dto.name(), dto.description(),
-        dto.enabled(), safeMappings(resolvedMappings), toDomain(dto.security()));
+        dto.enabled(), safeMappings(resolvedMappings), toDomain(dto.security(), dto.enabled()));
   }
 
   /// Converts API update payload to domain aggregate using the path identifier as
@@ -50,7 +51,7 @@ public class InboundWebhookMapper {
   public WebhookConnector toDomainForUpdate(String identifier, InboundWebhookUpdateDtoIn dto,
       List<EntityDynamicMapping> resolvedMappings) {
     return new WebhookConnector(null, identifier, dto.name(), dto.description(), dto.enabled(),
-        safeMappings(resolvedMappings), toDomain(dto.security()));
+        safeMappings(resolvedMappings), toDomain(dto.security(), dto.enabled()));
   }
 
   /// Converts domain aggregate to API response payload.
@@ -70,9 +71,17 @@ public class InboundWebhookMapper {
     return mappings == null ? List.of() : List.copyOf(mappings);
   }
 
-  private WebhookSecurity toDomain(InboundWebhookSecurityContractDtoIn security) {
+  private WebhookSecurity toDomain(InboundWebhookSecurityContractDtoIn security, boolean enabled) {
     if (security == null) {
       return new WebhookSecurity(WebhookSecurityType.NONE, Map.of());
+    }
+
+    if (security.type() == null || security.type().isBlank()) {
+      if (!enabled) {
+        return new WebhookSecurity(WebhookSecurityType.NONE, safeMap(security.config()));
+      }
+      throw new WebhookSecurityConfigurationException(
+          ValidationMessages.WEBHOOK_CONNECTOR_SECURITY_TYPE_MANDATORY);
     }
 
     var type = parseSecurityType(security.type());

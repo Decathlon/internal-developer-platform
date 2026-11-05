@@ -1138,14 +1138,10 @@ components:
       properties:
         type:
           type: string
-          minLength: 1
         config:
           type: object
           additionalProperties:
             type: string
-      required:
-      - config
-      - type
     InboundWebhookUpdateDtoIn:
       type: object
       properties:
