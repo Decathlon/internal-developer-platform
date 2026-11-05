@@ -15,6 +15,7 @@ import org.springframework.security.web.SecurityFilterChain;
 
 import com.decathlon.idp_core.infrastructure.adapters.api.auth.GlobalAuthorizationFilter;
 import com.decathlon.idp_core.infrastructure.adapters.api.auth.JitProvisioningFilter;
+import com.decathlon.idp_core.infrastructure.adapters.api.configuration.HttpMessageSignatureConfiguration.ChainConfigurer;
 
 /// Security filter chain for browser-based OAuth2 login.
 ///
@@ -37,7 +38,8 @@ public class OAuth2LoginFilterChainConfig {
 
   @Bean
   @Order(2)
-  public SecurityFilterChain oauth2LoginSecurityFilterChain(HttpSecurity http) {
+  public SecurityFilterChain oauth2LoginSecurityFilterChain(HttpSecurity http,
+      ChainConfigurer httpMessageSignature) {
     http.sessionManagement(
         session -> session.sessionCreationPolicy(SessionCreationPolicy.IF_REQUIRED))
         .cors(withDefaults()).csrf(withDefaults())
@@ -47,6 +49,7 @@ public class OAuth2LoginFilterChainConfig {
         .addFilterAfter(jitProvisioningFilter, OAuth2LoginAuthenticationFilter.class)
         .addFilterAfter(globalAuthorizationFilter, JitProvisioningFilter.class);
 
+    httpMessageSignature.configure(http);
     return http.build();
   }
 }

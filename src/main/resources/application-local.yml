@@ -41,6 +41,8 @@ app:
   # ${app.idp-core-prefix-url}/login/oauth2/code/github in the OAuth app settings.
   idp-core-prefix-url: http://localhost:8084
   security:
+    http-message-signature:
+      enabled: ${HTTP_MESSAGE_SIGNATURE_ENABLED:false}
     principal-provisioning:
       mode: ${IDP_PRINCIPAL_PROVISIONING_MODE:LINK_ONLY}
     authorization:
