@@ -144,8 +144,8 @@ class HttpMessageSignatureConfigurationTest {
         HttpMessageSignatureAlgorithm.HMAC_SHA256, 30, 0, paths);
     paths.clear();
     assertThat(properties.excludedPaths()).containsExactly("/custom/**");
-    assertThatThrownBy(() -> properties.excludedPaths().clear())
-        .isInstanceOf(UnsupportedOperationException.class);
+    var excludedPaths = properties.excludedPaths();
+    assertThatThrownBy(excludedPaths::clear).isInstanceOf(UnsupportedOperationException.class);
   }
 
   @ParameterizedTest

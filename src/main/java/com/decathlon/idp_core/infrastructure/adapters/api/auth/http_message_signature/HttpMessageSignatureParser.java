@@ -14,12 +14,17 @@ import java.util.regex.Pattern;
 public final class HttpMessageSignatureParser {
 
   private static final int MAX_HEADER_LENGTH = 8192;
+  private static final String ALGORITHM = "algorithm";
+  private static final String HEADERS = "headers";
+  private static final String CREATED = "created";
+  private static final String EXPIRES = "expires";
+  private static final String SIGNATURE = "signature";
   private static final Pattern ATTRIBUTE = Pattern.compile(
-      "[ \\t]*([A-Za-z][A-Za-z0-9]*)[ \\t]*=[ \\t]*(?:\"([^\"\\\\\\r\\n]*)\"|([^\\s,\"\\\\]+))[ \\t]*(,|$)");
-  private static final Set<String> REQUIRED = Set.of("algorithm", "headers", "created", "expires",
-      "signature");
-  private static final Set<String> ALLOWED = Set.of("keyid", "algorithm", "headers", "created",
-      "expires", "signature");
+      "[ \\t]*([A-Za-z][A-Za-z\\d]*)[ \\t]*=[ \\t]*(?:\"([^\"\\\\\\r\\n]*)\"|([^\\s,\"\\\\]+))[ \\t]*(,|$)");
+  private static final Set<String> REQUIRED = Set.of(ALGORITHM, HEADERS, CREATED, EXPIRES,
+      SIGNATURE);
+  private static final Set<String> ALLOWED = Set.of("keyid", ALGORITHM, HEADERS, CREATED, EXPIRES,
+      SIGNATURE);
   private static final BigDecimal MAX_TIMESTAMP = BigDecimal.valueOf(Instant.MAX.getEpochSecond());
 
   /// Returns parsed attributes, or empty for malformed or ambiguous input.
@@ -36,7 +41,7 @@ public final class HttpMessageSignatureParser {
         return Optional.empty();
       }
       String name = matcher.group(1).toLowerCase(Locale.ROOT);
-      String value = matcher.group(2) != null ? matcher.group(2) : matcher.group(3);
+      String value = matcher.group(matcher.group(2) != null ? 2 : 3);
       if (!ALLOWED.contains(name) || value.isBlank()
           || attributes.putIfAbsent(name, value) != null) {
         return Optional.empty();
@@ -46,20 +51,24 @@ public final class HttpMessageSignatureParser {
         return Optional.empty();
       }
     }
-    if (!attributes.keySet().containsAll(REQUIRED) || !attributes.get("created").matches("[0-9]+")
-        || !attributes.get("expires").matches("[0-9]+(?:\\.[0-9]{1,9})?")) {
+    return parseSignature(attributes);
+  }
+
+  private Optional<ParsedSignature> parseSignature(Map<String, String> attributes) {
+    if (!attributes.keySet().containsAll(REQUIRED) || !attributes.get(CREATED).matches("\\d+")
+        || !attributes.get(EXPIRES).matches("\\d+(?:\\.\\d{1,9})?")) {
       return Optional.empty();
     }
-    var created = new BigDecimal(attributes.get("created"));
-    var expires = new BigDecimal(attributes.get("expires"));
+    var created = new BigDecimal(attributes.get(CREATED));
+    var expires = new BigDecimal(attributes.get(EXPIRES));
     if (created.compareTo(MAX_TIMESTAMP) > 0 || expires.compareTo(MAX_TIMESTAMP) > 0) {
       return Optional.empty();
     }
     List<String> components = List
-        .of(attributes.get("headers").toLowerCase(Locale.ROOT).split(" ", -1));
+        .of(attributes.get(HEADERS).toLowerCase(Locale.ROOT).split(" ", -1));
     return Optional
-        .of(new ParsedSignature(attributes.get("algorithm"), components, attributes.get("created"),
-            attributes.get("expires"), created, expires, attributes.get("signature")));
+        .of(new ParsedSignature(attributes.get(ALGORITHM), components, attributes.get(CREATED),
+            attributes.get(EXPIRES), created, expires, attributes.get(SIGNATURE)));
   }
 
   /// Parsed values retain timestamp text for byte-exact canonicalization.

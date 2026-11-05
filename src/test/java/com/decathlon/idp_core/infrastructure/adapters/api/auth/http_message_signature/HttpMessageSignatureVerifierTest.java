@@ -144,11 +144,15 @@ class HttpMessageSignatureVerifierTest {
   }
 
   @ParameterizedTest
-  @ValueSource(strings = {"-1", "1e9", "NaN", "1.1234567890", "999999999999999999999999"})
-  void rejectsInvalidTimestampRepresentations(String expires) {
+  @ValueSource(strings = {"-1", "1e9", "NaN", "1.1234567890", "999999999999999999999999", "\u0661",
+      "\uFF11"})
+  void rejectsInvalidTimestampRepresentations(String timestamp) {
     String header = attributes(HttpMessageSignatureAlgorithm.HMAC_SHA256, COMPONENTS, CREATED,
-        expires, "hDLDYJ+Y16dQPFUj3X6LXzvnp/T+wwwt0D9BCnpgUqA=");
+        timestamp, "hDLDYJ+Y16dQPFUj3X6LXzvnp/T+wwwt0D9BCnpgUqA=");
     assertThat(new HttpMessageSignatureParser().parse(header)).isEmpty();
+    String invalidCreated = attributes(HttpMessageSignatureAlgorithm.HMAC_SHA256, COMPONENTS,
+        timestamp, EXPIRES, "hDLDYJ+Y16dQPFUj3X6LXzvnp/T+wwwt0D9BCnpgUqA=");
+    assertThat(new HttpMessageSignatureParser().parse(invalidCreated)).isEmpty();
   }
 
   @ParameterizedTest
