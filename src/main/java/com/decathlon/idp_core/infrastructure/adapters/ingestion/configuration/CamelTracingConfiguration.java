@@ -1,9 +1,6 @@
 package com.decathlon.idp_core.infrastructure.adapters.ingestion.configuration;
 
 import org.apache.camel.CamelContext;
-import org.apache.camel.component.micrometer.eventnotifier.MicrometerExchangeEventNotifier;
-import org.apache.camel.component.micrometer.eventnotifier.MicrometerRouteEventNotifier;
-import org.apache.camel.component.micrometer.messagehistory.MicrometerMessageHistoryFactory;
 import org.apache.camel.component.micrometer.routepolicy.MicrometerRoutePolicyFactory;
 import org.apache.camel.spring.boot.CamelContextConfiguration;
 import org.springframework.beans.factory.ObjectProvider;
@@ -35,7 +32,8 @@ public class CamelTracingConfiguration {
 
   @Bean
   public CamelContextConfiguration camelTelemetryBridge(Tracer camelTracer,
-      ContextPropagators camelContextPropagators, MeterRegistry meterRegistry) {
+      ContextPropagators camelContextPropagators,
+      ObjectProvider<MeterRegistry> meterRegistryProvider) {
     return new CamelContextConfiguration() {
       @Override
       public void beforeApplicationStart(CamelContext camelContext) {
@@ -43,25 +41,15 @@ public class CamelTracingConfiguration {
         camelContext.getRegistry().bind("camelTracer", camelTracer);
         camelContext.getRegistry().bind("camelContextPropagators", camelContextPropagators);
 
-        // 2. Emit camel.* metrics into Micrometer so they can be exported through the
-        // OTLP registry.
-        MicrometerRoutePolicyFactory routePolicyFactory = new MicrometerRoutePolicyFactory();
-        routePolicyFactory.setMeterRegistry(meterRegistry);
-        camelContext.addRoutePolicyFactory(routePolicyFactory);
+        MeterRegistry meterRegistry = meterRegistryProvider.getIfAvailable();
+        if (meterRegistry != null) {
+          MicrometerRoutePolicyFactory routePolicyFactory = new MicrometerRoutePolicyFactory();
+          routePolicyFactory.setMeterRegistry(meterRegistry);
+          camelContext.addRoutePolicyFactory(routePolicyFactory);
+          log.info("[TELEMETRY BRIDGE] Registered MicrometerRoutePolicyFactory into CamelContext.");
+        }
 
-        MicrometerMessageHistoryFactory messageHistoryFactory = new MicrometerMessageHistoryFactory();
-        messageHistoryFactory.setMeterRegistry(meterRegistry);
-        camelContext.setMessageHistoryFactory(messageHistoryFactory);
-
-        MicrometerExchangeEventNotifier exchangeNotifier = new MicrometerExchangeEventNotifier();
-        exchangeNotifier.setMeterRegistry(meterRegistry);
-        camelContext.getManagementStrategy().addEventNotifier(exchangeNotifier);
-
-        MicrometerRouteEventNotifier routeNotifier = new MicrometerRouteEventNotifier();
-        routeNotifier.setMeterRegistry(meterRegistry);
-        camelContext.getManagementStrategy().addEventNotifier(routeNotifier);
-
-        log.info("[TELEMETRY BRIDGE] Registered Camel OTel Tracer and Micrometer route metrics.");
+        log.info("[TELEMETRY BRIDGE] Registered Camel OTel Tracer and context propagators.");
       }
 
       @Override

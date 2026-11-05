@@ -258,12 +258,16 @@ management:
         enabled: ${MICROMETER_OTLP_EXPORT_ENABLED:true}
         url: ${OTEL_EXPORTER_OTLP_METRICS_ENDPOINT:${OTEL_EXPORTER_OTLP_ENDPOINT:http://localhost:4318}/v1/metrics}
         protocol: ${OTEL_EXPORTER_OTLP_METRICS_PROTOCOL:${OTEL_EXPORTER_OTLP_PROTOCOL:http/protobuf}}
-        step: ${OTEL_METRIC_EXPORT_INTERVAL:60000}
+        # Micrometer expects a Duration value such as 60s, not a raw millisecond integer.
+        step: ${MICROMETER_OTLP_EXPORT_INTERVAL:60s}
   metrics:
     # Micrometer is intentionally restricted to Camel route metrics only.
     enable:
       all: false
       camel: true
+    tags:
+      service: ${OTEL_SERVICE_NAME:idp-core-eph}
+      env: ${OTEL_ENV:local}
     distribution:
       percentiles-histogram:
         camel: true
@@ -271,7 +275,7 @@ management:
   endpoints:
     web:
       exposure:
-        include: health,metrics
+        include: health
   endpoint:
     health:
       probes:
@@ -294,6 +298,9 @@ management:
       show-details: when_authorized
 
 camel:
+  component:
+    micrometer:
+      enabled: true
   opentelemetry2:
     enabled: true
     # Keep core route spans enabled; processor spans depend on them for active scope propagation.
