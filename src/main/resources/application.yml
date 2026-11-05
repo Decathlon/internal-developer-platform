@@ -182,22 +182,22 @@ logging:
   level:
     # Application log level, defaults to INFO. Override per environment via LOG_LEVEL env var.
     com.decathlon: ${LOG_LEVEL:INFO}
+    # Keep ingestion logs aligned with LOG_LEVEL unless explicit diagnostics are requested.
+    com.decathlon.idp_core.infrastructure.adapters.ingestion: ${INGESTION_DIAGNOSTIC_LOG_LEVEL:${LOG_LEVEL:INFO}}
     # Suppresses noisy Spring context startup logs at WARN level.
     org.springframework.context.support: WARN
     # Suppresses a specific repetitive bean registration delegate log line.
     org.springframework.context.support.PostProcessorRegistrationDelegate: ERROR
-    io.opentelemetry.sdk: DEBUG
-    io.opentelemetry.exporter.otlp: DEBUG
-    com.decathlon.idp_core.infrastructure.adapters.ingestion: DEBUG
-    io.opentelemetry: TRACE
-    io.opentelemetry.sdk.metrics: TRACE
-      # Affiche la création et l'envoi des Spans OTel
-    io.opentelemetry.sdk.trace: TRACE
-      # Affiche l'interception des requêtes par Camel OpenTelemetry
-    org.apache.camel.opentelemetry: TRACE
-    io.opentelemetry.exporter: TRACE
-    io.opentelemetry.exporter.sender.okhttp: TRACE
-    khttp3: TRACE
+    # OpenTelemetry diagnostics are opt-in. Set these env vars to DEBUG/TRACE when troubleshooting.
+    io.opentelemetry.sdk: ${OTEL_SDK_DIAGNOSTIC_LOG_LEVEL:WARN}
+    io.opentelemetry.exporter.otlp: ${OTEL_OTLP_DIAGNOSTIC_LOG_LEVEL:WARN}
+    io.opentelemetry: ${OTEL_DIAGNOSTIC_LOG_LEVEL:WARN}
+    io.opentelemetry.sdk.metrics: ${OTEL_METRICS_DIAGNOSTIC_LOG_LEVEL:WARN}
+    io.opentelemetry.sdk.trace: ${OTEL_TRACES_DIAGNOSTIC_LOG_LEVEL:WARN}
+    org.apache.camel.opentelemetry: ${CAMEL_OTEL_DIAGNOSTIC_LOG_LEVEL:WARN}
+    io.opentelemetry.exporter: ${OTEL_EXPORTER_DIAGNOSTIC_LOG_LEVEL:WARN}
+    io.opentelemetry.exporter.sender.okhttp: ${OTEL_EXPORTER_HTTP_DIAGNOSTIC_LOG_LEVEL:WARN}
+    khttp3: ${OKHTTP_DIAGNOSTIC_LOG_LEVEL:WARN}
 
 # OpenTelemetry Spring Boot Starter Configuration
 otel:
@@ -251,26 +251,6 @@ otel:
       enabled: ${OTEL_INSTRUMENTATION_JDBC_ENABLED:false}
 
 management:
-  otlp:
-    metrics:
-      export:
-        # Micrometer OTLP export is intentionally opt-in and limited to Camel route meters.
-        enabled: ${MICROMETER_OTLP_EXPORT_ENABLED:true}
-        url: ${OTEL_EXPORTER_OTLP_METRICS_ENDPOINT:${OTEL_EXPORTER_OTLP_ENDPOINT:http://localhost:4318}/v1/metrics}
-        protocol: ${OTEL_EXPORTER_OTLP_METRICS_PROTOCOL:${OTEL_EXPORTER_OTLP_PROTOCOL:http/protobuf}}
-        # Micrometer expects a Duration value such as 60s, not a raw millisecond integer.
-        step: ${MICROMETER_OTLP_EXPORT_INTERVAL:60s}
-  metrics:
-    # Micrometer is intentionally restricted to Camel route metrics only.
-    enable:
-      all: false
-      camel: true
-    tags:
-      service: ${OTEL_SERVICE_NAME:idp-core-eph}
-      env: ${OTEL_ENV:local}
-    distribution:
-      percentiles-histogram:
-        camel: true
 
   endpoints:
     web:
@@ -298,9 +278,6 @@ management:
       show-details: when_authorized
 
 camel:
-  component:
-    micrometer:
-      enabled: true
   opentelemetry2:
     enabled: true
     # Keep core route spans enabled; processor spans depend on them for active scope propagation.

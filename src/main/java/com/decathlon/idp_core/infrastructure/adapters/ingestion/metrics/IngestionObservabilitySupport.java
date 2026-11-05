@@ -6,10 +6,10 @@ import static com.decathlon.idp_core.infrastructure.adapters.ingestion.configura
 import static com.decathlon.idp_core.infrastructure.adapters.ingestion.configuration.IngestionObservabilityConstants.PAYLOAD_DECODED_TOTAL;
 import static com.decathlon.idp_core.infrastructure.adapters.ingestion.configuration.IngestionObservabilityConstants.PAYLOAD_DECODE_ERRORS_TOTAL;
 import static com.decathlon.idp_core.infrastructure.adapters.ingestion.configuration.IngestionObservabilityConstants.PAYLOAD_SIZE_BYTES;
-import static reactor.netty.http.HttpConnectionLiveness.log;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
 
 import io.opentelemetry.api.common.AttributeKey;
@@ -21,24 +21,24 @@ import io.opentelemetry.api.trace.Span;
 
 public final class IngestionObservabilitySupport {
 
-  private static final Map<String, LongCounter> COUNTER_CACHE = new ConcurrentHashMap<>();
-  private static final Map<String, LongHistogram> HISTOGRAM_CACHE = new ConcurrentHashMap<>();
+  private static final Map<InstrumentCacheKey, LongCounter> COUNTER_CACHE = new ConcurrentHashMap<>();
+  private static final Map<InstrumentCacheKey, LongHistogram> HISTOGRAM_CACHE = new ConcurrentHashMap<>();
 
   private IngestionObservabilitySupport() {
   }
 
   public static void incrementCounter(Meter meter, String metricName, String... attributes) {
-    log.info(">>> [OTEL DEBUG] Increment counter: " + metricName + " with attributes: "
-        + java.util.Arrays.toString(attributes));
-    LongCounter counter = COUNTER_CACHE.computeIfAbsent(metricName,
-        name -> meter.counterBuilder(name).build());
+    var key = new InstrumentCacheKey(meter, metricName);
+    LongCounter counter = COUNTER_CACHE.computeIfAbsent(key,
+        ignored -> meter.counterBuilder(metricName).build());
     counter.add(1, toAttributes(attributes));
   }
 
   public static void recordHistogram(Meter meter, String metricName, long value,
       String... attributes) {
-    LongHistogram histogram = HISTOGRAM_CACHE.computeIfAbsent(metricName,
-        name -> meter.histogramBuilder(name).ofLongs().build());
+    var key = new InstrumentCacheKey(meter, metricName);
+    LongHistogram histogram = HISTOGRAM_CACHE.computeIfAbsent(key,
+        ignored -> meter.histogramBuilder(metricName).ofLongs().build());
     histogram.record(value, toAttributes(attributes));
   }
 
@@ -54,22 +54,25 @@ public final class IngestionObservabilitySupport {
   }
 
   public static void recordPayloadSizeMetric(Meter meter, String connector, long payloadSizeBytes) {
-    LongHistogram histogram = HISTOGRAM_CACHE.computeIfAbsent(PAYLOAD_SIZE_BYTES,
-        name -> meter.histogramBuilder(name).ofLongs().build());
+    var key = new InstrumentCacheKey(meter, PAYLOAD_SIZE_BYTES);
+    LongHistogram histogram = HISTOGRAM_CACHE.computeIfAbsent(key,
+        ignored -> meter.histogramBuilder(PAYLOAD_SIZE_BYTES).ofLongs().build());
     histogram.record(payloadSizeBytes,
         Attributes.of(AttributeKey.stringKey(ATTRIBUTE_CONNECTOR), connector));
   }
 
   public static void recordDecodedMetric(Meter meter, String connector, String encoding) {
-    LongCounter counter = COUNTER_CACHE.computeIfAbsent(PAYLOAD_DECODED_TOTAL,
-        name -> meter.counterBuilder(name).build());
+    var key = new InstrumentCacheKey(meter, PAYLOAD_DECODED_TOTAL);
+    LongCounter counter = COUNTER_CACHE.computeIfAbsent(key,
+        ignored -> meter.counterBuilder(PAYLOAD_DECODED_TOTAL).build());
     counter.add(1, Attributes.of(AttributeKey.stringKey(ATTRIBUTE_CONNECTOR), connector,
         AttributeKey.stringKey("encoding"), encoding));
   }
 
   public static void recordDecodeErrorMetric(Meter meter, String connector, String reason) {
-    LongCounter counter = COUNTER_CACHE.computeIfAbsent(PAYLOAD_DECODE_ERRORS_TOTAL,
-        name -> meter.counterBuilder(name).build());
+    var key = new InstrumentCacheKey(meter, PAYLOAD_DECODE_ERRORS_TOTAL);
+    LongCounter counter = COUNTER_CACHE.computeIfAbsent(key,
+        ignored -> meter.counterBuilder(PAYLOAD_DECODE_ERRORS_TOTAL).build());
     counter.add(1, Attributes.of(AttributeKey.stringKey(ATTRIBUTE_CONNECTOR), connector,
         AttributeKey.stringKey("reason"), reason));
   }
@@ -79,7 +82,6 @@ public final class IngestionObservabilitySupport {
         || attributeValue == null) {
       return;
     }
-    log.info(">>> [OTEL DEBUG] Set span attribute: " + attributeName + " = " + attributeValue);
     span.setAttribute(attributeName, attributeValue);
   }
 
@@ -95,5 +97,31 @@ public final class IngestionObservabilitySupport {
       builder.put(AttributeKey.stringKey(keyValues[i]), keyValues[i + 1]);
     }
     return builder.build();
+  }
+
+  private static final class InstrumentCacheKey {
+    private final Meter meter;
+    private final String metricName;
+
+    private InstrumentCacheKey(Meter meter, String metricName) {
+      this.meter = meter;
+      this.metricName = metricName;
+    }
+
+    @Override
+    public boolean equals(Object object) {
+      if (this == object) {
+        return true;
+      }
+      if (!(object instanceof InstrumentCacheKey other)) {
+        return false;
+      }
+      return meter == other.meter && Objects.equals(metricName, other.metricName);
+    }
+
+    @Override
+    public int hashCode() {
+      return 31 * System.identityHashCode(meter) + Objects.hashCode(metricName);
+    }
   }
 }

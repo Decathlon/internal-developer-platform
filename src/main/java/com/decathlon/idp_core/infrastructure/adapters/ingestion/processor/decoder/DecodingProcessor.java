@@ -42,6 +42,9 @@ public class DecodingProcessor {
   private static final int DECOMPRESSION_BUFFER_SIZE = 8192;
   private static final long MAX_INPUT_PAYLOAD_BYTES = 10L * 1024 * 1024; // 10MB
   private static final String BYTES_SUFFIX = " bytes";
+  private static final String INPUT_PAYLOAD_STRING_LENGTH_PREFIX = "Input payload string length ";
+  private static final String INPUT_PAYLOAD_SIZE_PREFIX = "Input payload size ";
+  private static final String EXCEEDS_MAX_SIZE_FRAGMENT = " exceeds maximum allowed size of ";
 
   private final Map<String, PayloadDecoder> decoders;
   private final Meter meter;
@@ -78,7 +81,10 @@ public class DecodingProcessor {
     try {
       if (encodingChain.isEmpty()) {
         String decoded = payloadToString(encodedPayload, connector);
-        recordPayloadSizeMetric(connector, decoded.getBytes(StandardCharsets.UTF_8).length);
+        long payloadSizeBytes = encodedPayload instanceof byte[] bytes
+            ? bytes.length
+            : decoded.getBytes(StandardCharsets.UTF_8).length;
+        recordPayloadSizeMetric(connector, payloadSizeBytes);
         incrementDecodedMetric(connector, "identity");
         return decoded;
       }
@@ -183,7 +189,7 @@ public class DecodingProcessor {
       case String s -> {
         if (s.length() > MAX_INPUT_PAYLOAD_BYTES) {
           throwPayloadSizeExceeded(connector,
-              "Input payload string length " + s.length() + " exceeds maximum allowed size of "
+              INPUT_PAYLOAD_STRING_LENGTH_PREFIX + s.length() + EXCEEDS_MAX_SIZE_FRAGMENT
                   + MAX_INPUT_PAYLOAD_BYTES + BYTES_SUFFIX);
         }
         yield s;
@@ -191,8 +197,8 @@ public class DecodingProcessor {
       case byte[] b -> {
         if (b.length > MAX_INPUT_PAYLOAD_BYTES) {
           throwPayloadSizeExceeded(connector,
-              "Input payload size " + b.length + BYTES_SUFFIX
-                  + " exceeds maximum allowed size of " + MAX_INPUT_PAYLOAD_BYTES + BYTES_SUFFIX);
+              INPUT_PAYLOAD_SIZE_PREFIX + b.length + BYTES_SUFFIX + EXCEEDS_MAX_SIZE_FRAGMENT
+                  + MAX_INPUT_PAYLOAD_BYTES + BYTES_SUFFIX);
         }
         yield new String(b, StandardCharsets.UTF_8);
       }
@@ -200,7 +206,7 @@ public class DecodingProcessor {
         String str = payload.toString();
         if (str.length() > MAX_INPUT_PAYLOAD_BYTES) {
           throwPayloadSizeExceeded(connector,
-              "Input payload string length " + str.length() + " exceeds maximum allowed size of "
+              INPUT_PAYLOAD_STRING_LENGTH_PREFIX + str.length() + EXCEEDS_MAX_SIZE_FRAGMENT
                   + MAX_INPUT_PAYLOAD_BYTES + BYTES_SUFFIX);
         }
         yield str;
@@ -217,22 +223,22 @@ public class DecodingProcessor {
       case byte[] b -> {
         if (b.length > MAX_INPUT_PAYLOAD_BYTES) {
           throwPayloadSizeExceeded(connector,
-              "Input payload size " + b.length + BYTES_SUFFIX
-                  + " exceeds maximum allowed size of " + MAX_INPUT_PAYLOAD_BYTES + BYTES_SUFFIX);
+              INPUT_PAYLOAD_SIZE_PREFIX + b.length + BYTES_SUFFIX + EXCEEDS_MAX_SIZE_FRAGMENT
+                  + MAX_INPUT_PAYLOAD_BYTES + BYTES_SUFFIX);
         }
         yield b;
       }
       case String s -> {
         if (s.length() > MAX_INPUT_PAYLOAD_BYTES) {
           throwPayloadSizeExceeded(connector,
-              "Input payload string length " + s.length() + " exceeds maximum allowed size of "
+              INPUT_PAYLOAD_STRING_LENGTH_PREFIX + s.length() + EXCEEDS_MAX_SIZE_FRAGMENT
                   + MAX_INPUT_PAYLOAD_BYTES + BYTES_SUFFIX);
         }
         byte[] bytes = s.getBytes(StandardCharsets.UTF_8);
         if (bytes.length > MAX_INPUT_PAYLOAD_BYTES) {
           throwPayloadSizeExceeded(connector,
-              "Input payload size " + bytes.length + BYTES_SUFFIX
-                  + " exceeds maximum allowed size of " + MAX_INPUT_PAYLOAD_BYTES + BYTES_SUFFIX);
+              INPUT_PAYLOAD_SIZE_PREFIX + bytes.length + BYTES_SUFFIX + EXCEEDS_MAX_SIZE_FRAGMENT
+                  + MAX_INPUT_PAYLOAD_BYTES + BYTES_SUFFIX);
         }
         yield bytes;
       }
@@ -240,14 +246,14 @@ public class DecodingProcessor {
         String str = payload.toString();
         if (str.length() > MAX_INPUT_PAYLOAD_BYTES) {
           throwPayloadSizeExceeded(connector,
-              "Input payload string length " + str.length() + " exceeds maximum allowed size of "
+              INPUT_PAYLOAD_STRING_LENGTH_PREFIX + str.length() + EXCEEDS_MAX_SIZE_FRAGMENT
                   + MAX_INPUT_PAYLOAD_BYTES + BYTES_SUFFIX);
         }
         byte[] bytes = str.getBytes(StandardCharsets.UTF_8);
         if (bytes.length > MAX_INPUT_PAYLOAD_BYTES) {
           throwPayloadSizeExceeded(connector,
-              "Input payload size " + bytes.length + BYTES_SUFFIX
-                  + " exceeds maximum allowed size of " + MAX_INPUT_PAYLOAD_BYTES + BYTES_SUFFIX);
+              INPUT_PAYLOAD_SIZE_PREFIX + bytes.length + BYTES_SUFFIX + EXCEEDS_MAX_SIZE_FRAGMENT
+                  + MAX_INPUT_PAYLOAD_BYTES + BYTES_SUFFIX);
         }
         yield bytes;
       }

@@ -15,13 +15,11 @@ flowchart LR
 
     subgraph "Backends"
         DD[Datadog / OTLP collector]
-        PROM[Prometheus]
     end
 
     APP --> CAMEL
     CAMEL --> OTEL
     OTEL --> DD
-    OTEL --> PROM
 ```
 
 The app exposes health endpoints and uses OTLP export for traces and metrics when enabled. The standard OpenTelemetry variables remain the integration point for the environment, not vendor-specific configuration.
@@ -44,7 +42,10 @@ otel:
 
 The previous Spring Boot starter exported Micrometer metrics. Its SDK configuration could attach an existing meter provider, but did not create one for these native instruments. Setting `management.opentelemetry.metrics.export.otlp.*` did not activate collection. A `DefaultMeter` therefore discarded custom measurements even while traces worked.
 
-`camel-opentelemetry2-starter` provides Camel tracing, not automatic base route metrics. This correction restores the existing custom metrics; it does not add Camel base metrics or export Micrometer registries.
+`camel-opentelemetry2-starter` provides Camel tracing, not automatic base route metrics.
+This correction restores the existing custom metrics emitted by the native
+OpenTelemetry SDK. It does not add Camel base metrics or a separate Micrometer
+OTLP export path.
 
 ### Diagnose missing metrics
 
@@ -59,22 +60,29 @@ The previous Spring Boot starter exported Micrometer metrics. Its SDK configurat
 
 For HTTP/protobuf, set `OTEL_EXPORTER_OTLP_METRICS_ENDPOINT` to the full collector URL, including `/v1/metrics`. Inside a container, `localhost` points to the application container. Use the collector service name, or `host.docker.internal` if the collector runs on your macOS host through Docker Desktop. The repository's Docker Compose file does not start a collector.
 
-### Verify the export path
+### Verify metrics behavior
 
-Run the focused tests without a collector or Datadog credentials:
+Run the focused ingestion processor tests without a collector or Datadog credentials:
 
 ```bash
-mvn -Dspring.profiles.active=test -Dtest=OpenTelemetryMetricsAutoConfigurationTest test
+mvn -Dspring.profiles.active=test -Dtest=IngestionProcessorTest,DecodingProcessorTest test
 ```
 
-The tests distinguish these checks:
+These tests validate application-level metric emission and processor behavior.
+They do not validate end-to-end OTLP transport to your deployed collector.
 
-- **SDK collection**: an in-memory exporter receives a custom counter and histogram with the expected measurements. A separate test checks the warning when you disable the SDK.
-- **OTLP HTTP transport**: the real exporter sends a `protobuf` request to a local server on an ephemeral port. The test checks the method, path, content type, configured header, and encoded metric, connector, and service identifiers. An HTTP 200 response completes the export; an HTTP 400 response reports failure. This check does not decode numeric points or exercise periodic scheduling.
-- **Datadog delivery**: these tests do not contact your deployed collector or Datadog. After deployment, send a webhook and confirm reception at the collector, then in Datadog. Check that the collector enables an OTLP receiver and a metrics pipeline connected to the Datadog exporter, or that your Datadog Agent enables OTLP metrics ingestion. A successful HTTP response alone does not prove downstream delivery.
+Use this manual procedure to verify delivery in an environment:
+
+1. Set `OTEL_METRICS_EXPORTER=otlp` and keep a short interval for checks (for example `OTEL_METRIC_EXPORT_INTERVAL=5000`).
+2. Send webhook traffic that exercises ingestion, decoding, and mapping.
+3. Confirm exporter and transport logs in the application.
+4. Confirm metrics reception at the collector/agent.
+5. Confirm the `idp.webhook.*` metric series in Datadog.
 
 > [!WARNING]
-> Do not use `SdkMeterProvider.forceFlush().isSuccess()` as proof of HTTP acceptance. In this SDK version, the reader can complete the flush successfully even when the exporter receives HTTP 400. The transport tests observe the actual exporter result; in deployment, check exporter errors and collector reception.
+> A successful local SDK flush confirms collection in-process, not downstream
+> delivery to your collector or Datadog. Always validate collector reception
+> and backend ingestion separately.
 
 ### Custom webhook ingestion metrics
 
@@ -85,7 +93,7 @@ The following metrics are produced by the ingestion, security and decoding proce
 | Metric name                                      | Attributes                              | Meaning                                                                      |
 |--------------------------------------------------|-----------------------------------------|------------------------------------------------------------------------------|
 | `idp.webhook.security.requests.total`            | `connector`, `security_type`            | Number of security checks executed for a connector.                          |
-| `idp.webhook.security.result`                    | `connector`, `security_type`, `result`  | Result of the security decision (`allowed`, `rejected`, `error`).            |
+| `idp.webhook.security.result`                    | `connector`, `security_type`, `result`  | Result of the security decision (`SUCCESS`, `REJECTED`, `ERROR`).            |
 | `idp.webhook.security.validation.errors.total`   | `connector`, `security_type`, `reason`  | Security validation failures and malformed configuration errors.             |
 | `idp.webhook.payload.decoded.total`              | `connector`, `encoding`                 | Successful payload decodes for each encoding step.                           |
 | `idp.webhook.payload.decode.errors.total`        | `connector`, `reason`                   | Payload decode failures, including unsupported or corrupted encodings.       |
@@ -121,10 +129,11 @@ OpenTelemetry tracing is enabled through Spring Boot configuration. The applicat
 | Variable | Description | Default |
 | --- | --- | --- |
 | `OTEL_TRACES_EXPORTER` | Trace exporter; `none` disables export | `otlp` (`none` locally) |
+| `OTEL_TRACES_SAMPLER` | Trace sampler strategy | `always_on` |
+| `OTEL_TRACES_SAMPLER_ARG` | Trace sampling ratio when sampler uses a ratio argument (for example `traceidratio` or `parentbased_traceidratio`) | `1.0` |
 | `OTEL_METRICS_EXPORTER` | Metric exporters; `console,otlp` for diagnosis | `otlp` |
 | `OTEL_METRIC_EXPORT_INTERVAL` | Metric export interval in milliseconds | `60000` |
 | `OTEL_LOGS_EXPORTER` | Log exporter | `none` |
-| `OTEL_TRACES_SAMPLER_ARG` | Trace sampling ratio | `0.1` |
 | `OTEL_EXPORTER_OTLP_ENDPOINT` | Base OTLP endpoint | `http://localhost:4318` |
 | `OTEL_EXPORTER_OTLP_TRACES_ENDPOINT` | Full traces endpoint | `<base>/v1/traces` |
 | `OTEL_EXPORTER_OTLP_METRICS_ENDPOINT` | Full metrics endpoint | `<base>/v1/metrics` |
@@ -134,6 +143,14 @@ OpenTelemetry tracing is enabled through Spring Boot configuration. The applicat
 | `OTEL_RESOURCE_ATTRIBUTES` | Resource metadata injected by the environment | - |
 
 The signal-specific variables win over the generic fallback, so local development and hosted deployments can both work without hard-coded vendor configuration.
+
+Because this runtime uses the native OpenTelemetry SDK path for metrics, setting
+`OTEL_METRICS_EXPORTER=none` disables metric export. There is no separate
+`MICROMETER_OTLP_EXPORT_ENABLED` switch in the final configuration.
+
+With the default `OTEL_TRACES_SAMPLER=always_on`, `OTEL_TRACES_SAMPLER_ARG`
+is ignored. Set `OTEL_TRACES_SAMPLER` to a ratio-based sampler if you want the
+argument to control sampling.
 
 Replace the old `OTEL_TRACING_ENABLED` and `OTEL_METRICS_EXPORT_ENABLED` flags with exporter selection (`otlp` or `none`). Replace `*_TRANSPORT=http` with `*_PROTOCOL=http/protobuf`. The official starter reads `otel.*`, not the former `management.opentelemetry.*` export settings. The test profile disables network export for all signals.
 

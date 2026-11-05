@@ -72,6 +72,10 @@ otel:
     exporter: none
 
 management:
+  otlp:
+    metrics:
+      export:
+        enabled: false
   endpoint:
     health:
       probes:

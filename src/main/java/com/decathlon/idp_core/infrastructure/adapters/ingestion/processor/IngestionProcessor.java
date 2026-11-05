@@ -91,10 +91,6 @@ public class IngestionProcessor {
         return;
       }
 
-      incrementCounter(MAPPING_RESULT,
-          ATTRIBUTE_CONNECTOR, connectorIdentifier, ATTRIBUTE_MAPPING_ID, mappingId, ATTRIBUTE_RESULT,
-          "MATCHED");
-
       switch (mapping.action()) {
         case UPDATE_ENTITY -> handleUpdate(entity, connectorIdentifier);
         case UPDATE_PROPERTIES -> handleUpdateProperties(entity, connectorIdentifier);
@@ -102,6 +98,10 @@ public class IngestionProcessor {
         case DELETE_ENTITY -> handleDelete(entity, connectorIdentifier);
         case null, default -> log.warn("Unsupported or null mapping action: {}", mapping.action());
       }
+
+      incrementCounter(MAPPING_RESULT,
+          ATTRIBUTE_CONNECTOR, connectorIdentifier, ATTRIBUTE_MAPPING_ID, mappingId, ATTRIBUTE_RESULT,
+          "MATCHED");
 
       log.info("Successfully processed action {} for entity: {} under template: {}",
           mapping.action(), entity.identifier(), entity.templateIdentifier());
