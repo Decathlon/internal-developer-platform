@@ -29,6 +29,7 @@ import com.decathlon.idp_core.infrastructure.adapters.persistence.repository.Jpa
 import com.decathlon.idp_core.infrastructure.adapters.persistence.specification.EntityFilterSpecification;
 import com.decathlon.idp_core.infrastructure.adapters.persistence.specification.EntitySearchSpecification;
 
+import io.opentelemetry.instrumentation.annotations.WithSpan;
 import lombok.RequiredArgsConstructor;
 
 @Component
@@ -59,6 +60,7 @@ public class PostgresEntityAdapter implements EntityRepositoryPort {
   }
 
   @Override
+  @WithSpan("PostgresEntityAdapter.findByTemplateIdentifierAndIdentifier")
   public Optional<Entity> findByTemplateIdentifierAndIdentifier(String templateIdentifier,
       String identifier) {
     return jpaEntityRepository.findByTemplateIdentifierAndIdentifier(templateIdentifier, identifier)
@@ -91,6 +93,7 @@ public class PostgresEntityAdapter implements EntityRepositoryPort {
   }
 
   @Override
+  @WithSpan("PostgresEntityAdapter.findSummariesByCompositeKeys")
   public List<EntitySummary> findSummariesByCompositeKeys(List<EntityCompositeKey> compositeKeys) {
     if (compositeKeys == null || compositeKeys.isEmpty()) {
       return List.of();

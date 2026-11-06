@@ -26,6 +26,7 @@ import com.decathlon.idp_core.domain.model.entity_template.RelationDefinition;
 import com.decathlon.idp_core.domain.port.EntityRepositoryPort;
 import com.decathlon.idp_core.domain.port.EntityTemplateRepositoryPort;
 
+import io.opentelemetry.instrumentation.annotations.WithSpan;
 import lombok.RequiredArgsConstructor;
 
 /// Domain service orchestrating [EntityTemplate] business operations and lifecycle management.
@@ -73,6 +74,7 @@ public class EntityTemplateService {
   /// @param identifier unique business identifier of the template
   /// @return the matching [EntityTemplate]
   /// @throws EntityTemplateNotFoundException when template doesn't exist
+  @WithSpan("EntityTemplateService.getEntityTemplateByIdentifier")
   public EntityTemplate getEntityTemplateByIdentifier(String identifier) {
     return entityTemplateRepositoryPort.findByIdentifier(identifier)
         .orElseThrow(() -> new EntityTemplateNotFoundException("identifier", identifier));

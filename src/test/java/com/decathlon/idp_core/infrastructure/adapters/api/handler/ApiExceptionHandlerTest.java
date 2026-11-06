@@ -49,6 +49,7 @@ import com.decathlon.idp_core.domain.model.entity_graph.EntityGraphTraversalMode
 import com.decathlon.idp_core.domain.service.entity_graph.EntityGraphService;
 import com.decathlon.idp_core.infrastructure.adapters.api.controller.EntityGraphController;
 import com.decathlon.idp_core.infrastructure.adapters.api.exception.MissingPrincipalIdentifierException;
+import com.decathlon.idp_core.infrastructure.adapters.api.mapper.entity_graph.EntityGraphFlatDtoOutMapper;
 import com.decathlon.idp_core.infrastructure.adapters.common.model.ErrorResponse;
 
 /// Comprehensive unit tests for [ApiExceptionHandler].
@@ -79,7 +80,9 @@ class ApiExceptionHandlerTest {
     @BeforeEach
     void setUpClient() {
       graphService = mock(EntityGraphService.class);
-      client = RestTestClient.bindToController(new EntityGraphController(graphService))
+      client = RestTestClient
+          .bindToController(
+              new EntityGraphController(graphService, new EntityGraphFlatDtoOutMapper()))
           .configureServer(builder -> builder.setControllerAdvice(exceptionHandler)).build();
     }
 

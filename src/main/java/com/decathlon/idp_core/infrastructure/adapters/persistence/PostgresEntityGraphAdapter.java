@@ -6,6 +6,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.UUID;
+import java.util.function.Supplier;
 
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
@@ -23,6 +24,14 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.ObjectReader;
 
+import io.opentelemetry.api.OpenTelemetry;
+import io.opentelemetry.api.trace.Span;
+import io.opentelemetry.api.trace.SpanKind;
+import io.opentelemetry.api.trace.StatusCode;
+import io.opentelemetry.api.trace.Tracer;
+import io.opentelemetry.context.Scope;
+import io.opentelemetry.instrumentation.annotations.WithSpan;
+
 /// Persistence adapter dedicated to entity relationship graph traversal.
 ///
 /// Separated from [PostgresEntityAdapter] because graph queries use a distinct
@@ -36,9 +45,14 @@ import com.fasterxml.jackson.databind.ObjectReader;
 @Component
 public class PostgresEntityGraphAdapter implements EntityGraphRepositoryPort {
 
+  private static final String FIND_ENTITY_IDS_SPAN = "entity_graph.database.find_entity_ids";
+  private static final String FIND_GRAPH_DATA_SPAN = "entity_graph.database.find_graph_data";
+  private static final String PROJECTION_MAPPING_SPAN = "entity_graph.projection_mapping";
+
   private final JpaEntityRepository jpaEntityRepository;
   private final ObjectReader propertyReader;
   private final ObjectReader relationReader;
+  private final Tracer tracer;
 
   /// Creates the adapter and prepares readers for the JSONB projection payloads.
   ///
@@ -47,13 +61,16 @@ public class PostgresEntityGraphAdapter implements EntityGraphRepositoryPort {
   /// @param objectMapper application-configured mapper used for JSON
   /// projection
   /// parsing
+  /// @param openTelemetry application OpenTelemetry instance used to create
+  /// child spans
   public PostgresEntityGraphAdapter(JpaEntityRepository jpaEntityRepository,
-      ObjectMapper objectMapper) {
+      ObjectMapper objectMapper, OpenTelemetry openTelemetry) {
     this.jpaEntityRepository = jpaEntityRepository;
     this.propertyReader = objectMapper.readerFor(new TypeReference<List<PropertyProjection>>() {
     });
     this.relationReader = objectMapper.readerFor(new TypeReference<List<RelationProjection>>() {
     });
+    this.tracer = openTelemetry.getTracer(PostgresEntityGraphAdapter.class.getName());
   }
 
   /// Fetches a depth-limited entity relationship graph for one or more root
@@ -85,6 +102,7 @@ public class PostgresEntityGraphAdapter implements EntityGraphRepositoryPort {
   /// are discovered
   @Override
   @Transactional(readOnly = true)
+  @WithSpan("PostgresEntityGraphAdapter.findEntityGraph")
   public Map<UUID, Entity> findEntityGraph(Collection<UUID> rootIds, int depth,
       boolean includeProperties, boolean includeRootEntityProperties,
       EntityGraphTraversalMode mode) {
@@ -93,22 +111,40 @@ public class PostgresEntityGraphAdapter implements EntityGraphRepositoryPort {
     if (rootIds == null || rootIds.isEmpty() || mode == null || depth < 1) {
       return Map.of();
     }
-    List<UUID> discoveredIds = jpaEntityRepository.findEntityIdsInGraph(rootIds, depth,
-        mode.name());
+    List<UUID> discoveredIds = traceOperation(FIND_ENTITY_IDS_SPAN,
+        () -> jpaEntityRepository.findEntityIdsInGraph(rootIds, depth, mode.name()));
     if (discoveredIds.isEmpty()) {
       return Map.of();
     }
 
-    List<EntityGraphJsonProjection> projections = jpaEntityRepository.findEntityGraphDataByIds(
-        discoveredIds, rootIds, includeProperties, includeRootEntityProperties);
-    Map<UUID, Entity> entities = HashMap.newHashMap(projections.size());
-    for (EntityGraphJsonProjection projection : projections) {
-      Entity entity = mapProjectionToDomain(projection);
-      if (entities.putIfAbsent(entity.id(), entity) != null) {
-        throw new IllegalStateException("Duplicate entity ID in graph projection: " + entity.id());
+    List<EntityGraphJsonProjection> projections = traceOperation(FIND_GRAPH_DATA_SPAN,
+        () -> jpaEntityRepository.findEntityGraphDataByIds(discoveredIds, rootIds,
+            includeProperties, includeRootEntityProperties));
+    return traceOperation(PROJECTION_MAPPING_SPAN, () -> {
+      Map<UUID, Entity> entities = HashMap.newHashMap(projections.size());
+
+      for (EntityGraphJsonProjection projection : projections) {
+        Entity entity = mapProjectionToDomain(projection);
+        if (entities.putIfAbsent(entity.id(), entity) != null) {
+          throw new IllegalStateException(
+              "Duplicate entity ID in graph projection: " + entity.id());
+        }
       }
+      return entities;
+    });
+  }
+
+  private <T> T traceOperation(String spanName, Supplier<T> operation) {
+    Span span = tracer.spanBuilder(spanName).setSpanKind(SpanKind.INTERNAL).startSpan();
+    try (Scope scope = span.makeCurrent()) {
+      return operation.get();
+    } catch (RuntimeException | Error exception) {
+      span.recordException(exception);
+      span.setStatus(StatusCode.ERROR);
+      throw exception;
+    } finally {
+      span.end();
     }
-    return entities;
   }
 
   // Suppress "Use a stream instead of this loop" rule warning
