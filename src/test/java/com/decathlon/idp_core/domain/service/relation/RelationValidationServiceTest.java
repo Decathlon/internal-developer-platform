@@ -1,11 +1,13 @@
 package com.decathlon.idp_core.domain.service.relation;
 
+import static com.decathlon.idp_core.domain.constant.ValidationMessages.RELATION_NAME_ALREADY_EXISTS;
 import static com.decathlon.idp_core.domain.constant.ValidationMessages.RELATION_NOT_DEFINED_IN_TEMPLATE;
 import static com.decathlon.idp_core.domain.constant.ValidationMessages.RELATION_REQUIRED_MISSING;
 import static com.decathlon.idp_core.domain.constant.ValidationMessages.RELATION_TARGET_ENTITY_NOT_FOUND;
 import static com.decathlon.idp_core.domain.constant.ValidationMessages.RELATION_TARGET_TEMPLATE_MISMATCH;
 import static com.decathlon.idp_core.domain.constant.ValidationMessages.RELATION_TOO_MANY_TARGETS;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
@@ -22,6 +24,8 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
@@ -101,6 +105,46 @@ class RelationValidationServiceTest {
 
   private EntitySummary entitySummary(String identifier, String templateIdentifier) {
     return new EntitySummary(UUID.randomUUID(), identifier, "Name", templateIdentifier);
+  }
+
+  @ParameterizedTest
+  @ValueSource(booleans = {false, true})
+  @DisplayName("Should reject duplicate relation names in strict validation and dry-run")
+  void shouldRejectDuplicateRelationNames(boolean dryRun) {
+    var template = template("system-template", List.of(definition("depends-on", false, true)));
+    var relations = List.of(relation("depends-on", List.of()), relation("depends-on", List.of()));
+    var violations = new Violations();
+
+    if (dryRun) {
+      service.validateRelationsAgainstTemplateForDryRun(template, relations, violations);
+    } else {
+      service.validateAndNormalizeRelationsAgainstTemplate(template, relations, violations);
+    }
+
+    assertEquals(List.of(RELATION_NAME_ALREADY_EXISTS.formatted("depends-on")),
+        violations.asList());
+    verifyNoInteractions(entityRepository);
+  }
+
+  @ParameterizedTest
+  @ValueSource(booleans = {false, true})
+  @DisplayName("Should reject duplicate names even when tolerant normalization omits one entry")
+  void shouldRejectDuplicateRelationNamesBeforeOptionalTargetOmission(boolean missingFirst) {
+    when(entityRepository.findByIdentifierIn(List.of("missing-team"))).thenReturn(List.of());
+    when(entityRepository.findByIdentifierIn(List.of("team-a", "team-b")))
+        .thenReturn(List.of(entitySummary("team-a", "team"), entitySummary("team-b", "team")));
+    var template = template("system-template",
+        List.of(definition("owned-by", "team", false, false)));
+    var missing = relation("owned-by", "team", List.of("missing-team"));
+    var resolved = relation("owned-by", "team", List.of("team-a", "team-b"));
+    var relations = missingFirst ? List.of(missing, resolved) : List.of(resolved, missing);
+    var violations = new Violations();
+
+    var normalized = tolerantService.validateAndNormalizeRelationsAgainstTemplate(template,
+        relations, violations);
+
+    assertEquals(List.of(resolved), normalized);
+    assertTrue(violations.asList().contains(RELATION_NAME_ALREADY_EXISTS.formatted("owned-by")));
   }
 
   @Nested

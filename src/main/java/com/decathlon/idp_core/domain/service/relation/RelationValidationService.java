@@ -1,6 +1,7 @@
 package com.decathlon.idp_core.domain.service.relation;
 
 import static com.decathlon.idp_core.domain.constant.ValidationMessages.ENTITY_DYNAMIC_MAPPING_ENTITY_RELATIONS_MISSING;
+import static com.decathlon.idp_core.domain.constant.ValidationMessages.RELATION_NAME_ALREADY_EXISTS;
 import static com.decathlon.idp_core.domain.constant.ValidationMessages.RELATION_NOT_DEFINED_IN_TEMPLATE;
 import static com.decathlon.idp_core.domain.constant.ValidationMessages.RELATION_REQUIRED_MISSING;
 import static com.decathlon.idp_core.domain.constant.ValidationMessages.RELATION_TARGET_ENTITY_NOT_FOUND;
@@ -152,7 +153,7 @@ public class RelationValidationService {
         omitMissingOptionalTargets);
   }
 
-  /// Validates relation names, target entities, required relations, and
+  /// Validates unique relation names, target entities, required relations, and
   /// cardinality for normal and dry-run workflows.
   ///
   /// @param skipDatabaseChecks when true, skips repository lookups for target
@@ -173,8 +174,13 @@ public class RelationValidationService {
         .filter(def -> def.name() != null).collect(Collectors.toMap(RelationDefinition::name,
             def -> def, (existing, replacement) -> existing));
 
-    Map<String, Relation> relationsByName = relations.stream().filter(rel -> rel.name() != null)
-        .collect(Collectors.toMap(Relation::name, rel -> rel, (existing, replacement) -> existing));
+    Map<String, Relation> relationsByName = new HashMap<>();
+    for (Relation relation : relations) {
+      if (relation.name() != null
+          && relationsByName.putIfAbsent(relation.name(), relation) != null) {
+        violations.add(RELATION_NAME_ALREADY_EXISTS, relation.name());
+      }
+    }
 
     Map<String, List<String>> targetIdentifiersByName = new HashMap<>();
     RelationValidationOptions options = new RelationValidationOptions(skipDatabaseChecks,
