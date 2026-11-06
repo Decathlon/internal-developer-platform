@@ -34,6 +34,7 @@ import org.springframework.web.filter.OncePerRequestFilter;
 import com.decathlon.idp_core.domain.exception.mock.MockSecurityConfigurationException;
 import com.decathlon.idp_core.infrastructure.adapters.api.auth.GlobalAuthorizationFilter;
 import com.decathlon.idp_core.infrastructure.adapters.api.auth.JitProvisioningFilter;
+import com.decathlon.idp_core.infrastructure.adapters.api.configuration.HttpMessageSignatureConfiguration.ChainConfigurer;
 
 /// Local mock security configuration that mirrors OAuth2/JWT behavior for local development.
 ///
@@ -76,7 +77,8 @@ public class MockFilterChainConfig {
   /// @return Configured security filter chain
   @Bean
   @Order(4)
-  public SecurityFilterChain mockSecurityFilterChain(HttpSecurity http) {
+  public SecurityFilterChain mockSecurityFilterChain(HttpSecurity http,
+      ChainConfigurer httpMessageSignature) {
     try {
       http.sessionManagement(
           session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
@@ -96,6 +98,7 @@ public class MockFilterChainConfig {
       throw new MockSecurityConfigurationException("Failed to configure mock security filter chain",
           e);
     }
+    httpMessageSignature.configure(http);
     return http.build();
   }
 

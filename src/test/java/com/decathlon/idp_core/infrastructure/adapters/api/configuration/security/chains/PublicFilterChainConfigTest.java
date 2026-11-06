@@ -19,6 +19,7 @@ import org.springframework.security.web.DefaultSecurityFilterChain;
 import org.springframework.security.web.SecurityFilterChain;
 
 import com.decathlon.idp_core.infrastructure.adapters.api.configuration.AuthenticationProperties;
+import com.decathlon.idp_core.infrastructure.adapters.api.configuration.HttpMessageSignatureConfiguration.ChainConfigurer;
 
 @DisplayName("PublicFilterChainConfigTest")
 @ExtendWith(MockitoExtension.class)
@@ -29,6 +30,7 @@ class PublicFilterChainConfigTest {
 
   private final ApplicationContextRunner contextRunner = new ApplicationContextRunner()
       .withConfiguration(AutoConfigurations.of(PublicFilterChainConfig.class))
+      .withBean(ChainConfigurer.class, () -> mock(ChainConfigurer.class))
       .withBean(AuthenticationProperties.class,
           () -> authenticationProperties(List.of("/public/**")))
       .withBean(HttpSecurity.class, () -> httpSecurity());

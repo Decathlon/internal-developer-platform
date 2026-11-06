@@ -153,6 +153,43 @@ Installing extensions requires superuser privileges or a role with `CREATE` exte
 
 ---
 
+## HTTP message signature configuration
+
+Configure HTTP message signature verification under `app.security.http-message-signature`. Any client with the shared secret can sign requests directly.
+
+```yaml title="application.yml"
+app:
+  security:
+    http-message-signature:
+      enabled: true
+      secret: ${HTTP_MESSAGE_SIGNATURE_SECRET}
+      identifier-header-name: x-request-id
+      algorithm: HMAC_SHA256
+      validity-duration-seconds: 30
+      clock-skew-seconds: 0
+      excluded-paths:
+        - /actuator/health
+        - /actuator/health/**
+        - /swagger-ui.html
+        - /swagger-ui/**
+        - /v3/api-docs/**
+```
+
+| Environment variable | Purpose | Default |
+| -------------------- | ------- | ------- |
+| `HTTP_MESSAGE_SIGNATURE_ENABLED` | Activate signature verification in all HTTP security chains | `true`; local/test opt out |
+| `HTTP_MESSAGE_SIGNATURE_SECRET` | Shared UTF-8 secret | Required when enabled |
+| `HTTP_MESSAGE_SIGNATURE_IDENTIFIER_HEADER_NAME` | Header containing the client-generated signed identifier, not signature attributes | `x-request-id` |
+| `HTTP_MESSAGE_SIGNATURE_ALGORITHM` | Pinned HMAC algorithm | `HMAC_SHA256` |
+| `HTTP_MESSAGE_SIGNATURE_VALIDITY_DURATION_SECONDS` | Positive maximum signed lifetime in seconds | `30` |
+| `HTTP_MESSAGE_SIGNATURE_CLOCK_SKEW_SECONDS` | Non-negative tolerance for signing client clock differences | `0` |
+| `HTTP_MESSAGE_SIGNATURE_EXCLUDED_PATHS` | Comma-separated Ant paths, replacing all defaults | Health and Swagger/OpenAPI paths above |
+
+The signed identifier header must differ from `Signature` and `Authorization`. The fixed `Signature` header contains the signature attributes. Set `excluded-paths: []` or an empty exclusions environment value to protect every path. Supported algorithms are `HMAC_SHA256`, `HMAC_SHA1`, `HMAC_SHA384`, and `HMAC_SHA512`; but prefer SHA256 or stronger.
+The signing client chooses its lifetime, but it must not exceed the backend maximum. See the [signing contract](../concepts/authentication.md#signature-contract) for canonical bytes and timestamp rules.
+
+---
+
 ## Application Settings
 
 ```yaml
