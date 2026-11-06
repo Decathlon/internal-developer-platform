@@ -111,6 +111,9 @@ springdoc:
     urls-primary-name: internal
 
 app:
+  relations:
+    # STRICT rejects unresolved targets; TOLERANT filters them from optional relations.
+    target-validation-mode: ${APP_RELATIONS_TARGET_VALIDATION_MODE:STRICT}
   # Maximum number of items returned per page by search and listing endpoints.
   max-page-size: ${MAX_PAGE_SIZE:500}
   ingestion:
