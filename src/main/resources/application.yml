@@ -125,7 +125,7 @@ app:
   security:
     http-message-signature:
       enabled: ${HTTP_MESSAGE_SIGNATURE_ENABLED:true}
-      secret: ${HTTP_MESSAGE_SIGNATURE_SECRET:}
+      secret: ${HTTP_MESSAGE_SIGNATURE_SECRET}
       identifier-header-name: ${HTTP_MESSAGE_SIGNATURE_IDENTIFIER_HEADER_NAME:x-request-id}
       algorithm: ${HTTP_MESSAGE_SIGNATURE_ALGORITHM:HMAC_SHA256}
       validity-duration-seconds: ${HTTP_MESSAGE_SIGNATURE_VALIDITY_DURATION_SECONDS:30}

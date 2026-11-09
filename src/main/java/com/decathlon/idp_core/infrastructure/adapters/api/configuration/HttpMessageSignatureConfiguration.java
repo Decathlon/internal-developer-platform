@@ -52,9 +52,9 @@ public class HttpMessageSignatureConfiguration {
   /// Applies the same optional filter to each independently matched security
   /// chain.
   public record ChainConfigurer(Optional<HttpMessageSignatureFilter> filter) {
-    /// Places verification before CORS, CSRF, and authentication filters.
+    /// Lets CORS handle preflights before verification, CSRF, and authentication.
     public void configure(HttpSecurity http) {
-      filter.ifPresent(value -> http.addFilterBefore(value, CorsFilter.class));
+      filter.ifPresent(value -> http.addFilterAfter(value, CorsFilter.class));
     }
   }
 }

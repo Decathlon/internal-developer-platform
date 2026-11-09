@@ -124,7 +124,8 @@ class HttpMessageSignatureFilterTest {
   @ParameterizedTest
   @ValueSource(strings = {"/", "/login", "/oauth2/authorization/github", "/api/v1/entities",
       "/actuator/env", "/webhooks/public-connector"})
-  void publicOrWebhookRoutesAreNotImplicitlyExcluded(String path) throws Exception {
+  void nonPreflightOptionsOnPublicOrWebhookRoutesAreNotImplicitlyExcluded(String path)
+      throws Exception {
     var request = new MockHttpServletRequest("OPTIONS", path);
     assertThat(reject(request).getStatus()).isEqualTo(401);
   }

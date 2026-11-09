@@ -18,7 +18,7 @@ flowchart LR
 
 ## HTTP message signatures
 
-HTTP message signature verification proves possession of a shared secret before authentication, CORS, or webhook ingestion. It protects every HTTP security chain, including public routes that you do not explicitly exclude. It does not replace JWT validation, principal authorization, or webhook connector authentication.
+HTTP message signature verification proves possession of a shared secret after CORS processing and before authentication or webhook ingestion. It protects every HTTP security chain, including public routes that you do not explicitly exclude. It does not replace JWT validation, principal authorization, or webhook connector authentication.
 
 Any client with the shared secret can sign requests directly; an API gateway is optional.
 
@@ -68,7 +68,9 @@ Prefer SHA256 or stronger. SHA1 requires explicit configuration and exists only 
 
 Default exclusions cover `/actuator/health`, `/actuator/health/**`, `/swagger-ui.html`, `/swagger-ui/**`, and `/v3/api-docs/**`. Overrides replace the defaults and an empty list protects every path. Exclusion matching uses application-relative Ant paths, without the deployment context path.
 
-Public authentication paths and JIT exemptions do not automatically bypass signature verification. Root, login, webhooks, and `OPTIONS` requests require signatures unless you explicitly exclude them. Exclusion only skips signature verification; downstream security still applies.
+Public authentication paths and JIT exemptions do not automatically bypass signature verification. Root, login, webhooks, and ordinary `OPTIONS` requests require signatures unless you explicitly exclude them. Exclusion only skips signature verification; downstream security still applies.
+
+In chains with CORS enabled, `CorsFilter` handles browser preflight requests before signature verification. An allowed preflight (`OPTIONS` with `Origin` and `Access-Control-Request-Method`) needs no signature or authentication. It carries requested header names, not signed header values. CORS rejects disallowed preflight requests. The actual request still requires a signature before authentication; `OPTIONS` without the preflight headers does too. You do not need a path exclusion for preflight requests.
 
 Rejections return HTTP 401 with `Content-Type: application/json`, UTF-8 encoding, `Cache-Control: no-store`, and `WWW-Authenticate: Signature realm="idp-core"`. The body contains exactly two fields:
 

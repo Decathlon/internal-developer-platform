@@ -31,6 +31,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT, properties = {
     "app.security.http-message-signature.enabled=true",
     "app.security.http-message-signature.secret=http-message-test-secret",
+    "spring.web.cors.allowed-origins=https://example.com",
     "app.ingestion.webhook.base-path=/signature-webhooks", "spring.threads.virtual.enabled=true"})
 @Sql(statements = {"""
     INSERT INTO webhook_connector (id, identifier, name, description, enabled, security)
@@ -86,19 +87,67 @@ class HttpMessageSignatureIntegrationTest extends AbstractIntegrationTest {
     verifyNoInteractions(jwtDecoder);
   }
 
+  @ParameterizedTest
+  @ValueSource(strings = {"/api/v1/entities", "/"})
+  void allowedPreflightDoesNotRequireHttpMessageSignatureOrAuthentication(String path) {
+    client.options().uri(path).header("Origin", "https://example.com")
+        .header("Access-Control-Request-Method", "POST")
+        .header("Access-Control-Request-Headers",
+            "Signature,x-request-id,Authorization,Content-Type")
+        .exchange().expectStatus().isOk().expectHeader()
+        .valueEquals("Access-Control-Allow-Origin", "https://example.com").expectHeader()
+        .value("Access-Control-Allow-Methods", value -> assertThat(value).contains("POST"))
+        .expectHeader()
+        .value("Access-Control-Allow-Headers",
+            value -> assertThat(value).containsIgnoringCase("Signature")
+                .containsIgnoringCase("x-request-id").containsIgnoringCase("Authorization")
+                .containsIgnoringCase("Content-Type"))
+        .expectHeader().doesNotExist("WWW-Authenticate").expectBody().isEmpty();
+    verifyNoInteractions(jwtDecoder);
+  }
+
   @Test
-  void preflightAlsoRequiresHttpMessageSignature() {
-    client.options().uri("/api/v1/entities").header("Origin", "https://example.com")
-        .header("Access-Control-Request-Method", "POST").exchange().expectStatus().isUnauthorized()
+  void disallowedPreflightIsRejectedByCorsBeforeSignatureVerification() {
+    client.options().uri("/api/v1/entities").header("Origin", "https://untrusted.example.com")
+        .header("Access-Control-Request-Method", "POST")
+        .header("Access-Control-Request-Headers", "Signature,x-request-id").exchange()
+        .expectStatus().isForbidden().expectHeader().doesNotExist("Access-Control-Allow-Origin")
+        .expectHeader().doesNotExist("WWW-Authenticate");
+    verifyNoInteractions(jwtDecoder);
+  }
+
+  @ParameterizedTest
+  @ValueSource(strings = {"", "https://example.com"})
+  void nonPreflightOptionsStillRequiresHttpMessageSignature(String origin) {
+    client.options().uri("/api/v1/entities").headers(headers -> {
+      if (!origin.isEmpty()) {
+        headers.setOrigin(origin);
+      }
+    }).exchange().expectStatus().isUnauthorized().expectBody(SignatureError.class)
+        .value(error -> assertThat(error.errorDescription())
+            .isEqualTo("The HTTP message signature is missing"));
+    verifyNoInteractions(jwtDecoder);
+  }
+
+  @Test
+  void actualCorsRequestStillRequiresHttpMessageSignatureBeforeAuthentication() {
+    client.post().uri("/api/v1/entities").header("Origin", "https://example.com")
+        .header("Authorization", "******").contentType(MediaType.APPLICATION_JSON).body("{}")
+        .exchange().expectStatus().isUnauthorized().expectHeader()
+        .valueEquals("Access-Control-Allow-Origin", "https://example.com").expectHeader()
+        .valueEquals("WWW-Authenticate", "Signature realm=\"idp-core\"")
         .expectBody(SignatureError.class).value(error -> assertThat(error.errorDescription())
             .isEqualTo("The HTTP message signature is missing"));
+    verifyNoInteractions(jwtDecoder);
   }
 
   @Test
   void validSignatureStillRequiresJwtAuthentication() throws Exception {
     client.get().uri("/api/v1/entities").header("x-request-id", ID)
-        .header("Signature", currentSignature()).exchange().expectStatus().isUnauthorized()
-        .expectHeader().value("WWW-Authenticate", value -> assertThat(value).startsWith("Bearer"));
+        .header("Origin", "https://example.com").header("Signature", currentSignature()).exchange()
+        .expectStatus().isUnauthorized().expectHeader()
+        .valueEquals("Access-Control-Allow-Origin", "https://example.com").expectHeader()
+        .value("WWW-Authenticate", value -> assertThat(value).startsWith("Bearer"));
   }
 
   @Test

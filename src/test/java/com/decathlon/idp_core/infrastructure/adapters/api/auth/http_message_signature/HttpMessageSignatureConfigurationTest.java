@@ -20,11 +20,13 @@ import org.springframework.security.config.annotation.web.configuration.EnableWe
 import org.springframework.security.oauth2.client.registration.ClientRegistration;
 import org.springframework.security.oauth2.client.registration.ClientRegistrationRepository;
 import org.springframework.security.oauth2.client.registration.InMemoryClientRegistrationRepository;
+import org.springframework.security.oauth2.client.web.OAuth2AuthorizationRequestRedirectFilter;
 import org.springframework.security.oauth2.core.AuthorizationGrantType;
 import org.springframework.security.oauth2.jwt.JwtDecoder;
 import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationConverter;
 import org.springframework.security.oauth2.server.resource.web.authentication.BearerTokenAuthenticationFilter;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.authentication.AbstractAuthenticationProcessingFilter;
 import org.springframework.security.web.authentication.AnonymousAuthenticationFilter;
 import org.springframework.security.web.csrf.CsrfFilter;
 import org.springframework.web.cors.CorsConfigurationSource;
@@ -150,7 +152,8 @@ class HttpMessageSignatureConfigurationTest {
 
   @ParameterizedTest
   @ValueSource(strings = {"jwt", "api-key", "mock", "oauth2-login"})
-  void everyRealChainContainsExactlyOneSignatureFilterBeforeCorsAndAuthentication(String mode) {
+  void everyRealChainContainsExactlyOneSignatureFilterAfterCorsAndBeforeAuthentication(
+      String mode) {
     chainRunner(mode).run(context -> {
       assertThat(context).hasNotFailed();
       assertThat(context.getBeansOfType(SecurityFilterChain.class)).hasSize(3);
@@ -160,8 +163,15 @@ class HttpMessageSignatureConfigurationTest {
             .hasSize(1);
         int signatureIndex = filters.indexOf(context.getBean(HttpMessageSignatureFilter.class));
         for (int i = 0; i < filters.size(); i++) {
-          if (filters.get(i) instanceof CorsFilter || filters.get(i) instanceof CsrfFilter
+          if (filters.get(i) instanceof CorsFilter) {
+            assertThat(signatureIndex).isEqualTo(i + 1);
+          }
+          if (filters.get(i) instanceof CsrfFilter
               || filters.get(i) instanceof BearerTokenAuthenticationFilter
+              || filters.get(i) instanceof AbstractAuthenticationProcessingFilter
+              || filters.get(i) instanceof OAuth2AuthorizationRequestRedirectFilter
+              || filters.get(i) instanceof JitProvisioningFilter
+              || filters.get(i) instanceof GlobalAuthorizationFilter
               || filters.get(i) instanceof AnonymousAuthenticationFilter) {
             assertThat(signatureIndex).isLessThan(i);
           }
