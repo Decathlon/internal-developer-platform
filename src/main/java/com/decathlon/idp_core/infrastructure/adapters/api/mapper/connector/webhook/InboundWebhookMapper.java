@@ -37,7 +37,8 @@ public class InboundWebhookMapper {
   public WebhookConnector toDomain(InboundWebhookCreateDtoIn dto,
       List<EntityDynamicMapping> resolvedMappings) {
     return new WebhookConnector(null, dto.identifier(), dto.name(), dto.description(),
-        dto.enabled(), safeMappings(resolvedMappings), toDomain(dto.security(), dto.enabled()));
+        dto.enabled(), safeMappings(resolvedMappings),
+        toDomain(dto.security(), dto.enabled() && !safeMappings(resolvedMappings).isEmpty()));
   }
 
   /// Converts API update payload to domain aggregate using the path identifier as
@@ -51,7 +52,8 @@ public class InboundWebhookMapper {
   public WebhookConnector toDomainForUpdate(String identifier, InboundWebhookUpdateDtoIn dto,
       List<EntityDynamicMapping> resolvedMappings) {
     return new WebhookConnector(null, identifier, dto.name(), dto.description(), dto.enabled(),
-        safeMappings(resolvedMappings), toDomain(dto.security(), dto.enabled()));
+        safeMappings(resolvedMappings),
+        toDomain(dto.security(), dto.enabled() && !safeMappings(resolvedMappings).isEmpty()));
   }
 
   /// Converts domain aggregate to API response payload.

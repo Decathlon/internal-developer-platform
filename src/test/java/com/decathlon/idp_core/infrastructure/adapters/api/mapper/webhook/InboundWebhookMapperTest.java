@@ -7,6 +7,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
+import org.assertj.core.api.Assertions;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
@@ -77,11 +78,10 @@ class InboundWebhookMapperTest {
         "Uses custom security", true, List.of("deployment-mapping"),
         new InboundWebhookSecurityContractDtoIn("CUSTOM_UNKNOWN_TYPE",
             Map.of("customKey", "customValue")));
+    var mappings = List.of(resolvedMapping());
 
-    org.assertj.core.api.Assertions
-        .assertThatThrownBy(() -> mapper.toDomain(request, List.of(resolvedMapping())))
-        .isInstanceOf(
-            com.decathlon.idp_core.domain.exception.webhook.WebhookSecurityConfigurationException.class)
+    Assertions.assertThatThrownBy(() -> mapper.toDomain(request, mappings)).isInstanceOf(
+        com.decathlon.idp_core.domain.exception.webhook.WebhookSecurityConfigurationException.class)
         .hasMessageContaining("CUSTOM_UNKNOWN_TYPE");
   }
 
@@ -152,11 +152,40 @@ class InboundWebhookMapperTest {
   @DisplayName("Should reject an empty security object for an enabled connector")
   void shouldRejectEmptySecurityWhenEnabled() {
     var request = new InboundWebhookCreateDtoIn("my-connector", "No Auth", "Enabled webhook", true,
-        List.of(), new InboundWebhookSecurityContractDtoIn(null, null));
+        List.of("deployment-mapping"), new InboundWebhookSecurityContractDtoIn(null, null));
+    var mappings = List.of(resolvedMapping());
 
-    assertThatThrownBy(() -> mapper.toDomain(request, List.of()))
+    assertThatThrownBy(() -> mapper.toDomain(request, mappings))
         .isInstanceOf(WebhookSecurityConfigurationException.class)
         .hasMessageContaining("type is mandatory");
+  }
+
+  @Test
+  @DisplayName("Should default empty security to NONE when creating with no mappings")
+  void shouldDefaultEmptySecurityToNoneWhenCreatingWithNoMappings() {
+    var request = new InboundWebhookCreateDtoIn("my-connector", "No Auth", "Enabled webhook", true,
+        List.of(), new InboundWebhookSecurityContractDtoIn(null, null));
+
+    var domain = mapper.toDomain(request, List.of());
+
+    assertThat(domain.enabled()).isTrue();
+    assertThat(domain.mappings()).isEmpty();
+    assertThat(domain.security().type()).isEqualTo(WebhookSecurityType.NONE);
+    assertThat(domain.security().config()).isEmpty();
+  }
+
+  @Test
+  @DisplayName("Should default empty security to NONE when updating with no mappings")
+  void shouldDefaultEmptySecurityToNoneWhenUpdatingWithNoMappings() {
+    var request = new InboundWebhookUpdateDtoIn("No Auth", "Enabled webhook", true, List.of(),
+        new InboundWebhookSecurityContractDtoIn(null, null));
+
+    var domain = mapper.toDomainForUpdate("identifier_from_path", request, List.of());
+
+    assertThat(domain.enabled()).isTrue();
+    assertThat(domain.mappings()).isEmpty();
+    assertThat(domain.security().type()).isEqualTo(WebhookSecurityType.NONE);
+    assertThat(domain.security().config()).isEmpty();
   }
 
   @Test
