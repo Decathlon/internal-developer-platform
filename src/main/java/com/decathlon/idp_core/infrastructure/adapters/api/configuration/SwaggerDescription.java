@@ -66,6 +66,24 @@ public class SwaggerDescription {
 
   public static final String ENDPOINT_POST_ENTITY_SUMMARY = "Create a new entity";
   public static final String ENDPOINT_POST_ENTITY_DESCRIPTION = "Create a new entity in the system with the provided information";
+  public static final String ENTITY_SEARCH_REQUEST_EXAMPLE = """
+      {
+        "query": "test",
+        "filter": {
+          "connector": "AND",
+          "criteria": [
+            {
+              "field": "template",
+              "operation": "EQ",
+              "value": "service"
+            }
+          ]
+        },
+        "page": 0,
+        "size": 20,
+        "sort": "identifier,asc"
+      }
+      """;
 
   public static final String ENDPOINT_PUT_ENTITY_SUMMARY = "Update an existing entity";
   public static final String ENDPOINT_PUT_ENTITY_DESCRIPTION = "Update an existing entity in the system with the provided information";
