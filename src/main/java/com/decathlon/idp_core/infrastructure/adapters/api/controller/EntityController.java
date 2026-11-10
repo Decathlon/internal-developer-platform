@@ -109,6 +109,7 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.enums.ParameterIn;
 import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.ExampleObject;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -379,7 +380,24 @@ public class EntityController {
   /// @param searchRequest the search request body with filter, page, size, and
   /// sort
   /// @return paginated entity DTOs matching the filter
-  @Operation(summary = ENDPOINT_POST_SEARCH_SUMMARY, description = ENDPOINT_POST_SEARCH_DESCRIPTION)
+  @Operation(summary = ENDPOINT_POST_SEARCH_SUMMARY, description = ENDPOINT_POST_SEARCH_DESCRIPTION, requestBody = @io.swagger.v3.oas.annotations.parameters.RequestBody(content = @Content(mediaType = "application/json", examples = @ExampleObject(name = "Entity search", value = """
+      {
+          "query": "test",
+          "filter": {
+              "connector": "AND",
+              "criteria": [
+                  {
+                      "field": "template",
+                      "operation": "EQ",
+                      "value": "service"
+                  }
+              ]
+          },
+          "page": 0,
+          "size": 20,
+          "sort": "identifier,asc"
+      }
+      """))))
   @ApiResponse(responseCode = OK_CODE, description = RESPONSE_SEARCH_SUCCESS, content = @Content(schema = @Schema(implementation = EntityPageResponse.class)))
   @ApiResponse(responseCode = BAD_REQUEST_CODE, description = RESPONSE_INVALID_SEARCH_QUERY, content = {
       @Content(schema = @Schema(implementation = ErrorResponse.class))})

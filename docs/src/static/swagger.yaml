@@ -929,6 +929,20 @@ paths:
           application/json:
             schema:
               "$ref": "#/components/schemas/EntitySearchRequestDtoIn"
+            examples:
+              Entity search:
+                description: Entity search
+                value:
+                  query: test
+                  filter:
+                    connector: AND
+                    criteria:
+                    - field: template
+                      operation: EQ
+                      value: service
+                  page: 0
+                  size: 20
+                  sort: identifier,asc
         required: true
       responses:
         '200':
@@ -1963,11 +1977,11 @@ components:
           format: int32
         last:
           type: boolean
-        sort:
-          "$ref": "#/components/schemas/SortObject"
         numberOfElements:
           type: integer
           format: int32
+        sort:
+          "$ref": "#/components/schemas/SortObject"
         first:
           type: boolean
         size:
@@ -2043,11 +2057,11 @@ components:
           format: int32
         last:
           type: boolean
-        sort:
-          "$ref": "#/components/schemas/SortObject"
         numberOfElements:
           type: integer
           format: int32
+        sort:
+          "$ref": "#/components/schemas/SortObject"
         first:
           type: boolean
         size:
@@ -2076,11 +2090,11 @@ components:
           format: int32
         last:
           type: boolean
-        sort:
-          "$ref": "#/components/schemas/SortObject"
         numberOfElements:
           type: integer
           format: int32
+        sort:
+          "$ref": "#/components/schemas/SortObject"
         first:
           type: boolean
         size:
@@ -2109,11 +2123,11 @@ components:
           format: int32
         last:
           type: boolean
-        sort:
-          "$ref": "#/components/schemas/SortObject"
         numberOfElements:
           type: integer
           format: int32
+        sort:
+          "$ref": "#/components/schemas/SortObject"
         first:
           type: boolean
         size:
