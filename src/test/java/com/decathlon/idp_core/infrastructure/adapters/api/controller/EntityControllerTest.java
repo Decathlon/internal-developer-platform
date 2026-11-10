@@ -201,7 +201,7 @@ public class EntityControllerTest extends AbstractIntegrationTest {
     @ParameterizedTest
     @CsvSource(value = {
         "badField,asc;Invalid sort field 'badField'. Supported fields: identifier, name, templateIdentifier",
-        "identifier,sideways;Invalid sort expression 'identifier,sideways'. Expected format: field[,|:asc|desc] or field alone"}, delimiter = ';')
+        "identifier,sideways;Invalid sort expression 'identifier,sideways'. Expected format: field[,asc|desc] or field alone"}, delimiter = ';')
     @DisplayName("Should return 400 when sort field or direction is invalid")
     @WithMockUser
     void getEntities_invalidSort_400(String sort, String errorDescription) throws Exception {
