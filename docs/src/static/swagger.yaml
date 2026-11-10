@@ -1096,6 +1096,1222 @@ paths:
             application/json:
               schema:
                 "$ref": "#/components/schemas/EntityDtoOut"
+        "401":
+          description: Unauthorized - Missing or invalid token
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
+        "403":
+          description: Insufficient rights
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
+        "404":
+          description: Principal not found in catalog (JIT provisioning may have failed)
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
+        "500":
+          description: Unexpected server-side failure
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
+  "/api/v1/audit/entities/{templateIdentifier}/{entityIdentifier}":
+    get:
+      tags:
+        - Audit
+      summary: Get entity audit history
+      description:
+        Retrieve the complete audit history for a specific entity, including
+        all revisions with timestamps and modification types
+      operationId: getEntityAuditHistory
+      parameters:
+        - name: templateIdentifier
+          in: path
+          required: true
+          schema:
+            type: string
+            minLength: 1
+        - name: entityIdentifier
+          in: path
+          required: true
+          schema:
+            type: string
+            minLength: 1
+      responses:
+        "200":
+          description: Successfully retrieved entity audit history
+          content:
+            "*/*":
+              schema:
+                type: array
+                items:
+                  "$ref": "#/components/schemas/EntityAuditDtoOut"
+        "400":
+          description: Invalid template or entity identifier
+          content:
+            "*/*":
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
+        "401":
+          description: Unauthorized - Missing or invalid token
+        "403":
+          description: Insufficient rights
+        "404":
+          description:
+            Template not found with the provided identifier or Entity not
+            found with the provided identifier
+          content:
+            "*/*":
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
+        "500":
+          description: Unexpected server-side failure
+          content:
+            "*/*":
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
+  "/actuator":
+    get:
+      tags:
+        - Actuator
+      summary: Actuator root web endpoint
+      operationId: links
+      responses:
+        "200":
+          description: OK
+          content:
+            application/vnd.spring-boot.actuator.v3+json:
+              schema:
+                type: object
+                additionalProperties:
+                  type: object
+                  additionalProperties:
+                    "$ref": "#/components/schemas/Link"
+            application/vnd.spring-boot.actuator.v2+json:
+              schema:
+                type: object
+                additionalProperties:
+                  type: object
+                  additionalProperties:
+                    "$ref": "#/components/schemas/Link"
+            application/json:
+              schema:
+                type: object
+                additionalProperties:
+                  type: object
+                  additionalProperties:
+                    "$ref": "#/components/schemas/Link"
+  "/actuator/health":
+    get:
+      tags:
+        - Actuator
+      summary: Actuator web endpoint 'health'
+      operationId: health
+      responses:
+        "200":
+          description: OK
+          content:
+            application/vnd.spring-boot.actuator.v3+json:
+              schema:
+                type: object
+            application/vnd.spring-boot.actuator.v2+json:
+              schema:
+                type: object
+            application/json:
+              schema:
+                type: object
+components:
+  schemas:
+    InboundWebhookSecurityContractDtoIn:
+      type: object
+      properties:
+        type:
+          type: string
+        config:
+          type: object
+          additionalProperties:
+            type: string
+    InboundWebhookUpdateDtoIn:
+      type: object
+      properties:
+        name:
+          type: string
+          maxLength: 255
+          minLength: 0
+        description:
+          type: string
+        enabled:
+          type: boolean
+        mapping_identifiers:
+          type: array
+          items:
+            type: string
+        security:
+          "$ref": "#/components/schemas/InboundWebhookSecurityContractDtoIn"
+      required:
+        - name
+    EntityDynamicMappingDtoOut:
+      type: object
+      properties:
+        identifier:
+          type: string
+        entityTemplateIdentifier:
+          type: string
+        filter:
+          type: string
+        action:
+          type: string
+          enum:
+            - UPDATE_ENTITY
+            - UPDATE_PROPERTIES
+            - UPDATE_RELATIONS
+            - DELETE_ENTITY
+        name:
+          type: string
+        description:
+          type: string
+        entity:
+          "$ref": "#/components/schemas/InboundWebhookEntityMappingDtoOut"
+    InboundWebhookDtoOut:
+      type: object
+      properties:
+        identifier:
+          type: string
+        name:
+          type: string
+        description:
+          type: string
+        enabled:
+          type: boolean
+        mappings:
+          type: array
+          items:
+            "$ref": "#/components/schemas/EntityDynamicMappingDtoOut"
+        security:
+          "$ref": "#/components/schemas/InboundWebhookSecurityDtoOut"
+    InboundWebhookEntityMappingDtoOut:
+      type: object
+      properties:
+        identifier:
+          type: string
+        name:
+          type: string
+        properties:
+          type: object
+          additionalProperties:
+            type: string
+        relations:
+          type: array
+          items:
+            "$ref": "#/components/schemas/RelationMappingDtoOut"
+    InboundWebhookSecurityDtoOut:
+      type: object
+      properties:
+        type:
+          type: string
+        config:
+          type: object
+          additionalProperties:
+            type: string
+    RelationMappingDtoOut:
+      type: object
+      properties:
+        name:
+          type: string
+        target_entity_identifiers:
+          type: array
+          items:
+            type: string
+    ErrorResponse:
+      type: object
+      properties:
+        error:
+          type: string
+        error_description:
+          type: string
+    EntityDynamicMappingRelationDtoIn:
+      type: object
+      properties:
+        name:
+          type: string
+          minLength: 1
+        target_entity_identifiers:
+          type: array
+          items:
+            type: string
+            minLength: 1
+          minItems: 1
+      required:
+        - name
+        - target_entity_identifiers
+    EntityDynamicMappingUpdateDtoIn:
+      type: object
+      properties:
+        entity_template_identifier:
+          type: string
+          minLength: 1
+        filter:
+          type: string
+          minLength: 1
+        action:
+          type: string
+          enum:
+            - UPDATE_ENTITY
+            - UPDATE_PROPERTIES
+            - UPDATE_RELATIONS
+            - DELETE_ENTITY
+        name:
+          type: string
+          minLength: 1
+        description:
+          type: string
+        entity:
+          "$ref": "#/components/schemas/EntityMappingDtoIn"
+      required:
+        - action
+        - entity
+        - entity_template_identifier
+        - filter
+        - name
+    EntityMappingDtoIn:
+      type: object
+      properties:
+        identifier:
+          type: string
+          minLength: 1
+        name:
+          type: string
+          minLength: 1
+        properties:
+          type: object
+          additionalProperties:
+            type: string
+        relations:
+          type: array
+          items:
+            "$ref": "#/components/schemas/EntityDynamicMappingRelationDtoIn"
+      required:
+        - identifier
+        - name
+    EntityTemplateUpdateDtoIn:
+      type: object
+      description: Input DTO for updating an entity template
+      properties:
+        name:
+          type: string
+          description: Unique Entity Template name
+          example: Service
+          maxLength: 255
+          minLength: 0
+          pattern: "^[a-zA-Z0-9 _-]+$"
+        description:
+          type: string
+          description: Entity Template description
+          example: A comprehensive service template
+        properties_definitions:
+          type: array
+          description: List of property definitions for this template
+          items:
+            "$ref": "#/components/schemas/PropertyDefinitionDtoIn"
+        relations_definitions:
+          type: array
+          description: List of relation definitions for this template
+          items:
+            "$ref": "#/components/schemas/RelationDefinitionDtoIn"
+      required:
+        - name
+    PropertyDefinitionDtoIn:
+      type: object
+      description: Input DTO for creating or updating a property definition
+      properties:
+        name:
+          type: string
+          description: Property name
+          example: applicationName
+          minLength: 1
+        description:
+          type: string
+          description: Property description
+          example: Name of the application
+          minLength: 1
+        type:
+          type: string
+          description: Property data type
+          enum:
+            - STRING
+            - NUMBER
+            - BOOLEAN
+          example: STRING
+        required:
+          type: boolean
+          default: false
+          description: Whether this property is required
+          example: true
+        rules:
+          "$ref": "#/components/schemas/PropertyRulesDtoIn"
+          description: Property validation rules
+      required:
+        - description
+        - name
+        - type
+    PropertyRulesDtoIn:
+      type: object
+      description: Input DTO for creating or updating a property definition
+      properties:
+        format:
+          type: string
+          description: Property format validation
+          enum:
+            - URL
+            - EMAIL
+          example: EMAIL
+        enum_values:
+          type: array
+          description: Enumeration values for enum properties
+          example:
+            - ACTIVE
+            - INACTIVE
+          items:
+            type: string
+        regex:
+          type: string
+          description: Regular expression pattern for validation
+          example: "^[a-zA-Z0-9]+$"
+        max_length:
+          type: integer
+          format: int32
+          description: Maximum length for string properties
+          example: 255
+        min_length:
+          type: integer
+          format: int32
+          description: Minimum length for string properties
+          example: 1
+        max_value:
+          type: integer
+          format: int32
+          description: Maximum value for numeric properties
+          example: 100
+        min_value:
+          type: integer
+          format: int32
+          description: Minimum value for numeric properties
+          example: 0
+    RelationDefinitionDtoIn:
+      type: object
+      description: Input DTO for creating or updating a relation definition
+      properties:
+        name:
+          type: string
+          description: Name of the relation
+          example: dependencies
+          minLength: 1
+        target_template_identifier:
+          type: string
+          description: Identifier of the target template
+          example: service
+          minLength: 1
+        required:
+          type: boolean
+          default: false
+          description: Whether this relation is required
+          example: false
+        to_many:
+          type: boolean
+          default: false
+          description: Whether this relation can have multiple targets
+          example: true
+      required:
+        - name
+        - target_template_identifier
+    EntityTemplateDtoOut:
+      type: object
+      description: Output for entity template
+      properties:
+        identifier:
+          type: string
+          description: Unique Entity Template identifier
+          example: service
+        name:
+          type: string
+          description: Unique Entity Template name
+          example: Service
+        description:
+          type: string
+          description: Entity Template description
+          example: A comprehensive service template
+        properties_definitions:
+          type: array
+          description: List of property definitions for this template
+          items:
+            "$ref": "#/components/schemas/PropertyDefinitionDtoOut"
+        relations_definitions:
+          type: array
+          description: List of relation definitions for this template
+          items:
+            "$ref": "#/components/schemas/RelationDefinitionDtoOut"
+    PropertyDefinitionDtoOut:
+      type: object
+      description: Output DTO for property definition
+      properties:
+        name:
+          type: string
+          description: Property name
+          example: applicationName
+        description:
+          type: string
+          description: Property description
+          example: Name of the application
+        type:
+          type: string
+          description: Property data type
+          enum:
+            - STRING
+            - NUMBER
+            - BOOLEAN
+          example: STRING
+        required:
+          type: boolean
+          description: Whether this property is required
+          example: true
+        rules:
+          "$ref": "#/components/schemas/PropertyRulesDtoOut"
+          description: Property validation rules
+          example: Property validation rules
+    PropertyRulesDtoOut:
+      type: object
+      description: Output DTO for property validation rules
+      properties:
+        format:
+          type: string
+          description: Format of the property
+          enum:
+            - URL
+            - EMAIL
+          example: STRING
+        enum_values:
+          type: array
+          description: Allowed enum values for the property
+          example:
+            - VALUE1
+            - VALUE2
+          items:
+            type: string
+        regex:
+          type: string
+          description: Regular expression for property validation
+          example: "^[A-Za-z0-9]+$"
+        max_length:
+          type: integer
+          format: int32
+          description: Maximum length of the property
+          example: 255
+        min_length:
+          type: integer
+          format: int32
+          description: Minimum length of the property
+          example: 1
+        max_value:
+          type: integer
+          format: int32
+          description: Maximum value for the property
+          example: 100
+        min_value:
+          type: integer
+          format: int32
+          description: Minimum value for the property
+          example: 0
+    RelationDefinitionDtoOut:
+      type: object
+      description: Output DTO for relation definition
+      properties:
+        name:
+          type: string
+          description: Name of the relation
+          example: dependencies
+        target_template_identifier:
+          type: string
+          description: Identifier of the target template
+          example: component-template
+        required:
+          type: boolean
+          description: Whether this relation is required
+          example: false
+        to_many:
+          type: boolean
+          description: Whether this relation can have multiple targets
+          example: true
+    EntityUpdateDtoIn:
+      type: object
+      description: Input DTO for updating an entity
+      properties:
+        name:
+          type: string
+          description: Name of the entity
+          example: my-web-service
+          minLength: 1
+        properties:
+          type: object
+          additionalProperties:
+            type: string
+          description: Map of property name to value for this entity
+          example:
+            port: "8080"
+            environment: dev
+        relations:
+          type: array
+          description: List of relations for this entity
+          items:
+            "$ref": "#/components/schemas/RelationDtoIn"
+      required:
+        - name
+    RelationDtoIn:
+      type: object
+      description: Input DTO for an entity relation instance
+      properties:
+        name:
+          type: string
+          description: Name of the relation (must match a template relation definition)
+          example: depends-on
+          minLength: 1
+        target_entity_identifiers:
+          type: array
+          description: List of target entity identifiers for this relation
+          example:
+            - web-api-1
+            - web-api-2
+          items:
+            type: string
+      required:
+        - name
+        - target_entity_identifiers
+    EntityDtoOut:
+      type: object
+      properties:
+        identifier:
+          type: string
+        name:
+          type: string
+        template_identifier:
+          type: string
+        properties:
+          type: object
+          additionalProperties: {}
+        relations:
+          type: object
+          additionalProperties:
+            type: array
+            items:
+              "$ref": "#/components/schemas/EntitySummaryDto"
+    EntitySummaryDto:
+      type: object
+      properties:
+        identifier:
+          type: string
+        name:
+          type: string
+        template_identifier:
+          type: string
+        properties:
+          type: object
+          additionalProperties: {}
+          description:
+            Property values for the related entity; included only when
+            include_relations_properties=true
+    InboundWebhookCreateDtoIn:
+      type: object
+      properties:
+        identifier:
+          type: string
+          maxLength: 255
+          minLength: 0
+        name:
+          type: string
+          maxLength: 255
+          minLength: 0
+        description:
+          type: string
+        enabled:
+          type: boolean
+        mapping_identifiers:
+          type: array
+          items:
+            type: string
+        security:
+          "$ref": "#/components/schemas/InboundWebhookSecurityContractDtoIn"
+      required:
+        - identifier
+        - name
+    EntityDynamicMappingCreateDtoIn:
+      type: object
+      properties:
+        identifier:
+          type: string
+          minLength: 1
+        entity_template_identifier:
+          type: string
+          minLength: 1
+        filter:
+          type: string
+          minLength: 1
+        action:
+          type: string
+          enum:
+            - UPDATE_ENTITY
+            - UPDATE_PROPERTIES
+            - UPDATE_RELATIONS
+            - DELETE_ENTITY
+        name:
+          type: string
+          minLength: 1
+        description:
+          type: string
+        entity:
+          "$ref": "#/components/schemas/EntityMappingDtoIn"
+      required:
+        - action
+        - entity
+        - entity_template_identifier
+        - filter
+        - identifier
+        - name
+    EntityDynamicMappingDryRunDtoIn:
+      type: object
+      description: Request payload for a single entity dynamic mapping dry-run validation
+      properties:
+        mapping:
+          "$ref": "#/components/schemas/EntityDynamicMappingCreateDtoIn"
+        payload:
+          description: Sample JSON payload to test against the webhook mapping configuration
+      required:
+        - mapping
+        - payload
+    DryRunEntityDto:
+      type: object
+      properties:
+        template_identifier:
+          type: string
+          description: Target template identifier
+        name:
+          type: string
+          description: Entity name
+        identifier:
+          type: string
+          description: Entity identifier
+        properties:
+          type: object
+          additionalProperties:
+            type: string
+          description: Extracted properties
+        relations:
+          type: array
+          description: Extracted relations
+          items:
+            "$ref": "#/components/schemas/DryRunRelationDto"
+    DryRunEntityResultDto:
+      type: object
+      properties:
+        mapping_template_identifier:
+          type: string
+          description: Template identifier for this mapping
+        success:
+          type: boolean
+          description: Whether the mapping was successful
+        entity:
+          "$ref": "#/components/schemas/DryRunEntityDto"
+          description: Mapped entity data
+        error:
+          "$ref": "#/components/schemas/DryRunErrorDto"
+          description: Error details
+    DryRunErrorDto:
+      type: object
+      properties:
+        type:
+          type: string
+          description: Error type
+        message:
+          type: string
+          description: Error message
+    DryRunRelationDto:
+      type: object
+      properties:
+        name:
+          type: string
+          description: Relation name
+        target_entity_identifiers:
+          type: array
+          description: Target entity identifiers extracted from payload
+          items:
+            type: string
+    EntityDynamicMappingDryRunDtoOut:
+      type: object
+      description: Result of an entity dynamic mapping dry-run validation
+      properties:
+        results:
+          type: array
+          description: List of entity mapping results
+          items:
+            "$ref": "#/components/schemas/DryRunEntityResultDto"
+    EntityTemplateCreateDtoIn:
+      type: object
+      description: Input DTO for creating an entity template
+      properties:
+        identifier:
+          type: string
+          description: Unique Entity Template identifier
+          example: service
+          minLength: 1
+        name:
+          type: string
+          description: Unique Entity Template name
+          example: Service
+          maxLength: 255
+          minLength: 0
+          pattern: "^[a-zA-Z0-9 _-]+$"
+        description:
+          type: string
+          description: Entity Template description
+          example: A comprehensive service template
+        properties_definitions:
+          type: array
+          description: List of property definitions for this template
+          items:
+            "$ref": "#/components/schemas/PropertyDefinitionDtoIn"
+        relations_definitions:
+          type: array
+          description: List of relation definitions for this template
+          items:
+            "$ref": "#/components/schemas/RelationDefinitionDtoIn"
+      required:
+        - identifier
+        - name
+    EntityCreateDtoIn:
+      type: object
+      description: Input DTO for creating an entity
+      properties:
+        identifier:
+          type: string
+          description: Unique identifier of the entity within the template scope
+          example: my-web-service
+          minLength: 1
+        name:
+          type: string
+          description: Name of the entity
+          example: my-web-service
+          minLength: 1
+        properties:
+          type: object
+          additionalProperties:
+            type: string
+          description: Map of property name to value for this entity
+          example:
+            port: "8080"
+            environment: dev
+        relations:
+          type: array
+          description: List of relations for this entity
+          items:
+            "$ref": "#/components/schemas/RelationDtoIn"
+      required:
+        - identifier
+        - name
+    EntitySearchRequestDtoIn:
+      type: object
+      description: Request body for the POST /api/v1/entities/search endpoint
+      properties:
+        query:
+          type: string
+          description:
+            Free-text search string. When present, returns entities whose
+            identifier, name, templateIdentifier, or any property value contains this
+            string (case-insensitive). Can be combined with filter.
+          example: checkout
+        filter:
+          "$ref": "#/components/schemas/FilterNodeDtoIn"
+          description:
+            Root node of the search filter tree. May be omitted or null
+            to return all entities.
+        page:
+          type: integer
+          format: int32
+          default: 0
+          description: Page number for pagination. Defaults to 0.
+          example: 0
+        size:
+          type: integer
+          format: int32
+          default: 20
+          description:
+            Number of items per page. Defaults to 20. Must be between 1
+            and 500.
+          example: 20
+        sort:
+          type: string
+          description:
+            "Sorting criteria in the format: property(,asc|desc). Defaults
+            to identifier,asc."
+          example: identifier:asc
+    FilterNodeDtoIn:
+      type: object
+      description:
+        A node in the search filter tree. Either a logical group (connector
+        + criteria) or a leaf criterion (field + operation + value).
+      properties:
+        connector:
+          type: string
+          description:
+            "Logical connector for a group node. One of: AND, OR. Required
+            for group nodes."
+          example: AND
+        criteria:
+          type: array
+          description:
+            Child filter nodes for a group node. Required for group nodes
+            (must be non-empty).
+          items:
+            "$ref": "#/components/schemas/FilterNodeDtoIn"
+        field:
+          type: string
+          description:
+            "Field to filter on for a criterion node. Required for leaf
+            nodes. Examples: template, identifier, name, relation, property.language,
+            relation.api-link, relation.api-link.identifier, relations_as_target.api-link.name"
+          example: template
+        operation:
+          type: string
+          description:
+            "Filter operation for a criterion node. One of: EQ, NEQ, CONTAINS,
+            NOT_CONTAINS, STARTS_WITH, ENDS_WITH, GT, GTE, LT, LTE. Required for leaf
+            nodes."
+          example: EQ
+        value:
+          type: string
+          description:
+            Value to compare against for a criterion node. Required for
+            leaf nodes.
+          example: microservice
+    EntityPageResponse:
+      type: object
+      description: Paginated response containing Entity objects
+      properties:
+        content:
+          type: array
+          items:
+            "$ref": "#/components/schemas/EntityDtoOut"
+        pageable:
+          "$ref": "#/components/schemas/PageableObject"
+        totalElements:
+          type: integer
+          format: int64
+        totalPages:
+          type: integer
+          format: int32
+        last:
+          type: boolean
+        sort:
+          "$ref": "#/components/schemas/SortObject"
+        first:
+          type: boolean
+        numberOfElements:
+          type: integer
+          format: int32
+        size:
+          type: integer
+          format: int32
+        number:
+          type: integer
+          format: int32
+        empty:
+          type: boolean
+    PageableObject:
+      type: object
+      properties:
+        offset:
+          type: integer
+          format: int64
+        paged:
+          type: boolean
+        pageNumber:
+          type: integer
+          format: int32
+        pageSize:
+          type: integer
+          format: int32
+        sort:
+          "$ref": "#/components/schemas/SortObject"
+        unpaged:
+          type: boolean
+    SortObject:
+      type: object
+      properties:
+        empty:
+          type: boolean
+        sorted:
+          type: boolean
+        unsorted:
+          type: boolean
+    EntityPatchDtoIn:
+      type: object
+      description: Input DTO for partially updating an entity
+      properties:
+        name:
+          type: string
+          description: Name of the entity
+          example: my-web-service-updated
+        properties:
+          type: object
+          additionalProperties:
+            type: string
+          description: Map of property name to value for this entity
+          example:
+            port: "8080"
+        relations:
+          type: array
+          description: List of relations for this entity
+          items:
+            "$ref": "#/components/schemas/RelationDtoIn"
+    WebhookConnectorPageResponse:
+      type: object
+      description: Paginated response containing Inbound Webhook Connector objects
+      properties:
+        content:
+          type: array
+          items:
+            "$ref": "#/components/schemas/InboundWebhookDtoOut"
+        pageable:
+          "$ref": "#/components/schemas/PageableObject"
+        totalElements:
+          type: integer
+          format: int64
+        totalPages:
+          type: integer
+          format: int32
+        last:
+          type: boolean
+        sort:
+          "$ref": "#/components/schemas/SortObject"
+        first:
+          type: boolean
+        numberOfElements:
+          type: integer
+          format: int32
+        size:
+          type: integer
+          format: int32
+        number:
+          type: integer
+          format: int32
+        empty:
+          type: boolean
+    EntityDynamicMappingPageResponse:
+      type: object
+      description: Paginated response containing Entity Dynamic Mapping objects
+      properties:
+        content:
+          type: array
+          items:
+            "$ref": "#/components/schemas/EntityDynamicMappingDtoOut"
+        pageable:
+          "$ref": "#/components/schemas/PageableObject"
+        totalElements:
+          type: integer
+          format: int64
+        totalPages:
+          type: integer
+          format: int32
+        last:
+          type: boolean
+        sort:
+          "$ref": "#/components/schemas/SortObject"
+        first:
+          type: boolean
+        numberOfElements:
+          type: integer
+          format: int32
+        size:
+          type: integer
+          format: int32
+        number:
+          type: integer
+          format: int32
+        empty:
+          type: boolean
+    TemplatePageResponse:
+      type: object
+      description: Paginated response containing Template objects
+      properties:
+        content:
+          type: array
+          items:
+            "$ref": "#/components/schemas/EntityTemplateDtoOut"
+        pageable:
+          "$ref": "#/components/schemas/PageableObject"
+        totalElements:
+          type: integer
+          format: int64
+        totalPages:
+          type: integer
+          format: int32
+        last:
+          type: boolean
+        sort:
+          "$ref": "#/components/schemas/SortObject"
+        first:
+          type: boolean
+        numberOfElements:
+          type: integer
+          format: int32
+        size:
+          type: integer
+          format: int32
+        number:
+          type: integer
+          format: int32
+        empty:
+          type: boolean
+    EntityGraphEdgeDtoOut:
+      type: object
+      properties:
+        id:
+          type: string
+          description: Unique edge identifier
+        source:
+          type: string
+          description: Node id of the source entity
+        target:
+          type: string
+          description: Node id of the target entity
+        type:
+          type: string
+          description: Relation name as defined in the entity template
+    EntityGraphFlatDtoOut:
+      type: object
+      properties:
+        nodes:
+          type: array
+          description: All entity nodes in the graph
+          items:
+            "$ref": "#/components/schemas/EntityGraphNodeFlatDtoOut"
+        edges:
+          type: array
+          description: All directed relation edges in the graph
+          items:
+            "$ref": "#/components/schemas/EntityGraphEdgeDtoOut"
+    EntityGraphNodeFlatDtoOut:
+      type: object
+      properties:
+        id:
+          type: string
+          description: Unique node identifier composed of templateIdentifier:identifier
+        label:
+          type: string
+          description: Human-readable entity name
+        template_identifier:
+          type: string
+          description: Template identifier this entity belongs to
+        identifier:
+          type: string
+          description: Business identifier of the entity within its template
+        data:
+          type: object
+          additionalProperties: {}
+          description:
+            Entity property values keyed by property name; present only
+            when include_data=true is requested
+    EntityAuditDtoOut:
+      type: object
+      description: Audit information for an entity revision
+      properties:
+        revision_number:
+          type: number
+          description: Unique revision number in the audit log
+          example: 42
+        revision_date:
+          type: string
+          format: date-time
+          description: Timestamp when the revision was created
+          example: "2026-06-08T14:37:27.743Z"
+        revision_type:
+          type: string
+          description: Type of operation performed (CREATED, UPDATED, DELETED)
+          example: UPDATED
+        modified_by:
+          type: string
+          description: Identifier of the user who performed the modification
+          example: user@example.com
+        snapshot:
+          "$ref": "#/components/schemas/EntitySnapshotDtoOut"
+          description: Snapshot of the entity state at this revision
+    EntitySnapshotDtoOut:
+      type: object
+      description: Snapshot of entity state at a specific audit revision
+      properties:
+        template_identifier:
+          type: string
+          description: Template identifier
+          example: web-service
+        name:
+          type: string
+          description: Entity name
+          example: My Service
+        identifier:
+          type: string
+          description: Entity identifier
+          example: my-service-api
+        properties:
+          type: array
+          description: Properties of the entity at this revision
+          items:
+            "$ref": "#/components/schemas/PropertySnapshotDtoOut"
+        relations:
+          type: array
+          description: Relations of the entity at this revision
+          items:
+            "$ref": "#/components/schemas/RelationSnapshotDtoOut"
+    PropertySnapshotDtoOut:
+      type: object
+      description: Snapshot of a property at a specific audit revision
+      properties:
+        name:
+          type: string
+          description: Name of the property matching a PropertyDefinition
+          example: description
+        value:
+          type: string
+          description: Value of the property at this revision
+          example: My service description
+    RelationSnapshotDtoOut:
+      type: object
+      description: Snapshot of a relation at a specific audit revision
+      properties:
+        name:
+          type: string
+          description: Name of the relation matching a RelationDefinition
+          example: deployed-on
+        target_template_identifier:
+          type: string
+          description: Identifier of the target entity template
+          example: infrastructure
+        target_entity_identifiers:
+          type: array
+          description: Business identifiers of target entities
+          example:
+            - prod-cluster
+            - staging-cluster
+          items:
+            type: string
+    Link:
+      type: object
+      properties:
+        href:
+          type: string
+        templated:
+          type: boolean
   securitySchemes:
     clientId:
       type: oauth2
