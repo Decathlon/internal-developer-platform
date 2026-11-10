@@ -5,6 +5,8 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.anyInt;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -24,6 +26,10 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.Spy;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 
 import com.decathlon.idp_core.domain.exception.entity.EntityNotFoundException;
 import com.decathlon.idp_core.domain.model.entity.Entity;
@@ -34,8 +40,10 @@ import com.decathlon.idp_core.domain.model.entity.Relation;
 import com.decathlon.idp_core.domain.model.entity_graph.EntityGraphNode;
 import com.decathlon.idp_core.domain.model.entity_graph.EntityGraphQueryOptions;
 import com.decathlon.idp_core.domain.model.entity_graph.EntityGraphTraversalMode;
+import com.decathlon.idp_core.domain.model.search.PaginationCriteria;
 import com.decathlon.idp_core.domain.port.EntityGraphRepositoryPort;
 import com.decathlon.idp_core.domain.port.EntityRepositoryPort;
+import com.decathlon.idp_core.domain.service.entity.EntityService;
 import com.decathlon.idp_core.domain.service.entity_template.EntityTemplateValidationService;
 
 @ExtendWith(MockitoExtension.class)
@@ -47,6 +55,9 @@ class EntityGraphServiceTest {
 
   @Mock
   private EntityGraphRepositoryPort entityGraphRepositoryPort;
+
+  @Mock
+  private EntityService entityService;
 
   @Mock
   private EntityTemplateValidationService entityTemplateValidationService;
@@ -73,6 +84,24 @@ class EntityGraphServiceTest {
   }
 
   private static final String TEMPLATE = "web-service";
+
+  @Nested
+  @DisplayName("Paginated Entity Sorting")
+  class PaginatedEntitySorting {
+
+    @Test
+    @DisplayName("Should apply the requested sort to the entity page")
+    void shouldApplyRequestedSort() {
+      when(entityService.getEntitiesByTemplateIdentifier(any(Pageable.class), eq(TEMPLATE),
+          isNull())).thenReturn(Page.empty());
+
+      entityGraphService.getEntityGraphPageByTemplate(
+          new PaginationCriteria(0, 10, "identifier,desc"), TEMPLATE, null, 1, 100);
+
+      verify(entityService).getEntitiesByTemplateIdentifier(
+          PageRequest.of(0, 10, Sort.by(Sort.Direction.DESC, "identifier")), TEMPLATE, null);
+    }
+  }
 
   private void stubRootEntity(Entity entity) {
     when(entityRepositoryPort.findSummariesByCompositeKeys(

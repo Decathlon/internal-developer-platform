@@ -176,10 +176,11 @@ public class EntityController {
   @ResponseStatus(OK)
   @GetMapping("/{templateIdentifier}")
   public Page<EntityDtoOut> getEntities(@RequestParam(defaultValue = "0") int page,
-      @RequestParam(required = false) Integer size, @PathVariable String templateIdentifier,
-      @RequestParam(required = false) String q) {
+      @RequestParam(required = false) Integer size,
+      @RequestParam(defaultValue = "identifier,asc") String sort,
+      @PathVariable String templateIdentifier, @RequestParam(required = false) String q) {
     PaginationCriteria paginationCriteria = new PaginationCriteria(page, resolvePageSize(size),
-        null);
+        sort);
     EntityFilter filter = entityFilterDslParser.parse(q);
     // Single transaction: pagination + batch relation fetch in one DB round trip
     Page<EntityGraphNode> graphNodes = entityGraphService.getEntityGraphPageByTemplate(

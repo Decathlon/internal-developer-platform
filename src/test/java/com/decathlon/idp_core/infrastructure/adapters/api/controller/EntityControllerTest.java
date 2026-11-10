@@ -173,9 +173,9 @@ public class EntityControllerTest extends AbstractIntegrationTest {
     void getEntities_paginated_200_custom() throws Exception {
 
       mockMvc
-          .perform(get(ENTITIES_BY_TEMPLATE_IDENTIFIER_PATH, "monitoring-service")
-              .param("page", "1").param("size", "5").param("sort", "template_identifier,asc")
-              .accept(APPLICATION_JSON))
+          .perform(
+              get(ENTITIES_BY_TEMPLATE_IDENTIFIER_PATH, "monitoring-service").param("page", "1")
+                  .param("size", "5").param("sort", "identifier,asc").accept(APPLICATION_JSON))
           .andExpect(status().isOk()).andExpect(content().contentType(APPLICATION_JSON))
           .andExpect(jsonPath("$.content.length()").value(1))
           .andExpect(jsonPath("$.content[0].name").value("Monitoring Service 6"))
