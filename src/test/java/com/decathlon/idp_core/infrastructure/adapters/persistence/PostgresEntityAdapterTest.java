@@ -57,7 +57,7 @@ class PostgresEntityAdapterTest {
         .thenReturn(new PageImpl<>(List.of()));
 
     adapter.search(new SearchFilterNode.Group(LogicalConnector.AND, List.of()), null,
-        new PaginationCriteria(0, 20, "identifier:desc"));
+        new PaginationCriteria(0, 20, "identifier,desc"));
 
     verify(jpaEntityRepository).findAll(any(Specification.class),
         eq(PageRequest.of(0, 20, Sort.by(Sort.Direction.DESC, "identifier"))));

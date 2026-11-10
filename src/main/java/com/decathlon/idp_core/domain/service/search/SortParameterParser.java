@@ -15,8 +15,8 @@ public final class SortParameterParser {
   private SortParameterParser() {
   }
 
-  /// Parses a sort expression in either `field,direction` or `field:direction`
-  /// form.
+  /// Parses a sort expression in the canonical `field,direction` form, with
+  /// `field:direction` accepted as a legacy alias.
   /// A field without a direction defaults to ascending; null or blank input means
   /// no sort was requested.
   ///

@@ -28,7 +28,7 @@ import io.swagger.v3.oas.annotations.media.Schema;
 ///   },
 ///   "page": 0,
 ///   "size": 20,
-///   "sort": "identifier:asc"
+///   "sort": "identifier,asc"
 /// }
 /// ```
 @Schema(description = SwaggerDescription.SCHEMA_ENTITY_SEARCH_REQUEST_IN)
@@ -42,7 +42,7 @@ public record EntitySearchRequestDtoIn(
 
     @Schema(description = SwaggerDescription.PARAM_SIZE_DESCRIPTION, defaultValue = "20", example = "20") Integer size,
 
-    @Schema(description = SwaggerDescription.PARAM_SORT_DESCRIPTION, example = "identifier:asc") String sort) {
+    @Schema(description = SwaggerDescription.PARAM_SORT_DESCRIPTION, example = "identifier,asc") String sort) {
   public EntitySearchRequestDtoIn {
     if (page == null) {
       page = 0;

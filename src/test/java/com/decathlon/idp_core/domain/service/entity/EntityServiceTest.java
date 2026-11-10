@@ -573,7 +573,7 @@ class EntityServiceTest {
             .thenReturn(paginatedResult);
 
     var result = entityService.searchEntities(filter, null,
-        new PaginationCriteria(0, 10, "identifier:asc"), 500);
+        new PaginationCriteria(0, 10, "identifier,asc"), 500);
 
     assertEquals(paginatedResult, result);
   }

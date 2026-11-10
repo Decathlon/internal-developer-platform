@@ -630,8 +630,7 @@ public class EntityService {
   /// and all property values; null means no text restriction
   /// @param paginationCriteria contains page (zero-based), size (1 to
   /// MAX_PAGE_SIZE),
-  /// and optional sort expression (`field`, `field,asc|desc`, or
-  /// `field:asc|desc`)
+  /// and optional sort expression (`field` or `field,asc|desc`)
   /// @return paginated entities matching the filter and query
   /// @throws InvalidSearchQueryException when pagination parameters are invalid
   @Transactional(readOnly = true)
