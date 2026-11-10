@@ -1,5 +1,6 @@
 package com.decathlon.idp_core.infrastructure.adapters.api.controller;
 
+import static org.hamcrest.Matchers.contains;
 import static org.hamcrest.Matchers.containsInAnyOrder;
 import static org.hamcrest.Matchers.hasItem;
 import static org.hamcrest.Matchers.hasSize;
@@ -183,6 +184,32 @@ public class EntityControllerTest extends AbstractIntegrationTest {
           .andExpect(jsonPath("$.page.total_pages").value(2))
           .andExpect(jsonPath("$.page.size").value(5))
           .andExpect(jsonPath("$.page.number").value(1));
+    }
+
+    @Test
+    @DisplayName("Should return entities in the requested descending order")
+    @WithMockUser
+    void getEntities_sortDescending_200() throws Exception {
+      mockMvc
+          .perform(get(ENTITIES_BY_TEMPLATE_IDENTIFIER_PATH, TEMPLATE_IDENTIFIER)
+              .param("sort", "identifier,desc").accept(APPLICATION_JSON))
+          .andExpect(status().isOk())
+          .andExpect(jsonPath("$.content[*].identifier").value(contains("web-api-2", "web-api-1",
+              "graph-svc-d", "graph-svc-c", "graph-svc-b", "graph-svc-a")));
+    }
+
+    @ParameterizedTest
+    @CsvSource(value = {
+        "badField,asc;Invalid sort field 'badField'. Supported fields: identifier, name, templateIdentifier",
+        "identifier,sideways;Invalid sort expression 'identifier,sideways'. Expected format: field[,|:asc|desc] or field alone"}, delimiter = ';')
+    @DisplayName("Should return 400 when sort field or direction is invalid")
+    @WithMockUser
+    void getEntities_invalidSort_400(String sort, String errorDescription) throws Exception {
+      mockMvc
+          .perform(get(ENTITIES_BY_TEMPLATE_IDENTIFIER_PATH, TEMPLATE_IDENTIFIER)
+              .param("sort", sort).accept(APPLICATION_JSON))
+          .andExpect(status().isBadRequest())
+          .andExpect(jsonPath("$.error_description").value(errorDescription));
     }
 
     @Test
