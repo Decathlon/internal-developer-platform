@@ -284,6 +284,28 @@ Retrieve a specific entity using its template and entity identifiers:
 GET /api/v1/entities/{templateIdentifier}/{entityIdentifier}
 ```
 
+By default, relation objects include only the related entity's identifier, name, and template identifier. Add
+`include_relations_properties=true` to include each related entity's typed properties. The root entity's properties are
+returned as usual, and omitting the flag keeps the existing relation response shape.
+
+```text
+GET /api/v1/entities/{templateIdentifier}/{entityIdentifier}?include_relations_properties=true
+```
+
+With the flag enabled, a relation object also includes a `properties` map:
+
+```json
+{
+  "identifier": "web-api-1",
+  "name": "Web API 1",
+  "template_identifier": "web-service",
+  "properties": {
+    "port": 8080,
+    "is_public": true
+  }
+}
+```
+
 ---
 
 ## Updating an Entity
