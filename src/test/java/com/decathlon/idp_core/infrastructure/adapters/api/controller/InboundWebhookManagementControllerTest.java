@@ -351,6 +351,48 @@ class InboundWebhookManagementControllerTest extends AbstractIntegrationTest {
 
     @Test
     @WithMockUser
+    @DisplayName("Should create a disabled connector with an empty security object")
+    void postWebhook_201_empty_security_when_disabled() throws Exception {
+      var payload = """
+          {
+            "identifier": "disabled-empty-security-webhook",
+            "name": "Disabled Empty Security Webhook",
+            "enabled": false,
+            "mapping_identifiers": [],
+            "security": {}
+          }
+          """;
+
+      mockMvc
+          .perform(MockMvcRequestBuilders.post(WEBHOOK_PATH).contentType(APPLICATION_JSON)
+              .accept(APPLICATION_JSON).with(csrf()).content(payload))
+          .andExpect(status().isCreated()).andExpect(jsonPath("$.security.type").value("NONE"))
+          .andExpect(jsonPath("$.security.config").isEmpty());
+    }
+
+    @Test
+    @WithMockUser
+    @DisplayName("Should create a disabled connector with null security")
+    void postWebhook_201_null_security_when_disabled() throws Exception {
+      var payload = """
+          {
+            "identifier": "disabled-null-security-webhook",
+            "name": "Disabled Null Security Webhook",
+            "enabled": false,
+            "mapping_identifiers": [],
+            "security": null
+          }
+          """;
+
+      mockMvc
+          .perform(MockMvcRequestBuilders.post(WEBHOOK_PATH).contentType(APPLICATION_JSON)
+              .accept(APPLICATION_JSON).with(csrf()).content(payload))
+          .andExpect(status().isCreated()).andExpect(jsonPath("$.security.type").value("NONE"))
+          .andExpect(jsonPath("$.security.config").isEmpty());
+    }
+
+    @Test
+    @WithMockUser
     @DisplayName("Should create connector with STATIC_TOKEN security and return 201")
     void postWebhook_201_static_token_security() throws Exception {
       var payload = """
@@ -654,6 +696,28 @@ class InboundWebhookManagementControllerTest extends AbstractIntegrationTest {
           """;
       mockMvc
           .perform(MockMvcRequestBuilders.put(WEBHOOK_PATH + "/connector-put-none-no-config")
+              .contentType(APPLICATION_JSON).accept(APPLICATION_JSON).with(csrf()).content(payload))
+          .andExpect(status().isOk()).andExpect(jsonPath("$.security.type").value("NONE"))
+          .andExpect(jsonPath("$.security.config").isEmpty());
+    }
+
+    @Test
+    @WithMockUser
+    @DisplayName("Should update a disabled connector with an empty security object")
+    void putWebhook_200_empty_security_when_disabled() throws Exception {
+      createWebhookConnector("connector-put-empty-security", "Connector Empty Security Initial");
+
+      var payload = """
+          {
+            "name": "Connector Empty Security Updated",
+            "description": "updated without security",
+            "enabled": false,
+            "mapping_identifiers": ["connector-put-empty-security-mapping"],
+            "security": {}
+          }
+          """;
+      mockMvc
+          .perform(MockMvcRequestBuilders.put(WEBHOOK_PATH + "/connector-put-empty-security")
               .contentType(APPLICATION_JSON).accept(APPLICATION_JSON).with(csrf()).content(payload))
           .andExpect(status().isOk()).andExpect(jsonPath("$.security.type").value("NONE"))
           .andExpect(jsonPath("$.security.config").isEmpty());
