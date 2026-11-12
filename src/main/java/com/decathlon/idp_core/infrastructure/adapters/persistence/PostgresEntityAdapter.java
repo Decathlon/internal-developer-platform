@@ -11,7 +11,6 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
-import org.springframework.data.domain.Sort.Direction;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Component;
 
@@ -22,7 +21,9 @@ import com.decathlon.idp_core.domain.model.entity.EntitySummary;
 import com.decathlon.idp_core.domain.model.search.PaginatedResult;
 import com.decathlon.idp_core.domain.model.search.PaginationCriteria;
 import com.decathlon.idp_core.domain.model.search.SearchFilterNode;
+import com.decathlon.idp_core.domain.model.search.SortCriteria;
 import com.decathlon.idp_core.domain.port.EntityRepositoryPort;
+import com.decathlon.idp_core.domain.service.search.SortParameterParser;
 import com.decathlon.idp_core.infrastructure.adapters.persistence.mapper.EntityPersistenceMapper;
 import com.decathlon.idp_core.infrastructure.adapters.persistence.model.entity.EntityJpaEntity;
 import com.decathlon.idp_core.infrastructure.adapters.persistence.repository.JpaEntityRepository;
@@ -138,28 +139,17 @@ public class PostgresEntityAdapter implements EntityRepositoryPort {
   }
 
   private Pageable buildPageable(PaginationCriteria criteria) {
-    if (criteria.sort() == null || criteria.sort().isBlank()) {
-      return PageRequest.of(criteria.page(), criteria.size());
-    }
-
-    Sort sort = parseSortExpression(criteria.sort());
-    return PageRequest.of(criteria.page(), criteria.size(), sort);
+    return SortParameterParser.parse(criteria.sort())
+        .map(sortCriteria -> PageRequest.of(criteria.page(), criteria.size(),
+            toSpringSort(sortCriteria)))
+        .orElseGet(() -> PageRequest.of(criteria.page(), criteria.size()));
   }
 
-  private Sort parseSortExpression(String sortExpression) {
-    String[] parts = sortExpression.split(":");
-    String property = parts[0].trim();
-
-    if (parts.length == 1) {
-      return Sort.by(Direction.ASC, property);
-    }
-
-    String direction = parts[1].trim().toLowerCase();
-    return switch (direction) {
-      case "asc" -> Sort.by(Direction.ASC, property);
-      case "desc" -> Sort.by(Direction.DESC, property);
-      default -> Sort.by(Direction.ASC, property);
-    };
+  private Sort toSpringSort(SortCriteria criteria) {
+    Sort.Direction direction = criteria.direction() == SortCriteria.Direction.ASC
+        ? Sort.Direction.ASC
+        : Sort.Direction.DESC;
+    return Sort.by(direction, criteria.field());
   }
 
   public List<Entity> findEntitiesRelated(String targetIdentifier) {

@@ -174,7 +174,7 @@ Request shape (`EntitySearchRequestDtoIn`):
   },
   "page": 0,
   "size": 20,
-  "sort": "identifier:asc"
+  "sort": "identifier,asc"
 }
 ```
 
@@ -203,7 +203,7 @@ curl -sS -X POST "http://localhost:8084/api/v1/entities/search" \
 - `query` (optional): free-text string (max 255 chars) searched case-insensitively in `identifier`, `name`, `templateIdentifier`, and property values.
 - `filter` (optional): nested `FilterNodeDtoIn` JSON structure. Use a `template` criterion to scope results to a specific template when needed.
 - `page` / `size`: pagination (zero-based `page`). `size` defaults to 20 and the server enforces a maximum of 500 by default (configurable with `MAX_PAGE_SIZE`).
-- `sort`: `field:asc|desc`. Allowed sort fields: `identifier`, `name`, `templateIdentifier`.
+- `sort`: `field,asc|desc`. Allowed sort fields: `identifier`, `name`, `templateIdentifier`.
 
 ### Operator semantics
 

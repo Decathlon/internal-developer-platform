@@ -134,7 +134,7 @@ public class ValidationMessages {
   public static final String SEARCH_QUERY_TOO_LONG = "Search query must not exceed %d characters";
   public static final String SEARCH_NUMERIC_OPERATOR_REQUIRES_PROPERTY = "Operator '%s' is only valid for property.{name} fields";
   public static final String SEARCH_INVALID_SORT_FIELD = "Invalid sort field '%s'. Supported fields: identifier, name, templateIdentifier";
-  public static final String SEARCH_INVALID_SORT_FORMAT = "Invalid sort expression '%s'. Expected format: field or field:asc|desc";
+  public static final String SEARCH_INVALID_SORT_FORMAT = "Invalid sort expression '%s'. Expected format: field[,asc|desc] or field alone";
   public static final String SEARCH_PAGE_INVALID = "Page index must be 0 or greater";
   public static final String SEARCH_SIZE_INVALID = "Page size must be greater than 0";
   public static final String SEARCH_NUMERIC_OPERATOR_INVALID_VALUE = "Value '%s' is not a valid number for operator '%s'";

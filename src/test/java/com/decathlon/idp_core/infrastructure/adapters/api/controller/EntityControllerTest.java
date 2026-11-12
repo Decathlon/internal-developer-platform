@@ -1,5 +1,6 @@
 package com.decathlon.idp_core.infrastructure.adapters.api.controller;
 
+import static org.hamcrest.Matchers.contains;
 import static org.hamcrest.Matchers.containsInAnyOrder;
 import static org.hamcrest.Matchers.hasItem;
 import static org.hamcrest.Matchers.hasSize;
@@ -173,9 +174,9 @@ public class EntityControllerTest extends AbstractIntegrationTest {
     void getEntities_paginated_200_custom() throws Exception {
 
       mockMvc
-          .perform(get(ENTITIES_BY_TEMPLATE_IDENTIFIER_PATH, "monitoring-service")
-              .param("page", "1").param("size", "5").param("sort", "template_identifier,asc")
-              .accept(APPLICATION_JSON))
+          .perform(
+              get(ENTITIES_BY_TEMPLATE_IDENTIFIER_PATH, "monitoring-service").param("page", "1")
+                  .param("size", "5").param("sort", "identifier,asc").accept(APPLICATION_JSON))
           .andExpect(status().isOk()).andExpect(content().contentType(APPLICATION_JSON))
           .andExpect(jsonPath("$.content.length()").value(1))
           .andExpect(jsonPath("$.content[0].name").value("Monitoring Service 6"))
@@ -183,6 +184,34 @@ public class EntityControllerTest extends AbstractIntegrationTest {
           .andExpect(jsonPath("$.page.total_pages").value(2))
           .andExpect(jsonPath("$.page.size").value(5))
           .andExpect(jsonPath("$.page.number").value(1));
+    }
+
+    @Test
+    @DisplayName("Should return entities in the requested descending order")
+    @WithMockUser
+    void getEntities_sortDescending_200() throws Exception {
+      mockMvc
+          .perform(get(ENTITIES_BY_TEMPLATE_IDENTIFIER_PATH, TEMPLATE_IDENTIFIER)
+              .param("sort", "identifier,desc").accept(APPLICATION_JSON))
+          .andExpect(status().isOk())
+          .andExpect(jsonPath("$.content[*].identifier").value(contains("web-api-2", "web-api-1",
+              "graph-svc-d", "graph-svc-c", "graph-svc-b", "graph-svc-a")));
+    }
+
+    @ParameterizedTest
+    @CsvSource(value = {
+        "badField,asc;Invalid sort field 'badField'. Supported fields: identifier, name, templateIdentifier",
+        "identifier,sideways;Invalid sort expression 'identifier,sideways'. Expected format: field[,asc|desc] or field alone",
+        "name:asc;Invalid sort expression 'name:asc'. Expected format: field[,asc|desc] or field alone",
+        "name:desc;Invalid sort expression 'name:desc'. Expected format: field[,asc|desc] or field alone"}, delimiter = ';')
+    @DisplayName("Should return 400 when sort field or direction is invalid")
+    @WithMockUser
+    void getEntities_invalidSort_400(String sort, String errorDescription) throws Exception {
+      mockMvc
+          .perform(get(ENTITIES_BY_TEMPLATE_IDENTIFIER_PATH, TEMPLATE_IDENTIFIER)
+              .param("sort", sort).accept(APPLICATION_JSON))
+          .andExpect(status().isBadRequest())
+          .andExpect(jsonPath("$.error_description").value(errorDescription));
     }
 
     @Test
@@ -1200,7 +1229,7 @@ public class EntityControllerTest extends AbstractIntegrationTest {
                     { "field": "property.programmingLanguage", "operation": "EQ", "value": "JAVA" }
                   ]
                 },
-                "page": 0, "size": 20, "sort": "identifier:asc"
+                "page": 0, "size": 20, "sort": "identifier,asc"
               }
               """)).andExpect(status().isOk()).andReturn();
       JSONAssert.assertEquals(
@@ -1223,7 +1252,7 @@ public class EntityControllerTest extends AbstractIntegrationTest {
                     { "field": "template", "operation": "EQ", "value": "batch-job" }
                   ]
                 },
-                "page": 0, "size": 20, "sort": "identifier:asc"
+                "page": 0, "size": 20, "sort": "identifier,asc"
               }
               """)).andExpect(status().isOk()).andReturn();
       JSONAssert.assertEquals(
@@ -1526,7 +1555,7 @@ public class EntityControllerTest extends AbstractIntegrationTest {
                     },
                     "page": 0,
                     "size": 6,
-                    "sort": "name:desc"
+                    "sort": "name,desc"
                   }
                   """))
           .andExpect(status().isOk()).andExpect(jsonPath("$.content.length()").value(6))
@@ -1813,10 +1842,24 @@ public class EntityControllerTest extends AbstractIntegrationTest {
       mockMvc
           .perform(MockMvcRequestBuilders.post(SEARCH_PATH).contentType(APPLICATION_JSON)
               .accept(APPLICATION_JSON).with(csrf()).content("""
-                  { "page": 0, "size": 20, "sort": "badField:asc" }
+                  { "page": 0, "size": 20, "sort": "badField,asc" }
                   """))
           .andExpect(status().isBadRequest()).andExpect(jsonPath("$.error_description").value(
               "Invalid sort field 'badField'. Supported fields: identifier, name, templateIdentifier"));
+    }
+
+    @ParameterizedTest
+    @CsvSource({"name:asc", "name:desc"})
+    @WithMockUser
+    @DisplayName("Should return 400 for colon-delimited sort")
+    void search_400_colonDelimitedSort(String sort) throws Exception {
+      mockMvc
+          .perform(MockMvcRequestBuilders.post(SEARCH_PATH).contentType(APPLICATION_JSON)
+              .accept(APPLICATION_JSON).with(csrf()).content("""
+                  { "page": 0, "size": 20, "sort": "%s" }
+                  """.formatted(sort)))
+          .andExpect(status().isBadRequest()).andExpect(jsonPath("$.error_description")
+              .value(ValidationMessages.SEARCH_INVALID_SORT_FORMAT.formatted(sort)));
     }
 
     @Test
@@ -1846,7 +1889,7 @@ public class EntityControllerTest extends AbstractIntegrationTest {
           .contentType(APPLICATION_JSON).accept(APPLICATION_JSON).with(csrf()).content("""
               {
                 "filter": { "field": "relation", "operation": "CONTAINS", "value": "database" },
-                "page": 0, "size": 20, "sort": "identifier:asc"
+                "page": 0, "size": 20, "sort": "identifier,asc"
               }
               """)).andExpect(status().isOk()).andReturn();
       JSONAssert.assertEquals(
