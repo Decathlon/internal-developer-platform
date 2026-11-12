@@ -112,6 +112,14 @@ Each entity can link to **multiple** target entities.
 
 ---
 
+## Unresolved identifiers for relations
+
+The platform validates relation targets on every entity create, update, and patch, whether you use the REST API or webhook ingestion. Set `APP_RELATIONS_TARGET_VALIDATION_MODE` to choose how it handles unresolved targets. The default, `STRICT`, rejects any non-blank target identifier that does not resolve to an entity. In `TOLERANT` mode, the platform filters unresolved identifiers from optional relations, keeps resolved targets, and omits the relation if none resolve.
+
+Both modes enforce required relations, target-template compatibility for resolved targets, and the existing `required` and `to_many` cardinality constraints. Tolerant mode checks cardinality after filtering unresolved optional targets. REST entity writes return `400 Bad Request` for validation failures, while webhook ingestion returns `422 Unprocessable Content`.
+
+---
+
 ## Example: Complete Data Model
 
 Here's a complete example with multiple templates and relations:

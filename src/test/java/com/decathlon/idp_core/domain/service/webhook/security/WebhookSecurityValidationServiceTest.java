@@ -48,7 +48,7 @@ class WebhookSecurityValidationServiceTest {
     @Test
     @DisplayName("Should throw when security is null")
     void shouldThrowWhenSecurityIsNull() {
-      assertThatThrownBy(() -> service.validateForCreation(null))
+      assertThatThrownBy(() -> service.validateForCreation(null, true))
           .isInstanceOf(WebhookSecurityConfigurationException.class)
           .hasMessageContaining("mandatory");
     }
@@ -81,7 +81,7 @@ class WebhookSecurityValidationServiceTest {
       var config = Map.of("header_name", "X-Hub-Signature-256", "secret_alias", "MY_SECRET");
       var security = new WebhookSecurity(HMAC_SHA256, config);
 
-      assertThatCode(() -> service.validateForCreation(security)).doesNotThrowAnyException();
+      assertThatCode(() -> service.validateForCreation(security, true)).doesNotThrowAnyException();
 
       verify(hmacCreationValidator).validateConfiguration(config);
     }
@@ -96,7 +96,7 @@ class WebhookSecurityValidationServiceTest {
     void shouldPassForNoneTypeWithEmptyConfig() {
       var security = new WebhookSecurity(WebhookSecurityType.NONE, Map.of());
 
-      assertThatCode(() -> service.validateForCreation(security)).doesNotThrowAnyException();
+      assertThatCode(() -> service.validateForCreation(security, true)).doesNotThrowAnyException();
     }
 
     @Test
@@ -105,7 +105,7 @@ class WebhookSecurityValidationServiceTest {
       WebhookSecurity security = new WebhookSecurity(WebhookSecurityType.NONE, null);
 
       assertThat(security.config()).isNotNull().isEmpty();
-      assertThatCode(() -> service.validateForCreation(security)).doesNotThrowAnyException();
+      assertThatCode(() -> service.validateForCreation(security, true)).doesNotThrowAnyException();
     }
 
     @Test
@@ -113,32 +113,43 @@ class WebhookSecurityValidationServiceTest {
     void shouldThrowForNoneTypeWithNonEmptyConfig() {
       var security = new WebhookSecurity(WebhookSecurityType.NONE, Map.of("header_name", "X-Test"));
 
-      assertThatThrownBy(() -> service.validateForCreation(security))
+      assertThatThrownBy(() -> service.validateForCreation(security, true))
           .isInstanceOf(WebhookSecurityConfigurationException.class)
           .hasMessageContaining("must be empty when type is NONE");
     }
 
     @Test
-    @DisplayName("Should reject NONE type when the allow-none flag is disabled")
-    void shouldRejectNoneTypeWhenDisabled() {
+    @DisplayName("Should allow disabled connectors with NONE when the allow-none flag is disabled")
+    void shouldAllowDisabledConnectorWithNoneWhenDisabled() {
       var disabled = new WebhookSecurityValidationService(List.of(hmacCreationValidator),
           new WebhookSecurityValidationPolicy(false));
       var security = new WebhookSecurity(WebhookSecurityType.NONE, Map.of());
 
-      assertThatThrownBy(() -> disabled.validateForCreation(security))
+      assertThatCode(() -> disabled.validateForCreation(security, false))
+          .doesNotThrowAnyException();
+    }
+
+    @Test
+    @DisplayName("Should reject enabled connectors with NONE when the allow-none flag is disabled")
+    void shouldRejectEnabledConnectorWithNoneWhenDisabled() {
+      var disabled = new WebhookSecurityValidationService(List.of(hmacCreationValidator),
+          new WebhookSecurityValidationPolicy(false));
+      var security = new WebhookSecurity(WebhookSecurityType.NONE, Map.of());
+
+      assertThatThrownBy(() -> disabled.validateForCreation(security, true))
           .isInstanceOf(WebhookSecurityConfigurationException.class)
           .hasMessageContaining("IDP_WEBHOOK_SECURITY_ALLOW_NONE");
     }
 
     @Test
-    @DisplayName("Should reject implicit NONE (null config normalized) when the flag is disabled")
-    void shouldRejectImplicitNoneWhenDisabled() {
+    @DisplayName("Should allow disabled connectors with normalized null NONE config")
+    void shouldAllowDisabledConnectorWithNullNoneConfig() {
       var disabled = new WebhookSecurityValidationService(List.of(hmacCreationValidator),
           new WebhookSecurityValidationPolicy(false));
       var security = new WebhookSecurity(WebhookSecurityType.NONE, null);
 
-      assertThatThrownBy(() -> disabled.validateForCreation(security))
-          .isInstanceOf(WebhookSecurityConfigurationException.class);
+      assertThatCode(() -> disabled.validateForCreation(security, false))
+          .doesNotThrowAnyException();
     }
 
     @Test
@@ -148,8 +159,9 @@ class WebhookSecurityValidationServiceTest {
           new WebhookSecurityValidationPolicy(false));
       var config = Map.of("header_name", "X-Hub-Signature-256", "secret_alias", "MY_SECRET");
 
-      assertThatCode(() -> disabled.validateForCreation(new WebhookSecurity(HMAC_SHA256, config)))
-          .doesNotThrowAnyException();
+      assertThatCode(
+          () -> disabled.validateForCreation(new WebhookSecurity(HMAC_SHA256, config), true))
+              .doesNotThrowAnyException();
     }
   }
 
@@ -164,7 +176,7 @@ class WebhookSecurityValidationServiceTest {
       var security = new WebhookSecurity(JWT_BEARER,
           Map.of("jwks_uri", "https://example.com/.well-known/jwks"));
 
-      assertThatThrownBy(() -> service.validateForCreation(security))
+      assertThatThrownBy(() -> service.validateForCreation(security, true))
           .isInstanceOf(WebhookSecurityConfigurationException.class)
           .hasMessageContaining("No validator registered");
     }
