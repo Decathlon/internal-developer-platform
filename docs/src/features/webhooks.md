@@ -157,7 +157,9 @@ value in the connector configuration.
 
     For `NONE`, you can omit `config`, set it to `null`, or pass `{}`. Any non-empty `config` is rejected.
 
-    `NONE` is disabled by default. Set the `IDP_WEBHOOK_SECURITY_ALLOW_NONE` environment variable to `true` to allow creating or updating connectors with `NONE`. When the flag is off, a request with `NONE` or with the `security` section omitted is rejected with `400 Bad Request`. Connectors that already use `NONE` continue to ingest events.
+    `NONE` is forbidden by default for enabled connectors. Set the `IDP_WEBHOOK_SECURITY_ALLOW_NONE` environment variable to `true` to allow creating or updating enabled connectors with `NONE`. Disabled connectors can omit `security`, set it to `null` or `{}`, or use `NONE` without enabling this flag. In all cases, a `NONE` configuration must be empty. Connectors that already use `NONE` continue to ingest events.
+
+    Creating or updating a connector without mappings automatically disables it, even if you send `enabled: true`. These requests also accept `security: {}`.
 
 ### JWT_BEARER Configuration Reference
 
