@@ -581,19 +581,19 @@ class EntityServiceTest {
   @Test
   @DisplayName("Should reject invalid sort field")
   void shouldRejectInvalidSortField() {
-    assertSearchThrows(new PaginationCriteria(0, 20, "badField:asc"));
+    assertSearchThrows(new PaginationCriteria(0, 20, "badField,asc"));
   }
 
   @Test
   @DisplayName("Should reject invalid sort direction")
   void shouldRejectInvalidSortDirection() {
-    assertSearchThrows(new PaginationCriteria(0, 20, "identifier:zzz"));
+    assertSearchThrows(new PaginationCriteria(0, 20, "identifier,zzz"));
   }
 
   @Test
   @DisplayName("Should reject extra sort expression segments")
   void shouldRejectExtraSortSegments() {
-    assertSearchThrows(new PaginationCriteria(0, 20, "identifier:asc:extra"));
+    assertSearchThrows(new PaginationCriteria(0, 20, "identifier,asc,extra"));
   }
 
   // ---------------------------------------------------------------------------

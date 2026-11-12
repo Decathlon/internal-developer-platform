@@ -21,10 +21,14 @@ class SortParameterParserTest {
   }
 
   @Test
-  @DisplayName("Should parse colon-delimited sort expression")
-  void shouldParseColonDelimitedExpression() {
-    assertThat(SortParameterParser.parse("name:asc"))
-        .contains(new SortCriteria("name", Direction.ASC));
+  @DisplayName("Should reject colon-delimited sort expressions")
+  void shouldRejectColonDelimitedExpressions() {
+    assertThatThrownBy(() -> SortParameterParser.parse("name:asc"))
+        .isInstanceOf(InvalidSearchQueryException.class)
+        .hasMessageContaining("Invalid sort expression");
+    assertThatThrownBy(() -> SortParameterParser.parse("name:desc"))
+        .isInstanceOf(InvalidSearchQueryException.class)
+        .hasMessageContaining("Invalid sort expression");
   }
 
   @Test

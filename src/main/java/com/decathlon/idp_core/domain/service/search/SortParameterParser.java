@@ -15,8 +15,7 @@ public final class SortParameterParser {
   private SortParameterParser() {
   }
 
-  /// Parses a sort expression in the canonical `field,direction` form, with
-  /// `field:direction` accepted as a legacy alias.
+  /// Parses a sort expression in the canonical `field,direction` form.
   /// A field without a direction defaults to ascending; null or blank input means
   /// no sort was requested.
   ///
@@ -28,8 +27,9 @@ public final class SortParameterParser {
       return Optional.empty();
     }
 
-    String[] parts = expression.trim().split("[,:]", -1);
-    if (parts.length > 2 || parts[0].isBlank() || parts.length == 2 && parts[1].isBlank()) {
+    String[] parts = expression.trim().split(",", -1);
+    if (expression.contains(":") || parts.length > 2 || parts[0].isBlank()
+        || parts.length == 2 && parts[1].isBlank()) {
       throw invalidFormat(expression);
     }
 
