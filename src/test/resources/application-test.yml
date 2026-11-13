@@ -29,7 +29,7 @@ spring:
 # Added App Security configuration
 app:
   security:
-    http-message-signature:
+    http-message-signature-verification:
       enabled: false
     principal-provisioning:
       mode: JIT

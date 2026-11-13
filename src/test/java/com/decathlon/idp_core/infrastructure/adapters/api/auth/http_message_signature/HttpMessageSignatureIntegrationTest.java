@@ -18,9 +18,12 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.web.server.LocalServerPort;
 import org.springframework.http.MediaType;
+import org.springframework.security.oauth2.jwt.JwtDecoder;
+import org.springframework.security.web.FilterChainProxy;
 import org.springframework.test.context.jdbc.Sql;
 import org.springframework.test.web.servlet.client.RestTestClient;
 
@@ -29,8 +32,8 @@ import com.decathlon.idp_core.infrastructure.adapters.api.configuration.HttpMess
 import com.fasterxml.jackson.annotation.JsonProperty;
 
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT, properties = {
-    "app.security.http-message-signature.enabled=true",
-    "app.security.http-message-signature.secret=http-message-test-secret",
+    "app.security.http-message-signature-verification.enabled=true",
+    "app.security.http-message-signature-verification.secret=http-message-test-secret",
     "spring.web.cors.allowed-origins=https://example.com",
     "app.ingestion.webhook.base-path=/signature-webhooks", "spring.threads.virtual.enabled=true"})
 @Sql(statements = {"""
@@ -56,9 +59,25 @@ class HttpMessageSignatureIntegrationTest extends AbstractIntegrationTest {
   private int port;
 
   @Autowired
-  private org.springframework.security.oauth2.jwt.JwtDecoder jwtDecoder;
+  private JwtDecoder jwtDecoder;
+
+  @Autowired
+  @Qualifier("springSecurityFilterChain")
+  private FilterChainProxy securityFilterChain;
+
+  @Autowired
+  private HttpMessageSignatureFilter signatureFilter;
 
   private RestTestClient client;
+
+  @Test
+  void everyActiveSecurityFilterChainContainsExactlyOneSignatureFilter() {
+    var chains = securityFilterChain.getFilterChains();
+    assertThat(chains).isNotEmpty();
+    chains.forEach(chain -> assertThat(chain.getFilters())
+        .as("HTTP message signature verification in %s", chain)
+        .filteredOn(HttpMessageSignatureFilter.class::isInstance).containsExactly(signatureFilter));
+  }
 
   @BeforeEach
   void setUpClient() {

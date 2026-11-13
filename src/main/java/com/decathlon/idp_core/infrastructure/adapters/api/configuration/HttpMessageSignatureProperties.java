@@ -7,7 +7,7 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.boot.context.properties.bind.DefaultValue;
 
 /// HTTP message signature verification configuration.
-@ConfigurationProperties("app.security.http-message-signature")
+@ConfigurationProperties("app.security.http-message-signature-verification")
 public record HttpMessageSignatureProperties(@DefaultValue("true") boolean enabled, String secret,
     @DefaultValue("x-request-id") String identifierHeaderName,
     @DefaultValue("HMAC_SHA256") HttpMessageSignatureAlgorithm algorithm,

@@ -58,13 +58,14 @@ class HttpMessageSignatureConfigurationTest {
   @Test
   void defaultEnablementRequiresSecretAndFailsWithoutExposingIt() {
     contextRunner.run(context -> assertThat(context).hasFailed());
-    contextRunner.withPropertyValues("app.security.http-message-signature.secret= ")
+    contextRunner.withPropertyValues("app.security.http-message-signature-verification.secret= ")
         .run(context -> assertThat(context).hasFailed());
   }
 
   @Test
   void defaultsBindAndServletAutoRegistrationIsDisabled() {
-    contextRunner.withPropertyValues("app.security.http-message-signature.secret=dummy-secret")
+    contextRunner
+        .withPropertyValues("app.security.http-message-signature-verification.secret=dummy-secret")
         .run(context -> {
           assertThat(context).hasNotFailed().hasSingleBean(HttpMessageSignatureFilter.class);
           var properties = context.getBean(HttpMessageSignatureProperties.class);
@@ -81,7 +82,8 @@ class HttpMessageSignatureConfigurationTest {
 
   @Test
   void disabledFeatureNeedsNoSecretAndRegistersNoFilter() {
-    contextRunner.withPropertyValues("app.security.http-message-signature.enabled=false")
+    contextRunner
+        .withPropertyValues("app.security.http-message-signature-verification.enabled=false")
         .run(context -> {
           assertThat(context).hasNotFailed().doesNotHaveBean(HttpMessageSignatureFilter.class)
               .doesNotHaveBean(FilterRegistrationBean.class);
@@ -92,21 +94,11 @@ class HttpMessageSignatureConfigurationTest {
   }
 
   @Test
-  void legacyConfigurationCannotDisableVerificationOrSupplyItsSecret() {
+  void verificationConfigurationBindsCurrentPolicy() {
     contextRunner
-        .withPropertyValues("app.security.gateway-signature.enabled=false",
-            "app.security.gateway-signature.secret=legacy-dummy-secret")
-        .run(context -> assertThat(context).hasFailed());
-  }
-
-  @Test
-  void newConfigurationIgnoresLegacyPolicyKeys() {
-    contextRunner.withPropertyValues("app.security.http-message-signature.secret=dummy-secret",
-        "app.security.http-message-signature.identifier-header-name=x-client-id",
-        "app.security.gateway-signature.enabled=false",
-        "app.security.gateway-signature.gateway-header-name=legacy-id",
-        "app.security.gateway-signature.algorithm=HMAC_SHA1",
-        "app.security.gateway-signature.validity-duration-seconds=300").run(context -> {
+        .withPropertyValues("app.security.http-message-signature-verification.secret=dummy-secret",
+            "app.security.http-message-signature-verification.identifier-header-name=x-client-id")
+        .run(context -> {
           assertThat(context).hasNotFailed().hasSingleBean(HttpMessageSignatureFilter.class);
           var properties = context.getBean(HttpMessageSignatureProperties.class);
           assertThat(properties.enabled()).isTrue();
@@ -124,20 +116,24 @@ class HttpMessageSignatureConfigurationTest {
       "algorithm=HMAC_MD5", "excluded-paths=relative"})
   void invalidPolicyFailsStartup(String setting) {
     contextRunner
-        .withPropertyValues("app.security.http-message-signature.secret=dummy-secret",
-            "app.security.http-message-signature." + setting)
+        .withPropertyValues("app.security.http-message-signature-verification.secret=dummy-secret",
+            "app.security.http-message-signature-verification." + setting)
         .run(context -> assertThat(context).hasFailed());
   }
 
   @Test
   void exclusionsAreReplacedAndCanBeEmpty() {
-    contextRunner.withPropertyValues("app.security.http-message-signature.enabled=false",
-        "app.security.http-message-signature.excluded-paths=/custom/**").run(context -> {
+    contextRunner
+        .withPropertyValues("app.security.http-message-signature-verification.enabled=false",
+            "app.security.http-message-signature-verification.excluded-paths=/custom/**")
+        .run(context -> {
           assertThat(context.getBean(HttpMessageSignatureProperties.class).excludedPaths())
               .containsExactly("/custom/**");
         });
-    contextRunner.withPropertyValues("app.security.http-message-signature.enabled=false",
-        "app.security.http-message-signature.excluded-paths=").run(context -> {
+    contextRunner
+        .withPropertyValues("app.security.http-message-signature-verification.enabled=false",
+            "app.security.http-message-signature-verification.excluded-paths=")
+        .run(context -> {
           assertThat(context.getBean(HttpMessageSignatureProperties.class).excludedPaths())
               .isEmpty();
         });
@@ -182,7 +178,8 @@ class HttpMessageSignatureConfigurationTest {
 
   @Test
   void disabledFeatureIsAbsentFromAllRealChains() {
-    chainRunner("jwt").withPropertyValues("app.security.http-message-signature.enabled=false")
+    chainRunner("jwt")
+        .withPropertyValues("app.security.http-message-signature-verification.enabled=false")
         .run(context -> {
           assertThat(context).hasNotFailed();
           context.getBeansOfType(SecurityFilterChain.class).values()
@@ -200,7 +197,7 @@ class HttpMessageSignatureConfigurationTest {
     return new WebApplicationContextRunner().withUserConfiguration(Chains.class)
         .withBean("corsConfigurationSource", CorsConfigurationSource.class,
             UrlBasedCorsConfigurationSource::new)
-        .withPropertyValues("app.security.http-message-signature.secret=dummy-secret",
+        .withPropertyValues("app.security.http-message-signature-verification.secret=dummy-secret",
             "app.security.authentication." + mode + ".enabled=true")
         .withBean(ApiErrorResponseWriter.class,
             () -> new ApiErrorResponseWriter(new ObjectMapper()))

@@ -206,7 +206,7 @@ jobs:
       - name: Check if static swagger file is up to date
         env:
           SPEC_URL_PATH: '/v3/api-docs/internal'
-          HTTP_MESSAGE_SIGNATURE_ENABLED: 'false'
+          HTTP_MESSAGE_SIGNATURE_VERIFICATION_ENABLED: 'false'
           SERVER_PORT: 8080
           OAUTH_JWK_URI: 'http://localhost:9999/mock/jwks'
           OAUTH_TOKEN_URI: 'http://localhost:9999/mock/token'

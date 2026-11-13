@@ -32,7 +32,7 @@ public class HttpMessageSignatureConfiguration {
   /// Creates the enabled HTTP message signature verification filter with the
   /// system UTC clock.
   @Bean
-  @ConditionalOnProperty(prefix = "app.security.http-message-signature", name = "enabled", havingValue = "true", matchIfMissing = true)
+  @ConditionalOnProperty(prefix = "app.security.http-message-signature-verification", name = "enabled", havingValue = "true", matchIfMissing = true)
   public HttpMessageSignatureFilter httpMessageSignatureFilter(
       HttpMessageSignatureProperties properties, ApiErrorResponseWriter errorWriter) {
     return new HttpMessageSignatureFilter(properties,
@@ -41,7 +41,7 @@ public class HttpMessageSignatureConfiguration {
 
   /// Prevents Spring Boot from also running the filter outside Spring Security.
   @Bean
-  @ConditionalOnProperty(prefix = "app.security.http-message-signature", name = "enabled", havingValue = "true", matchIfMissing = true)
+  @ConditionalOnProperty(prefix = "app.security.http-message-signature-verification", name = "enabled", havingValue = "true", matchIfMissing = true)
   public FilterRegistrationBean<HttpMessageSignatureFilter> httpMessageSignatureRegistration(
       HttpMessageSignatureFilter filter) {
     var registration = new FilterRegistrationBean<>(filter);
