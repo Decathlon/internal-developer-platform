@@ -56,6 +56,7 @@ applyTo: '**/*.java'
 
 - Use parameterized queries. Always use Spring Data JPA or `NamedParameterJdbcTemplate` to prevent SQL injection.
 - Validate request bodies and parameters using JSR-380 (`@NotNull`, `@Size`, etc.) annotations and `BindingResult`
+- When adding or modifying a `SecurityFilterChain`, inject `HttpMessageSignatureConfiguration.ChainConfigurer` and call its `configure(http)` method before `http.build()`.
 
 ### Profiles
 
