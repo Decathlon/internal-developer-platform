@@ -19,6 +19,7 @@ import com.decathlon.idp_core.infrastructure.adapters.persistence.model.entity.R
 import com.decathlon.idp_core.infrastructure.adapters.persistence.model.entity.RelationTargetJpaEntity;
 import com.decathlon.idp_core.infrastructure.adapters.persistence.repository.JpaEntityRepository;
 
+import io.opentelemetry.instrumentation.annotations.WithSpan;
 import lombok.RequiredArgsConstructor;
 
 /// Custom mapper for Entity persistence layer.
@@ -37,6 +38,7 @@ public class EntityPersistenceMapper {
   // Entity Mapping
   // =========================================================================
 
+  @WithSpan("EntityPersistenceMapper.toDomain")
   public Entity toDomain(EntityJpaEntity jpa) {
     if (jpa == null) {
       return null;

@@ -18,6 +18,8 @@ import com.decathlon.idp_core.domain.model.entity.EntitySummary;
 import com.decathlon.idp_core.infrastructure.adapters.persistence.model.entity.EntityGraphJsonProjection;
 import com.decathlon.idp_core.infrastructure.adapters.persistence.model.entity.EntityJpaEntity;
 
+import io.opentelemetry.instrumentation.annotations.WithSpan;
+
 @Repository
 public interface JpaEntityRepository
     extends
@@ -63,6 +65,7 @@ public interface JpaEntityRepository
   @Query("SELECT e.id, e.identifier AS identifier, e.name AS name, e.templateIdentifier AS templateIdentifier FROM EntityJpaEntity e JOIN e.relations r WHERE r.id IN :relationIds")
   List<EntitySummary> findByRelationIdIn(List<UUID> relationIds);
 
+  @WithSpan("JpaEntityRepository.findByTemplateIdentifierAndIdentifier")
   Optional<EntityJpaEntity> findByTemplateIdentifierAndIdentifier(String templateIdentifier,
       String identifier);
 
