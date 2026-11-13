@@ -213,7 +213,7 @@ jobs:
           SPRING_JPA_DATABASE_PLATFORM: 'org.hibernate.dialect.H2Dialect'
           SPRING_FLYWAY_ENABLED: 'false'
           SPRING_JPA_HIBERNATE_DDL_AUTO: 'none'
-          SPRING_DATASOURCE_URL: 'jdbc:h2:mem'
+          SPRING_DATASOURCE_URL: 'jdbc:h2:mem:idp_core;DB_CLOSE_DELAY=-1'
           SPRING_DATASOURCE_DRIVER_CLASS_NAME: 'org.h2.Driver'
         run: |
           mkdir -p specs

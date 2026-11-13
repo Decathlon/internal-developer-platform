@@ -185,9 +185,13 @@ sequenceDiagram
 sequenceDiagram
     participant DomainService
     participant ApiExceptionHandler
+    participant CamelRoute
+    participant WebhookExceptionHandlerHelper
     participant Client
     DomainService->>ApiExceptionHandler: Throw domain exception
-    ApiExceptionHandler->>Client: Map to HTTP status + ErrorResponse DTO
+    ApiExceptionHandler->>Client: Return RFC 7807 ProblemDetail + legacy extensions
+    CamelRoute->>WebhookExceptionHandlerHelper: Map ingestion exception
+    WebhookExceptionHandlerHelper->>Client: Return RFC 7807 ProblemDetail + legacy extensions
 ```
 
 ---

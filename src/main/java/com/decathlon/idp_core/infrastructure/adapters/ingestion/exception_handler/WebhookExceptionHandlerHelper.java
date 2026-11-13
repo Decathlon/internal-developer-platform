@@ -1,19 +1,22 @@
 package com.decathlon.idp_core.infrastructure.adapters.ingestion.exception_handler;
 
-import static com.decathlon.idp_core.infrastructure.adapters.ingestion.configuration.IngestionConstants.APPLICATION_JSON;
 import static com.decathlon.idp_core.infrastructure.adapters.ingestion.configuration.IngestionConstants.CONNECTOR_IDENTIFIER_PROPERTY;
 import static com.decathlon.idp_core.infrastructure.adapters.ingestion.configuration.IngestionConstants.UNKNOWN_VALUE;
+
+import java.net.URI;
+import java.time.Instant;
 
 import org.apache.camel.Exchange;
 import org.apache.camel.LoggingLevel;
 import org.apache.camel.Message;
 import org.apache.camel.builder.RouteBuilder;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
+import org.springframework.http.ProblemDetail;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 
 import com.decathlon.idp_core.domain.exception.webhook.WebhookAuthenticationException;
-import com.decathlon.idp_core.infrastructure.adapters.common.model.ErrorResponse;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
@@ -46,7 +49,7 @@ public class WebhookExceptionHandlerHelper {
       Class<T> exceptionType, WebhookErrorCode error, boolean exposeExceptionMessage) {
 
     routeBuilder.onException(exceptionType).handled(true).removeHeaders("*")
-        .process(exchange -> setJsonErrorResponse(exchange, error, exposeExceptionMessage))
+        .process(exchange -> setProblemDetailResponse(exchange, error, exposeExceptionMessage))
         .process(exchange -> logHandledException(exchange, error.logLevel(), error.code(),
             error.httpStatus().value()));
   }
@@ -66,15 +69,30 @@ public class WebhookExceptionHandlerHelper {
     }
   }
 
-  private void setJsonErrorResponse(Exchange exchange, WebhookErrorCode error,
+  private void setProblemDetailResponse(Exchange exchange, WebhookErrorCode error,
       boolean exposeExceptionMessage) throws JsonProcessingException {
     HttpStatus httpStatus = error.httpStatus();
     String errorDescription = resolveErrorDescription(exchange, error, exposeExceptionMessage);
-    ErrorResponse errorResponse = new ErrorResponse(error.code(), errorDescription);
+    ProblemDetail problemDetail = ProblemDetail.forStatus(httpStatus);
+    problemDetail.setType(URI.create("about:blank"));
+    problemDetail.setTitle(httpStatus.getReasonPhrase());
+    problemDetail.setDetail(errorDescription);
+    problemDetail.setProperty("error", error.code());
+    problemDetail.setProperty("error_description", errorDescription);
+    problemDetail.setProperty("timestamp", Instant.now().toString());
+
+    var responseBody = objectMapper.createObjectNode();
+    responseBody.put("type", problemDetail.getType().toString());
+    responseBody.put("title", problemDetail.getTitle());
+    responseBody.put("status", problemDetail.getStatus());
+    responseBody.put("detail", problemDetail.getDetail());
+    problemDetail.getProperties()
+        .forEach((name, value) -> responseBody.set(name, objectMapper.valueToTree(value)));
+
     Message message = exchange.getMessage();
     message.setHeader(Exchange.HTTP_RESPONSE_CODE, httpStatus.value());
-    message.setHeader(Exchange.CONTENT_TYPE, APPLICATION_JSON);
-    message.setBody(objectMapper.writeValueAsString(errorResponse));
+    message.setHeader(Exchange.CONTENT_TYPE, MediaType.APPLICATION_PROBLEM_JSON_VALUE);
+    message.setBody(objectMapper.writeValueAsString(responseBody));
   }
 
   private String resolveErrorDescription(Exchange exchange, WebhookErrorCode error,
