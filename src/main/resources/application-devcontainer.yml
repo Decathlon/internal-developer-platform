@@ -1,0 +1,7 @@
+app:
+  security:
+    authentication:
+      jwt:
+        enabled: false
+      oauth2-login:
+        enabled: false

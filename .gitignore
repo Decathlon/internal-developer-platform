@@ -46,6 +46,10 @@ buildNumber.properties
 application-secret.*
 flyway-migration-order-report.md
 
+# Local certificate authorities used by the dev container.
+.devcontainer/certs/*
+!.devcontainer/certs/.gitkeep
+
 # BlueJ files
 *.ctxt
 
