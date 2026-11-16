@@ -1,6 +1,8 @@
 package com.decathlon.idp_core.infrastructure.adapters.persistence;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -15,8 +17,16 @@ import org.junit.jupiter.api.Test;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.jpa.domain.Specification;
 
 import com.decathlon.idp_core.domain.model.entity.Entity;
+import com.decathlon.idp_core.domain.model.search.LogicalConnector;
+import com.decathlon.idp_core.domain.model.search.PaginationCriteria;
+import com.decathlon.idp_core.domain.model.search.SearchFilterNode;
 import com.decathlon.idp_core.infrastructure.adapters.persistence.mapper.EntityPersistenceMapper;
 import com.decathlon.idp_core.infrastructure.adapters.persistence.model.entity.EntityJpaEntity;
 import com.decathlon.idp_core.infrastructure.adapters.persistence.repository.JpaEntityRepository;
@@ -38,6 +48,19 @@ class PostgresEntityAdapterTest {
   @BeforeEach
   void setUp() {
     MockitoAnnotations.openMocks(this);
+  }
+
+  @Test
+  @DisplayName("Should apply shared sort parsing to global search")
+  void shouldApplySharedSortParsingToSearch() {
+    when(jpaEntityRepository.findAll(any(Specification.class), any(Pageable.class)))
+        .thenReturn(new PageImpl<>(List.of()));
+
+    adapter.search(new SearchFilterNode.Group(LogicalConnector.AND, List.of()), null,
+        new PaginationCriteria(0, 20, "identifier,desc"));
+
+    verify(jpaEntityRepository).findAll(any(Specification.class),
+        eq(PageRequest.of(0, 20, Sort.by(Sort.Direction.DESC, "identifier"))));
   }
 
   @Nested

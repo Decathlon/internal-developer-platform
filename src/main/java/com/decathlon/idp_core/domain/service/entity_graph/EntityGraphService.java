@@ -9,6 +9,7 @@ import java.util.UUID;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -23,9 +24,11 @@ import com.decathlon.idp_core.domain.model.entity_graph.EntityGraphNode;
 import com.decathlon.idp_core.domain.model.entity_graph.EntityGraphQueryOptions;
 import com.decathlon.idp_core.domain.model.entity_graph.EntityGraphTraversalMode;
 import com.decathlon.idp_core.domain.model.search.PaginationCriteria;
+import com.decathlon.idp_core.domain.model.search.SortCriteria;
 import com.decathlon.idp_core.domain.port.EntityGraphRepositoryPort;
 import com.decathlon.idp_core.domain.port.EntityRepositoryPort;
 import com.decathlon.idp_core.domain.service.entity.EntityService;
+import com.decathlon.idp_core.domain.service.search.SortParameterParser;
 
 import lombok.RequiredArgsConstructor;
 
@@ -123,8 +126,8 @@ public class EntityGraphService {
   /// produce
   /// unified `relations` DTOs without any further DB calls.
   ///
-  /// @param paginationCriteria zero-based page and page size, validated against
-  /// `maxPageSize`; the sort is not applied
+  /// @param paginationCriteria zero-based page, page size, and optional sort
+  /// expression, validated against `maxPageSize`
   /// @param templateIdentifier template to scope the entity list
   /// @param entityFilter optional filter criteria; `null` means no filtering
   /// @param depth the maximum relationship depth used for each page entity's
@@ -139,7 +142,10 @@ public class EntityGraphService {
       String templateIdentifier, EntityFilter entityFilter, int depth, int maxPageSize) {
 
     paginationCriteria.validateBounds(maxPageSize);
-    Pageable pageable = PageRequest.of(paginationCriteria.page(), paginationCriteria.size());
+    Pageable pageable = SortParameterParser.parse(paginationCriteria.sort())
+        .map(sortCriteria -> PageRequest.of(paginationCriteria.page(), paginationCriteria.size(),
+            toSpringSort(sortCriteria)))
+        .orElseGet(() -> PageRequest.of(paginationCriteria.page(), paginationCriteria.size()));
 
     // Fetch paginated entities — template existence is validated inside this call
     Page<Entity> entityPage = entityService.getEntitiesByTemplateIdentifier(pageable,
@@ -168,6 +174,13 @@ public class EntityGraphService {
     return entityPage.map(entity -> graphsByUuid.getOrDefault(entity.id(),
         new EntityGraphNode(entity.templateIdentifier(), entity.identifier(), entity.name(),
             entity.properties(), List.of(), List.of())));
+  }
+
+  private Sort toSpringSort(SortCriteria criteria) {
+    Sort.Direction direction = criteria.direction() == SortCriteria.Direction.ASC
+        ? Sort.Direction.ASC
+        : Sort.Direction.DESC;
+    return Sort.by(direction, criteria.field());
   }
 
 }
