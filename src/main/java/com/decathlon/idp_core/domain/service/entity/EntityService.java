@@ -18,8 +18,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.validation.annotation.Validated;
 
-import com.decathlon.idp_core.domain.constant.SearchConstraints;
-import com.decathlon.idp_core.domain.constant.ValidationMessages;
 import com.decathlon.idp_core.domain.exception.entity.EntityAlreadyExistsException;
 import com.decathlon.idp_core.domain.exception.entity.EntityDeletionBlockedException;
 import com.decathlon.idp_core.domain.exception.entity.EntityNotFoundException;
@@ -43,6 +41,7 @@ import com.decathlon.idp_core.domain.service.entity_template.EntityTemplateServi
 import com.decathlon.idp_core.domain.service.entity_template.EntityTemplateValidationService;
 import com.decathlon.idp_core.domain.service.filter.EntityFilterDslParser;
 import com.decathlon.idp_core.domain.service.search.SearchFilterValidationService;
+import com.decathlon.idp_core.domain.service.search.SortParameterParser;
 
 import lombok.RequiredArgsConstructor;
 
@@ -631,7 +630,7 @@ public class EntityService {
   /// and all property values; null means no text restriction
   /// @param paginationCriteria contains page (zero-based), size (1 to
   /// MAX_PAGE_SIZE),
-  /// and optional sort expression (`field` or `field:asc|desc`)
+  /// and optional sort expression (`field` or `field,asc|desc`)
   /// @return paginated entities matching the filter and query
   /// @throws InvalidSearchQueryException when pagination parameters are invalid
   @Transactional(readOnly = true)
@@ -656,30 +655,7 @@ public class EntityService {
 
   private void validatePaginationCriteria(PaginationCriteria criteria, int maxPageSize) {
     criteria.validateBounds(maxPageSize);
-    String sort = criteria.sort();
-    if (sort != null && !sort.isBlank()) {
-      validateSortExpression(sort);
-    }
-  }
-
-  private void validateSortExpression(String sortExpression) {
-    String[] parts = sortExpression.split(":");
-    if (parts.length > 2) {
-      throw new InvalidSearchQueryException(
-          ValidationMessages.SEARCH_INVALID_SORT_FORMAT.formatted(sortExpression));
-    }
-    String property = parts[0].trim();
-    if (!SearchConstraints.ALLOWED_SORT_FIELDS.contains(property)) {
-      throw new InvalidSearchQueryException(
-          ValidationMessages.SEARCH_INVALID_SORT_FIELD.formatted(property));
-    }
-    if (parts.length == 2) {
-      String direction = parts[1].trim().toLowerCase();
-      if (!direction.equals("asc") && !direction.equals("desc")) {
-        throw new InvalidSearchQueryException(
-            ValidationMessages.SEARCH_INVALID_SORT_FORMAT.formatted(sortExpression));
-      }
-    }
+    SortParameterParser.parse(criteria.sort());
   }
 
 }

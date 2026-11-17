@@ -1,4 +1,3 @@
----
 openapi: 3.1.0
 info:
   title: Idp core API
@@ -14,6 +13,8 @@ tags:
   description: Entity relationship graph operations
 - name: Inbound Webhook Management
   description: Operations for managing inbound webhook connector configurations
+- name: Principals
+  description: Principal identity and profile management
 - name: Entities Management
   description: Operations related to entity management
 - name: Audit
@@ -338,7 +339,8 @@ paths:
           type: array
       - name: include_relations_properties
         in: query
-        description: When true, include property values for related entities. Defaults to false.
+        description: When true, include property values for related entities. Defaults
+          to false.
         required: false
         schema:
           type: boolean
@@ -380,60 +382,6 @@ paths:
           application/json:
             schema:
               "$ref": "#/components/schemas/EntityUpdateDtoIn"
-        required: true
-      responses:
-        '200':
-          description: Entity updated successfully
-          content:
-            "*/*":
-              schema:
-                "$ref": "#/components/schemas/EntityDtoOut"
-        '400':
-          description: Invalid entity data provided
-          content:
-            "*/*":
-              schema:
-                "$ref": "#/components/schemas/ErrorResponse"
-        '401':
-          description: Unauthorized - Missing or invalid token
-        '403':
-          description: Insufficient rights
-        '404':
-          description: Entity not found with the provided identifier
-          content:
-            "*/*":
-              schema:
-                "$ref": "#/components/schemas/ErrorResponse"
-        '500':
-          description: Unexpected server-side failure
-          content:
-            "*/*":
-              schema:
-                "$ref": "#/components/schemas/ErrorResponse"
-    patch:
-      tags:
-      - Entities Management
-      summary: Partially update an existing entity
-      description: Partially update an existing entity in the system with the provided information
-      operationId: patchEntity
-      parameters:
-      - name: templateIdentifier
-        in: path
-        required: true
-        schema:
-          type: string
-          minLength: 1
-      - name: entityIdentifier
-        in: path
-        required: true
-        schema:
-          type: string
-          minLength: 1
-      requestBody:
-        content:
-          application/json:
-            schema:
-              "$ref": "#/components/schemas/EntityPatchDtoIn"
         required: true
       responses:
         '200':
@@ -516,6 +464,61 @@ paths:
             "*/*":
               schema:
                 "$ref": "#/components/schemas/ErrorResponse"
+    patch:
+      tags:
+      - Entities Management
+      summary: Partially update an existing entity
+      description: Partially update an existing entity in the system with the provided
+        information
+      operationId: patchEntity
+      parameters:
+      - name: templateIdentifier
+        in: path
+        required: true
+        schema:
+          type: string
+          minLength: 1
+      - name: entityIdentifier
+        in: path
+        required: true
+        schema:
+          type: string
+          minLength: 1
+      requestBody:
+        content:
+          application/json:
+            schema:
+              "$ref": "#/components/schemas/EntityPatchDtoIn"
+        required: true
+      responses:
+        '200':
+          description: Entity updated successfully
+          content:
+            "*/*":
+              schema:
+                "$ref": "#/components/schemas/EntityDtoOut"
+        '400':
+          description: Invalid entity data provided
+          content:
+            "*/*":
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
+        '401':
+          description: Unauthorized - Missing or invalid token
+        '403':
+          description: Insufficient rights
+        '404':
+          description: Entity not found with the provided identifier
+          content:
+            "*/*":
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
+        '500':
+          description: Unexpected server-side failure
+          content:
+            "*/*":
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
   "/webhooks/{webhookIdentifier}":
     post:
       tags:
@@ -542,7 +545,8 @@ paths:
               default: '0'
       - name: size
         in: query
-        description: Number of items per page. Defaults to 20. Must be between 1 and 500.
+        description: Number of items per page. Defaults to 20. Must be between 1 and
+          500.
         content:
           "*/*":
             schema:
@@ -550,8 +554,7 @@ paths:
               default: '20'
       - name: sort
         in: query
-        description: 'Sorting criteria in the format: property(,asc|desc). Defaults
-          to identifier,asc.'
+        description: 'Sorting criteria in the format: field[,asc|desc]'
         content:
           "*/*":
             schema:
@@ -621,7 +624,8 @@ paths:
               default: '0'
       - name: size
         in: query
-        description: Number of items per page. Defaults to 20. Must be between 1 and 500.
+        description: Number of items per page. Defaults to 20. Must be between 1 and
+          500.
         content:
           "*/*":
             schema:
@@ -629,8 +633,7 @@ paths:
               default: '20'
       - name: sort
         in: query
-        description: 'Sorting criteria in the format: property(,asc|desc). Defaults
-          to identifier,asc.'
+        description: 'Sorting criteria in the format: field[,asc|desc]'
         content:
           "*/*":
             schema:
@@ -739,7 +742,8 @@ paths:
               default: '0'
       - name: size
         in: query
-        description: Number of items per page. Defaults to 20. Must be between 1 and 500.
+        description: Number of items per page. Defaults to 20. Must be between 1 and
+          500.
         content:
           "*/*":
             schema:
@@ -747,8 +751,7 @@ paths:
               default: '20'
       - name: sort
         in: query
-        description: 'Sorting criteria in the format: property(,asc|desc). Defaults
-          to identifier,asc.'
+        description: 'Sorting criteria in the format: field[,asc|desc]'
         content:
           "*/*":
             schema:
@@ -811,13 +814,23 @@ paths:
               default: '0'
       - name: size
         in: query
-        description: Number of items per page. Defaults to 20. Must be between 1 and 500.
+        description: Number of items per page. Defaults to 20. Must be between 1 and
+          500.
         required: false
         content:
           "*/*":
             schema:
               type: integer
               default: '20'
+      - name: sort
+        in: query
+        description: 'Sorting criteria in the format: field[,asc|desc]'
+        required: false
+        content:
+          "*/*":
+            schema:
+              type: string
+              default: identifier,asc
       - name: templateIdentifier
         in: path
         required: true
@@ -835,15 +848,6 @@ paths:
           "*/*":
             schema:
               type: string
-      - name: sort
-        in: query
-        description: 'Sorting criteria in the format: property(,asc|desc). Defaults
-          to identifier,asc.'
-        content:
-          "*/*":
-            schema:
-              type: string
-              default: identifier,asc
       responses:
         '200':
           description: Paginated entities retrieved successfully
@@ -925,6 +929,20 @@ paths:
           application/json:
             schema:
               "$ref": "#/components/schemas/EntitySearchRequestDtoIn"
+            examples:
+              Entity search:
+                description: Entity search
+                value:
+                  query: test
+                  filter:
+                    connector: AND
+                    criteria:
+                    - field: template
+                      operation: EQ
+                      value: service
+                  page: 0
+                  size: 20
+                  sort: identifier,asc
         required: true
       responses:
         '200':
@@ -1026,6 +1044,58 @@ paths:
           description: Entity not found with the provided identifier
           content:
             "*/*":
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
+  "/api/v1/entities/principals/me":
+    get:
+      tags:
+      - Principals
+      summary: Get current authenticated principal
+      description: |
+        Returns the Principal entity of the currently authenticated actor (human or service account).
+        The principal is automatically provisioned via JIT if this is the first authentication.
+
+        **Response includes:**
+        - Principal identifier (unique ID)
+        - Display name
+        - Principal kind (HUMAN or SERVICE_ACCOUNT)
+        - Attributes (email, client_id, etc.)
+        - Group memberships (via relations)
+
+        **Use cases:**
+        - Profile inspection: "Who am I?"
+        - Authorization context retrieval
+        - Service account validation
+      operationId: getCurrentPrincipal
+      responses:
+        '200':
+          description: Principal entity retrieved successfully
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/EntityDtoOut"
+        '401':
+          description: Unauthorized - Missing or invalid token
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
+        '403':
+          description: Insufficient rights
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
+        '404':
+          description: Principal not found in catalog (JIT provisioning may have failed)
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
+        '500':
+          description: Unexpected server-side failure
+          content:
+            application/json:
               schema:
                 "$ref": "#/components/schemas/ErrorResponse"
   "/api/v1/audit/entities/{templateIdentifier}/{entityIdentifier}":
@@ -1576,24 +1646,6 @@ components:
             "$ref": "#/components/schemas/RelationDtoIn"
       required:
       - name
-    EntityPatchDtoIn:
-      type: object
-      description: Input DTO for partially updating an entity. Omitted fields remain unchanged.
-      properties:
-        name:
-          type: string
-          description: Name of the entity
-          example: my-web-service-updated
-        properties:
-          type: object
-          additionalProperties:
-            type: string
-          description: Properties to merge with the existing entity properties
-        relations:
-          type: array
-          description: Relations to merge with the existing entity relations
-          items:
-            "$ref": "#/components/schemas/RelationDtoIn"
     RelationDtoIn:
       type: object
       description: Input DTO for an entity relation instance
@@ -1644,6 +1696,8 @@ components:
         properties:
           type: object
           additionalProperties: {}
+          description: Property values for the related entity; included only when
+            include_relations_properties=true
     InboundWebhookCreateDtoIn:
       type: object
       properties:
@@ -1865,13 +1919,13 @@ components:
           type: integer
           format: int32
           default: 20
-          description: Number of items per page. Defaults to 20. Must be between 1 and 500.
+          description: Number of items per page. Defaults to 20. Must be between 1
+            and 500.
           example: 20
         sort:
           type: string
-          description: 'Sorting criteria in the format: property(,asc|desc). Defaults
-            to identifier,asc.'
-          example: identifier:asc
+          description: 'Sorting criteria in the format: field[,asc|desc]'
+          example: identifier,asc
     FilterNodeDtoIn:
       type: object
       description: A node in the search filter tree. Either a logical group (connector
@@ -1923,13 +1977,13 @@ components:
           format: int32
         last:
           type: boolean
+        numberOfElements:
+          type: integer
+          format: int32
         sort:
           "$ref": "#/components/schemas/SortObject"
         first:
           type: boolean
-        numberOfElements:
-          type: integer
-          format: int32
         size:
           type: integer
           format: int32
@@ -1941,6 +1995,9 @@ components:
     PageableObject:
       type: object
       properties:
+        offset:
+          type: integer
+          format: int64
         paged:
           type: boolean
         pageNumber:
@@ -1953,18 +2010,35 @@ components:
           "$ref": "#/components/schemas/SortObject"
         unpaged:
           type: boolean
-        offset:
-          type: integer
-          format: int64
     SortObject:
       type: object
       properties:
+        empty:
+          type: boolean
         sorted:
           type: boolean
         unsorted:
           type: boolean
-        empty:
-          type: boolean
+    EntityPatchDtoIn:
+      type: object
+      description: Input DTO for partially updating an entity
+      properties:
+        name:
+          type: string
+          description: Name of the entity
+          example: my-web-service-updated
+        properties:
+          type: object
+          additionalProperties:
+            type: string
+          description: Map of property name to value for this entity
+          example:
+            port: '8080'
+        relations:
+          type: array
+          description: List of relations for this entity
+          items:
+            "$ref": "#/components/schemas/RelationDtoIn"
     WebhookConnectorPageResponse:
       type: object
       description: Paginated response containing Inbound Webhook Connector objects
@@ -1983,13 +2057,13 @@ components:
           format: int32
         last:
           type: boolean
+        numberOfElements:
+          type: integer
+          format: int32
         sort:
           "$ref": "#/components/schemas/SortObject"
         first:
           type: boolean
-        numberOfElements:
-          type: integer
-          format: int32
         size:
           type: integer
           format: int32
@@ -2016,13 +2090,13 @@ components:
           format: int32
         last:
           type: boolean
+        numberOfElements:
+          type: integer
+          format: int32
         sort:
           "$ref": "#/components/schemas/SortObject"
         first:
           type: boolean
-        numberOfElements:
-          type: integer
-          format: int32
         size:
           type: integer
           format: int32
@@ -2049,13 +2123,13 @@ components:
           format: int32
         last:
           type: boolean
+        numberOfElements:
+          type: integer
+          format: int32
         sort:
           "$ref": "#/components/schemas/SortObject"
         first:
           type: boolean
-        numberOfElements:
-          type: integer
-          format: int32
         size:
           type: integer
           format: int32

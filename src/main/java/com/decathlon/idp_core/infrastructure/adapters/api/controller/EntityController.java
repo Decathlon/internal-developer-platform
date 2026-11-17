@@ -17,6 +17,7 @@ import static com.decathlon.idp_core.infrastructure.adapters.api.configuration.S
 import static com.decathlon.idp_core.infrastructure.adapters.api.configuration.SwaggerDescription.ENDPOINT_POST_SEARCH_SUMMARY;
 import static com.decathlon.idp_core.infrastructure.adapters.api.configuration.SwaggerDescription.ENDPOINT_PUT_ENTITY_DESCRIPTION;
 import static com.decathlon.idp_core.infrastructure.adapters.api.configuration.SwaggerDescription.ENDPOINT_PUT_ENTITY_SUMMARY;
+import static com.decathlon.idp_core.infrastructure.adapters.api.configuration.SwaggerDescription.ENTITY_SEARCH_REQUEST_EXAMPLE;
 import static com.decathlon.idp_core.infrastructure.adapters.api.configuration.SwaggerDescription.FORBIDDEN_CODE;
 import static com.decathlon.idp_core.infrastructure.adapters.api.configuration.SwaggerDescription.INCLUDE_RELATIONS_PROPERTIES_DESCRIPTION;
 import static com.decathlon.idp_core.infrastructure.adapters.api.configuration.SwaggerDescription.INTERNAL_SERVER_ERROR_CODE;
@@ -110,6 +111,7 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.enums.ParameterIn;
 import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.ExampleObject;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -177,15 +179,16 @@ public class EntityController {
   @ResponseStatus(OK)
   @GetMapping("/{templateIdentifier}")
   public Page<EntityDtoOut> getEntities(@RequestParam(defaultValue = "0") int page,
-      @RequestParam(required = false) Integer size, @PathVariable String templateIdentifier,
-      @RequestParam(required = false) String q) {
+      @RequestParam(required = false) Integer size,
+      @RequestParam(defaultValue = "identifier,asc") String sort,
+      @PathVariable String templateIdentifier, @RequestParam(required = false) String q) {
     Span currentSpan = Span.current();
     currentSpan.setAttribute("idp.entity.template", templateIdentifier);
     currentSpan.setAttribute("idp.entity.page", page);
     currentSpan.setAttribute("idp.entity.filter.query", q == null ? "" : q);
 
     PaginationCriteria paginationCriteria = new PaginationCriteria(page, resolvePageSize(size),
-        null);
+        sort);
     EntityFilter filter = entityFilterDslParser.parse(q);
     // Single transaction: pagination + batch relation fetch in one DB round trip
     Page<EntityGraphNode> graphNodes = entityGraphService.getEntityGraphPageByTemplate(
@@ -384,7 +387,7 @@ public class EntityController {
   /// @param searchRequest the search request body with filter, page, size, and
   /// sort
   /// @return paginated entity DTOs matching the filter
-  @Operation(summary = ENDPOINT_POST_SEARCH_SUMMARY, description = ENDPOINT_POST_SEARCH_DESCRIPTION)
+  @Operation(summary = ENDPOINT_POST_SEARCH_SUMMARY, description = ENDPOINT_POST_SEARCH_DESCRIPTION, requestBody = @io.swagger.v3.oas.annotations.parameters.RequestBody(content = @Content(mediaType = "application/json", examples = @ExampleObject(name = "Entity search", value = ENTITY_SEARCH_REQUEST_EXAMPLE))))
   @ApiResponse(responseCode = OK_CODE, description = RESPONSE_SEARCH_SUCCESS, content = @Content(schema = @Schema(implementation = EntityPageResponse.class)))
   @ApiResponse(responseCode = BAD_REQUEST_CODE, description = RESPONSE_INVALID_SEARCH_QUERY, content = {
       @Content(schema = @Schema(implementation = ErrorResponse.class))})
