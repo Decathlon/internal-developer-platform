@@ -116,7 +116,7 @@ app:
   max-page-size: ${MAX_PAGE_SIZE:500}
   ingestion:
     # Enable temporary diagnostics to inspect Camel exchange telemetry context propagation.
-    tracing-diagnostic-enabled: ${APP_INGESTION_TRACING_DIAGNOSTIC_ENABLED:true}
+    tracing-diagnostic-enabled: ${APP_INGESTION_TRACING_DIAGNOSTIC_ENABLED:false}
     webhook:
       base-path: /webhooks
       identifier-path: /{webhookIdentifier}
@@ -200,7 +200,7 @@ logging:
     org.apache.camel.opentelemetry: ${CAMEL_OTEL_DIAGNOSTIC_LOG_LEVEL:WARN}
     io.opentelemetry.exporter: ${OTEL_EXPORTER_DIAGNOSTIC_LOG_LEVEL:WARN}
     io.opentelemetry.exporter.sender.okhttp: ${OTEL_EXPORTER_HTTP_DIAGNOSTIC_LOG_LEVEL:WARN}
-    khttp3: ${OKHTTP_DIAGNOSTIC_LOG_LEVEL:WARN}
+    okhttp3: ${OKHTTP_DIAGNOSTIC_LOG_LEVEL:WARN}
 
 # OpenTelemetry Spring Boot Starter Configuration
 otel:

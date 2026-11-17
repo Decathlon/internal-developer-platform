@@ -1,5 +1,7 @@
 package com.decathlon.idp_core.infrastructure.adapters.ingestion.configuration;
 
+import io.opentelemetry.api.common.AttributeKey;
+
 public final class IngestionObservabilityConstants {
 
   public static final String SECURITY_REQUESTS_TOTAL = "idp.webhook.security.requests.total";
@@ -33,8 +35,27 @@ public final class IngestionObservabilityConstants {
   public static final String ATTRIBUTE_TEMPLATE = "template";
   public static final String ATTRIBUTE_RESULT = "result";
   public static final String ATTRIBUTE_SECURITY_TYPE = "security_type";
+  public static final String ATTRIBUTE_ENCODING = "encoding";
+  public static final String ATTRIBUTE_ERROR_TYPE = "error_type";
+
+  public static final AttributeKey<String> CONNECTOR_KEY = AttributeKey
+      .stringKey(ATTRIBUTE_CONNECTOR);
+  public static final AttributeKey<String> MAPPING_ID_KEY = AttributeKey
+      .stringKey(ATTRIBUTE_MAPPING_ID);
+  public static final AttributeKey<String> ACTION_KEY = AttributeKey.stringKey(ATTRIBUTE_ACTION);
+  public static final AttributeKey<String> REASON_KEY = AttributeKey.stringKey(ATTRIBUTE_REASON);
+  public static final AttributeKey<String> TEMPLATE_KEY = AttributeKey
+      .stringKey(ATTRIBUTE_TEMPLATE);
+  public static final AttributeKey<String> RESULT_KEY = AttributeKey.stringKey(ATTRIBUTE_RESULT);
+  public static final AttributeKey<String> SECURITY_TYPE_KEY = AttributeKey
+      .stringKey(ATTRIBUTE_SECURITY_TYPE);
+  public static final AttributeKey<String> ENCODING_KEY = AttributeKey
+      .stringKey(ATTRIBUTE_ENCODING);
+  public static final AttributeKey<String> ERROR_TYPE_KEY = AttributeKey
+      .stringKey(ATTRIBUTE_ERROR_TYPE);
 
   public static final String SPAN_ATTRIBUTE_WEBHOOK_IDENTIFIER = "idp.webhook.identifier";
+  public static final String SPAN_ATTRIBUTE_SECURITY_RESULT = "idp.webhook.security.result";
 
   private IngestionObservabilityConstants() {
   }

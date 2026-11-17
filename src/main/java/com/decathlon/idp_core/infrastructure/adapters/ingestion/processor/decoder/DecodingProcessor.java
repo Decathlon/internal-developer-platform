@@ -1,6 +1,7 @@
 package com.decathlon.idp_core.infrastructure.adapters.ingestion.processor.decoder;
 
 import static com.decathlon.idp_core.infrastructure.adapters.ingestion.configuration.IngestionConstants.*;
+import static com.decathlon.idp_core.infrastructure.adapters.ingestion.configuration.IngestionObservabilityConstants.*;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
@@ -21,6 +22,9 @@ import org.springframework.stereotype.Component;
 import com.decathlon.idp_core.infrastructure.adapters.ingestion.exception.WebhookDecodingException;
 import com.decathlon.idp_core.infrastructure.adapters.ingestion.metrics.IngestionObservabilitySupport;
 
+import io.opentelemetry.api.common.Attributes;
+import io.opentelemetry.api.metrics.LongCounter;
+import io.opentelemetry.api.metrics.LongHistogram;
 import io.opentelemetry.api.metrics.Meter;
 
 /// Processor responsible for decoding webhook payloads based on HTTP `Content-Encoding` headers.
@@ -47,14 +51,21 @@ public class DecodingProcessor {
   private static final String EXCEEDS_MAX_SIZE_FRAGMENT = " exceeds maximum allowed size of ";
 
   private final Map<String, PayloadDecoder> decoders;
-  private final Meter meter;
   private final long maxDecompressedBytes;
+  private final LongCounter payloadDecodedCounter;
+  private final LongCounter payloadDecodeErrorsCounter;
+  private final LongHistogram payloadSizeHistogram;
 
   public DecodingProcessor(
       @Value("${idp.ingestion.max-decompressed-bytes:10485760}") long maxDecompressedBytes,
       @Qualifier("decodingMeter") Meter meter) {
     this.maxDecompressedBytes = maxDecompressedBytes;
-    this.meter = meter;
+    this.payloadDecodedCounter = meter.counterBuilder(PAYLOAD_DECODED_TOTAL)
+        .setDescription("Successful payload decodes for each encoding step").build();
+    this.payloadDecodeErrorsCounter = meter.counterBuilder(PAYLOAD_DECODE_ERRORS_TOTAL)
+        .setDescription("Payload decode failures by reason").build();
+    this.payloadSizeHistogram = meter.histogramBuilder(PAYLOAD_SIZE_BYTES).ofLongs()
+        .setDescription("Histogram of decoded payload size in bytes").setUnit("By").build();
     this.decoders = Map.of(CONTENT_ENCODING_IDENTITY, this::decodeIdentity, CONTENT_ENCODING_GZIP,
         this::decodeGzip);
   }
@@ -261,15 +272,15 @@ public class DecodingProcessor {
   }
 
   private void recordPayloadSizeMetric(String connector, long payloadSizeBytes) {
-    IngestionObservabilitySupport.recordPayloadSizeMetric(meter, connector, payloadSizeBytes);
+    payloadSizeHistogram.record(payloadSizeBytes, Attributes.of(CONNECTOR_KEY, connector));
   }
 
   private void incrementDecodedMetric(String connector, String encoding) {
-    IngestionObservabilitySupport.recordDecodedMetric(meter, connector, encoding);
+    payloadDecodedCounter.add(1, Attributes.of(CONNECTOR_KEY, connector, ENCODING_KEY, encoding));
   }
 
   private void incrementDecodeErrorMetric(String connector, String reason) {
-    IngestionObservabilitySupport.recordDecodeErrorMetric(meter, connector, reason);
+    payloadDecodeErrorsCounter.add(1, Attributes.of(CONNECTOR_KEY, connector, REASON_KEY, reason));
   }
 
   private String extractContentEncodingHeader(Map<String, Object> headers) {

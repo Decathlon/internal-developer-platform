@@ -13,11 +13,12 @@ import com.decathlon.idp_core.domain.model.enums.WebhookSecurityType;
 import com.decathlon.idp_core.domain.model.inbound_connectors.webhook.WebhookConnector;
 import com.decathlon.idp_core.domain.model.inbound_connectors.webhook.WebhookSecurity;
 import com.decathlon.idp_core.domain.port.WebhookSecurityStrategy;
-import com.decathlon.idp_core.infrastructure.adapters.ingestion.configuration.IngestionObservabilityConstants;
 import com.decathlon.idp_core.infrastructure.adapters.ingestion.exception.WebhookSecurityException;
 import com.decathlon.idp_core.infrastructure.adapters.ingestion.metrics.IngestionObservabilitySupport;
 import com.decathlon.idp_core.infrastructure.adapters.ingestion.security.WebhookRequestAuthenticator;
 
+import io.opentelemetry.api.common.Attributes;
+import io.opentelemetry.api.metrics.LongCounter;
 import io.opentelemetry.api.metrics.Meter;
 import io.opentelemetry.api.trace.Span;
 import lombok.extern.slf4j.Slf4j;
@@ -27,19 +28,24 @@ import lombok.extern.slf4j.Slf4j;
 public class SecurityProcessor {
 
   private static final String WEBHOOK_AUTHENTICATION_FAILED_MESSAGE = "Webhook authentication failed";
-  private static final String SPAN_ATTRIBUTE_WEBHOOK_IDENTIFIER = "idp.webhook.identifier";
-  private static final String SPAN_ATTRIBUTE_SECURITY_RESULT = "idp.webhook.security.result";
   private static final String RESULT_SUCCESS = "SUCCESS";
   private static final String RESULT_REJECTED = "REJECTED";
   private static final String RESULT_ERROR = "ERROR";
 
   private final List<WebhookSecurityStrategy> strategies;
-  private final Meter meter;
+  private final LongCounter securityRequestsCounter;
+  private final LongCounter securityResultCounter;
+  private final LongCounter securityValidationErrorsCounter;
 
   public SecurityProcessor(List<WebhookSecurityStrategy> strategies,
       @Qualifier("securityMeter") Meter meter) {
     this.strategies = List.copyOf(strategies);
-    this.meter = meter;
+    this.securityRequestsCounter = meter.counterBuilder(SECURITY_REQUESTS_TOTAL)
+        .setDescription("Number of security checks executed for a connector").build();
+    this.securityResultCounter = meter.counterBuilder(SECURITY_RESULT)
+        .setDescription("Result of the webhook security decision").build();
+    this.securityValidationErrorsCounter = meter.counterBuilder(SECURITY_VALIDATION_ERRORS_TOTAL)
+        .setDescription("Security validation failures and malformed configuration errors").build();
   }
 
   public void validate(Map<String, Object> headers, byte[] rawPayload,
@@ -50,8 +56,8 @@ public class SecurityProcessor {
         ? WebhookSecurityType.NONE.name()
         : security.type().name();
 
-    incrementCounter(IngestionObservabilityConstants.SECURITY_REQUESTS_TOTAL, ATTRIBUTE_CONNECTOR,
-        webhookIdentifier, "security_type", securityType);
+    securityRequestsCounter.add(1,
+        Attributes.of(CONNECTOR_KEY, webhookIdentifier, SECURITY_TYPE_KEY, securityType));
     IngestionObservabilitySupport.setSpanAttribute(Span.current(),
         SPAN_ATTRIBUTE_WEBHOOK_IDENTIFIER, webhookIdentifier);
 
@@ -78,22 +84,17 @@ public class SecurityProcessor {
     } catch (RuntimeException exception) {
       String result = isSecurityRejected(exception) ? RESULT_REJECTED : RESULT_ERROR;
       recordSecurityResult(webhookIdentifier, securityType, result);
-      incrementCounter(IngestionObservabilityConstants.SECURITY_VALIDATION_ERRORS_TOTAL,
-          ATTRIBUTE_CONNECTOR, webhookIdentifier, ATTRIBUTE_SECURITY_TYPE, securityType,
-          ATTRIBUTE_REASON, classifyFailure(exception));
+      securityValidationErrorsCounter.add(1, Attributes.of(CONNECTOR_KEY, webhookIdentifier,
+          SECURITY_TYPE_KEY, securityType, REASON_KEY, classifyFailure(exception)));
       throw exception;
     }
   }
 
   private void recordSecurityResult(String webhookIdentifier, String securityType, String result) {
-    incrementCounter(IngestionObservabilityConstants.SECURITY_RESULT, ATTRIBUTE_CONNECTOR,
-        webhookIdentifier, ATTRIBUTE_SECURITY_TYPE, securityType, "result", result);
+    securityResultCounter.add(1, Attributes.of(CONNECTOR_KEY, webhookIdentifier, SECURITY_TYPE_KEY,
+        securityType, RESULT_KEY, result));
     IngestionObservabilitySupport.setSpanAttribute(Span.current(), SPAN_ATTRIBUTE_SECURITY_RESULT,
         result);
-  }
-
-  private void incrementCounter(String metricName, String... attributes) {
-    IngestionObservabilitySupport.incrementCounter(meter, metricName, attributes);
   }
 
   private boolean isSecurityRejected(RuntimeException exception) {

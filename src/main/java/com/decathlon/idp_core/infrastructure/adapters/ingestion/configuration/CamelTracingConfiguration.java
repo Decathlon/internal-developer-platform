@@ -11,23 +11,60 @@ import io.opentelemetry.api.trace.Tracer;
 import io.opentelemetry.context.propagation.ContextPropagators;
 import lombok.extern.slf4j.Slf4j;
 
+/// Configures the Camel/OpenTelemetry tracing bridge for webhook ingestion routes.
+///
+/// This configuration:
+/// - creates a Camel-scoped `Tracer` from the application `OpenTelemetry` instance,
+/// - exposes `ContextPropagators` to Camel so context propagation remains consistent,
+/// - binds both objects into the Camel registry before route startup.
+///
+/// The bridge keeps Camel route spans connected to the application trace context
+/// without introducing additional metric instrumentation.
 @Configuration
 @Slf4j
 public class CamelTracingConfiguration {
 
   static final String CAMEL_INSTRUMENTATION_SCOPE = "camel";
 
+  /// Creates the Camel-scoped OpenTelemetry tracer used by Camel route
+  /// instrumentation.
+  ///
+  /// The bean resolves `OpenTelemetry` from Spring's context. If no OpenTelemetry
+  /// bean is available (for example in sliced tests), it falls back to
+  /// `OpenTelemetry.noop()` to keep the bridge null-safe.
+  ///
+  /// @param openTelemetryProvider provides the runtime `OpenTelemetry` instance
+  /// from Spring
   @Bean
   public Tracer camelTracer(ObjectProvider<OpenTelemetry> openTelemetryProvider) {
-    return openTelemetryProvider.getIfAvailable().getTracer(CAMEL_INSTRUMENTATION_SCOPE);
+    OpenTelemetry openTelemetry = openTelemetryProvider.getIfAvailable(OpenTelemetry::noop);
+    return openTelemetry.getTracer(CAMEL_INSTRUMENTATION_SCOPE);
   }
 
+  /// Exposes OpenTelemetry context propagators for Camel context hand-off.
+  ///
+  /// Camel uses these propagators to preserve trace/span correlation when
+  /// processing
+  /// exchanges across route steps and integrations. If no OpenTelemetry bean is
+  /// available, this method uses `OpenTelemetry.noop()` propagators.
+  ///
+  /// @param openTelemetryProvider provides the runtime `OpenTelemetry` instance
+  /// from Spring
   @Bean
   public ContextPropagators camelContextPropagators(
       ObjectProvider<OpenTelemetry> openTelemetryProvider) {
-    return openTelemetryProvider.getIfAvailable().getPropagators();
+    OpenTelemetry openTelemetry = openTelemetryProvider.getIfAvailable(OpenTelemetry::noop);
+    return openTelemetry.getPropagators();
   }
 
+  /// Registers tracing objects in Camel before route startup.
+  ///
+  /// The bridge binds both `Tracer` and `ContextPropagators` into the Camel
+  /// registry
+  /// so Camel OpenTelemetry components can resolve them during initialization.
+  ///
+  /// @param camelTracer the Camel-scoped tracer bound into Camel registry
+  /// @param camelContextPropagators context propagators bound into Camel registry
   @Bean
   public CamelContextConfiguration camelTelemetryBridge(Tracer camelTracer,
       ContextPropagators camelContextPropagators) {
