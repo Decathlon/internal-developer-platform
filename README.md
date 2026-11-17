@@ -1,15 +1,18 @@
 # 🚀 idp-core
 
-**idp-core** is the backbone of the Internal Developer Platform. It provides a modern, scalable, and extensible backend to build your software catalog, track engineering excellence through scorecards, and empower teams with self-service actions.
+**idp-core** is the backbone of the Internal Developer Platform. It provides an extensible, API-first backend to build your software catalog and keep it up to date from your existing tools. Scorecards and self-service actions are on the roadmap.
 
 ---
 
 ## ✨ Key Features
 
-- 🏗️ **Software Catalog**: Centralize all your services, resources, and their relationships.
-- 📊 **Engineering Excellence**: Create scorecards to monitor and improve technical standards.
-- 🛠️ **Self-Service Actions**: Automate routine tasks and empower developers.
-- 🔌 **Extensible Data Integration**: Pull data from any source to enrich your platform.
+| Feature | Status | Description |
+|---------|--------|-------------|
+| 🏗️ **Software Catalog** | ✅ Available | Model your services, resources, and their relationships with entity templates, search them, and explore them as a graph. |
+| 🧾 **Audit History** | ✅ Available | Every change to templates and entities is recorded and can be queried. |
+| 🔌 **Data Integration** | 🚧 In progress | Inbound webhooks with JSLT mappings are available. Pull-based connectors and Kafka aren't available yet. |
+| 📊 **Scorecards** | 🕐 Planned | Monitor and improve technical standards. See the [design](docs/src/features/scorecards.md). |
+| 🛠️ **Self-Service Actions** | 🕐 Planned | Automate routine tasks for developers. See the [design](docs/src/features/self-service-actions.md). |
 
 ## 📚 Documentation
 
