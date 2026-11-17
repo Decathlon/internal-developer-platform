@@ -48,10 +48,18 @@ app:
     authentication:
       jwt:
         enabled: true
+        issuer-uri: ${OAUTH_ISSUER_URI:}
+        audiences: ${OAUTH_AUDIENCES:}
 ```
 
+A valid signature only proves that the token comes from your identity provider. Set `OAUTH_ISSUER_URI` to the expected
+`iss` claim and `OAUTH_AUDIENCES` to a comma-separated list of accepted `aud` values so that IDP-Core rejects tokens
+issued for other applications of the same provider. Both settings are optional; IDP-Core logs a warning at startup
+for each one that's missing.
+
 When `jwt.enabled` is `false`, IDP-Core creates neither the JWT decoder nor the JWT chain, so `OAUTH_JWK_URI` isn't
-required. You can disable Swagger independently with `app.security.swagger.enabled=false`. When you enable Swagger
+required. When no authentication mode is enabled at all (`jwt`, `oauth2-login`, `api-key`, and `mock` are all
+`false`), IDP-Core denies every request outside the public paths and the webhook entry point. You can disable Swagger independently with `app.security.swagger.enabled=false`. When you enable Swagger
 without OAuth configuration, it publishes only the available security schemes.
 
 #### Map IdP claims
