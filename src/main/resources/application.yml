@@ -137,6 +137,11 @@ app:
     authentication:
       jwt:
         enabled: true
+        # Expected `iss` claim. When set, tokens from any other issuer are rejected.
+        issuer-uri: ${OAUTH_ISSUER_URI:}
+        # Comma-separated accepted `aud` values. When set, a token must carry at least one of them,
+        # which rejects tokens issued by the same identity provider for other applications.
+        audiences: ${OAUTH_AUDIENCES:}
       api-key:
         enabled: false
       mock:
