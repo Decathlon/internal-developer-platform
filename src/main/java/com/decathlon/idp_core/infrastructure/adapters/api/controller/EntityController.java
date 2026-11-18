@@ -17,7 +17,9 @@ import static com.decathlon.idp_core.infrastructure.adapters.api.configuration.S
 import static com.decathlon.idp_core.infrastructure.adapters.api.configuration.SwaggerDescription.ENDPOINT_POST_SEARCH_SUMMARY;
 import static com.decathlon.idp_core.infrastructure.adapters.api.configuration.SwaggerDescription.ENDPOINT_PUT_ENTITY_DESCRIPTION;
 import static com.decathlon.idp_core.infrastructure.adapters.api.configuration.SwaggerDescription.ENDPOINT_PUT_ENTITY_SUMMARY;
+import static com.decathlon.idp_core.infrastructure.adapters.api.configuration.SwaggerDescription.ENTITY_SEARCH_REQUEST_EXAMPLE;
 import static com.decathlon.idp_core.infrastructure.adapters.api.configuration.SwaggerDescription.FORBIDDEN_CODE;
+import static com.decathlon.idp_core.infrastructure.adapters.api.configuration.SwaggerDescription.INCLUDE_RELATIONS_PROPERTIES_DESCRIPTION;
 import static com.decathlon.idp_core.infrastructure.adapters.api.configuration.SwaggerDescription.INTERNAL_SERVER_ERROR_CODE;
 import static com.decathlon.idp_core.infrastructure.adapters.api.configuration.SwaggerDescription.NOT_FOUND_CODE;
 import static com.decathlon.idp_core.infrastructure.adapters.api.configuration.SwaggerDescription.NO_CONTENT_CODE;
@@ -62,6 +64,8 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.http.MediaType;
+import org.springframework.http.ProblemDetail;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -75,6 +79,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.decathlon.idp_core.domain.constant.SearchConstraints;
 import com.decathlon.idp_core.domain.model.entity.Entity;
 import com.decathlon.idp_core.domain.model.entity.EntityFilter;
 import com.decathlon.idp_core.domain.model.entity.EntityPatch;
@@ -89,6 +94,8 @@ import com.decathlon.idp_core.domain.service.entity.EntityService;
 import com.decathlon.idp_core.domain.service.entity_graph.EntityGraphService;
 import com.decathlon.idp_core.domain.service.filter.EntityFilterDslParser;
 import com.decathlon.idp_core.domain.service.search.SearchFilterParser;
+import com.decathlon.idp_core.infrastructure.adapters.api.auth.AuthorizedResource;
+import com.decathlon.idp_core.infrastructure.adapters.api.configuration.SearchProperties;
 import com.decathlon.idp_core.infrastructure.adapters.api.configuration.SwaggerConfiguration.EntityPageResponse;
 import com.decathlon.idp_core.infrastructure.adapters.api.dto.in.EntityCreateDtoIn;
 import com.decathlon.idp_core.infrastructure.adapters.api.dto.in.EntityPatchDtoIn;
@@ -99,12 +106,12 @@ import com.decathlon.idp_core.infrastructure.adapters.api.mapper.entity.EntityDt
 import com.decathlon.idp_core.infrastructure.adapters.api.mapper.entity.EntityDtoOutFromEntityNodeMapper;
 import com.decathlon.idp_core.infrastructure.adapters.api.mapper.entity.EntityDtoOutMapper;
 import com.decathlon.idp_core.infrastructure.adapters.api.mapper.entity.SearchFilterMapper;
-import com.decathlon.idp_core.infrastructure.adapters.common.model.ErrorResponse;
 
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.enums.ParameterIn;
 import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.ExampleObject;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -119,6 +126,7 @@ import lombok.RequiredArgsConstructor;
 /// - Provides paginated responses for efficient data transfer
 /// - Maps domain exceptions to appropriate HTTP status codes
 @RestController
+@AuthorizedResource("entity")
 @RequestMapping("/api/v1/entities")
 @Tag(name = "Entities Management", description = "Operations related to entity management")
 @Validated
@@ -133,6 +141,7 @@ public class EntityController {
   private final SearchFilterMapper searchFilterMapper;
   private final SearchFilterParser searchFilterParser;
   private final EntityGraphService entityGraphService;
+  private final SearchProperties searchProperties;
 
   // Validation message constants for relations_depth parameter
   private static final int RELATIONS_DEPTH_MIN = 1;
@@ -153,6 +162,7 @@ public class EntityController {
   /// @param size number of entities per page for response size
   /// control
   /// @param templateIdentifier template filter for entity scope limitation
+  /// @param sort optional sort expression in the format `field,direction`
   /// @param q optional filter query string (e.g.
   /// `name:API;property.language=JAVA`)
   /// @return paginated entity DTOs matching the template and optional filter
@@ -160,9 +170,9 @@ public class EntityController {
   @Operation(summary = ENDPOINT_GET_ENTITIES_SUMMARY, description = ENDPOINT_GET_ENTITIES_PAGINATED_DESCRIPTION)
   @ApiResponse(responseCode = OK_CODE, description = RESPONSE_ENTITIES_PAGINATED_SUCCESS, content = @Content(schema = @Schema(implementation = EntityPageResponse.class)))
   @ApiResponse(responseCode = BAD_REQUEST_CODE, description = RESPONSE_INVALID_PAGINATION, content = {
-      @Content(schema = @Schema(implementation = ErrorResponse.class))})
+      @Content(mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE, schema = @Schema(implementation = ProblemDetail.class))})
   @ApiResponse(responseCode = BAD_REQUEST_CODE, description = RESPONSE_INVALID_QUERY, content = {
-      @Content(schema = @Schema(implementation = ErrorResponse.class))})
+      @Content(mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE, schema = @Schema(implementation = ProblemDetail.class))})
   @Parameter(name = "page", description = PARAM_PAGE_DESCRIPTION, in = ParameterIn.QUERY, content = @Content(schema = @Schema(type = "integer", defaultValue = "0")))
   @Parameter(name = "size", description = PARAM_SIZE_DESCRIPTION, in = ParameterIn.QUERY, content = @Content(schema = @Schema(type = "integer", defaultValue = "20")))
   @Parameter(name = "sort", description = PARAM_SORT_DESCRIPTION, in = ParameterIn.QUERY, content = @Content(schema = @Schema(type = "string", defaultValue = "identifier,asc")))
@@ -170,13 +180,14 @@ public class EntityController {
   @ResponseStatus(OK)
   @GetMapping("/{templateIdentifier}")
   public Page<EntityDtoOut> getEntities(@RequestParam(defaultValue = "0") int page,
-      @RequestParam(defaultValue = "20") int size, @PathVariable String templateIdentifier,
-      @RequestParam(required = false) String q) {
-    Pageable pageable = PageRequest.of(page, size);
+      @RequestParam(required = false) Integer size, @PathVariable String templateIdentifier,
+      @RequestParam(required = false) String sort, @RequestParam(required = false) String q) {
+    PaginationCriteria paginationCriteria = new PaginationCriteria(page, resolvePageSize(size),
+        sort);
     EntityFilter filter = entityFilterDslParser.parse(q);
     // Single transaction: pagination + batch relation fetch in one DB round trip
-    Page<EntityGraphNode> graphNodes = entityGraphService.getEntityGraphPageByTemplate(pageable,
-        templateIdentifier, filter, 1);
+    Page<EntityGraphNode> graphNodes = entityGraphService.getEntityGraphPageByTemplate(
+        paginationCriteria, templateIdentifier, filter, 1, searchProperties.maxPageSize());
     return entityDtoOutFromEntityNodeMapper.toPageDto(graphNodes, templateIdentifier, 1);
   }
 
@@ -206,29 +217,33 @@ public class EntityController {
    *          to 1)
    * @param relationsToDisplay
    *          optional set of relation names to include; omit to include all
+   * @param includeRelationsProperties
+   *          whether to include property values for related entities
    * @return entity DTO with full property and relationship data
    */
   @Operation(summary = ENDPOINT_GET_ENTITY_BY_IDENTIFIER_SUMMARY, description = ENDPOINT_GET_ENTITY_BY_IDENTIFIER_DESCRIPTION)
   @ApiResponse(responseCode = OK_CODE, description = RESPONSE_ENTITY_FOUND, content = {
       @Content(schema = @Schema(implementation = EntityDtoOut.class))})
   @ApiResponse(responseCode = NOT_FOUND_CODE, description = RESPONSE_ENTITY_NOT_FOUND_IDENTIFIER, content = {
-      @Content(schema = @Schema(implementation = ErrorResponse.class))})
+      @Content(mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE, schema = @Schema(implementation = ProblemDetail.class))})
   @Parameter(name = "relations_depth", description = RELATIONS_DEPTH_DESCRIPTION, in = ParameterIn.QUERY, schema = @Schema(type = "integer", defaultValue = "1", minimum = "1", maximum = "6"))
   @Parameter(name = "relations_to_display", description = RELATIONS_TO_DISPLAY_DESCRIPTION, in = ParameterIn.QUERY, schema = @Schema(type = "array"))
+  @Parameter(name = "include_relations_properties", description = INCLUDE_RELATIONS_PROPERTIES_DESCRIPTION, in = ParameterIn.QUERY, schema = @Schema(type = "boolean", defaultValue = "false"))
   @GetMapping("/{templateIdentifier}/{entityIdentifier}")
   @ResponseStatus(OK)
   public EntityDtoOut getEntity(@PathVariable String templateIdentifier,
       @PathVariable String entityIdentifier,
       @Min(value = RELATIONS_DEPTH_MIN, message = RELATIONS_DEPTH_MIN_MESSAGE) @Max(value = RELATIONS_DEPTH_MAX, message = RELATIONS_DEPTH_MAX_MESSAGE) @RequestParam(name = "relations_depth", required = false, defaultValue = "1") Integer relationsDepth,
-      @RequestParam(name = "relations_to_display", required = false) Set<String> relationsToDisplay) {
+      @RequestParam(name = "relations_to_display", required = false) Set<String> relationsToDisplay,
+      @RequestParam(name = "include_relations_properties", defaultValue = "false") boolean includeRelationsProperties) {
 
     EntityGraphNode entityGraphNode = entityGraphService.getEntityGraph(templateIdentifier,
         entityIdentifier,
-        new EntityGraphQueryOptions(relationsDepth, false, true,
+        new EntityGraphQueryOptions(relationsDepth, includeRelationsProperties, true,
             relationsToDisplay == null ? Set.of() : relationsToDisplay, Set.of(),
             EntityGraphTraversalMode.DIRECT_LINEAGE));
     return entityDtoOutFromEntityNodeMapper.toDto(entityGraphNode, templateIdentifier,
-        relationsDepth);
+        relationsDepth, includeRelationsProperties);
   }
 
   /// Creates a new entity for the specified template with validation.
@@ -246,15 +261,17 @@ public class EntityController {
   @ApiResponse(responseCode = CREATED_CODE, description = RESPONSE_ENTITY_CREATED, content = {
       @Content(schema = @Schema(implementation = EntityDtoOut.class))})
   @ApiResponse(responseCode = BAD_REQUEST_CODE, description = RESPONSE_INVALID_ENTITY_DATA, content = {
-      @Content(schema = @Schema(implementation = ErrorResponse.class))})
-  @ApiResponse(responseCode = UNAUTHORIZED_CODE, description = RESPONSE_UNAUTHORIZED, content = @Content)
-  @ApiResponse(responseCode = FORBIDDEN_CODE, description = RESPONSE_INSUFFICIENT_RIGHTS, content = @Content)
+      @Content(mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE, schema = @Schema(implementation = ProblemDetail.class))})
+  @ApiResponse(responseCode = UNAUTHORIZED_CODE, description = RESPONSE_UNAUTHORIZED, content = {
+      @Content(mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE, schema = @Schema(implementation = ProblemDetail.class))})
+  @ApiResponse(responseCode = FORBIDDEN_CODE, description = RESPONSE_INSUFFICIENT_RIGHTS, content = {
+      @Content(mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE, schema = @Schema(implementation = ProblemDetail.class))})
   @ApiResponse(responseCode = CONFLICT_CODE, description = RESPONSE_ENTITY_CONFLICT, content = {
-      @Content(schema = @Schema(implementation = ErrorResponse.class))})
+      @Content(mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE, schema = @Schema(implementation = ProblemDetail.class))})
   @ApiResponse(responseCode = NOT_FOUND_CODE, description = RESPONSE_TEMPLATE_NOT_FOUND_IDENTIFIER, content = {
-      @Content(schema = @Schema(implementation = ErrorResponse.class))})
+      @Content(mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE, schema = @Schema(implementation = ProblemDetail.class))})
   @ApiResponse(responseCode = INTERNAL_SERVER_ERROR_CODE, description = RESPONSE_UNEXPECTED_SERVER_ERROR, content = {
-      @Content(schema = @Schema(implementation = ErrorResponse.class))})
+      @Content(mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE, schema = @Schema(implementation = ProblemDetail.class))})
   @PostMapping("/{templateIdentifier}")
   @ResponseStatus(CREATED)
   public EntityDtoOut createEntity(@NotBlank @PathVariable String templateIdentifier,
@@ -283,13 +300,15 @@ public class EntityController {
   @ApiResponse(responseCode = OK_CODE, description = RESPONSE_ENTITY_UPDATED, content = {
       @Content(schema = @Schema(implementation = EntityDtoOut.class))})
   @ApiResponse(responseCode = BAD_REQUEST_CODE, description = RESPONSE_INVALID_ENTITY_DATA, content = {
-      @Content(schema = @Schema(implementation = ErrorResponse.class))})
-  @ApiResponse(responseCode = UNAUTHORIZED_CODE, description = RESPONSE_UNAUTHORIZED, content = @Content)
-  @ApiResponse(responseCode = FORBIDDEN_CODE, description = RESPONSE_INSUFFICIENT_RIGHTS, content = @Content)
+      @Content(mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE, schema = @Schema(implementation = ProblemDetail.class))})
+  @ApiResponse(responseCode = UNAUTHORIZED_CODE, description = RESPONSE_UNAUTHORIZED, content = {
+      @Content(mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE, schema = @Schema(implementation = ProblemDetail.class))})
+  @ApiResponse(responseCode = FORBIDDEN_CODE, description = RESPONSE_INSUFFICIENT_RIGHTS, content = {
+      @Content(mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE, schema = @Schema(implementation = ProblemDetail.class))})
   @ApiResponse(responseCode = NOT_FOUND_CODE, description = RESPONSE_ENTITY_NOT_FOUND_IDENTIFIER, content = {
-      @Content(schema = @Schema(implementation = ErrorResponse.class))})
+      @Content(mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE, schema = @Schema(implementation = ProblemDetail.class))})
   @ApiResponse(responseCode = INTERNAL_SERVER_ERROR_CODE, description = RESPONSE_UNEXPECTED_SERVER_ERROR, content = {
-      @Content(schema = @Schema(implementation = ErrorResponse.class))})
+      @Content(mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE, schema = @Schema(implementation = ProblemDetail.class))})
   @PutMapping("/{templateIdentifier}/{entityIdentifier}")
   @ResponseStatus(OK)
   public EntityDtoOut updateEntity(@NotBlank @PathVariable String templateIdentifier,
@@ -310,13 +329,15 @@ public class EntityController {
   @ApiResponse(responseCode = OK_CODE, description = RESPONSE_ENTITY_UPDATED, content = {
       @Content(schema = @Schema(implementation = EntityDtoOut.class))})
   @ApiResponse(responseCode = BAD_REQUEST_CODE, description = RESPONSE_INVALID_ENTITY_DATA, content = {
-      @Content(schema = @Schema(implementation = ErrorResponse.class))})
-  @ApiResponse(responseCode = UNAUTHORIZED_CODE, description = RESPONSE_UNAUTHORIZED, content = @Content)
-  @ApiResponse(responseCode = FORBIDDEN_CODE, description = RESPONSE_INSUFFICIENT_RIGHTS, content = @Content)
+      @Content(mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE, schema = @Schema(implementation = ProblemDetail.class))})
+  @ApiResponse(responseCode = UNAUTHORIZED_CODE, description = RESPONSE_UNAUTHORIZED, content = {
+      @Content(mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE, schema = @Schema(implementation = ProblemDetail.class))})
+  @ApiResponse(responseCode = FORBIDDEN_CODE, description = RESPONSE_INSUFFICIENT_RIGHTS, content = {
+      @Content(mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE, schema = @Schema(implementation = ProblemDetail.class))})
   @ApiResponse(responseCode = NOT_FOUND_CODE, description = RESPONSE_ENTITY_NOT_FOUND_IDENTIFIER, content = {
-      @Content(schema = @Schema(implementation = ErrorResponse.class))})
+      @Content(mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE, schema = @Schema(implementation = ProblemDetail.class))})
   @ApiResponse(responseCode = INTERNAL_SERVER_ERROR_CODE, description = RESPONSE_UNEXPECTED_SERVER_ERROR, content = {
-      @Content(schema = @Schema(implementation = ErrorResponse.class))})
+      @Content(mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE, schema = @Schema(implementation = ProblemDetail.class))})
   @PatchMapping("/{templateIdentifier}/{entityIdentifier}")
   @ResponseStatus(OK)
   public EntityDtoOut patchEntity(@NotBlank @PathVariable String templateIdentifier,
@@ -341,15 +362,17 @@ public class EntityController {
   @Operation(summary = ENDPOINT_DELETE_ENTITY_SUMMARY, description = ENDPOINT_DELETE_ENTITY_DESCRIPTION)
   @ApiResponse(responseCode = NO_CONTENT_CODE, description = RESPONSE_ENTITY_DELETED)
   @ApiResponse(responseCode = BAD_REQUEST_CODE, description = RESPONSE_INVALID_ENTITY_DATA, content = {
-      @Content(schema = @Schema(implementation = ErrorResponse.class))})
-  @ApiResponse(responseCode = UNAUTHORIZED_CODE, description = RESPONSE_UNAUTHORIZED, content = @Content)
-  @ApiResponse(responseCode = FORBIDDEN_CODE, description = RESPONSE_INSUFFICIENT_RIGHTS, content = @Content)
+      @Content(mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE, schema = @Schema(implementation = ProblemDetail.class))})
+  @ApiResponse(responseCode = UNAUTHORIZED_CODE, description = RESPONSE_UNAUTHORIZED, content = {
+      @Content(mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE, schema = @Schema(implementation = ProblemDetail.class))})
+  @ApiResponse(responseCode = FORBIDDEN_CODE, description = RESPONSE_INSUFFICIENT_RIGHTS, content = {
+      @Content(mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE, schema = @Schema(implementation = ProblemDetail.class))})
   @ApiResponse(responseCode = NOT_FOUND_CODE, description = RESPONSE_ENTITY_NOT_FOUND_IDENTIFIER, content = {
-      @Content(schema = @Schema(implementation = ErrorResponse.class))})
+      @Content(mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE, schema = @Schema(implementation = ProblemDetail.class))})
   @ApiResponse(responseCode = CONFLICT_CODE, description = RESPONSE_ENTITY_RELATION_CONFLICT, content = {
-      @Content(schema = @Schema(implementation = ErrorResponse.class))})
+      @Content(mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE, schema = @Schema(implementation = ProblemDetail.class))})
   @ApiResponse(responseCode = INTERNAL_SERVER_ERROR_CODE, description = RESPONSE_UNEXPECTED_SERVER_ERROR, content = {
-      @Content(schema = @Schema(implementation = ErrorResponse.class))})
+      @Content(mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE, schema = @Schema(implementation = ProblemDetail.class))})
   @DeleteMapping("/{templateIdentifier}/{entityIdentifier}")
   @ResponseStatus(NO_CONTENT)
   public void deleteEntity(@NotBlank @PathVariable String templateIdentifier,
@@ -367,20 +390,22 @@ public class EntityController {
   /// @param searchRequest the search request body with filter, page, size, and
   /// sort
   /// @return paginated entity DTOs matching the filter
-  @Operation(summary = ENDPOINT_POST_SEARCH_SUMMARY, description = ENDPOINT_POST_SEARCH_DESCRIPTION)
+  @Operation(summary = ENDPOINT_POST_SEARCH_SUMMARY, description = ENDPOINT_POST_SEARCH_DESCRIPTION, requestBody = @io.swagger.v3.oas.annotations.parameters.RequestBody(content = @Content(mediaType = "application/json", examples = @ExampleObject(name = "Entity search", value = ENTITY_SEARCH_REQUEST_EXAMPLE))))
   @ApiResponse(responseCode = OK_CODE, description = RESPONSE_SEARCH_SUCCESS, content = @Content(schema = @Schema(implementation = EntityPageResponse.class)))
   @ApiResponse(responseCode = BAD_REQUEST_CODE, description = RESPONSE_INVALID_SEARCH_QUERY, content = {
-      @Content(schema = @Schema(implementation = ErrorResponse.class))})
+      @Content(mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE, schema = @Schema(implementation = ProblemDetail.class))})
   @PostMapping("/search")
+  @AuthorizedResource(value = "entity_search", readOnly = true)
   @ResponseStatus(OK)
   public Page<EntityDtoOut> searchEntities(@RequestBody EntitySearchRequestDtoIn searchRequest) {
     RawSearchFilterNode rawFilter = searchFilterMapper.toRaw(searchRequest.filter());
     SearchFilterNode filter = searchFilterParser.parse(rawFilter);
     PaginationCriteria paginationCriteria = new PaginationCriteria(searchRequest.page(),
-        searchRequest.size(), searchRequest.sort());
+        resolvePageSize(searchRequest.size()), searchRequest.sort());
+    paginationCriteria.validateBounds(searchProperties.maxPageSize());
 
     PaginatedResult<Entity> result = entityService.searchEntities(filter, searchRequest.query(),
-        paginationCriteria);
+        paginationCriteria, searchProperties.maxPageSize());
     Page<Entity> page = toPageResponse(result.content(), paginationCriteria,
         result.totalElements());
     return entityDtoOutMapper.fromEntitiesSearchPageToDtoPage(page);
@@ -390,5 +415,13 @@ public class EntityController {
       long totalElements) {
     Pageable pageable = PageRequest.of(criteria.page(), criteria.size());
     return new PageImpl<>(content, pageable, totalElements);
+  }
+
+  /// Uses the requested size when present; otherwise the default size, capped at
+  /// the configured maximum so that omitting `size` never fails validation.
+  private int resolvePageSize(Integer requestedSize) {
+    return requestedSize != null
+        ? requestedSize
+        : Math.min(SearchConstraints.DEFAULT_PAGE_SIZE, searchProperties.maxPageSize());
   }
 }

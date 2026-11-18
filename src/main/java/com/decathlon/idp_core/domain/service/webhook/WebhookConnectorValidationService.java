@@ -26,13 +26,15 @@ public class WebhookConnectorValidationService {
 
   public void validateWebhookConnectorForCreation(WebhookConnector webhookConnector) {
     validateIdentifierUniqueness(webhookConnector.identifier());
-    webhookSecurityValidationService.validateForCreation(webhookConnector.security());
+    webhookSecurityValidationService.validateForCreation(webhookConnector.security(),
+        webhookConnector.enabled());
 
   }
 
   public void validateWebhookConnectorForUpdate(WebhookConnector webhookConnectorToUpdate) {
     validateMappingsIfPresent(webhookConnectorToUpdate);
-    webhookSecurityValidationService.validateForCreation(webhookConnectorToUpdate.security());
+    webhookSecurityValidationService.validateForCreation(webhookConnectorToUpdate.security(),
+        webhookConnectorToUpdate.enabled());
   }
 
   private void validateMappingsIfPresent(WebhookConnector webhookConnector) {

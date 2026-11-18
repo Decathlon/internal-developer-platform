@@ -44,7 +44,7 @@ buildNumber.properties
 
 .env
 application-secret.*
-
+flyway-migration-order-report.md
 
 # BlueJ files
 *.ctxt

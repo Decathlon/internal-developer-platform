@@ -66,6 +66,24 @@ public class SwaggerDescription {
 
   public static final String ENDPOINT_POST_ENTITY_SUMMARY = "Create a new entity";
   public static final String ENDPOINT_POST_ENTITY_DESCRIPTION = "Create a new entity in the system with the provided information";
+  public static final String ENTITY_SEARCH_REQUEST_EXAMPLE = """
+      {
+        "query": "test",
+        "filter": {
+          "connector": "AND",
+          "criteria": [
+            {
+              "field": "template",
+              "operation": "EQ",
+              "value": "service"
+            }
+          ]
+        },
+        "page": 0,
+        "size": 20,
+        "sort": "identifier,asc"
+      }
+      """;
 
   public static final String ENDPOINT_PUT_ENTITY_SUMMARY = "Update an existing entity";
   public static final String ENDPOINT_PUT_ENTITY_DESCRIPTION = "Update an existing entity in the system with the provided information";
@@ -185,6 +203,7 @@ public class SwaggerDescription {
   public static final String FIELD_ENTITY_RELATIONS = "List of relations for this entity";
   public static final String FIELD_ENTITY_RELATION_NAME = "Name of the relation (must match a template relation definition)";
   public static final String FIELD_ENTITY_RELATION_TARGETS = "List of target entity identifiers for this relation";
+  public static final String FIELD_RELATION_ENTITY_PROPERTIES = "Property values for the related entity; included only when include_relations_properties=true";
 
   public static final String FIELD_PROPERTY_ID = "Unique identifier of the property definition";
   public static final String FIELD_PROPERTY_NAME = "Property name";
@@ -221,8 +240,8 @@ public class SwaggerDescription {
 
   // --- Pagination and sorting parameter descriptions ---
   public static final String PARAM_PAGE_DESCRIPTION = "Page number for pagination. Defaults to 0.";
-  public static final String PARAM_SIZE_DESCRIPTION = "Number of items per page. Defaults to 20.";
-  public static final String PARAM_SORT_DESCRIPTION = "Sorting criteria in the format: property(,asc|desc). Defaults to identifier,asc.";
+  public static final String PARAM_SIZE_DESCRIPTION = "Number of items per page. Defaults to 20. Must be between 1 and 500.";
+  public static final String PARAM_SORT_DESCRIPTION = "Sorting criteria in the format: field[,asc|desc]";
   public static final String PARAM_QUERY_DESCRIPTION = """
       Optional filter query using a simple expression language. See more details in the API documentation. Example: `name:idp` for entities with names containing 'idp'.
       """;
@@ -232,9 +251,11 @@ public class SwaggerDescription {
   public static final String PARAM_DEPTH_DESCRIPTION = "Maximum traversal depth for relationship resolution. Clamped between 1 and 6.";
   public static final String RELATIONS_DEPTH_DESCRIPTION = "Maximum depth to traverse when collecting entity relations. Defaults to 1. Valid range: 1-6.";
   public static final String RELATIONS_TO_DISPLAY_DESCRIPTION = "Comma-separated list of relation names to filter the response. Only relations that form a connected chain from the root entity are included. Isolated relations (not reachable from the root) are excluded even if listed. When omitted, all reachable relations are included.";
+  public static final String INCLUDE_RELATIONS_PROPERTIES_DESCRIPTION = "When true, include property values for related entities. Defaults to false.";
   public static final String ENDPOINT_GET_ENTITY_GRAPH_FLAT_SUMMARY = "Get entity relationship graph as flat nodes and edges";
   public static final String ENDPOINT_GET_ENTITY_GRAPH_FLAT_DESCRIPTION = "Retrieves the entity relationship graph as a flat nodes-and-edges structure, suitable for frontend visualization tools such as React Flow, Vis.js, and Cytoscape.";
   public static final String RESPONSE_ENTITY_GRAPH_FLAT_SUCCESS = "Flat entity graph successfully retrieved";
+  public static final String RESPONSE_INVALID_GRAPH_QUERY = "Invalid graph query parameter value";
   public static final String ENTITY_GRAPH_FLAT_NODES_DESCRIPTION = "All entity nodes in the graph";
   public static final String ENTITY_GRAPH_FLAT_EDGES_DESCRIPTION = "All directed relation edges in the graph";
   public static final String ENTITY_GRAPH_FLAT_NODE_ID_DESCRIPTION = "Unique node identifier composed of templateIdentifier:identifier";

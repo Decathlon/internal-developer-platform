@@ -7,7 +7,6 @@ import org.springframework.transaction.annotation.Transactional;
 
 import com.decathlon.idp_core.domain.model.entity.EntityAuditInfo;
 import com.decathlon.idp_core.domain.port.audit.EntityAuditPort;
-import com.decathlon.idp_core.domain.service.entity_template.EntityTemplateService;
 
 import lombok.RequiredArgsConstructor;
 
@@ -28,7 +27,6 @@ import lombok.RequiredArgsConstructor;
 public class EntityAuditService {
 
   private final EntityAuditPort entityAuditPort;
-  private final EntityTemplateService entityTemplateService;
 
   /// Retrieves the complete audit history for a specific entity.
   ///

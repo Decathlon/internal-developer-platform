@@ -190,20 +190,46 @@ spring:
 ```yaml
 management:
   tracing:
-    enabled: true
     sampling:
-      probability: 1.0
+      probability: ${OTEL_TRACES_SAMPLER_ARG:0.1}
+    export:
+      enabled: ${OTEL_TRACING_ENABLED:false}
 
-otel:
-  exporter:
-    otlp:
-      endpoint: http://otel-collector:4317
-  service:
-    name: idp-core
-  resource:
-    attributes:
-      deployment.environment: production
+  otlp:
+    metrics:
+      export:
+        url: ${OTEL_EXPORTER_OTLP_METRICS_ENDPOINT:${OTEL_EXPORTER_OTLP_ENDPOINT:http://localhost:4318}/v1/metrics}
+        enabled: ${OTEL_METRICS_EXPORT_ENABLED:false}
+        transport: ${OTEL_EXPORTER_OTLP_METRICS_PROTOCOL:${OTEL_EXPORTER_OTLP_PROTOCOL:http/protobuf}}
+
+  opentelemetry:
+    tracing:
+      export:
+        otlp:
+          endpoint: ${OTEL_EXPORTER_OTLP_TRACES_ENDPOINT:${OTEL_EXPORTER_OTLP_ENDPOINT:http://localhost:4318}/v1/traces}
+          transport: ${OTEL_EXPORTER_OTLP_TRACES_TRANSPORT:${OTEL_EXPORTER_OTLP_PROTOCOL:http}}
+    resource-attributes:
+      deployment.environment: ${OTEL_ENV:local}
+      service.namespace: ${OTEL_SERVICE_NAMESPACE:idp-core}
+      service.name: ${OTEL_SERVICE_NAME:internal-developer-platform}
 ```
+
+The signal-specific OpenTelemetry variables win over the generic fallback, so you can set the standard OpenTelemetry environment variables without hard-coding vendor-specific values.
+
+### Common environment variables
+
+| Variable | Description |
+| --- | --- |
+| `OTEL_TRACING_ENABLED` | Enables tracing export |
+| `OTEL_METRICS_EXPORT_ENABLED` | Enables OTLP metrics export |
+| `OTEL_TRACES_SAMPLER_ARG` | Trace sampling ratio |
+| `OTEL_EXPORTER_OTLP_ENDPOINT` | Base OTLP endpoint |
+| `OTEL_EXPORTER_OTLP_TRACES_ENDPOINT` | Full traces URL |
+| `OTEL_EXPORTER_OTLP_METRICS_ENDPOINT` | Full metrics URL |
+| `OTEL_EXPORTER_OTLP_PROTOCOL` | Generic OTLP protocol fallback |
+| `OTEL_EXPORTER_OTLP_TRACES_TRANSPORT` | Trace transport override |
+| `OTEL_EXPORTER_OTLP_METRICS_PROTOCOL` | Metrics transport override |
+| `OTEL_RESOURCE_ATTRIBUTES` | Resource metadata for the service |
 
 ---
 

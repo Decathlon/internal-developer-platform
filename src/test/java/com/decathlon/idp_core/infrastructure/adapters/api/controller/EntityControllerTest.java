@@ -1,9 +1,11 @@
 package com.decathlon.idp_core.infrastructure.adapters.api.controller;
 
+import static org.hamcrest.Matchers.contains;
 import static org.hamcrest.Matchers.containsInAnyOrder;
 import static org.hamcrest.Matchers.hasItem;
 import static org.hamcrest.Matchers.hasSize;
 import static org.springframework.http.MediaType.APPLICATION_JSON;
+import static org.springframework.http.MediaType.APPLICATION_PROBLEM_JSON;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -24,16 +26,19 @@ import org.skyscreamer.jsonassert.JSONAssert;
 import org.skyscreamer.jsonassert.JSONCompareMode;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.test.context.support.WithMockUser;
+import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders;
 
 import com.decathlon.idp_core.AbstractIntegrationTest;
 import com.decathlon.idp_core.domain.constant.SearchConstraints;
+import com.decathlon.idp_core.domain.constant.ValidationMessages;
 
 /// Integration tests for the EntityController REST API endpoints. These tests
 /// verify the behavior of entity retrieval endpoints, including pagination,
 /// authentication, and lookup by template identifier and entity identifier.
+@TestPropertySource(properties = "app.relations.target-validation-mode=TOLERANT")
 public class EntityControllerTest extends AbstractIntegrationTest {
 
   private static final String TEMPLATE_IDENTIFIER = "web-service";
@@ -71,11 +76,89 @@ public class EntityControllerTest extends AbstractIntegrationTest {
     }
 
     @Test
+    @DisplayName("Should accept size at the minimum bound of 1")
+    @WithMockUser
+    void getEntities_sizeMinimum_200() throws Exception {
+      mockMvc
+          .perform(get(ENTITIES_BY_TEMPLATE_IDENTIFIER_PATH, TEMPLATE_IDENTIFIER).param("page", "0")
+              .param("size", "1").accept(APPLICATION_JSON))
+          .andExpect(status().isOk()).andExpect(jsonPath("$.page.size").value(1));
+    }
+
+    @Test
+    @DisplayName("Should accept size at the maximum bound of 500")
+    @WithMockUser
+    void getEntities_sizeMaximum_200() throws Exception {
+      mockMvc
+          .perform(get(ENTITIES_BY_TEMPLATE_IDENTIFIER_PATH, TEMPLATE_IDENTIFIER).param("page", "0")
+              .param("size", "500").accept(APPLICATION_JSON))
+          .andExpect(status().isOk()).andExpect(jsonPath("$.page.size").value(500));
+    }
+
+    @Test
+    @DisplayName("Should return 400 when size is zero")
+    @WithMockUser
+    void getEntities_sizeZero_400() throws Exception {
+      mockMvc.perform(get(ENTITIES_BY_TEMPLATE_IDENTIFIER_PATH, TEMPLATE_IDENTIFIER)
+          .param("page", "0").param("size", "0").accept(APPLICATION_JSON))
+          .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    @DisplayName("Should return 400 when size exceeds 500")
+    @WithMockUser
+    void getEntities_sizeAboveMaximum_400() throws Exception {
+      mockMvc.perform(get(ENTITIES_BY_TEMPLATE_IDENTIFIER_PATH, TEMPLATE_IDENTIFIER)
+          .param("page", "0").param("size", "501").accept(APPLICATION_JSON))
+          .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    @DisplayName("Should return 400 when page is negative")
+    @WithMockUser
+    void getEntities_negativePage_400() throws Exception {
+      mockMvc
+          .perform(get(ENTITIES_BY_TEMPLATE_IDENTIFIER_PATH, TEMPLATE_IDENTIFIER)
+              .param("page", "-1").param("size", "10").accept(APPLICATION_JSON))
+          .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    @DisplayName("Should return 400 when size is not a number")
+    @WithMockUser
+    void getEntities_nonNumericSize_400() throws Exception {
+      mockMvc
+          .perform(get(ENTITIES_BY_TEMPLATE_IDENTIFIER_PATH, TEMPLATE_IDENTIFIER).param("page", "0")
+              .param("size", "abc").accept(APPLICATION_JSON))
+          .andExpect(status().isBadRequest()).andExpect(
+              jsonPath("$.error_description").value(ValidationMessages.PAGE_SIZE_NOT_INTEGER));
+    }
+
+    @Test
+    @DisplayName("Should return 400 when page is not an integer")
+    @WithMockUser
+    void getEntities_nonIntegerPage_400() throws Exception {
+      mockMvc
+          .perform(get(ENTITIES_BY_TEMPLATE_IDENTIFIER_PATH, TEMPLATE_IDENTIFIER)
+              .param("page", "1.5").param("size", "10").accept(APPLICATION_JSON))
+          .andExpect(status().isBadRequest()).andExpect(
+              jsonPath("$.error_description").value(ValidationMessages.PAGE_INDEX_NOT_INTEGER));
+    }
+
+    @Test
     @DisplayName("Should return 404 when template does not exist")
     @WithMockUser
     void getEntities_paginated_404_when_non_existent_template() throws Exception {
-      mockMvc.perform(get(ENTITIES_BY_TEMPLATE_IDENTIFIER_PATH, "non-existent-template-identifier")
-          .accept(APPLICATION_JSON)).andExpect(status().isNotFound());
+      mockMvc
+          .perform(get(ENTITIES_BY_TEMPLATE_IDENTIFIER_PATH, "non-existent-template-identifier")
+              .accept(APPLICATION_JSON))
+          .andExpect(status().isNotFound())
+          .andExpect(content().contentType(APPLICATION_PROBLEM_JSON))
+          .andExpect(jsonPath("$.status").value(404))
+          .andExpect(jsonPath("$.title").value("Not Found"))
+          .andExpect(jsonPath("$.error").value("NOT_FOUND"))
+          .andExpect(jsonPath("$.error_description").exists())
+          .andExpect(jsonPath("$.timestamp").exists());
     }
 
     @Test
@@ -100,9 +183,9 @@ public class EntityControllerTest extends AbstractIntegrationTest {
     void getEntities_paginated_200_custom() throws Exception {
 
       mockMvc
-          .perform(get(ENTITIES_BY_TEMPLATE_IDENTIFIER_PATH, "monitoring-service")
-              .param("page", "1").param("size", "5").param("sort", "template_identifier,asc")
-              .accept(APPLICATION_JSON))
+          .perform(
+              get(ENTITIES_BY_TEMPLATE_IDENTIFIER_PATH, "monitoring-service").param("page", "1")
+                  .param("size", "5").param("sort", "identifier,asc").accept(APPLICATION_JSON))
           .andExpect(status().isOk()).andExpect(content().contentType(APPLICATION_JSON))
           .andExpect(jsonPath("$.content.length()").value(1))
           .andExpect(jsonPath("$.content[0].name").value("Monitoring Service 6"))
@@ -113,9 +196,37 @@ public class EntityControllerTest extends AbstractIntegrationTest {
     }
 
     @Test
+    @DisplayName("Should return entities in the requested descending order")
+    @WithMockUser
+    void getEntities_sortDescending_200() throws Exception {
+      mockMvc
+          .perform(get(ENTITIES_BY_TEMPLATE_IDENTIFIER_PATH, TEMPLATE_IDENTIFIER)
+              .param("sort", "identifier,desc").accept(APPLICATION_JSON))
+          .andExpect(status().isOk())
+          .andExpect(jsonPath("$.content[*].identifier").value(contains("web-api-2", "web-api-1",
+              "graph-svc-d", "graph-svc-c", "graph-svc-b", "graph-svc-a")));
+    }
+
+    @ParameterizedTest
+    @CsvSource(value = {
+        "badField,asc;Invalid sort field 'badField'. Supported fields: identifier, name, templateIdentifier",
+        "identifier,sideways;Invalid sort expression 'identifier,sideways'. Expected format: field[,asc|desc] or field alone",
+        "name:asc;Invalid sort expression 'name:asc'. Expected format: field[,asc|desc] or field alone",
+        "name:desc;Invalid sort expression 'name:desc'. Expected format: field[,asc|desc] or field alone"}, delimiter = ';')
+    @DisplayName("Should return 400 when sort field or direction is invalid")
+    @WithMockUser
+    void getEntities_invalidSort_400(String sort, String errorDescription) throws Exception {
+      mockMvc
+          .perform(get(ENTITIES_BY_TEMPLATE_IDENTIFIER_PATH, TEMPLATE_IDENTIFIER)
+              .param("sort", sort).accept(APPLICATION_JSON))
+          .andExpect(status().isBadRequest())
+          .andExpect(jsonPath("$.error_description").value(errorDescription));
+    }
+
+    @Test
     @DisplayName("Should return paginated entities with default pagination")
     @WithMockUser
-    void getEntities_invalid_pagination_200() throws Exception {
+    void getEntities_defaultPagination_200() throws Exception {
       mockMvc
           .perform(get(ENTITIES_BY_TEMPLATE_IDENTIFIER_PATH, TEMPLATE_IDENTIFIER)
               .accept(APPLICATION_JSON))
@@ -199,8 +310,14 @@ public class EntityControllerTest extends AbstractIntegrationTest {
       mockMvc
           .perform(get(ENTITIES_BY_TEMPLATE_IDENTIFIER_PATH, TEMPLATE_IDENTIFIER)
               .param("q", "noOperator").accept(APPLICATION_JSON))
-          .andExpect(status().isBadRequest()).andExpect(jsonPath("$.error_description")
-              .value("Invalid query format, expected field:operator:value"));
+          .andExpect(status().isBadRequest())
+          .andExpect(content().contentType(APPLICATION_PROBLEM_JSON))
+          .andExpect(jsonPath("$.status").value(400))
+          .andExpect(jsonPath("$.title").value("Bad Request"))
+          .andExpect(jsonPath("$.error").value("BAD_REQUEST"))
+          .andExpect(jsonPath("$.error_description")
+              .value("Invalid query format, expected field:operator:value"))
+          .andExpect(jsonPath("$.timestamp").exists());
     }
 
     @Test
@@ -398,8 +515,22 @@ public class EntityControllerTest extends AbstractIntegrationTest {
           .andExpect(status().isOk()).andExpect(jsonPath("$.identifier").value("graph-svc-a"))
           .andExpect(jsonPath("$.relations.uses", hasSize(1)))
           .andExpect(jsonPath("$.relations.uses[0].identifier").value("graph-svc-b"))
+          .andExpect(jsonPath("$.relations.uses[0].properties").doesNotExist())
           .andExpect(jsonPath("$.relations.monitors", hasSize(1)))
           .andExpect(jsonPath("$.relations.monitors[0].identifier").value("graph-svc-b"));
+    }
+
+    @Test
+    @DisplayName("Should include relation properties when include_relations_properties=true")
+    @WithMockUser
+    void getEntity_includeRelationsProperties() throws Exception {
+      mockMvc
+          .perform(get(ENTITIES_BY_IDENTIFIER_PATH, TEMPLATE_IDENTIFIER, "graph-svc-a")
+              .param("include_relations_properties", "true").accept(APPLICATION_JSON))
+          .andExpect(status().isOk())
+          .andExpect(jsonPath("$.relations.uses[0].identifier").value("graph-svc-b"))
+          .andExpect(jsonPath("$.relations.uses[0].properties.tier").value("silver"))
+          .andExpect(jsonPath("$.relations.uses[0].properties.version").value("2.0.0"));
     }
 
     @Test
@@ -558,17 +689,51 @@ public class EntityControllerTest extends AbstractIntegrationTest {
 
     @Test
     @WithMockUser()
-    @DisplayName("Should return 400 when relation target entity does not exist")
-    void postEntity_400_when_relation_target_entity_does_not_exist() throws Exception {
+    @DisplayName("Should omit unresolved targets from optional relations")
+    void postEntity_201_omitsUnresolvedOptionalRelationTargets() throws Exception {
+      String entityIdentifier = "web-service-missing-relation-target-"
+          + java.util.UUID.randomUUID();
+      String payload = getJsonTestFileContent(
+          ENTITY_JSON_FILES_TEST_PATH + "postEntity_optional_missing_relation_target.json")
+              .replace("web-service-missing-relation-target", entityIdentifier);
+
+      try {
+        mockMvc
+            .perform(MockMvcRequestBuilders
+                .post(ENTITIES_BY_TEMPLATE_IDENTIFIER_PATH, TEMPLATE_IDENTIFIER)
+                .contentType(APPLICATION_JSON).accept(APPLICATION_JSON).with(csrf())
+                .content(payload))
+            .andExpect(status().isCreated())
+            .andExpect(jsonPath("$.identifier").value(entityIdentifier))
+            .andExpect(jsonPath("$.properties.applicationName").value("catalog-api"))
+            .andExpect(jsonPath("$.relations.database").doesNotExist());
+      } finally {
+        mockMvc.perform(delete(ENTITIES_BY_IDENTIFIER_PATH, TEMPLATE_IDENTIFIER, entityIdentifier)
+            .accept(APPLICATION_JSON).with(csrf())).andExpect(status().isNoContent());
+      }
+    }
+
+    @Test
+    @WithMockUser
+    @DisplayName("Should reject an unresolved target on a required relation")
+    void postEntity_400_when_required_relation_target_is_unresolved() throws Exception {
       mockMvc
-          .perform(
-              MockMvcRequestBuilders.post(ENTITIES_BY_TEMPLATE_IDENTIFIER_PATH, TEMPLATE_IDENTIFIER)
-                  .contentType(APPLICATION_JSON).accept(APPLICATION_JSON).with(csrf())
-                  .content(getJsonTestFileContent(ENTITY_JSON_FILES_TEST_PATH
-                      + "postEntity_400_relation_target_entity_does_not_exist.json")))
-          .andExpect(status().isBadRequest()).andExpect(jsonPath("$.error").value("BAD_REQUEST"))
+          .perform(post(ENTITIES_BY_TEMPLATE_IDENTIFIER_PATH, "support")
+              .contentType(APPLICATION_JSON).accept(APPLICATION_JSON).with(csrf()).content("""
+                  {
+                    "name": "Support Entity",
+                    "identifier": "support-missing-required-team",
+                    "relations": [
+                      {
+                        "name": "required_team",
+                        "target_entity_identifiers": ["missing-team"]
+                      }
+                    ]
+                  }
+                  """))
+          .andExpect(status().isBadRequest())
           .andExpect(jsonPath("$.error_description").value(org.hamcrest.Matchers.containsString(
-              "Relation 'database': target entity 'missing-database' does not exist")));
+              "Relation 'required_team': target entity 'missing-team' does not exist")));
     }
 
   }
@@ -665,8 +830,9 @@ public class EntityControllerTest extends AbstractIntegrationTest {
 
     @Test
     @WithMockUser
-    @DisplayName("Should return 400 when update contains a property not defined in template and a missing relation target")
-    void putEntity_400_when_property_not_defined_and_relation_target_missing() throws Exception {
+    @DisplayName("Should ignore unresolved optional relation targets while rejecting invalid properties")
+    void putEntity_400_when_property_not_defined_and_optional_relation_target_missing()
+        throws Exception {
       mockMvc
           .perform(put(ENTITIES_BY_IDENTIFIER_PATH, TEMPLATE_IDENTIFIER, ENTITY_IDENTIFIER)
               .contentType(APPLICATION_JSON).accept(APPLICATION_JSON).with(csrf())
@@ -676,8 +842,8 @@ public class EntityControllerTest extends AbstractIntegrationTest {
           .andExpect(jsonPath("$.error_description").value(org.hamcrest.Matchers.allOf(
               org.hamcrest.Matchers
                   .containsString("Property 'status' is not defined in template 'web-service'"),
-              org.hamcrest.Matchers.containsString(
-                  "Relation 'database': target entity 'missing-database' does not exist"))));
+              org.hamcrest.Matchers.not(org.hamcrest.Matchers.containsString(
+                  "Relation 'database': target entity 'missing-database' does not exist")))));
     }
 
     @Test
@@ -760,6 +926,61 @@ public class EntityControllerTest extends AbstractIntegrationTest {
         mockMvc.perform(
             delete(ENTITIES_BY_IDENTIFIER_PATH, PATCH_TEMPLATE_IDENTIFIER, entityIdentifier)
                 .accept(APPLICATION_JSON).with(csrf()));
+      }
+    }
+
+    @Test
+    @WithMockUser
+    @DisplayName("Should omit unresolved optional targets when patching relations")
+    void patchEntity_200_omitsUnresolvedOptionalRelationTargets() throws Exception {
+      String entityIdentifier = "relation-patch-" + java.util.UUID.randomUUID();
+      String createPayload = """
+          {
+            "name": "Relation Patch Entity",
+            "identifier": "%s",
+            "properties": {
+              "applicationName": "catalog-api",
+              "ownerEmail": "owner@example.com",
+              "environment": "DEV",
+              "version": "1.2.3",
+              "teamName": "platform-team",
+              "baseUrl": "https://catalog.example.com",
+              "port": "8080",
+              "protocol": "HTTP",
+              "programmingLanguage": "JAVA"
+            },
+            "relations": [
+              {
+                "name": "database",
+                "target_entity_identifiers": ["database-service-1"]
+              }
+            ]
+          }
+          """.formatted(entityIdentifier);
+
+      try {
+        mockMvc.perform(post(ENTITIES_BY_TEMPLATE_IDENTIFIER_PATH, TEMPLATE_IDENTIFIER)
+            .contentType(APPLICATION_JSON).accept(APPLICATION_JSON).with(csrf())
+            .content(createPayload)).andExpect(status().isCreated());
+
+        mockMvc
+            .perform(patch(ENTITIES_BY_IDENTIFIER_PATH, TEMPLATE_IDENTIFIER, entityIdentifier)
+                .contentType(APPLICATION_JSON).accept(APPLICATION_JSON).with(csrf()).content("""
+                    {
+                      "relations": [
+                        {
+                          "name": "database",
+                          "target_entity_identifiers": ["missing-database"]
+                        }
+                      ]
+                    }
+                    """))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.properties.applicationName").value("catalog-api"))
+            .andExpect(jsonPath("$.relations.database").doesNotExist());
+      } finally {
+        mockMvc.perform(delete(ENTITIES_BY_IDENTIFIER_PATH, TEMPLATE_IDENTIFIER, entityIdentifier)
+            .accept(APPLICATION_JSON).with(csrf())).andExpect(status().isNoContent());
       }
     }
 
@@ -1023,7 +1244,7 @@ public class EntityControllerTest extends AbstractIntegrationTest {
                     { "field": "property.programmingLanguage", "operation": "EQ", "value": "JAVA" }
                   ]
                 },
-                "page": 0, "size": 20, "sort": "identifier:asc"
+                "page": 0, "size": 20, "sort": "identifier,asc"
               }
               """)).andExpect(status().isOk()).andReturn();
       JSONAssert.assertEquals(
@@ -1046,7 +1267,7 @@ public class EntityControllerTest extends AbstractIntegrationTest {
                     { "field": "template", "operation": "EQ", "value": "batch-job" }
                   ]
                 },
-                "page": 0, "size": 20, "sort": "identifier:asc"
+                "page": 0, "size": 20, "sort": "identifier,asc"
               }
               """)).andExpect(status().isOk()).andReturn();
       JSONAssert.assertEquals(
@@ -1349,7 +1570,7 @@ public class EntityControllerTest extends AbstractIntegrationTest {
                     },
                     "page": 0,
                     "size": 6,
-                    "sort": "name:desc"
+                    "sort": "name,desc"
                   }
                   """))
           .andExpect(status().isOk()).andExpect(jsonPath("$.content.length()").value(6))
@@ -1564,9 +1785,8 @@ public class EntityControllerTest extends AbstractIntegrationTest {
                   }
                   """))
           .andExpect(status().isOk()).andExpect(jsonPath("$.page.total_elements").value(3))
-          .andExpect(jsonPath("$.content[0].identifier").value("web-api-1"))
-          .andExpect(jsonPath("$.content[1].identifier").value("web-service-valid-1"))
-          .andExpect(jsonPath("$.content[2].identifier").value("web-api-2"));
+          .andExpect(jsonPath("$.content[*].identifier")
+              .value(containsInAnyOrder("web-api-1", "web-api-2", "web-service-valid-1")));
     }
 
     @Test
@@ -1600,7 +1820,7 @@ public class EntityControllerTest extends AbstractIntegrationTest {
     void search_200_noPageOrSize_usesDefaults() throws Exception {
       // Omitting page and size must not cause a 400 JSON parse error (primitive int
       // vs null).
-      // The record defaults should kick in: page=0, size=20.
+      // The controller defaults should kick in: page=0, size=20.
       mockMvc
           .perform(MockMvcRequestBuilders.post(SEARCH_PATH).contentType(APPLICATION_JSON)
               .accept(APPLICATION_JSON).with(csrf()).content("""
@@ -1626,8 +1846,8 @@ public class EntityControllerTest extends AbstractIntegrationTest {
               .accept(APPLICATION_JSON).with(csrf()).content("""
                   { "page": 0, "size": 501 }
                   """))
-          .andExpect(status().isBadRequest()).andExpect(jsonPath("$.error_description")
-              .value("Page size must not exceed %d".formatted(SearchConstraints.MAX_PAGE_SIZE)));
+          .andExpect(status().isBadRequest()).andExpect(jsonPath("$.error_description").value(
+              "Page size must not exceed %d".formatted(SearchConstraints.DEFAULT_MAX_PAGE_SIZE)));
     }
 
     @Test
@@ -1637,10 +1857,24 @@ public class EntityControllerTest extends AbstractIntegrationTest {
       mockMvc
           .perform(MockMvcRequestBuilders.post(SEARCH_PATH).contentType(APPLICATION_JSON)
               .accept(APPLICATION_JSON).with(csrf()).content("""
-                  { "page": 0, "size": 20, "sort": "badField:asc" }
+                  { "page": 0, "size": 20, "sort": "badField,asc" }
                   """))
           .andExpect(status().isBadRequest()).andExpect(jsonPath("$.error_description").value(
               "Invalid sort field 'badField'. Supported fields: identifier, name, templateIdentifier"));
+    }
+
+    @ParameterizedTest
+    @CsvSource({"name:asc", "name:desc"})
+    @WithMockUser
+    @DisplayName("Should return 400 for colon-delimited sort")
+    void search_400_colonDelimitedSort(String sort) throws Exception {
+      mockMvc
+          .perform(MockMvcRequestBuilders.post(SEARCH_PATH).contentType(APPLICATION_JSON)
+              .accept(APPLICATION_JSON).with(csrf()).content("""
+                  { "page": 0, "size": 20, "sort": "%s" }
+                  """.formatted(sort)))
+          .andExpect(status().isBadRequest()).andExpect(jsonPath("$.error_description")
+              .value(ValidationMessages.SEARCH_INVALID_SORT_FORMAT.formatted(sort)));
     }
 
     @Test
@@ -1670,7 +1904,7 @@ public class EntityControllerTest extends AbstractIntegrationTest {
           .contentType(APPLICATION_JSON).accept(APPLICATION_JSON).with(csrf()).content("""
               {
                 "filter": { "field": "relation", "operation": "CONTAINS", "value": "database" },
-                "page": 0, "size": 20, "sort": "identifier:asc"
+                "page": 0, "size": 20, "sort": "identifier,asc"
               }
               """)).andExpect(status().isOk()).andReturn();
       JSONAssert.assertEquals(

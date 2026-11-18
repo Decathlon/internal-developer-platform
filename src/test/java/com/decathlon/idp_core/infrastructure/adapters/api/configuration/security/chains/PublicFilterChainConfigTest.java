@@ -19,7 +19,6 @@ import org.springframework.security.web.DefaultSecurityFilterChain;
 import org.springframework.security.web.SecurityFilterChain;
 
 import com.decathlon.idp_core.infrastructure.adapters.api.configuration.AuthenticationProperties;
-import com.decathlon.idp_core.infrastructure.adapters.api.configuration.AuthenticationProperties.ServiceAccountDetection;
 
 @DisplayName("PublicFilterChainConfigTest")
 @ExtendWith(MockitoExtension.class)
@@ -41,9 +40,7 @@ class PublicFilterChainConfigTest {
   }
 
   private AuthenticationProperties authenticationProperties(List<String> excludedPaths) {
-    return new AuthenticationProperties(Map.of(),
-        new ServiceAccountDetection(false, "legacy", "token_type", "m2m", List.of()),
-        excludedPaths);
+    return new AuthenticationProperties(Map.of(), excludedPaths);
   }
 
   private HttpSecurity httpSecurity() {

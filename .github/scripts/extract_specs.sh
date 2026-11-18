@@ -13,7 +13,7 @@ PR_BRANCH=$(git rev-parse --abbrev-ref HEAD)
 git fetch origin main
 git checkout origin/main
 # 1. Check if the static swagger file exists on the 'main' branch
-if [ -f "$MAIN_SWAGGER" ]; then
+if [[ -f "$MAIN_SWAGGER" ]]; then
     # If it exists, copy it as the reference spec
     cp "$MAIN_SWAGGER" "specs/static-swagger-main.yaml"
 else
@@ -22,7 +22,7 @@ else
     mvn clean package -B
 
     JAR_PATH=$(find target -maxdepth 1 -name "*.jar" | head -n 1)
-    if [ -z "$JAR_PATH" ]; then
+    if [[ -z "$JAR_PATH" ]]; then
         printf --  "::error:: No JAR found in target/ folder.\n"
         exit 1
     fi
@@ -39,7 +39,7 @@ else
 
     printf -- "Waiting for API endpoint (%s) to be reachable...\n" "$API_URL"
 
-    while [ "$ATTEMPT" -lt "$MAX_ATTEMPTS" ]; do
+    while [[ "$ATTEMPT" -lt "$MAX_ATTEMPTS" ]]; do
         # Use curl with --fail and --silent to check for a successful connection (HTTP 2xx response)
         if curl --fail --silent -o /dev/null "$API_URL"; then
             printf -- "API is up after %d seconds.\n" "$((ATTEMPT * SLEEP_TIME))"
@@ -50,7 +50,7 @@ else
         ATTEMPT=$((ATTEMPT + 1))
     done
     # Check if the maximum number of attempts was reached (timeout)
-    if [ "$ATTEMPT" -eq "$MAX_ATTEMPTS" ]; then
+    if [[ "$ATTEMPT" -eq "$MAX_ATTEMPTS" ]]; then
         printf --  "::error:: Application failed to start and expose Swagger endpoint after %d attempts.\n" "$MAX_ATTEMPTS"
         printf -- "Swagger endpoint unreachable. Dumping logs:\n"
         pgrep -a java || printf -- "No Java process found\n"

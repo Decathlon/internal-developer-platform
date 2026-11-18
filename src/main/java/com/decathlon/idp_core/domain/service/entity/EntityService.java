@@ -18,8 +18,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.validation.annotation.Validated;
 
-import com.decathlon.idp_core.domain.constant.SearchConstraints;
-import com.decathlon.idp_core.domain.constant.ValidationMessages;
 import com.decathlon.idp_core.domain.exception.entity.EntityAlreadyExistsException;
 import com.decathlon.idp_core.domain.exception.entity.EntityDeletionBlockedException;
 import com.decathlon.idp_core.domain.exception.entity.EntityNotFoundException;
@@ -43,6 +41,7 @@ import com.decathlon.idp_core.domain.service.entity_template.EntityTemplateServi
 import com.decathlon.idp_core.domain.service.entity_template.EntityTemplateValidationService;
 import com.decathlon.idp_core.domain.service.filter.EntityFilterDslParser;
 import com.decathlon.idp_core.domain.service.search.SearchFilterValidationService;
+import com.decathlon.idp_core.domain.service.search.SortParameterParser;
 
 import lombok.RequiredArgsConstructor;
 
@@ -162,9 +161,9 @@ public class EntityService {
     // Enrich relations with target template identifiers from template definition
     Entity enrichedEntity = enrichRelationsWithTargetTemplates(entity, template);
 
-    entityValidationService.validateForCreation(enrichedEntity, template);
+    Entity validatedEntity = entityValidationService.validateForCreation(enrichedEntity, template);
 
-    return entityRepository.save(enrichedEntity);
+    return entityRepository.save(validatedEntity);
   }
 
   /// Updates an existing entity identified by template and entity identifiers.
@@ -194,11 +193,11 @@ public class EntityService {
     // Enrich relations with target template identifiers from template definition
     Entity enrichedEntity = enrichRelationsWithTargetTemplates(entityToSave, template);
 
-    entityValidationService.validateForUpdate(enrichedEntity, template);
+    Entity validatedEntity = entityValidationService.validateForUpdate(enrichedEntity, template);
 
     // Only save if there are actual changes to avoid unnecessary audit records
-    if (hasEntityChanged(existingEntity, enrichedEntity)) {
-      return entityRepository.save(enrichedEntity);
+    if (hasEntityChanged(existingEntity, validatedEntity)) {
+      return entityRepository.save(validatedEntity);
     }
 
     return existingEntity;
@@ -247,10 +246,10 @@ public class EntityService {
         new ArrayList<>(mergedProperties.values()), new ArrayList<>(mergedRelations.values()));
 
     Entity updatedEntity = enrichRelationsWithTargetTemplates(entityToSave, template);
-    entityValidationService.validateForUpdate(updatedEntity, template);
+    Entity validatedEntity = entityValidationService.validateForUpdate(updatedEntity, template);
 
-    if (hasEntityChanged(existingEntity, updatedEntity)) {
-      return entityRepository.save(updatedEntity);
+    if (hasEntityChanged(existingEntity, validatedEntity)) {
+      return entityRepository.save(validatedEntity);
     }
 
     return existingEntity;
@@ -631,14 +630,14 @@ public class EntityService {
   /// and all property values; null means no text restriction
   /// @param paginationCriteria contains page (zero-based), size (1 to
   /// MAX_PAGE_SIZE),
-  /// and optional sort expression (`field` or `field:asc|desc`)
+  /// and optional sort expression (`field` or `field,asc|desc`)
   /// @return paginated entities matching the filter and query
   /// @throws InvalidSearchQueryException when pagination parameters are invalid
   @Transactional(readOnly = true)
   public PaginatedResult<Entity> searchEntities(SearchFilterNode filter, String query,
-      PaginationCriteria paginationCriteria) {
+      PaginationCriteria paginationCriteria, int maxPageSize) {
     searchFilterValidationService.validate(filter, query);
-    validatePaginationCriteria(paginationCriteria);
+    validatePaginationCriteria(paginationCriteria, maxPageSize);
     return entityRepository.search(filter, query, paginationCriteria);
   }
 
@@ -654,41 +653,9 @@ public class EntityService {
         .findByTemplateIdentifierAndIdentifier(templateIdentifier, entityIdentifier).isPresent();
   }
 
-  private void validatePaginationCriteria(PaginationCriteria criteria) {
-    if (criteria.page() < 0) {
-      throw new InvalidSearchQueryException(ValidationMessages.SEARCH_PAGE_INVALID);
-    }
-    if (criteria.size() <= 0) {
-      throw new InvalidSearchQueryException(ValidationMessages.SEARCH_SIZE_INVALID);
-    }
-    if (criteria.size() > SearchConstraints.MAX_PAGE_SIZE) {
-      throw new InvalidSearchQueryException(
-          ValidationMessages.SEARCH_PAGE_SIZE_TOO_LARGE.formatted(SearchConstraints.MAX_PAGE_SIZE));
-    }
-    String sort = criteria.sort();
-    if (sort != null && !sort.isBlank()) {
-      validateSortExpression(sort);
-    }
-  }
-
-  private void validateSortExpression(String sortExpression) {
-    String[] parts = sortExpression.split(":");
-    if (parts.length > 2) {
-      throw new InvalidSearchQueryException(
-          ValidationMessages.SEARCH_INVALID_SORT_FORMAT.formatted(sortExpression));
-    }
-    String property = parts[0].trim();
-    if (!SearchConstraints.ALLOWED_SORT_FIELDS.contains(property)) {
-      throw new InvalidSearchQueryException(
-          ValidationMessages.SEARCH_INVALID_SORT_FIELD.formatted(property));
-    }
-    if (parts.length == 2) {
-      String direction = parts[1].trim().toLowerCase();
-      if (!direction.equals("asc") && !direction.equals("desc")) {
-        throw new InvalidSearchQueryException(
-            ValidationMessages.SEARCH_INVALID_SORT_FORMAT.formatted(sortExpression));
-      }
-    }
+  private void validatePaginationCriteria(PaginationCriteria criteria, int maxPageSize) {
+    criteria.validateBounds(maxPageSize);
+    SortParameterParser.parse(criteria.sort());
   }
 
 }

@@ -116,6 +116,44 @@ class PrincipalProvisioningServiceTest {
   }
 
   @Test
+  void shouldProvisionPrincipalWithAdminDisabledRegardlessOfAttributes() {
+    PrincipalInfo principalInfo = new PrincipalInfo("alice", PrincipalKind.HUMAN, "Alice Dupont",
+        Map.of("is_admin", "true", "kind", "SERVICE_ACCOUNT"), List.of());
+    when(entityRepository.findByTemplateIdentifierAndIdentifier("principal", "alice"))
+        .thenReturn(Optional.empty());
+    when(entityRepository.save(any(Entity.class)))
+        .thenAnswer(invocation -> invocation.getArgument(0));
+
+    provisioningService.provisionPrincipal(principalInfo);
+
+    ArgumentCaptor<Entity> entityCaptor = ArgumentCaptor.forClass(Entity.class);
+    verify(entityRepository).save(entityCaptor.capture());
+    List<Property> properties = entityCaptor.getValue().properties();
+    assertThat(properties).filteredOn(property -> property.name().equals("is_admin"))
+        .extracting(Property::value).containsExactly("false");
+    assertThat(properties).filteredOn(property -> property.name().equals("kind"))
+        .extracting(Property::value).containsExactly("HUMAN");
+  }
+
+  @Test
+  void shouldProvisionGlobalAdministratorWithAdminEnabled() {
+    PrincipalInfo principalInfo = new PrincipalInfo("global-admin", PrincipalKind.HUMAN,
+        "Global Admin", Map.of("is_admin", "false"), List.of());
+    when(entityRepository.findByTemplateIdentifierAndIdentifier("principal", "global-admin"))
+        .thenReturn(Optional.empty());
+    when(entityRepository.save(any(Entity.class)))
+        .thenAnswer(invocation -> invocation.getArgument(0));
+
+    provisioningService.provisionGlobalAdministrator(principalInfo);
+
+    ArgumentCaptor<Entity> entityCaptor = ArgumentCaptor.forClass(Entity.class);
+    verify(entityRepository).save(entityCaptor.capture());
+    assertThat(entityCaptor.getValue().properties())
+        .filteredOn(property -> property.name().equals("is_admin")).extracting(Property::value)
+        .containsExactly("true");
+  }
+
+  @Test
   void shouldHandlePrincipalWithNoGroups() {
     // Given: Principal without group membership
     PrincipalInfo principalInfo = new PrincipalInfo("bob", PrincipalKind.HUMAN, "Bob Smith",
@@ -195,7 +233,7 @@ class PrincipalProvisioningServiceTest {
         .thenReturn(Optional.of(principal));
 
     // When: Retrieve principal
-    Optional<Entity> result = provisioningService.getPrincipal("alice");
+    Optional<Entity> result = provisioningService.findPrincipal("alice");
 
     // Then: Principal returned
     assertThat(result).isPresent();
@@ -209,9 +247,21 @@ class PrincipalProvisioningServiceTest {
         .thenReturn(Optional.empty());
 
     // When: Retrieve non-existent principal
-    Optional<Entity> result = provisioningService.getPrincipal("unknown");
+    Optional<Entity> result = provisioningService.findPrincipal("unknown");
 
     // Then: Empty optional returned
     assertThat(result).isEmpty();
+  }
+
+  @Test
+  void shouldNotLinkPrincipalWhenStoredKindDiffersFromAuthenticatedKind() {
+    PrincipalInfo human = new PrincipalInfo("alice", PrincipalKind.HUMAN, "Alice", Map.of(),
+        List.of());
+    Entity serviceAccount = new Entity(UUID.randomUUID(), "principal", "Alice", "alice",
+        List.of(new Property(null, "kind", "SERVICE_ACCOUNT")), List.of());
+    when(entityRepository.findByTemplateIdentifierAndIdentifier("principal", "alice"))
+        .thenReturn(Optional.of(serviceAccount));
+
+    assertThat(provisioningService.findPrincipalWithSameKind(human)).isEmpty();
   }
 }

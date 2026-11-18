@@ -4,13 +4,15 @@ import java.util.Locale;
 import java.util.Set;
 
 import org.springframework.boot.context.properties.ConfigurationProperties;
+import org.springframework.boot.context.properties.bind.DefaultValue;
 
-/// Externalized JWKS security configuration for webhook authentication.
+/// Externalized security configuration for webhook authentication.
 ///
 /// The `allowedJwksHosts` allow-list is intentionally small and explicit so teams can permit
 /// trusted issuers without hardcoding hostnames in the validator.
 @ConfigurationProperties(prefix = "idp.security.webhook")
-public record WebhookSecurityProperties(Set<String> allowedJwksHosts) {
+public record WebhookSecurityProperties(Set<String> allowedJwksHosts,
+    @DefaultValue("false") boolean allowNone) {
 
   public WebhookSecurityProperties {
     allowedJwksHosts = allowedJwksHosts == null

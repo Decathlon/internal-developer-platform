@@ -1,4 +1,3 @@
----
 openapi: 3.1.0
 info:
   title: Idp core API
@@ -14,6 +13,8 @@ tags:
   description: Entity relationship graph operations
 - name: Inbound Webhook Management
   description: Operations for managing inbound webhook connector configurations
+- name: Principals
+  description: Principal identity and profile management
 - name: Entities Management
   description: Operations related to entity management
 - name: Audit
@@ -28,7 +29,7 @@ tags:
 - name: Entity dynamic mapping
   description: Operations related to entity dynamic mapping management
 paths:
-  "/api/v1/inbound_webhooks/{identifier}":
+  /api/v1/inbound_webhooks/{identifier}:
     get:
       tags:
       - Inbound Webhook Management
@@ -45,21 +46,20 @@ paths:
         '200':
           description: Webhook connector found
           content:
-            "*/*":
+            '*/*':
               schema:
-                "$ref": "#/components/schemas/InboundWebhookDtoOut"
+                $ref: '#/components/schemas/InboundWebhookDtoOut'
         '404':
           description: Webhook connector not found with the provided identifier
           content:
-            "*/*":
+            application/problem+json:
               schema:
-                "$ref": "#/components/schemas/ErrorResponse"
+                $ref: '#/components/schemas/ProblemDetail'
     put:
       tags:
       - Inbound Webhook Management
       summary: Update an existing webhook connector by identifier
-      description: Update the details of an existing webhook connector identified
-        by its unique string identifier
+      description: Update the details of an existing webhook connector identified by its unique string identifier
       operationId: putWebhookConnector
       parameters:
       - name: identifier
@@ -71,33 +71,33 @@ paths:
         content:
           application/json:
             schema:
-              "$ref": "#/components/schemas/InboundWebhookUpdateDtoIn"
+              $ref: '#/components/schemas/InboundWebhookUpdateDtoIn'
         required: true
       responses:
         '200':
           description: Webhook connector updated successfully
           content:
-            "*/*":
+            '*/*':
               schema:
-                "$ref": "#/components/schemas/InboundWebhookDtoOut"
-        '400':
-          description: Invalid request payload
-          content:
-            "*/*":
-              schema:
-                "$ref": "#/components/schemas/ErrorResponse"
+                $ref: '#/components/schemas/InboundWebhookDtoOut'
         '404':
           description: Webhook connector not found with the provided identifier
           content:
-            "*/*":
+            application/problem+json:
               schema:
-                "$ref": "#/components/schemas/ErrorResponse"
+                $ref: '#/components/schemas/ProblemDetail'
+        '400':
+          description: Invalid request payload
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetail'
         '409':
           description: Webhook connector name already exists
           content:
-            "*/*":
+            application/problem+json:
               schema:
-                "$ref": "#/components/schemas/ErrorResponse"
+                $ref: '#/components/schemas/ProblemDetail'
     delete:
       tags:
       - Inbound Webhook Management
@@ -116,10 +116,10 @@ paths:
         '404':
           description: Webhook connector not found with the provided identifier
           content:
-            "*/*":
+            application/problem+json:
               schema:
-                "$ref": "#/components/schemas/ErrorResponse"
-  "/api/v1/entity_dynamic_mappings/{identifier}":
+                $ref: '#/components/schemas/ProblemDetail'
+  /api/v1/entity_dynamic_mappings/{identifier}:
     get:
       tags:
       - Entity dynamic mapping
@@ -136,21 +136,20 @@ paths:
         '200':
           description: Entity dynamic mapping found
           content:
-            "*/*":
+            '*/*':
               schema:
-                "$ref": "#/components/schemas/EntityDynamicMappingDtoOut"
+                $ref: '#/components/schemas/EntityDynamicMappingDtoOut'
         '404':
           description: Entity dynamic mapping not found with the provided identifier
           content:
-            "*/*":
+            application/problem+json:
               schema:
-                "$ref": "#/components/schemas/ErrorResponse"
+                $ref: '#/components/schemas/ProblemDetail'
     put:
       tags:
       - Entity dynamic mapping
       summary: Update an existing entity dynamic mapping by identifier
-      description: Update the details of an existing entity dynamic mapping  identified
-        by its unique string identifier
+      description: Update the details of an existing entity dynamic mapping  identified by its unique string identifier
       operationId: updateEntityDynamicMapping
       parameters:
       - name: identifier
@@ -162,34 +161,33 @@ paths:
         content:
           application/json:
             schema:
-              "$ref": "#/components/schemas/EntityDynamicMappingUpdateDtoIn"
+              $ref: '#/components/schemas/EntityDynamicMappingUpdateDtoIn'
         required: true
       responses:
         '200':
           description: Entity dynamic mapping updated successfully
           content:
-            "*/*":
+            '*/*':
               schema:
-                "$ref": "#/components/schemas/EntityDynamicMappingDtoOut"
-        '400':
-          description: Entity template identifier is mandatory or target entity template
-            not found
-          content:
-            "*/*":
-              schema:
-                "$ref": "#/components/schemas/ErrorResponse"
+                $ref: '#/components/schemas/EntityDynamicMappingDtoOut'
         '404':
           description: Entity dynamic mapping not found with the provided identifier
           content:
-            "*/*":
+            application/problem+json:
               schema:
-                "$ref": "#/components/schemas/ErrorResponse"
+                $ref: '#/components/schemas/ProblemDetail'
+        '400':
+          description: Entity template identifier is mandatory or target entity template not found
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetail'
         '409':
           description: Target entity template not found or identifier already exists
           content:
-            "*/*":
+            application/problem+json:
               schema:
-                "$ref": "#/components/schemas/ErrorResponse"
+                $ref: '#/components/schemas/ProblemDetail'
     delete:
       tags:
       - Entity dynamic mapping
@@ -208,10 +206,10 @@ paths:
         '404':
           description: Entity dynamic mapping not found with the provided identifier
           content:
-            "*/*":
+            application/problem+json:
               schema:
-                "$ref": "#/components/schemas/ErrorResponse"
-  "/api/v1/entity-templates/{identifier}":
+                $ref: '#/components/schemas/ProblemDetail'
+  /api/v1/entity-templates/{identifier}:
     get:
       tags:
       - Entities Templates Management
@@ -228,21 +226,20 @@ paths:
         '200':
           description: Template found
           content:
-            "*/*":
+            '*/*':
               schema:
-                "$ref": "#/components/schemas/EntityTemplateDtoOut"
+                $ref: '#/components/schemas/EntityTemplateDtoOut'
         '404':
           description: Template not found with the provided identifier
           content:
-            "*/*":
+            application/problem+json:
               schema:
-                "$ref": "#/components/schemas/ErrorResponse"
+                $ref: '#/components/schemas/ProblemDetail'
     put:
       tags:
       - Entities Templates Management
       summary: Update an existing template by template identifier
-      description: Update the details of an existing template identified by its unique
-        string identifier
+      description: Update the details of an existing template identified by its unique string identifier
       operationId: updateTemplate
       parameters:
       - name: identifier
@@ -254,21 +251,21 @@ paths:
         content:
           application/json:
             schema:
-              "$ref": "#/components/schemas/EntityTemplateUpdateDtoIn"
+              $ref: '#/components/schemas/EntityTemplateUpdateDtoIn'
         required: true
       responses:
         '200':
           description: Template update successfully
           content:
-            "*/*":
+            '*/*':
               schema:
-                "$ref": "#/components/schemas/EntityTemplateDtoOut"
+                $ref: '#/components/schemas/EntityTemplateDtoOut'
         '404':
           description: Template not found with the provided identifier
           content:
-            "*/*":
+            application/problem+json:
               schema:
-                "$ref": "#/components/schemas/ErrorResponse"
+                $ref: '#/components/schemas/ProblemDetail'
     delete:
       tags:
       - Entities Templates Management
@@ -287,24 +284,23 @@ paths:
         '400':
           description: 'Cannot delete template: it is a target for other relations'
           content:
-            "*/*":
+            application/problem+json:
               schema:
-                "$ref": "#/components/schemas/ErrorResponse"
+                $ref: '#/components/schemas/ProblemDetail'
         '404':
           description: Template not found with the provided identifier
           content:
-            "*/*":
+            application/problem+json:
               schema:
-                "$ref": "#/components/schemas/ErrorResponse"
-  "/api/v1/entities/{templateIdentifier}/{entityIdentifier}":
+                $ref: '#/components/schemas/ProblemDetail'
+  /api/v1/entities/{templateIdentifier}/{entityIdentifier}:
     get:
       tags:
       - Entities Management
       summary: Get entity by entity template and identifier
-      description: Retrieve a specific entity using its string identifier and its
-        template identifier with configurable relationship graph traversal. Supports
-        fetching both inbound and outbound relations up to a specified depth using
-        direct lineage mode.
+      description: Retrieve a specific entity using its string identifier and its template identifier with configurable relationship
+        graph traversal. Supports fetching both inbound and outbound relations up to a specified depth using direct lineage
+        mode.
       operationId: getEntity
       parameters:
       - name: templateIdentifier
@@ -319,8 +315,7 @@ paths:
           type: string
       - name: relations_depth
         in: query
-        description: 'Maximum depth to traverse when collecting entity relations.
-          Defaults to 1. Valid range: 1-6.'
+        description: 'Maximum depth to traverse when collecting entity relations. Defaults to 1. Valid range: 1-6.'
         required: false
         schema:
           type: integer
@@ -329,26 +324,32 @@ paths:
           minimum: 1
       - name: relations_to_display
         in: query
-        description: Comma-separated list of relation names to filter the response.
-          Only relations that form a connected chain from the root entity are included.
-          Isolated relations (not reachable from the root) are excluded even if listed.
+        description: Comma-separated list of relation names to filter the response. Only relations that form a connected chain
+          from the root entity are included. Isolated relations (not reachable from the root) are excluded even if listed.
           When omitted, all reachable relations are included.
         required: false
         schema:
           type: array
+      - name: include_relations_properties
+        in: query
+        description: When true, include property values for related entities. Defaults to false.
+        required: false
+        schema:
+          type: boolean
+          default: false
       responses:
         '200':
           description: Entity found
           content:
-            "*/*":
+            '*/*':
               schema:
-                "$ref": "#/components/schemas/EntityDtoOut"
+                $ref: '#/components/schemas/EntityDtoOut'
         '404':
           description: Entity not found with the provided identifier
           content:
-            "*/*":
+            application/problem+json:
               schema:
-                "$ref": "#/components/schemas/ErrorResponse"
+                $ref: '#/components/schemas/ProblemDetail'
     put:
       tags:
       - Entities Management
@@ -372,37 +373,104 @@ paths:
         content:
           application/json:
             schema:
-              "$ref": "#/components/schemas/EntityUpdateDtoIn"
+              $ref: '#/components/schemas/EntityUpdateDtoIn'
         required: true
       responses:
         '200':
           description: Entity updated successfully
           content:
-            "*/*":
+            '*/*':
               schema:
-                "$ref": "#/components/schemas/EntityDtoOut"
+                $ref: '#/components/schemas/EntityDtoOut'
         '400':
           description: Invalid entity data provided
           content:
-            "*/*":
+            application/problem+json:
               schema:
-                "$ref": "#/components/schemas/ErrorResponse"
+                $ref: '#/components/schemas/ProblemDetail'
         '401':
           description: Unauthorized - Missing or invalid token
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetail'
         '403':
           description: Insufficient rights
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetail'
         '404':
           description: Entity not found with the provided identifier
           content:
-            "*/*":
+            application/problem+json:
               schema:
-                "$ref": "#/components/schemas/ErrorResponse"
+                $ref: '#/components/schemas/ProblemDetail'
         '500':
           description: Unexpected server-side failure
           content:
-            "*/*":
+            application/problem+json:
               schema:
-                "$ref": "#/components/schemas/ErrorResponse"
+                $ref: '#/components/schemas/ProblemDetail'
+    delete:
+      tags:
+      - Entities Management
+      summary: Delete an existing entity
+      description: Delete an entity from the system using its template and entity identifiers. This operation removes the
+        entity and automatically cleans up any relations from other entities that reference it.
+      operationId: deleteEntity
+      parameters:
+      - name: templateIdentifier
+        in: path
+        required: true
+        schema:
+          type: string
+          minLength: 1
+      - name: entityIdentifier
+        in: path
+        required: true
+        schema:
+          type: string
+          minLength: 1
+      responses:
+        '204':
+          description: Entity deleted successfully
+        '400':
+          description: Invalid entity data provided
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetail'
+        '401':
+          description: Unauthorized - Missing or invalid token
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetail'
+        '403':
+          description: Insufficient rights
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetail'
+        '404':
+          description: Entity not found with the provided identifier
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetail'
+        '409':
+          description: Target entity has required relations
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetail'
+        '500':
+          description: Unexpected server-side failure
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetail'
     patch:
       tags:
       - Entities Management
@@ -426,90 +494,46 @@ paths:
         content:
           application/json:
             schema:
-              "$ref": "#/components/schemas/EntityPatchDtoIn"
+              $ref: '#/components/schemas/EntityPatchDtoIn'
         required: true
       responses:
         '200':
           description: Entity updated successfully
           content:
-            "*/*":
+            '*/*':
               schema:
-                "$ref": "#/components/schemas/EntityDtoOut"
+                $ref: '#/components/schemas/EntityDtoOut'
         '400':
           description: Invalid entity data provided
           content:
-            "*/*":
+            application/problem+json:
               schema:
-                "$ref": "#/components/schemas/ErrorResponse"
+                $ref: '#/components/schemas/ProblemDetail'
         '401':
           description: Unauthorized - Missing or invalid token
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetail'
         '403':
           description: Insufficient rights
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetail'
         '404':
           description: Entity not found with the provided identifier
           content:
-            "*/*":
+            application/problem+json:
               schema:
-                "$ref": "#/components/schemas/ErrorResponse"
+                $ref: '#/components/schemas/ProblemDetail'
         '500':
           description: Unexpected server-side failure
           content:
-            "*/*":
+            application/problem+json:
               schema:
-                "$ref": "#/components/schemas/ErrorResponse"
-    delete:
-      tags:
-      - Entities Management
-      summary: Delete an existing entity
-      description: Delete an entity from the system using its template and entity
-        identifiers. This operation removes the entity and automatically cleans up
-        any relations from other entities that reference it.
-      operationId: deleteEntity
-      parameters:
-      - name: templateIdentifier
-        in: path
-        required: true
-        schema:
-          type: string
-          minLength: 1
-      - name: entityIdentifier
-        in: path
-        required: true
-        schema:
-          type: string
-          minLength: 1
-      responses:
-        '204':
-          description: Entity deleted successfully
-        '400':
-          description: Invalid entity data provided
-          content:
-            "*/*":
-              schema:
-                "$ref": "#/components/schemas/ErrorResponse"
-        '401':
-          description: Unauthorized - Missing or invalid token
-        '403':
-          description: Insufficient rights
-        '404':
-          description: Entity not found with the provided identifier
-          content:
-            "*/*":
-              schema:
-                "$ref": "#/components/schemas/ErrorResponse"
-        '409':
-          description: Target entity has required relations
-          content:
-            "*/*":
-              schema:
-                "$ref": "#/components/schemas/ErrorResponse"
-        '500':
-          description: Unexpected server-side failure
-          content:
-            "*/*":
-              schema:
-                "$ref": "#/components/schemas/ErrorResponse"
-  "/webhooks/{webhookIdentifier}":
+                $ref: '#/components/schemas/ProblemDetail'
+  /webhooks/{webhookIdentifier}:
     post:
       tags:
       - spring-boot-platform-http-consumer
@@ -517,7 +541,7 @@ paths:
       responses:
         '200':
           description: OK
-  "/api/v1/inbound_webhooks":
+  /api/v1/inbound_webhooks:
     get:
       tags:
       - Inbound Webhook Management
@@ -529,24 +553,23 @@ paths:
         in: query
         description: Page number for pagination. Defaults to 0.
         content:
-          "*/*":
+          '*/*':
             schema:
               type: integer
               default: '0'
       - name: size
         in: query
-        description: Number of items per page. Defaults to 20.
+        description: Number of items per page. Defaults to 20. Must be between 1 and 500.
         content:
-          "*/*":
+          '*/*':
             schema:
               type: integer
               default: '20'
       - name: sort
         in: query
-        description: 'Sorting criteria in the format: property(,asc|desc). Defaults
-          to identifier,asc.'
+        description: 'Sorting criteria in the format: property(,asc|desc). Defaults to identifier,asc.'
         content:
-          "*/*":
+          '*/*':
             schema:
               type: string
               default: identifier,asc
@@ -554,78 +577,75 @@ paths:
         '200':
           description: Paginated webhook connector retrieved successfully
           content:
-            "*/*":
+            '*/*':
               schema:
-                "$ref": "#/components/schemas/WebhookConnectorPageResponse"
+                $ref: '#/components/schemas/WebhookConnectorPageResponse'
         '400':
           description: Invalid pagination parameters
           content:
-            "*/*":
+            application/problem+json:
               schema:
-                "$ref": "#/components/schemas/ErrorResponse"
+                $ref: '#/components/schemas/ProblemDetail'
     post:
       tags:
       - Inbound Webhook Management
       summary: Create a new webhook connector configuration
-      description: Creates a webhook connector configuration used by the generic inbound
-        webhook endpoint
+      description: Creates a webhook connector configuration used by the generic inbound webhook endpoint
       operationId: createInboundWebhook
       requestBody:
         content:
           application/json:
             schema:
-              "$ref": "#/components/schemas/InboundWebhookCreateDtoIn"
+              $ref: '#/components/schemas/InboundWebhookCreateDtoIn'
         required: true
       responses:
         '201':
           description: Webhook connector created
           content:
-            "*/*":
+            '*/*':
               schema:
-                "$ref": "#/components/schemas/InboundWebhookDtoOut"
+                $ref: '#/components/schemas/InboundWebhookDtoOut'
         '400':
           description: Invalid webhook connector data provided
           content:
-            "*/*":
+            '*/*':
               schema:
-                "$ref": "#/components/schemas/InboundWebhookDtoOut"
+                $ref: '#/components/schemas/InboundWebhookDtoOut'
         '409':
           description: Webhook connector already exists in this entityTemplateIdentifier
           content:
-            "*/*":
+            '*/*':
               schema:
-                "$ref": "#/components/schemas/InboundWebhookDtoOut"
-  "/api/v1/entity_dynamic_mappings":
+                $ref: '#/components/schemas/InboundWebhookDtoOut'
+  /api/v1/entity_dynamic_mappings:
     get:
       tags:
       - Entity dynamic mapping
       summary: Get paginated entity dynamic mappings
-      description: Retrieve a paginated list of entity dynamic mappings with optional
-        sorting
+      description: Retrieve a paginated list of entity dynamic mappings with optional sorting
       operationId: getEntityDynamicMappingPaginated
       parameters:
       - name: page
         in: query
         description: Page number for pagination. Defaults to 0.
         content:
-          "*/*":
+          '*/*':
             schema:
               type: integer
               default: '0'
       - name: size
         in: query
-        description: Number of items per page. Defaults to 20.
+        description: Number of items per page. Defaults to 20. Must be between 1 and 500.
         content:
-          "*/*":
+          '*/*':
             schema:
               type: integer
               default: '20'
       - name: sort
         in: query
-        description: 'Sorting criteria in the format: property(,asc|desc). Defaults
-          to identifier,asc.'
+        description: 'Sorting criteria in the format: property(,asc|desc). Defaults to identifier,asc.'
         content:
-          "*/*":
+          '*/*':
             schema:
               type: string
               default: identifier,asc
@@ -633,88 +653,86 @@ paths:
         '200':
           description: Paginated entity dynamic mapping retrieved successfully
           content:
-            "*/*":
+            '*/*':
               schema:
-                "$ref": "#/components/schemas/EntityDynamicMappingPageResponse"
+                $ref: '#/components/schemas/EntityDynamicMappingPageResponse'
         '400':
           description: Invalid pagination parameters
           content:
-            "*/*":
+            application/problem+json:
               schema:
-                "$ref": "#/components/schemas/ErrorResponse"
+                $ref: '#/components/schemas/ProblemDetail'
     post:
       tags:
       - Entity dynamic mapping
       summary: Create entity dynamic mapping
-      description: Creates a new entity dynamic mapping used by the generic inbound
-        webhook endpoint
+      description: Creates a new entity dynamic mapping used by the generic inbound webhook endpoint
       operationId: createDynamicMapping
       requestBody:
         content:
           application/json:
             schema:
-              "$ref": "#/components/schemas/EntityDynamicMappingCreateDtoIn"
+              $ref: '#/components/schemas/EntityDynamicMappingCreateDtoIn'
         required: true
       responses:
         '201':
           description: Entity dynamic mapping created
           content:
-            "*/*":
+            '*/*':
               schema:
-                "$ref": "#/components/schemas/EntityDynamicMappingDtoOut"
+                $ref: '#/components/schemas/EntityDynamicMappingDtoOut'
         '400':
           description: Invalid entity dynamic mapping data provided
           content:
-            "*/*":
+            '*/*':
               schema:
-                "$ref": "#/components/schemas/EntityDynamicMappingDtoOut"
+                $ref: '#/components/schemas/EntityDynamicMappingDtoOut'
         '409':
           description: Identifier already exists
           content:
-            "*/*":
+            '*/*':
               schema:
-                "$ref": "#/components/schemas/EntityDynamicMappingDtoOut"
-  "/api/v1/entity_dynamic_mappings/dry-run":
+                $ref: '#/components/schemas/EntityDynamicMappingDtoOut'
+  /api/v1/entity_dynamic_mappings/dry-run:
     post:
       tags:
       - Entity dynamic mapping
       summary: Validate a single entity dynamic mapping with a dry-run
-      description: Validate one JSLT mapping definition against a sample payload and
-        target template identifier without persisting any data
+      description: Validate one JSLT mapping definition against a sample payload and target template identifier without persisting
+        any data
       operationId: executeDryRun
       requestBody:
         content:
           application/json:
             schema:
-              "$ref": "#/components/schemas/EntityDynamicMappingDryRunDtoIn"
+              $ref: '#/components/schemas/EntityDynamicMappingDryRunDtoIn'
         required: true
       responses:
         '200':
           description: Dry-run completed successfully
           content:
-            "*/*":
+            '*/*':
               schema:
-                "$ref": "#/components/schemas/EntityDynamicMappingDryRunDtoOut"
+                $ref: '#/components/schemas/EntityDynamicMappingDryRunDtoOut'
         '400':
           description: Invalid entity dynamic mapping data provided
           content:
-            "*/*":
+            application/problem+json:
               schema:
-                "$ref": "#/components/schemas/ErrorResponse"
+                $ref: '#/components/schemas/ProblemDetail'
         '404':
           description: Entity template not found with the provided identifier
           content:
-            "*/*":
+            application/problem+json:
               schema:
-                "$ref": "#/components/schemas/ErrorResponse"
+                $ref: '#/components/schemas/ProblemDetail'
         '422':
-          description: Mapping validation, template validation or expression evaluation
-            error
+          description: Mapping validation, template validation or expression evaluation error
           content:
-            "*/*":
+            application/problem+json:
               schema:
-                "$ref": "#/components/schemas/ErrorResponse"
-  "/api/v1/entity-templates":
+                $ref: '#/components/schemas/ProblemDetail'
+  /api/v1/entity-templates:
     get:
       tags:
       - Entities Templates Management
@@ -726,24 +744,23 @@ paths:
         in: query
         description: Page number for pagination. Defaults to 0.
         content:
-          "*/*":
+          '*/*':
             schema:
               type: integer
               default: '0'
       - name: size
         in: query
-        description: Number of items per page. Defaults to 20.
+        description: Number of items per page. Defaults to 20. Must be between 1 and 500.
         content:
-          "*/*":
+          '*/*':
             schema:
               type: integer
               default: '20'
       - name: sort
         in: query
-        description: 'Sorting criteria in the format: property(,asc|desc). Defaults
-          to identifier,asc.'
+        description: 'Sorting criteria in the format: property(,asc|desc). Defaults to identifier,asc.'
         content:
-          "*/*":
+          '*/*':
             schema:
               type: string
               default: identifier,asc
@@ -751,15 +768,15 @@ paths:
         '200':
           description: Paginated templates retrieved successfully
           content:
-            "*/*":
+            '*/*':
               schema:
-                "$ref": "#/components/schemas/TemplatePageResponse"
+                $ref: '#/components/schemas/TemplatePageResponse'
         '400':
           description: Invalid pagination parameters
           content:
-            "*/*":
+            application/problem+json:
               schema:
-                "$ref": "#/components/schemas/ErrorResponse"
+                $ref: '#/components/schemas/ProblemDetail'
     post:
       tags:
       - Entities Templates Management
@@ -770,22 +787,22 @@ paths:
         content:
           application/json:
             schema:
-              "$ref": "#/components/schemas/EntityTemplateCreateDtoIn"
+              $ref: '#/components/schemas/EntityTemplateCreateDtoIn'
         required: true
       responses:
         '201':
           description: Template created successfully
           content:
-            "*/*":
+            '*/*':
               schema:
-                "$ref": "#/components/schemas/EntityTemplateDtoOut"
+                $ref: '#/components/schemas/EntityTemplateDtoOut'
         '400':
           description: Invalid template data provided
           content:
-            "*/*":
+            application/problem+json:
               schema:
-                "$ref": "#/components/schemas/ErrorResponse"
-  "/api/v1/entities/{templateIdentifier}":
+                $ref: '#/components/schemas/ProblemDetail'
+  /api/v1/entities/{templateIdentifier}:
     get:
       tags:
       - Entities Management
@@ -798,58 +815,66 @@ paths:
         description: Page number for pagination. Defaults to 0.
         required: false
         content:
-          "*/*":
+          '*/*':
             schema:
               type: integer
               default: '0'
       - name: size
         in: query
-        description: Number of items per page. Defaults to 20.
+        description: Number of items per page. Defaults to 20. Must be between 1 and 500.
         required: false
         content:
-          "*/*":
+          '*/*':
             schema:
               type: integer
               default: '20'
-      - name: templateIdentifier
-        in: path
-        required: true
-        schema:
-          type: string
-      - name: q
-        in: query
-        description: 'Optional filter query using a simple expression language. See
-          more details in the API documentation. Example: `name:idp` for entities
-          with names containing ''idp''.
-
-          '
-        required: false
-        content:
-          "*/*":
-            schema:
-              type: string
       - name: sort
         in: query
-        description: 'Sorting criteria in the format: property(,asc|desc). Defaults
-          to identifier,asc.'
+        description: 'Sorting criteria in the format: field[,asc|desc]'
+        required: false
         content:
           "*/*":
             schema:
               type: string
               default: identifier,asc
+      - name: templateIdentifier
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: sort
+        in: query
+        description: 'Sorting criteria in the format: property(,asc|desc). Defaults to identifier,asc.'
+        required: false
+        content:
+          '*/*':
+            schema:
+              type: string
+              default: identifier,asc
+      - name: q
+        in: query
+        description: 'Optional filter query using a simple expression language. See more details in the API documentation.
+          Example: `name:idp` for entities with names containing ''idp''.
+
+          '
+        required: false
+        content:
+          '*/*':
+            schema:
+              type: string
       responses:
         '200':
           description: Paginated entities retrieved successfully
           content:
-            "*/*":
+            '*/*':
               schema:
-                "$ref": "#/components/schemas/EntityPageResponse"
+                $ref: '#/components/schemas/EntityPageResponse'
         '400':
           description: Invalid filter query syntax
           content:
-            "*/*":
+            application/problem+json:
               schema:
-                "$ref": "#/components/schemas/ErrorResponse"
+                $ref: '#/components/schemas/ProblemDetail'
     post:
       tags:
       - Entities Management
@@ -867,79 +892,99 @@ paths:
         content:
           application/json:
             schema:
-              "$ref": "#/components/schemas/EntityCreateDtoIn"
+              $ref: '#/components/schemas/EntityCreateDtoIn'
         required: true
       responses:
         '201':
           description: Entity created successfully
           content:
-            "*/*":
+            '*/*':
               schema:
-                "$ref": "#/components/schemas/EntityDtoOut"
+                $ref: '#/components/schemas/EntityDtoOut'
         '400':
           description: Invalid entity data provided
           content:
-            "*/*":
+            application/problem+json:
               schema:
-                "$ref": "#/components/schemas/ErrorResponse"
+                $ref: '#/components/schemas/ProblemDetail'
         '401':
           description: Unauthorized - Missing or invalid token
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetail'
         '403':
           description: Insufficient rights
-        '404':
-          description: Template not found with the provided identifier
           content:
-            "*/*":
+            application/problem+json:
               schema:
-                "$ref": "#/components/schemas/ErrorResponse"
+                $ref: '#/components/schemas/ProblemDetail'
         '409':
           description: Entity already exists in this template
           content:
-            "*/*":
+            application/problem+json:
               schema:
-                "$ref": "#/components/schemas/ErrorResponse"
+                $ref: '#/components/schemas/ProblemDetail'
+        '404':
+          description: Template not found with the provided identifier
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetail'
         '500':
           description: Unexpected server-side failure
           content:
-            "*/*":
+            application/problem+json:
               schema:
-                "$ref": "#/components/schemas/ErrorResponse"
-  "/api/v1/entities/search":
+                $ref: '#/components/schemas/ProblemDetail'
+  /api/v1/entities/search:
     post:
       tags:
       - Entities Management
       summary: Search entities
-      description: Search for entities across all templates using nested filter queries.
-        Supports complex logical compositions (AND / OR) of filter criteria on template,
-        identifier, name, properties, relations, and reverse relations.
+      description: Search for entities across all templates using nested filter queries. Supports complex logical compositions
+        (AND / OR) of filter criteria on template, identifier, name, properties, relations, and reverse relations.
       operationId: searchEntities
       requestBody:
         content:
           application/json:
             schema:
-              "$ref": "#/components/schemas/EntitySearchRequestDtoIn"
+              $ref: '#/components/schemas/EntitySearchRequestDtoIn'
+            examples:
+              Entity search:
+                description: Entity search
+                value:
+                  query: test
+                  filter:
+                    connector: AND
+                    criteria:
+                    - field: template
+                      operation: EQ
+                      value: service
+                  page: 0
+                  size: 20
+                  sort: identifier,asc
         required: true
       responses:
         '200':
           description: Entities retrieved successfully
           content:
-            "*/*":
+            '*/*':
               schema:
-                "$ref": "#/components/schemas/EntityPageResponse"
+                $ref: '#/components/schemas/EntityPageResponse'
         '400':
           description: Invalid search filter
           content:
-            "*/*":
+            application/problem+json:
               schema:
-                "$ref": "#/components/schemas/ErrorResponse"
-  "/api/v1/entities/{templateIdentifier}/{entityIdentifier}/graph":
+                $ref: '#/components/schemas/ProblemDetail'
+  /api/v1/entities/{templateIdentifier}/{entityIdentifier}/graph:
     get:
       tags:
       - Entity Graph
       summary: Get entity relationship graph as flat nodes and edges
-      description: Retrieves the entity relationship graph as a flat nodes-and-edges
-        structure, suitable for frontend visualization tools such as React Flow, Vis.js,
-        and Cytoscape.
+      description: Retrieves the entity relationship graph as a flat nodes-and-edges structure, suitable for frontend visualization
+        tools such as React Flow, Vis.js, and Cytoscape.
       operationId: getEntityGraph
       parameters:
       - name: templateIdentifier
@@ -956,8 +1001,7 @@ paths:
           minLength: 1
       - name: depth
         in: query
-        description: Maximum traversal depth for relationship resolution. Clamped
-          between 1 and 6.
+        description: Maximum traversal depth for relationship resolution. Clamped between 1 and 6.
         required: false
         schema:
           type: integer
@@ -965,16 +1009,15 @@ paths:
           default: 1
       - name: include_data
         in: query
-        description: When true, each graph node includes a data object containing
-          the entity's property values. Defaults to false.
+        description: When true, each graph node includes a data object containing the entity's property values. Defaults to
+          false.
         required: false
         schema:
           type: boolean
           default: false
       - name: traversal_mode
         in: query
-        description: Specifies the traversal mode for the entity graph. Defaults to
-          DIRECT_LINEAGE.
+        description: Specifies the traversal mode for the entity graph. Defaults to DIRECT_LINEAGE.
         required: false
         schema:
           type: string
@@ -985,8 +1028,8 @@ paths:
           - OUTBOUND_ONLY
       - name: relations
         in: query
-        description: When provided, only relations whose name matches one of the listed
-          values are traversed and included. Omit to include all relations.
+        description: When provided, only relations whose name matches one of the listed values are traversed and included.
+          Omit to include all relations.
         required: false
         schema:
           type: array
@@ -994,9 +1037,8 @@ paths:
             type: string
       - name: properties
         in: query
-        description: When provided, each node's data object is restricted to the listed
-          property names. Requires include_data=true to have any effect. Omit to include
-          all properties.
+        description: When provided, each node's data object is restricted to the listed property names. Requires include_data=true
+          to have any effect. Omit to include all properties.
         required: false
         schema:
           type: array
@@ -1006,22 +1048,92 @@ paths:
         '200':
           description: Flat entity graph successfully retrieved
           content:
-            "*/*":
+            '*/*':
               schema:
-                "$ref": "#/components/schemas/EntityGraphFlatDtoOut"
+                $ref: '#/components/schemas/EntityGraphFlatDtoOut'
+        '400':
+          description: Invalid graph query parameter value
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetail'
         '404':
           description: Entity not found with the provided identifier
           content:
-            "*/*":
+            application/problem+json:
               schema:
-                "$ref": "#/components/schemas/ErrorResponse"
-  "/api/v1/audit/entities/{templateIdentifier}/{entityIdentifier}":
+                $ref: '#/components/schemas/ProblemDetail'
+  /api/v1/entities/principals/me:
+    get:
+      tags:
+      - Principals
+      summary: Get current authenticated principal
+      description: 'Returns the Principal entity of the currently authenticated actor (human or service account).
+
+        The principal is automatically provisioned via JIT if this is the first authentication.
+
+
+        **Response includes:**
+
+        - Principal identifier (unique ID)
+
+        - Display name
+
+        - Principal kind (HUMAN or SERVICE_ACCOUNT)
+
+        - Attributes (email, client_id, etc.)
+
+        - Group memberships (via relations)
+
+
+        **Use cases:**
+
+        - Profile inspection: "Who am I?"
+
+        - Authorization context retrieval
+
+        - Service account validation
+
+        '
+      operationId: getCurrentPrincipal
+      responses:
+        '200':
+          description: Principal entity retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EntityDtoOut'
+        '401':
+          description: Unauthorized - Missing or invalid token
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetail'
+        '403':
+          description: Insufficient rights
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetail'
+        '404':
+          description: Principal not found in catalog (JIT provisioning may have failed)
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetail'
+        '500':
+          description: Unexpected server-side failure
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetail'
+  /api/v1/audit/entities/{templateIdentifier}/{entityIdentifier}:
     get:
       tags:
       - Audit
       summary: Get entity audit history
-      description: Retrieve the complete audit history for a specific entity, including
-        all revisions with timestamps and modification types
+      description: Retrieve the complete audit history for a specific entity, including all revisions with timestamps and
+        modification types
       operationId: getEntityAuditHistory
       parameters:
       - name: templateIdentifier
@@ -1040,35 +1152,42 @@ paths:
         '200':
           description: Successfully retrieved entity audit history
           content:
-            "*/*":
+            '*/*':
               schema:
                 type: array
                 items:
-                  "$ref": "#/components/schemas/EntityAuditDtoOut"
+                  $ref: '#/components/schemas/EntityAuditDtoOut'
         '400':
           description: Invalid template or entity identifier
           content:
-            "*/*":
+            application/problem+json:
               schema:
-                "$ref": "#/components/schemas/ErrorResponse"
+                $ref: '#/components/schemas/ProblemDetail'
         '401':
           description: Unauthorized - Missing or invalid token
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetail'
         '403':
           description: Insufficient rights
-        '404':
-          description: Template not found with the provided identifier or Entity not
-            found with the provided identifier
           content:
-            "*/*":
+            application/problem+json:
               schema:
-                "$ref": "#/components/schemas/ErrorResponse"
+                $ref: '#/components/schemas/ProblemDetail'
+        '404':
+          description: Template not found with the provided identifier or Entity not found with the provided identifier
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetail'
         '500':
           description: Unexpected server-side failure
           content:
-            "*/*":
+            application/problem+json:
               schema:
-                "$ref": "#/components/schemas/ErrorResponse"
-  "/actuator":
+                $ref: '#/components/schemas/ProblemDetail'
+  /actuator:
     get:
       tags:
       - Actuator
@@ -1084,22 +1203,22 @@ paths:
                 additionalProperties:
                   type: object
                   additionalProperties:
-                    "$ref": "#/components/schemas/Link"
+                    $ref: '#/components/schemas/Link'
             application/vnd.spring-boot.actuator.v2+json:
               schema:
                 type: object
                 additionalProperties:
                   type: object
                   additionalProperties:
-                    "$ref": "#/components/schemas/Link"
+                    $ref: '#/components/schemas/Link'
             application/json:
               schema:
                 type: object
                 additionalProperties:
                   type: object
                   additionalProperties:
-                    "$ref": "#/components/schemas/Link"
-  "/actuator/health":
+                    $ref: '#/components/schemas/Link'
+  /actuator/health:
     get:
       tags:
       - Actuator
@@ -1125,14 +1244,10 @@ components:
       properties:
         type:
           type: string
-          minLength: 1
         config:
           type: object
           additionalProperties:
             type: string
-      required:
-      - config
-      - type
     InboundWebhookUpdateDtoIn:
       type: object
       properties:
@@ -1149,7 +1264,7 @@ components:
           items:
             type: string
         security:
-          "$ref": "#/components/schemas/InboundWebhookSecurityContractDtoIn"
+          $ref: '#/components/schemas/InboundWebhookSecurityContractDtoIn'
       required:
       - name
     EntityDynamicMappingDtoOut:
@@ -1173,7 +1288,7 @@ components:
         description:
           type: string
         entity:
-          "$ref": "#/components/schemas/InboundWebhookEntityMappingDtoOut"
+          $ref: '#/components/schemas/InboundWebhookEntityMappingDtoOut'
     InboundWebhookDtoOut:
       type: object
       properties:
@@ -1188,9 +1303,9 @@ components:
         mappings:
           type: array
           items:
-            "$ref": "#/components/schemas/EntityDynamicMappingDtoOut"
+            $ref: '#/components/schemas/EntityDynamicMappingDtoOut'
         security:
-          "$ref": "#/components/schemas/InboundWebhookSecurityDtoOut"
+          $ref: '#/components/schemas/InboundWebhookSecurityDtoOut'
     InboundWebhookEntityMappingDtoOut:
       type: object
       properties:
@@ -1205,7 +1320,7 @@ components:
         relations:
           type: array
           items:
-            "$ref": "#/components/schemas/RelationMappingDtoOut"
+            $ref: '#/components/schemas/RelationMappingDtoOut'
     InboundWebhookSecurityDtoOut:
       type: object
       properties:
@@ -1224,13 +1339,32 @@ components:
           type: array
           items:
             type: string
-    ErrorResponse:
+    ProblemDetail:
       type: object
       properties:
+        type:
+          type: string
+          format: uri
+        title:
+          type: string
+        status:
+          type: integer
+          format: int32
+        detail:
+          type: string
+        instance:
+          type: string
+          format: uri
         error:
           type: string
+          description: HTTP status name, e.g. NOT_FOUND
         error_description:
           type: string
+          description: Human-readable description of the error
+        timestamp:
+          type: string
+          format: date-time
+          description: Instant at which the error occurred
     EntityDynamicMappingRelationDtoIn:
       type: object
       properties:
@@ -1268,7 +1402,7 @@ components:
         description:
           type: string
         entity:
-          "$ref": "#/components/schemas/EntityMappingDtoIn"
+          $ref: '#/components/schemas/EntityMappingDtoIn'
       required:
       - action
       - entity
@@ -1291,7 +1425,7 @@ components:
         relations:
           type: array
           items:
-            "$ref": "#/components/schemas/EntityDynamicMappingRelationDtoIn"
+            $ref: '#/components/schemas/EntityDynamicMappingRelationDtoIn'
       required:
       - identifier
       - name
@@ -1305,7 +1439,7 @@ components:
           example: Service
           maxLength: 255
           minLength: 0
-          pattern: "^[a-zA-Z0-9 _-]+$"
+          pattern: ^[a-zA-Z0-9 _-]+$
         description:
           type: string
           description: Entity Template description
@@ -1314,12 +1448,12 @@ components:
           type: array
           description: List of property definitions for this template
           items:
-            "$ref": "#/components/schemas/PropertyDefinitionDtoIn"
+            $ref: '#/components/schemas/PropertyDefinitionDtoIn'
         relations_definitions:
           type: array
           description: List of relation definitions for this template
           items:
-            "$ref": "#/components/schemas/RelationDefinitionDtoIn"
+            $ref: '#/components/schemas/RelationDefinitionDtoIn'
       required:
       - name
     PropertyDefinitionDtoIn:
@@ -1350,7 +1484,7 @@ components:
           description: Whether this property is required
           example: true
         rules:
-          "$ref": "#/components/schemas/PropertyRulesDtoIn"
+          $ref: '#/components/schemas/PropertyRulesDtoIn'
           description: Property validation rules
       required:
       - description
@@ -1378,7 +1512,7 @@ components:
         regex:
           type: string
           description: Regular expression pattern for validation
-          example: "^[a-zA-Z0-9]+$"
+          example: ^[a-zA-Z0-9]+$
         max_length:
           type: integer
           format: int32
@@ -1446,12 +1580,12 @@ components:
           type: array
           description: List of property definitions for this template
           items:
-            "$ref": "#/components/schemas/PropertyDefinitionDtoOut"
+            $ref: '#/components/schemas/PropertyDefinitionDtoOut'
         relations_definitions:
           type: array
           description: List of relation definitions for this template
           items:
-            "$ref": "#/components/schemas/RelationDefinitionDtoOut"
+            $ref: '#/components/schemas/RelationDefinitionDtoOut'
     PropertyDefinitionDtoOut:
       type: object
       description: Output DTO for property definition
@@ -1477,7 +1611,7 @@ components:
           description: Whether this property is required
           example: true
         rules:
-          "$ref": "#/components/schemas/PropertyRulesDtoOut"
+          $ref: '#/components/schemas/PropertyRulesDtoOut'
           description: Property validation rules
           example: Property validation rules
     PropertyRulesDtoOut:
@@ -1502,7 +1636,7 @@ components:
         regex:
           type: string
           description: Regular expression for property validation
-          example: "^[A-Za-z0-9]+$"
+          example: ^[A-Za-z0-9]+$
         max_length:
           type: integer
           format: int32
@@ -1564,27 +1698,9 @@ components:
           type: array
           description: List of relations for this entity
           items:
-            "$ref": "#/components/schemas/RelationDtoIn"
+            $ref: '#/components/schemas/RelationDtoIn'
       required:
       - name
-    EntityPatchDtoIn:
-      type: object
-      description: Input DTO for partially updating an entity. Omitted fields remain unchanged.
-      properties:
-        name:
-          type: string
-          description: Name of the entity
-          example: my-web-service-updated
-        properties:
-          type: object
-          additionalProperties:
-            type: string
-          description: Properties to merge with the existing entity properties
-        relations:
-          type: array
-          description: Relations to merge with the existing entity relations
-          items:
-            "$ref": "#/components/schemas/RelationDtoIn"
     RelationDtoIn:
       type: object
       description: Input DTO for an entity relation instance
@@ -1622,7 +1738,7 @@ components:
           additionalProperties:
             type: array
             items:
-              "$ref": "#/components/schemas/EntitySummaryDto"
+              $ref: '#/components/schemas/EntitySummaryDto'
     EntitySummaryDto:
       type: object
       properties:
@@ -1632,6 +1748,10 @@ components:
           type: string
         template_identifier:
           type: string
+        properties:
+          type: object
+          additionalProperties: {}
+          description: Property values for the related entity; included only when include_relations_properties=true
     InboundWebhookCreateDtoIn:
       type: object
       properties:
@@ -1652,7 +1772,7 @@ components:
           items:
             type: string
         security:
-          "$ref": "#/components/schemas/InboundWebhookSecurityContractDtoIn"
+          $ref: '#/components/schemas/InboundWebhookSecurityContractDtoIn'
       required:
       - identifier
       - name
@@ -1681,7 +1801,7 @@ components:
         description:
           type: string
         entity:
-          "$ref": "#/components/schemas/EntityMappingDtoIn"
+          $ref: '#/components/schemas/EntityMappingDtoIn'
       required:
       - action
       - entity
@@ -1694,7 +1814,7 @@ components:
       description: Request payload for a single entity dynamic mapping dry-run validation
       properties:
         mapping:
-          "$ref": "#/components/schemas/EntityDynamicMappingCreateDtoIn"
+          $ref: '#/components/schemas/EntityDynamicMappingCreateDtoIn'
         payload:
           description: Sample JSON payload to test against the webhook mapping configuration
       required:
@@ -1721,7 +1841,7 @@ components:
           type: array
           description: Extracted relations
           items:
-            "$ref": "#/components/schemas/DryRunRelationDto"
+            $ref: '#/components/schemas/DryRunRelationDto'
     DryRunEntityResultDto:
       type: object
       properties:
@@ -1732,10 +1852,10 @@ components:
           type: boolean
           description: Whether the mapping was successful
         entity:
-          "$ref": "#/components/schemas/DryRunEntityDto"
+          $ref: '#/components/schemas/DryRunEntityDto'
           description: Mapped entity data
         error:
-          "$ref": "#/components/schemas/DryRunErrorDto"
+          $ref: '#/components/schemas/DryRunErrorDto'
           description: Error details
     DryRunErrorDto:
       type: object
@@ -1765,7 +1885,7 @@ components:
           type: array
           description: List of entity mapping results
           items:
-            "$ref": "#/components/schemas/DryRunEntityResultDto"
+            $ref: '#/components/schemas/DryRunEntityResultDto'
     EntityTemplateCreateDtoIn:
       type: object
       description: Input DTO for creating an entity template
@@ -1781,7 +1901,7 @@ components:
           example: Service
           maxLength: 255
           minLength: 0
-          pattern: "^[a-zA-Z0-9 _-]+$"
+          pattern: ^[a-zA-Z0-9 _-]+$
         description:
           type: string
           description: Entity Template description
@@ -1790,12 +1910,12 @@ components:
           type: array
           description: List of property definitions for this template
           items:
-            "$ref": "#/components/schemas/PropertyDefinitionDtoIn"
+            $ref: '#/components/schemas/PropertyDefinitionDtoIn'
         relations_definitions:
           type: array
           description: List of relation definitions for this template
           items:
-            "$ref": "#/components/schemas/RelationDefinitionDtoIn"
+            $ref: '#/components/schemas/RelationDefinitionDtoIn'
       required:
       - identifier
       - name
@@ -1825,7 +1945,7 @@ components:
           type: array
           description: List of relations for this entity
           items:
-            "$ref": "#/components/schemas/RelationDtoIn"
+            $ref: '#/components/schemas/RelationDtoIn'
       required:
       - identifier
       - name
@@ -1835,14 +1955,12 @@ components:
       properties:
         query:
           type: string
-          description: Free-text search string. When present, returns entities whose
-            identifier, name, templateIdentifier, or any property value contains this
-            string (case-insensitive). Can be combined with filter.
+          description: Free-text search string. When present, returns entities whose identifier, name, templateIdentifier,
+            or any property value contains this string (case-insensitive). Can be combined with filter.
           example: checkout
         filter:
-          "$ref": "#/components/schemas/FilterNodeDtoIn"
-          description: Root node of the search filter tree. May be omitted or null
-            to return all entities.
+          $ref: '#/components/schemas/FilterNodeDtoIn'
+          description: Root node of the search filter tree. May be omitted or null to return all entities.
         page:
           type: integer
           format: int32
@@ -1853,45 +1971,39 @@ components:
           type: integer
           format: int32
           default: 20
-          description: Number of items per page. Defaults to 20.
+          description: Number of items per page. Defaults to 20. Must be between 1 and 500.
           example: 20
         sort:
           type: string
-          description: 'Sorting criteria in the format: property(,asc|desc). Defaults
-            to identifier,asc.'
-          example: identifier:asc
+          description: 'Sorting criteria in the format: property(,asc|desc). Defaults to identifier,asc.'
+          example: identifier,asc
     FilterNodeDtoIn:
       type: object
-      description: A node in the search filter tree. Either a logical group (connector
-        + criteria) or a leaf criterion (field + operation + value).
+      description: A node in the search filter tree. Either a logical group (connector + criteria) or a leaf criterion (field
+        + operation + value).
       properties:
         connector:
           type: string
-          description: 'Logical connector for a group node. One of: AND, OR. Required
-            for group nodes.'
+          description: 'Logical connector for a group node. One of: AND, OR. Required for group nodes.'
           example: AND
         criteria:
           type: array
-          description: Child filter nodes for a group node. Required for group nodes
-            (must be non-empty).
+          description: Child filter nodes for a group node. Required for group nodes (must be non-empty).
           items:
-            "$ref": "#/components/schemas/FilterNodeDtoIn"
+            $ref: '#/components/schemas/FilterNodeDtoIn'
         field:
           type: string
-          description: 'Field to filter on for a criterion node. Required for leaf
-            nodes. Examples: template, identifier, name, relation, property.language,
-            relation.api-link, relation.api-link.identifier, relations_as_target.api-link.name'
+          description: 'Field to filter on for a criterion node. Required for leaf nodes. Examples: template, identifier,
+            name, relation, property.language, relation.api-link, relation.api-link.identifier, relations_as_target.api-link.name'
           example: template
         operation:
           type: string
-          description: 'Filter operation for a criterion node. One of: EQ, NEQ, CONTAINS,
-            NOT_CONTAINS, STARTS_WITH, ENDS_WITH, GT, GTE, LT, LTE. Required for leaf
-            nodes.'
+          description: 'Filter operation for a criterion node. One of: EQ, NEQ, CONTAINS, NOT_CONTAINS, STARTS_WITH, ENDS_WITH,
+            GT, GTE, LT, LTE. Required for leaf nodes.'
           example: EQ
         value:
           type: string
-          description: Value to compare against for a criterion node. Required for
-            leaf nodes.
+          description: Value to compare against for a criterion node. Required for leaf nodes.
           example: microservice
     EntityPageResponse:
       type: object
@@ -1900,24 +2012,24 @@ components:
         content:
           type: array
           items:
-            "$ref": "#/components/schemas/EntityDtoOut"
+            $ref: '#/components/schemas/EntityDtoOut'
         pageable:
-          "$ref": "#/components/schemas/PageableObject"
+          $ref: '#/components/schemas/PageableObject'
+        last:
+          type: boolean
         totalElements:
           type: integer
           format: int64
         totalPages:
           type: integer
           format: int32
-        last:
-          type: boolean
-        sort:
-          "$ref": "#/components/schemas/SortObject"
         first:
           type: boolean
         numberOfElements:
           type: integer
           format: int32
+        sort:
+          $ref: '#/components/schemas/SortObject'
         size:
           type: integer
           format: int32
@@ -1929,6 +2041,9 @@ components:
     PageableObject:
       type: object
       properties:
+        offset:
+          type: integer
+          format: int64
         paged:
           type: boolean
         pageNumber:
@@ -1938,21 +2053,38 @@ components:
           type: integer
           format: int32
         sort:
-          "$ref": "#/components/schemas/SortObject"
+          $ref: '#/components/schemas/SortObject'
         unpaged:
           type: boolean
-        offset:
-          type: integer
-          format: int64
     SortObject:
       type: object
       properties:
+        empty:
+          type: boolean
         sorted:
           type: boolean
         unsorted:
           type: boolean
-        empty:
-          type: boolean
+    EntityPatchDtoIn:
+      type: object
+      description: Input DTO for partially updating an entity
+      properties:
+        name:
+          type: string
+          description: Name of the entity
+          example: my-web-service-updated
+        properties:
+          type: object
+          additionalProperties:
+            type: string
+          description: Map of property name to value for this entity
+          example:
+            port: '8080'
+        relations:
+          type: array
+          description: List of relations for this entity
+          items:
+            $ref: '#/components/schemas/RelationDtoIn'
     WebhookConnectorPageResponse:
       type: object
       description: Paginated response containing Inbound Webhook Connector objects
@@ -1960,24 +2092,24 @@ components:
         content:
           type: array
           items:
-            "$ref": "#/components/schemas/InboundWebhookDtoOut"
+            $ref: '#/components/schemas/InboundWebhookDtoOut'
         pageable:
-          "$ref": "#/components/schemas/PageableObject"
+          $ref: '#/components/schemas/PageableObject'
+        last:
+          type: boolean
         totalElements:
           type: integer
           format: int64
         totalPages:
           type: integer
           format: int32
-        last:
-          type: boolean
-        sort:
-          "$ref": "#/components/schemas/SortObject"
         first:
           type: boolean
         numberOfElements:
           type: integer
           format: int32
+        sort:
+          $ref: '#/components/schemas/SortObject'
         size:
           type: integer
           format: int32
@@ -1993,24 +2125,24 @@ components:
         content:
           type: array
           items:
-            "$ref": "#/components/schemas/EntityDynamicMappingDtoOut"
+            $ref: '#/components/schemas/EntityDynamicMappingDtoOut'
         pageable:
-          "$ref": "#/components/schemas/PageableObject"
+          $ref: '#/components/schemas/PageableObject'
+        last:
+          type: boolean
         totalElements:
           type: integer
           format: int64
         totalPages:
           type: integer
           format: int32
-        last:
-          type: boolean
-        sort:
-          "$ref": "#/components/schemas/SortObject"
         first:
           type: boolean
         numberOfElements:
           type: integer
           format: int32
+        sort:
+          $ref: '#/components/schemas/SortObject'
         size:
           type: integer
           format: int32
@@ -2026,24 +2158,24 @@ components:
         content:
           type: array
           items:
-            "$ref": "#/components/schemas/EntityTemplateDtoOut"
+            $ref: '#/components/schemas/EntityTemplateDtoOut'
         pageable:
-          "$ref": "#/components/schemas/PageableObject"
+          $ref: '#/components/schemas/PageableObject'
+        last:
+          type: boolean
         totalElements:
           type: integer
           format: int64
         totalPages:
           type: integer
           format: int32
-        last:
-          type: boolean
-        sort:
-          "$ref": "#/components/schemas/SortObject"
         first:
           type: boolean
         numberOfElements:
           type: integer
           format: int32
+        sort:
+          $ref: '#/components/schemas/SortObject'
         size:
           type: integer
           format: int32
@@ -2074,12 +2206,12 @@ components:
           type: array
           description: All entity nodes in the graph
           items:
-            "$ref": "#/components/schemas/EntityGraphNodeFlatDtoOut"
+            $ref: '#/components/schemas/EntityGraphNodeFlatDtoOut'
         edges:
           type: array
           description: All directed relation edges in the graph
           items:
-            "$ref": "#/components/schemas/EntityGraphEdgeDtoOut"
+            $ref: '#/components/schemas/EntityGraphEdgeDtoOut'
     EntityGraphNodeFlatDtoOut:
       type: object
       properties:
@@ -2098,8 +2230,7 @@ components:
         data:
           type: object
           additionalProperties: {}
-          description: Entity property values keyed by property name; present only
-            when include_data=true is requested
+          description: Entity property values keyed by property name; present only when include_data=true is requested
     EntityAuditDtoOut:
       type: object
       description: Audit information for an entity revision
@@ -2122,7 +2253,7 @@ components:
           description: Identifier of the user who performed the modification
           example: user@example.com
         snapshot:
-          "$ref": "#/components/schemas/EntitySnapshotDtoOut"
+          $ref: '#/components/schemas/EntitySnapshotDtoOut'
           description: Snapshot of the entity state at this revision
     EntitySnapshotDtoOut:
       type: object
@@ -2144,12 +2275,12 @@ components:
           type: array
           description: Properties of the entity at this revision
           items:
-            "$ref": "#/components/schemas/PropertySnapshotDtoOut"
+            $ref: '#/components/schemas/PropertySnapshotDtoOut'
         relations:
           type: array
           description: Relations of the entity at this revision
           items:
-            "$ref": "#/components/schemas/RelationSnapshotDtoOut"
+            $ref: '#/components/schemas/RelationSnapshotDtoOut'
     PropertySnapshotDtoOut:
       type: object
       description: Snapshot of a property at a specific audit revision

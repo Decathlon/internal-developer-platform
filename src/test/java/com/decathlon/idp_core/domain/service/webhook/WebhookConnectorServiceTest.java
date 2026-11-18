@@ -109,8 +109,9 @@ class WebhookConnectorServiceTest {
     void shouldNotSaveWhenValidationFails() {
       WebhookConnector toCreate = buildWebhookConnector(null, "github-dora", "GitHub DORA", "desc",
           true);
+      WebhookConnector normalizedConnector = toCreate.withEnabled(false);
       doThrow(new RuntimeException("validation error")).when(webhookConnectorValidationService)
-          .validateWebhookConnectorForCreation(toCreate);
+          .validateWebhookConnectorForCreation(normalizedConnector);
 
       assertThatThrownBy(() -> service.createWebhookConnector(toCreate))
           .hasMessageContaining("validation error");
@@ -135,6 +136,8 @@ class WebhookConnectorServiceTest {
       // Even though toCreate had enabled=true, it should be saved with enabled=false
       assertThat(saved.enabled()).isFalse();
       assertThat(saved.mappings()).isEmpty();
+      verify(webhookConnectorValidationService)
+          .validateWebhookConnectorForCreation(argThat(connector -> !connector.enabled()));
     }
 
     @Test
@@ -284,6 +287,8 @@ class WebhookConnectorServiceTest {
       // Should be forced to false because mappings are empty
       assertThat(saved.enabled()).isFalse();
       assertThat(saved.mappings()).isEmpty();
+      verify(webhookConnectorValidationService)
+          .validateWebhookConnectorForUpdate(argThat(connector -> !connector.enabled()));
     }
 
     @Test

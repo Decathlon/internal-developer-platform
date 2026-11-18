@@ -1,5 +1,6 @@
 package com.decathlon.idp_core.infrastructure.adapters.api.controller;
 
+import static com.decathlon.idp_core.infrastructure.adapters.api.configuration.SwaggerDescription.BAD_REQUEST_CODE;
 import static com.decathlon.idp_core.infrastructure.adapters.api.configuration.SwaggerDescription.ENDPOINT_GET_ENTITY_GRAPH_FLAT_DESCRIPTION;
 import static com.decathlon.idp_core.infrastructure.adapters.api.configuration.SwaggerDescription.ENDPOINT_GET_ENTITY_GRAPH_FLAT_SUMMARY;
 import static com.decathlon.idp_core.infrastructure.adapters.api.configuration.SwaggerDescription.NOT_FOUND_CODE;
@@ -11,6 +12,7 @@ import static com.decathlon.idp_core.infrastructure.adapters.api.configuration.S
 import static com.decathlon.idp_core.infrastructure.adapters.api.configuration.SwaggerDescription.PARAM_TRAVERSAL_MODE_DESCRIPTION;
 import static com.decathlon.idp_core.infrastructure.adapters.api.configuration.SwaggerDescription.RESPONSE_ENTITY_GRAPH_FLAT_SUCCESS;
 import static com.decathlon.idp_core.infrastructure.adapters.api.configuration.SwaggerDescription.RESPONSE_ENTITY_NOT_FOUND_IDENTIFIER;
+import static com.decathlon.idp_core.infrastructure.adapters.api.configuration.SwaggerDescription.RESPONSE_INVALID_GRAPH_QUERY;
 import static org.springframework.http.HttpStatus.OK;
 
 import java.util.List;
@@ -18,6 +20,7 @@ import java.util.Set;
 
 import jakarta.validation.constraints.NotBlank;
 
+import org.springframework.http.ProblemDetail;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -30,9 +33,9 @@ import com.decathlon.idp_core.domain.model.entity_graph.EntityGraphNode;
 import com.decathlon.idp_core.domain.model.entity_graph.EntityGraphQueryOptions;
 import com.decathlon.idp_core.domain.model.entity_graph.EntityGraphTraversalMode;
 import com.decathlon.idp_core.domain.service.entity_graph.EntityGraphService;
+import com.decathlon.idp_core.infrastructure.adapters.api.auth.AuthorizedResource;
 import com.decathlon.idp_core.infrastructure.adapters.api.dto.out.entity_graph.EntityGraphFlatDtoOut;
 import com.decathlon.idp_core.infrastructure.adapters.api.mapper.entity_graph.EntityGraphFlatDtoOutMapper;
-import com.decathlon.idp_core.infrastructure.adapters.common.model.ErrorResponse;
 
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -48,6 +51,7 @@ import lombok.RequiredArgsConstructor;
 /// starting from a specified entity, suitable for frontend visualization tools
 /// such as React Flow, Vis.js, and Cytoscape.
 @RestController
+@AuthorizedResource("entity")
 @RequestMapping("/api/v1/entities")
 @RequiredArgsConstructor
 @Validated
@@ -77,7 +81,8 @@ public class EntityGraphController {
   @ResponseStatus(OK)
   @Operation(summary = ENDPOINT_GET_ENTITY_GRAPH_FLAT_SUMMARY, description = ENDPOINT_GET_ENTITY_GRAPH_FLAT_DESCRIPTION, responses = {
       @ApiResponse(responseCode = OK_CODE, description = RESPONSE_ENTITY_GRAPH_FLAT_SUCCESS, content = @Content(schema = @Schema(implementation = EntityGraphFlatDtoOut.class))),
-      @ApiResponse(responseCode = NOT_FOUND_CODE, description = RESPONSE_ENTITY_NOT_FOUND_IDENTIFIER, content = @Content(schema = @Schema(implementation = ErrorResponse.class)))})
+      @ApiResponse(responseCode = BAD_REQUEST_CODE, description = RESPONSE_INVALID_GRAPH_QUERY, content = @Content(mediaType = org.springframework.http.MediaType.APPLICATION_PROBLEM_JSON_VALUE, schema = @Schema(implementation = ProblemDetail.class))),
+      @ApiResponse(responseCode = NOT_FOUND_CODE, description = RESPONSE_ENTITY_NOT_FOUND_IDENTIFIER, content = @Content(mediaType = org.springframework.http.MediaType.APPLICATION_PROBLEM_JSON_VALUE, schema = @Schema(implementation = ProblemDetail.class)))})
   public EntityGraphFlatDtoOut getEntityGraph(@PathVariable @NotBlank String templateIdentifier,
       @PathVariable @NotBlank String entityIdentifier,
       @Parameter(description = PARAM_DEPTH_DESCRIPTION) @RequestParam(defaultValue = "1") int depth,

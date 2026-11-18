@@ -12,7 +12,7 @@ echo "🔍 Checking for broken navigation links in ${SITE_DIR}..."
 
 # Find files with 'none' placeholders in navigation
 while IFS= read -r file; do
-    if [ -n "$file" ]; then
+    if [[ -n "$file" ]]; then
         # Get line numbers where 'none' appears in md-ellipsis context
         line_nums=$(grep -n "^\s*none\s*$" "$file" | cut -d: -f1 2>/dev/null || true)
 
@@ -39,7 +39,7 @@ while IFS= read -r file; do
     fi
 done < <(find "$SITE_DIR" -name "*.html" -type f)
 
-if [ $EXIT_CODE -eq 0 ]; then
+if [[ $EXIT_CODE -eq 0 ]]; then
     echo "✅ No broken navigation links found"
 else
     echo ""
@@ -54,7 +54,7 @@ else
         # Try to find it in the source directory
         found_files=$(find "$SRC_DIR" -name "$filename" 2>/dev/null || true)
 
-        if [ -n "$found_files" ]; then
+        if [[ -n "$found_files" ]]; then
             echo "$found_files" | while read -r found; do
                 echo "   ❌ $found"
             done

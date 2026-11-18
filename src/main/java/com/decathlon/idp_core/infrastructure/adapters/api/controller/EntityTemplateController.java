@@ -29,11 +29,16 @@ import static org.springframework.http.HttpStatus.CREATED;
 import static org.springframework.http.HttpStatus.NO_CONTENT;
 import static org.springframework.http.HttpStatus.OK;
 
+import java.util.Optional;
+
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.web.PageableDefault;
+import org.springframework.http.MediaType;
+import org.springframework.http.ProblemDetail;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -44,15 +49,18 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.decathlon.idp_core.domain.model.authorization.AuthorizationAction;
+import com.decathlon.idp_core.domain.model.authorization.AuthorizationResource;
 import com.decathlon.idp_core.domain.model.entity_template.EntityTemplate;
 import com.decathlon.idp_core.domain.service.entity_template.EntityTemplateService;
+import com.decathlon.idp_core.infrastructure.adapters.api.auth.AuthorizedResource;
+import com.decathlon.idp_core.infrastructure.adapters.api.auth.RequestAuthorizer;
 import com.decathlon.idp_core.infrastructure.adapters.api.configuration.SwaggerConfiguration.TemplatePageResponse;
 import com.decathlon.idp_core.infrastructure.adapters.api.dto.in.EntityTemplateCreateDtoIn;
 import com.decathlon.idp_core.infrastructure.adapters.api.dto.in.EntityTemplateUpdateDtoIn;
 import com.decathlon.idp_core.infrastructure.adapters.api.dto.out.entity_template.EntityTemplateDtoOut;
 import com.decathlon.idp_core.infrastructure.adapters.api.handler.ApiExceptionHandler;
 import com.decathlon.idp_core.infrastructure.adapters.api.mapper.entity_template.EntityTemplateMapper;
-import com.decathlon.idp_core.infrastructure.adapters.common.model.ErrorResponse;
 
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -81,6 +89,7 @@ import lombok.RequiredArgsConstructor;
 /// paginated listing, identifier-based lookup, creation with uniqueness validation,
 /// updates with conflict resolution, and safe deletion with referential checks.
 @RestController
+@AuthorizedResource("entity_template")
 @RequiredArgsConstructor
 @RequestMapping("/api/v1/entity-templates")
 @Tag(name = "Entities Templates Management", description = "Operations related to entity template management")
@@ -88,6 +97,7 @@ public class EntityTemplateController {
 
   private final EntityTemplateService entityTemplateService;
   private final EntityTemplateMapper templateMapper;
+  private final RequestAuthorizer requestAuthorizer;
 
   /// Retrieves paginated entity templates for administrative interfaces.
   ///
@@ -98,7 +108,7 @@ public class EntityTemplateController {
   @Operation(summary = ENDPOINT_GET_TEMPLATES_PAGINATED_SUMMARY, description = ENDPOINT_GET_TEMPLATES_PAGINATED_DESCRIPTION)
   @ApiResponse(responseCode = OK_CODE, description = RESPONSE_TEMPLATES_PAGINATED_SUCCESS, content = @Content(schema = @Schema(implementation = TemplatePageResponse.class)))
   @ApiResponse(responseCode = BAD_REQUEST_CODE, description = RESPONSE_INVALID_PAGINATION, content = {
-      @Content(schema = @Schema(implementation = ErrorResponse.class))})
+      @Content(mediaType = org.springframework.http.MediaType.APPLICATION_PROBLEM_JSON_VALUE, schema = @Schema(implementation = ProblemDetail.class))})
   @Parameter(name = "page", description = PARAM_PAGE_DESCRIPTION, in = ParameterIn.QUERY, content = @Content(schema = @Schema(type = "integer", defaultValue = "0")))
   @Parameter(name = "size", description = PARAM_SIZE_DESCRIPTION, in = ParameterIn.QUERY, content = @Content(schema = @Schema(type = "integer", defaultValue = "20")))
   @Parameter(name = "sort", description = PARAM_SORT_DESCRIPTION, in = ParameterIn.QUERY, content = @Content(schema = @Schema(type = "string", defaultValue = "identifier,asc")))
@@ -119,7 +129,7 @@ public class EntityTemplateController {
   @ApiResponse(responseCode = OK_CODE, description = RESPONSE_TEMPLATE_FOUND, content = {
       @Content(schema = @Schema(implementation = EntityTemplateDtoOut.class))})
   @ApiResponse(responseCode = NOT_FOUND_CODE, description = RESPONSE_TEMPLATE_NOT_FOUND_IDENTIFIER, content = {
-      @Content(schema = @Schema(implementation = ErrorResponse.class))})
+      @Content(mediaType = org.springframework.http.MediaType.APPLICATION_PROBLEM_JSON_VALUE, schema = @Schema(implementation = ProblemDetail.class))})
   @GetMapping("/{identifier}")
   @ResponseStatus(OK)
   public EntityTemplateDtoOut getTemplateByIdentifier(@PathVariable String identifier) {
@@ -137,11 +147,18 @@ public class EntityTemplateController {
   @ApiResponse(responseCode = CREATED_CODE, description = RESPONSE_TEMPLATE_CREATED, content = {
       @Content(schema = @Schema(implementation = EntityTemplateDtoOut.class))})
   @ApiResponse(responseCode = BAD_REQUEST_CODE, description = RESPONSE_INVALID_TEMPLATE_DATA, content = {
-      @Content(schema = @Schema(implementation = ErrorResponse.class))})
+      @Content(mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE, schema = @Schema(implementation = ProblemDetail.class))})
   @PostMapping
   @ResponseStatus(CREATED)
   public EntityTemplateDtoOut createTemplate(
-      @Valid @RequestBody EntityTemplateCreateDtoIn entityTemplateCreateDtoIn) {
+      @Valid @RequestBody EntityTemplateCreateDtoIn entityTemplateCreateDtoIn,
+      HttpServletRequest request) {
+    if (AuthorizationResource.PRINCIPAL_TEMPLATE_IDENTIFIER
+        .equals(entityTemplateCreateDtoIn.getIdentifier())) {
+      requestAuthorizer.authorize(request, AuthorizationAction.CREATE,
+          new AuthorizationResource(AuthorizationResource.ENTITY_TEMPLATE,
+              Optional.of(entityTemplateCreateDtoIn.getIdentifier()), Optional.empty()));
+    }
     EntityTemplate entityTemplate = entityTemplateService
         .createEntityTemplate(templateMapper.fromDtoToEntityTemplate(entityTemplateCreateDtoIn));
     return templateMapper.fromEntityTemplatetoDto(entityTemplate);
@@ -157,7 +174,7 @@ public class EntityTemplateController {
   @ApiResponse(responseCode = OK_CODE, description = RESPONSE_TEMPLATE_UPDATED, content = {
       @Content(schema = @Schema(implementation = EntityTemplateDtoOut.class))})
   @ApiResponse(responseCode = "404", description = RESPONSE_TEMPLATE_NOT_FOUND_IDENTIFIER, content = {
-      @Content(schema = @Schema(implementation = ErrorResponse.class))})
+      @Content(mediaType = org.springframework.http.MediaType.APPLICATION_PROBLEM_JSON_VALUE, schema = @Schema(implementation = ProblemDetail.class))})
   @PutMapping("/{identifier}")
   public EntityTemplateDtoOut updateTemplate(@PathVariable(name = "identifier") String identifier,
       @RequestBody @Valid EntityTemplateUpdateDtoIn entityTemplateUpdateDtoIn) {
@@ -176,9 +193,9 @@ public class EntityTemplateController {
   @Operation(summary = ENDPOINT_DELETE_TEMPLATE_SUMMARY, description = ENDPOINT_DELETE_TEMPLATE_DESCRIPTION)
   @ApiResponse(responseCode = NO_CONTENT_CODE, description = RESPONSE_TEMPLATE_DELETED)
   @ApiResponse(responseCode = BAD_REQUEST_CODE, description = "Cannot delete template: it is a target for other relations", content = {
-      @Content(schema = @Schema(implementation = ErrorResponse.class))})
+      @Content(mediaType = org.springframework.http.MediaType.APPLICATION_PROBLEM_JSON_VALUE, schema = @Schema(implementation = ProblemDetail.class))})
   @ApiResponse(responseCode = NOT_FOUND_CODE, description = RESPONSE_TEMPLATE_NOT_FOUND_IDENTIFIER, content = {
-      @Content(schema = @Schema(implementation = ErrorResponse.class))})
+      @Content(mediaType = org.springframework.http.MediaType.APPLICATION_PROBLEM_JSON_VALUE, schema = @Schema(implementation = ProblemDetail.class))})
   @ResponseStatus(NO_CONTENT)
   @DeleteMapping("/{identifier}")
   public void deleteTemplate(@PathVariable String identifier) {

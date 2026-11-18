@@ -13,23 +13,24 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.test.context.support.WithMockUser;
+import org.springframework.test.context.jdbc.Sql;
 import org.springframework.test.web.servlet.MockMvc;
 
 import com.decathlon.idp_core.AbstractIntegrationTest;
 
 @DisplayName("Audit Controller Integration Tests")
+@Sql(scripts = {
+    "/db/test/R__6_insert_principal_user_for_test.sql"}, executionPhase = Sql.ExecutionPhase.BEFORE_TEST_METHOD)
 class AuditControllerTest extends AbstractIntegrationTest {
 
   private static final String AUDIT_JSON_FILES_TEST_PATH = "integration_test/json/audit/v1/";
-
+  private static final String AUDIT_BASE_PATH = "/api/v1/audit/entities";
+  private static final String ENTITY_BASE_PATH = "/api/v1/entities";
   @Autowired
   private MockMvc mockMvc;
 
-  private static final String AUDIT_BASE_PATH = "/api/v1/audit/entities";
-  private static final String ENTITY_BASE_PATH = "/api/v1/entities";
-
   @Test
-  @WithMockUser
+  @WithMockUser(username = "test-admin")
   @DisplayName("Should return audit history for existing entity")
   void getAuditHistory_shouldReturnAuditNotFound_whenEntityExistsBeforeAudit() throws Exception {
     String templateIdentifier = "web-service";
@@ -41,7 +42,7 @@ class AuditControllerTest extends AbstractIntegrationTest {
   }
 
   @Test
-  @WithMockUser
+  @WithMockUser(username = "test-admin")
   @DisplayName("Should return 404 when entity does not exist")
   void getAuditHistory_shouldReturn404_whenEntityDoesNotExist() throws Exception {
     String templateIdentifier = "non-existing-template";
@@ -62,7 +63,7 @@ class AuditControllerTest extends AbstractIntegrationTest {
   }
 
   @Test
-  @WithMockUser(username = "test-user")
+  @WithMockUser(username = "test-admin")
   @DisplayName("Should track complete lifecycle (Create, Update, Delete) in audit history")
   void auditHistory_shouldTrackFullLifecycle() throws Exception {
     String templateIdentifier = "web-audited";
@@ -79,16 +80,16 @@ class AuditControllerTest extends AbstractIntegrationTest {
 
         // Latest action (DELETED)
         .andExpect(jsonPath("$[0].revision_type").value("DELETED"))
-        .andExpect(jsonPath("$[0].modified_by").value("test-user"))
+        .andExpect(jsonPath("$[0].modified_by").value("test-admin"))
 
         // Middle action (UPDATED)
         .andExpect(jsonPath("$[1].revision_type").value("UPDATED"))
-        .andExpect(jsonPath("$[1].modified_by").value("test-user"))
+        .andExpect(jsonPath("$[1].modified_by").value("test-admin"))
         .andExpect(jsonPath("$[1].snapshot.name").value("Audit Test Entity Updated"))
 
         // First action (CREATED)
         .andExpect(jsonPath("$[2].revision_type").value("CREATED"))
-        .andExpect(jsonPath("$[2].modified_by").value("test-user"))
+        .andExpect(jsonPath("$[2].modified_by").value("test-admin"))
         .andExpect(jsonPath("$[2].snapshot.name").value("Audit Test Entity"));
   }
 

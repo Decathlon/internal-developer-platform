@@ -63,7 +63,8 @@ class WebhookConnectorValidationServiceTest {
 
       var order = inOrder(webhookConnectorRepositoryPort, webhookSecurityValidationService);
       order.verify(webhookConnectorRepositoryPort).existsByIdentifier("github-dora");
-      order.verify(webhookSecurityValidationService).validateForCreation(connector.security());
+      order.verify(webhookSecurityValidationService).validateForCreation(connector.security(),
+          connector.enabled());
     }
 
     @Test
@@ -76,7 +77,19 @@ class WebhookConnectorValidationServiceTest {
           .isInstanceOf(WebhookConnectorAlreadyExistException.class)
           .hasMessageContaining("github-dora");
 
-      verify(webhookSecurityValidationService, never()).validateForCreation(any());
+      verify(webhookSecurityValidationService, never()).validateForCreation(any(), anyBoolean());
+    }
+
+    @Test
+    @DisplayName("Should pass the disabled state to security validation on creation")
+    void shouldPassDisabledStateToSecurityValidationOnCreation() {
+      WebhookConnector connector = buildWebhookConnector("github-dora", "GitHub DORA")
+          .withEnabled(false);
+      when(webhookConnectorRepositoryPort.existsByIdentifier("github-dora")).thenReturn(false);
+
+      service.validateWebhookConnectorForCreation(connector);
+
+      verify(webhookSecurityValidationService).validateForCreation(connector.security(), false);
     }
   }
 
@@ -94,7 +107,8 @@ class WebhookConnectorValidationServiceTest {
 
       verify(webhookConnectorMappingValidationService)
           .validateMappings(connectorToUpdate.mappings());
-      verify(webhookSecurityValidationService).validateForCreation(connectorToUpdate.security());
+      verify(webhookSecurityValidationService).validateForCreation(connectorToUpdate.security(),
+          connectorToUpdate.enabled());
     }
 
     @Test
@@ -119,7 +133,20 @@ class WebhookConnectorValidationServiceTest {
       service.validateWebhookConnectorForUpdate(connectorToUpdate);
 
       verify(webhookConnectorMappingValidationService, never()).validateMappings(any());
-      verify(webhookSecurityValidationService).validateForCreation(connectorToUpdate.security());
+      verify(webhookSecurityValidationService).validateForCreation(connectorToUpdate.security(),
+          connectorToUpdate.enabled());
+    }
+
+    @Test
+    @DisplayName("Should pass the disabled state to security validation on update")
+    void shouldPassDisabledStateToSecurityValidationOnUpdate() {
+      WebhookConnector connectorToUpdate = buildWebhookConnector("github-dora", "Title")
+          .withEnabled(false);
+
+      service.validateWebhookConnectorForUpdate(connectorToUpdate);
+
+      verify(webhookSecurityValidationService).validateForCreation(connectorToUpdate.security(),
+          false);
     }
 
     @Test

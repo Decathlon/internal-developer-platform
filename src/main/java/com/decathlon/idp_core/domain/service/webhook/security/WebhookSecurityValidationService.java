@@ -8,27 +8,34 @@ import org.springframework.stereotype.Service;
 import com.decathlon.idp_core.domain.exception.webhook.WebhookSecurityConfigurationException;
 import com.decathlon.idp_core.domain.model.enums.WebhookSecurityType;
 import com.decathlon.idp_core.domain.model.inbound_connectors.webhook.WebhookSecurity;
+import com.decathlon.idp_core.domain.model.inbound_connectors.webhook.WebhookSecurityValidationPolicy;
 import com.decathlon.idp_core.domain.port.WebhookSecurityStrategy;
 
 /// Domain service for validating webhook security configuration at creation/update time.
 ///
 /// This service ensures that the security configuration provided when creating or updating
-/// a webhook connector is valid before storing it in the database.
+/// a webhook connector is valid before storing it in the database. The `NONE` security type
+/// (unauthenticated webhooks) is rejected for enabled connectors unless
+/// `IDP_WEBHOOK_SECURITY_ALLOW_NONE` is enabled.
 @Service
 public class WebhookSecurityValidationService {
 
   private final List<WebhookSecurityStrategy> strategies;
+  private final WebhookSecurityValidationPolicy policy;
 
-  public WebhookSecurityValidationService(List<WebhookSecurityStrategy> strategies) {
+  public WebhookSecurityValidationService(List<WebhookSecurityStrategy> strategies,
+      WebhookSecurityValidationPolicy policy) {
     this.strategies = List.copyOf(strategies);
+    this.policy = policy;
   }
 
   /// Validates webhook security configuration for creation or update.
   ///
   /// @param security the security configuration to validate
+  /// @param enabled whether the webhook connector is enabled
   /// @throws WebhookSecurityConfigurationException if the configuration is
   /// invalid
-  public void validateForCreation(WebhookSecurity security) {
+  public void validateForCreation(WebhookSecurity security, boolean enabled) {
     if (security == null) {
       throw new WebhookSecurityConfigurationException("Webhook security section is mandatory");
     }
@@ -37,6 +44,10 @@ public class WebhookSecurityValidationService {
 
     if (security.type() == WebhookSecurityType.NONE) {
       validateNoSecurityConfig(config);
+      if (enabled && !policy.allowNone()) {
+        throw new WebhookSecurityConfigurationException(
+            "Webhook security type NONE is disabled. Set IDP_WEBHOOK_SECURITY_ALLOW_NONE=true to allow it");
+      }
       return;
     }
 
@@ -48,7 +59,7 @@ public class WebhookSecurityValidationService {
   }
 
   private void validateNoSecurityConfig(Map<String, String> config) {
-    if (!config.isEmpty()) {
+    if (config != null && !config.isEmpty()) {
       throw new WebhookSecurityConfigurationException(
           "Webhook security config must be empty when type is NONE");
     }

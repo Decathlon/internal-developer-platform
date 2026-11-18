@@ -22,6 +22,7 @@ import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
+import org.mockito.Mockito;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import com.decathlon.idp_core.domain.exception.entity.EntityAlreadyExistsException;
@@ -53,6 +54,10 @@ class EntityValidationServiceTest {
   void setUp() {
     entityValidationService = new EntityValidationService(entityRepository,
         propertyValidationService, relationValidationService);
+    Mockito
+        .lenient().when(relationValidationService
+            .validateAndNormalizeRelationsAgainstTemplate(any(), any(), any()))
+        .thenAnswer(invocation -> invocation.getArgument(1));
   }
 
   @Nested
@@ -121,8 +126,31 @@ class EntityValidationServiceTest {
           eq(template.propertiesDefinitions()), eq(Map.of("version", property)),
           any(Violations.class));
 
-      verify(relationValidationService).validateRelationsAgainstTemplate(eq(template),
+      verify(relationValidationService).validateAndNormalizeRelationsAgainstTemplate(eq(template),
           eq(entity.relations()), any(Violations.class));
+    }
+
+    @Test
+    @DisplayName("Should return the entity with normalized relations")
+    void shouldReturnEntityWithNormalizedRelations() {
+      var template = buildTemplate();
+      var relation = new Relation(UUID.randomUUID(), "owned-by", "team",
+          List.of("team-a", "missing-team"));
+      var resolvedRelation = new Relation(relation.id(), relation.name(),
+          relation.targetTemplateIdentifier(), List.of("team-a"));
+      var entity = buildEntity("web-service", "catalog-api", "Catalog API", List.of(),
+          List.of(relation));
+
+      when(entityRepository.findByTemplateIdentifierAndIdentifier(any(), any()))
+          .thenReturn(Optional.empty());
+      when(relationValidationService.validateAndNormalizeRelationsAgainstTemplate(eq(template),
+          eq(entity.relations()), any(Violations.class))).thenReturn(List.of(resolvedRelation));
+
+      var validatedEntity = entityValidationService.validateForCreation(entity, template);
+
+      assertEquals(List.of(resolvedRelation), validatedEntity.relations());
+      assertEquals(entity.properties(), validatedEntity.properties());
+      assertEquals(entity.identifier(), validatedEntity.identifier());
     }
 
     @Test
@@ -148,8 +176,8 @@ class EntityValidationServiceTest {
 
         verify(propertyValidationService).validatePropertiesAgainstTemplate(eq(template), any(),
             any(), any());
-        verify(relationValidationService).validateRelationsAgainstTemplate(eq(template), any(),
-            any());
+        verify(relationValidationService).validateAndNormalizeRelationsAgainstTemplate(eq(template),
+            any(), any());
       }
     }
 
@@ -183,7 +211,7 @@ class EntityValidationServiceTest {
       assertDoesNotThrow(() -> entityValidationService.validateForCreation(entity, template));
 
       // Entity's compact constructor converts null to empty list
-      verify(relationValidationService).validateRelationsAgainstTemplate(eq(template),
+      verify(relationValidationService).validateAndNormalizeRelationsAgainstTemplate(eq(template),
           eq(List.of()), any(Violations.class));
     }
 
@@ -260,7 +288,7 @@ class EntityValidationServiceTest {
       verify(propertyValidationService).validatePropertiesAgainstTemplate(eq(template),
           eq(template.propertiesDefinitions()), eq(Map.of("version", property)),
           any(Violations.class));
-      verify(relationValidationService).validateRelationsAgainstTemplate(eq(template),
+      verify(relationValidationService).validateAndNormalizeRelationsAgainstTemplate(eq(template),
           eq(entity.relations()), any(Violations.class));
     }
 
@@ -308,7 +336,7 @@ class EntityValidationServiceTest {
       // Entity's compact constructor converts null to empty lists
       verify(propertyValidationService).validatePropertiesAgainstTemplate(eq(template),
           eq(template.propertiesDefinitions()), eq(Map.of()), any(Violations.class));
-      verify(relationValidationService).validateRelationsAgainstTemplate(eq(template),
+      verify(relationValidationService).validateAndNormalizeRelationsAgainstTemplate(eq(template),
           eq(List.of()), any(Violations.class));
     }
   }

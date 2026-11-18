@@ -35,8 +35,8 @@ import lombok.extern.slf4j.Slf4j;
 /// for all CRUD operations on inbound webhook connectors.
 @DisplayName("InboundWebhookManagementController Integration Tests")
 @TestClassOrder(ClassOrderer.OrderAnnotation.class)
-@Sql(scripts = {"/db/test/R__1_Insert_test_data.sql",
-    "/db/test/R__4_insert_webhook_test_data.sql"}, executionPhase = Sql.ExecutionPhase.BEFORE_TEST_METHOD)
+@Sql(scripts = {"/db/test/R__1_Insert_test_data.sql", "/db/test/R__4_insert_webhook_test_data.sql",
+    "/db/test/R__6_insert_principal_user_for_test.sql"}, executionPhase = Sql.ExecutionPhase.BEFORE_TEST_METHOD)
 @Slf4j
 class InboundWebhookManagementControllerTest extends AbstractIntegrationTest {
 
@@ -168,6 +168,30 @@ class InboundWebhookManagementControllerTest extends AbstractIntegrationTest {
           .andExpect(jsonPath("$.content[*].identifier", containsInAnyOrder("github-dora-connector",
               "github-dora-connector-success", "public-connector", "token-connector")));
     }
+
+    @Test
+    @WithMockUser
+    @DisplayName("Should return 400 when page size exceeds 500")
+    void getWebhooks_400_size_above_500() throws Exception {
+      mockMvc.perform(get(WEBHOOK_PATH).param("size", "501").accept(APPLICATION_JSON))
+          .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    @WithMockUser
+    @DisplayName("Should return 400 when page size is zero")
+    void getWebhooks_400_size_zero() throws Exception {
+      mockMvc.perform(get(WEBHOOK_PATH).param("size", "0").accept(APPLICATION_JSON))
+          .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    @WithMockUser
+    @DisplayName("Should return 400 when page size is not an integer")
+    void getWebhooks_400_size_not_integer() throws Exception {
+      mockMvc.perform(get(WEBHOOK_PATH).param("size", "abc").accept(APPLICATION_JSON))
+          .andExpect(status().isBadRequest());
+    }
   }
 
   @Nested
@@ -183,6 +207,17 @@ class InboundWebhookManagementControllerTest extends AbstractIntegrationTest {
               .accept(APPLICATION_JSON).with(csrf())
               .content(getJsonTestFileContent(JSON_PATH + "postWebhook_201.json")))
           .andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    @WithMockUser(username = "standard-human-webhook-creator")
+    @DisplayName("Should forbid standard humans from creating webhook configurations")
+    void postWebhook_403_for_standard_human() throws Exception {
+      mockMvc
+          .perform(MockMvcRequestBuilders.post(WEBHOOK_PATH).contentType(APPLICATION_JSON)
+              .accept(APPLICATION_JSON).with(csrf())
+              .content(getJsonTestFileContent(JSON_PATH + "postWebhook_201.json")))
+          .andExpect(status().isForbidden());
     }
 
     @Test
@@ -312,6 +347,48 @@ class InboundWebhookManagementControllerTest extends AbstractIntegrationTest {
           .perform(MockMvcRequestBuilders.post(WEBHOOK_PATH).contentType(APPLICATION_JSON)
               .accept(APPLICATION_JSON).with(csrf()).content(payload))
           .andExpect(status().isCreated()).andExpect(jsonPath("$.security.type").value("NONE"));
+    }
+
+    @Test
+    @WithMockUser
+    @DisplayName("Should create a disabled connector with an empty security object")
+    void postWebhook_201_empty_security_when_disabled() throws Exception {
+      var payload = """
+          {
+            "identifier": "disabled-empty-security-webhook",
+            "name": "Disabled Empty Security Webhook",
+            "enabled": false,
+            "mapping_identifiers": [],
+            "security": {}
+          }
+          """;
+
+      mockMvc
+          .perform(MockMvcRequestBuilders.post(WEBHOOK_PATH).contentType(APPLICATION_JSON)
+              .accept(APPLICATION_JSON).with(csrf()).content(payload))
+          .andExpect(status().isCreated()).andExpect(jsonPath("$.security.type").value("NONE"))
+          .andExpect(jsonPath("$.security.config").isEmpty());
+    }
+
+    @Test
+    @WithMockUser
+    @DisplayName("Should create a disabled connector with null security")
+    void postWebhook_201_null_security_when_disabled() throws Exception {
+      var payload = """
+          {
+            "identifier": "disabled-null-security-webhook",
+            "name": "Disabled Null Security Webhook",
+            "enabled": false,
+            "mapping_identifiers": [],
+            "security": null
+          }
+          """;
+
+      mockMvc
+          .perform(MockMvcRequestBuilders.post(WEBHOOK_PATH).contentType(APPLICATION_JSON)
+              .accept(APPLICATION_JSON).with(csrf()).content(payload))
+          .andExpect(status().isCreated()).andExpect(jsonPath("$.security.type").value("NONE"))
+          .andExpect(jsonPath("$.security.config").isEmpty());
     }
 
     @Test
@@ -600,6 +677,50 @@ class InboundWebhookManagementControllerTest extends AbstractIntegrationTest {
           .andExpect(jsonPath("$.enabled").value(false));
 
       assertWebhookTemplateMapping("connector-put-200");
+    }
+
+    @Test
+    @WithMockUser
+    @DisplayName("Should update to NONE security when config is omitted")
+    void putWebhook_200_none_security_without_config() throws Exception {
+      createWebhookConnector("connector-put-none-no-config", "Connector Put None Initial");
+
+      var payload = """
+          {
+            "name": "Connector Put None Updated",
+            "description": "updated without security config",
+            "enabled": false,
+            "mapping_identifiers": ["connector-put-none-no-config-mapping"],
+            "security": { "type": "NONE" }
+          }
+          """;
+      mockMvc
+          .perform(MockMvcRequestBuilders.put(WEBHOOK_PATH + "/connector-put-none-no-config")
+              .contentType(APPLICATION_JSON).accept(APPLICATION_JSON).with(csrf()).content(payload))
+          .andExpect(status().isOk()).andExpect(jsonPath("$.security.type").value("NONE"))
+          .andExpect(jsonPath("$.security.config").isEmpty());
+    }
+
+    @Test
+    @WithMockUser
+    @DisplayName("Should update a disabled connector with an empty security object")
+    void putWebhook_200_empty_security_when_disabled() throws Exception {
+      createWebhookConnector("connector-put-empty-security", "Connector Empty Security Initial");
+
+      var payload = """
+          {
+            "name": "Connector Empty Security Updated",
+            "description": "updated without security",
+            "enabled": false,
+            "mapping_identifiers": ["connector-put-empty-security-mapping"],
+            "security": {}
+          }
+          """;
+      mockMvc
+          .perform(MockMvcRequestBuilders.put(WEBHOOK_PATH + "/connector-put-empty-security")
+              .contentType(APPLICATION_JSON).accept(APPLICATION_JSON).with(csrf()).content(payload))
+          .andExpect(status().isOk()).andExpect(jsonPath("$.security.type").value("NONE"))
+          .andExpect(jsonPath("$.security.config").isEmpty());
     }
 
     @Test
@@ -1028,19 +1149,71 @@ class InboundWebhookManagementControllerTest extends AbstractIntegrationTest {
     @WithMockUser
     @DisplayName("NONE — Should create connector without config field")
     void security_none_no_config_201() throws Exception {
+      // The "config" key is truly omitted from the request body.
       var payload = """
           {
             "identifier": "sec-none-no-config",
             "name": "None No Config",
             "enabled": false,
             "mapping_identifiers": [],
-            "security": { "type": "NONE", "config":{} }
+            "security": { "type": "NONE" }
           }
           """;
       mockMvc
           .perform(MockMvcRequestBuilders.post(WEBHOOK_PATH).contentType(APPLICATION_JSON)
               .accept(APPLICATION_JSON).with(csrf()).content(payload))
-          .andExpect(status().isCreated()).andExpect(jsonPath("$.security.type").value("NONE"));
+          .andExpect(status().isCreated()).andExpect(jsonPath("$.security.type").value("NONE"))
+          .andExpect(jsonPath("$.security.config").isEmpty());
+    }
+
+    @Test
+    @WithMockUser
+    @DisplayName("NONE — Should create connector with a null config")
+    void security_none_null_config_201() throws Exception {
+      var payload = """
+          {
+            "identifier": "sec-none-null-config",
+            "name": "None Null Config",
+            "enabled": false,
+            "mapping_identifiers": [],
+            "security": { "type": "NONE", "config": null }
+          }
+          """;
+      mockMvc
+          .perform(MockMvcRequestBuilders.post(WEBHOOK_PATH).contentType(APPLICATION_JSON)
+              .accept(APPLICATION_JSON).with(csrf()).content(payload))
+          .andExpect(status().isCreated()).andExpect(jsonPath("$.security.type").value("NONE"))
+          .andExpect(jsonPath("$.security.config").isEmpty());
+    }
+
+    @Test
+    @WithMockUser
+    @DisplayName("NONE — Should return 400 when config is not empty")
+    void security_none_non_empty_config_400() throws Exception {
+      mockMvc
+          .perform(MockMvcRequestBuilders.post(WEBHOOK_PATH).contentType(APPLICATION_JSON)
+              .accept(APPLICATION_JSON).with(csrf()).content(buildSecurityPayload(
+                  "sec-none-with-config", "None With Config", "NONE", "{ \"a\": \"b\" }")))
+          .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    @WithMockUser
+    @DisplayName("HMAC_SHA256 — Should return 400 when config is omitted")
+    void security_hmac_no_config_400() throws Exception {
+      var payload = """
+          {
+            "identifier": "sec-hmac-no-config",
+            "name": "HMAC No Config",
+            "enabled": false,
+            "mapping_identifiers": [],
+            "security": { "type": "HMAC_SHA256" }
+          }
+          """;
+      mockMvc
+          .perform(MockMvcRequestBuilders.post(WEBHOOK_PATH).contentType(APPLICATION_JSON)
+              .accept(APPLICATION_JSON).with(csrf()).content(payload))
+          .andExpect(status().isBadRequest());
     }
 
     @Test

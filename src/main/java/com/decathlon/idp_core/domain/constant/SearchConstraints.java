@@ -11,8 +11,14 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor(access = AccessLevel.PRIVATE)
 public final class SearchConstraints {
 
-  /// Maximum number of entities returned per page in a search request.
-  public static final int MAX_PAGE_SIZE = 500;
+  /// Page size applied when a request omits `size`. Capped at the configured
+  /// maximum.
+  public static final int DEFAULT_PAGE_SIZE = 20;
+
+  /// Default maximum number of entities returned per page in a search request.
+  /// The effective limit is configurable via `app.max-page-size` (env
+  /// `MAX_PAGE_SIZE`).
+  public static final int DEFAULT_MAX_PAGE_SIZE = 500;
 
   /// Maximum length (in characters) of the free-text `query` parameter.
   public static final int MAX_QUERY_LENGTH = 255;

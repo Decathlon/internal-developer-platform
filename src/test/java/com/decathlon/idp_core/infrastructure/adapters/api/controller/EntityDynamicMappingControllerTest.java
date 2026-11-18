@@ -1,14 +1,25 @@
 package com.decathlon.idp_core.infrastructure.adapters.api.controller;
 
-import static com.decathlon.idp_core.domain.constant.ValidationMessages.*;
+import static com.decathlon.idp_core.domain.constant.ValidationMessages.ENTITY_DYNAMIC_MAPPING_TEMPLATE_IDENTIFIER_MANDATORY;
 import static org.hamcrest.Matchers.containsString;
 import static org.springframework.http.MediaType.APPLICATION_JSON;
+import static org.springframework.http.MediaType.APPLICATION_PROBLEM_JSON;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.jwt;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-import org.junit.jupiter.api.*;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.ClassOrderer;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Nested;
+import org.junit.jupiter.api.Order;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestClassOrder;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
 import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.context.jdbc.Sql;
 import org.springframework.test.web.servlet.MockMvc;
@@ -24,15 +35,14 @@ import lombok.extern.slf4j.Slf4j;
 /// for all CRUD operations on entity dynamic mappings.
 @DisplayName("EntityDynamicMappingController Integration Tests")
 @TestClassOrder(ClassOrderer.OrderAnnotation.class)
-@Sql(scripts = {"/db/test/R__1_Insert_test_data.sql",
-    "/db/test/R__4_insert_webhook_test_data.sql"}, executionPhase = Sql.ExecutionPhase.BEFORE_TEST_METHOD)
+@Sql(scripts = {"/db/test/R__1_Insert_test_data.sql", "/db/test/R__4_insert_webhook_test_data.sql",
+    "/db/test/R__6_insert_principal_user_for_test.sql"}, executionPhase = Sql.ExecutionPhase.BEFORE_TEST_METHOD)
 @Slf4j
 class EntityDynamicMappingControllerTest extends AbstractIntegrationTest {
 
+  private static final String MAPPING_PATH = "/api/v1/entity_dynamic_mappings";
   @Autowired
   private MockMvc mockMvc;
-
-  private static final String MAPPING_PATH = "/api/v1/entity_dynamic_mappings";
 
   /// Builds a valid entity dynamic mapping creation payload.
   private String buildCreatePayload(String mappingIdentifier) {
@@ -137,12 +147,70 @@ class EntityDynamicMappingControllerTest extends AbstractIntegrationTest {
           .andExpect(jsonPath("$.page.size").value(5))
           .andExpect(jsonPath("$.page.number").value(0));
     }
+
+    @Test
+    @WithMockUser
+    @DisplayName("Should return 400 when page size exceeds 500")
+    void getMappings_400_size_above_500() throws Exception {
+      mockMvc
+          .perform(
+              get(MAPPING_PATH).param("page", "0").param("size", "501").accept(APPLICATION_JSON))
+          .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    @WithMockUser
+    @DisplayName("Should return 400 when page size is zero")
+    void getMappings_400_size_zero() throws Exception {
+      mockMvc
+          .perform(get(MAPPING_PATH).param("page", "0").param("size", "0").accept(APPLICATION_JSON))
+          .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    @WithMockUser
+    @DisplayName("Should return 400 when page size is not an integer")
+    void getMappings_400_size_not_integer() throws Exception {
+      mockMvc
+          .perform(
+              get(MAPPING_PATH).param("page", "0").param("size", "abc").accept(APPLICATION_JSON))
+          .andExpect(status().isBadRequest());
+    }
   }
 
   @Nested
   @DisplayName("POST /api/v1/entity-dynamic-mappings - Create mapping")
   @Order(2)
   class PostMappingTests {
+
+    @Test
+    @DisplayName("Should forbid service accounts from creating principal-targeting mappings")
+    void postPrincipalTargetMapping_forbiddenForServiceAccount() throws Exception {
+      String serviceIdentifier = "mapping-service-" + java.util.UUID.randomUUID();
+      String payload = """
+          {
+            "identifier": "protected-principal-mapping",
+            "entity_template_identifier": "principal",
+            "filter": ".action == \\"pushed\\"",
+            "action": "UPDATE_ENTITY",
+            "name": "Protected principal mapping",
+            "entity": {
+              "identifier": ".user.id",
+              "name": ".user.name",
+              "properties": {"is_admin": "true"},
+              "relations": []
+            }
+          }
+          """;
+
+      mockMvc
+          .perform(MockMvcRequestBuilders.post(MAPPING_PATH)
+              .with(jwt().jwt(token -> token.claim("sub", serviceIdentifier)
+                  .claim("client_id", serviceIdentifier).claim("token_type", "m2m")))
+              .contentType(APPLICATION_JSON).accept(APPLICATION_JSON).with(csrf()).content(payload))
+          .andExpect(status().isForbidden()).andExpect(jsonPath("$.error").value("FORBIDDEN"))
+          .andExpect(jsonPath("$.error_description").exists());
+    }
 
     @Test
     @DisplayName("Should return 401 without authentication")
@@ -191,7 +259,7 @@ class EntityDynamicMappingControllerTest extends AbstractIntegrationTest {
           .perform(MockMvcRequestBuilders.post(MAPPING_PATH).contentType(APPLICATION_JSON)
               .accept(APPLICATION_JSON).with(csrf())
               .content(buildCreatePayload("microservice-mapping")))
-          .andExpect(status().isConflict()).andExpect(jsonPath("$.error").value("CONFLICT"))
+          .andExpect(status().isConflict()).andExpect(problemDetailResponse(HttpStatus.CONFLICT))
           .andExpect(jsonPath("$.error_description").value(containsString("microservice-mapping")));
     }
 
@@ -223,7 +291,8 @@ class EntityDynamicMappingControllerTest extends AbstractIntegrationTest {
       mockMvc
           .perform(MockMvcRequestBuilders.post(MAPPING_PATH).contentType(APPLICATION_JSON)
               .accept(APPLICATION_JSON).with(csrf()).content(payload))
-          .andExpect(status().isBadRequest()).andExpect(jsonPath("$.error").value("BAD_REQUEST"))
+          .andExpect(status().isBadRequest())
+          .andExpect(problemDetailResponse(HttpStatus.BAD_REQUEST))
           .andExpect(jsonPath("$.error_description").value(containsString("mapping identifier")));
     }
 
@@ -250,7 +319,8 @@ class EntityDynamicMappingControllerTest extends AbstractIntegrationTest {
       mockMvc
           .perform(MockMvcRequestBuilders.post(MAPPING_PATH).contentType(APPLICATION_JSON)
               .accept(APPLICATION_JSON).with(csrf()).content(payload))
-          .andExpect(status().isBadRequest()).andExpect(jsonPath("$.error").value("BAD_REQUEST"))
+          .andExpect(status().isBadRequest())
+          .andExpect(problemDetailResponse(HttpStatus.BAD_REQUEST))
           .andExpect(jsonPath("$.error_description")
               .value(containsString("Entity Template Identifier is mandatory")));
     }
@@ -279,7 +349,7 @@ class EntityDynamicMappingControllerTest extends AbstractIntegrationTest {
       mockMvc
           .perform(MockMvcRequestBuilders.post(MAPPING_PATH).contentType(APPLICATION_JSON)
               .accept(APPLICATION_JSON).with(csrf()).content(payload))
-          .andExpect(status().isNotFound()).andExpect(jsonPath("$.error").value("NOT_FOUND"))
+          .andExpect(status().isNotFound()).andExpect(problemDetailResponse(HttpStatus.NOT_FOUND))
           .andExpect(jsonPath("$.error_description")
               .value(containsString("non-existent-entityTemplateIdentifier")));
     }
@@ -311,13 +381,13 @@ class EntityDynamicMappingControllerTest extends AbstractIntegrationTest {
           .perform(MockMvcRequestBuilders.post(MAPPING_PATH).contentType(APPLICATION_JSON)
               .accept(APPLICATION_JSON).with(csrf()).content(payload))
           .andExpect(status().isUnprocessableContent())
-          .andExpect(jsonPath("$.error").value("UNPROCESSABLE_CONTENT"))
+          .andExpect(problemDetailResponse(HttpStatus.UNPROCESSABLE_CONTENT))
           .andExpect(jsonPath("$.error_description").value(containsString("missing required")));
     }
 
     @Test
     @WithMockUser
-    @DisplayName("Should return 400 with explicit message when target_entity_identifiers is a plain string instead of an array")
+    @DisplayName("Should return a native 400 problem detail when target_entity_identifiers is a string instead of an array")
     void postMapping_400_target_entity_identifiers_is_string() throws Exception {
       var payload = """
           {
@@ -344,10 +414,15 @@ class EntityDynamicMappingControllerTest extends AbstractIntegrationTest {
       mockMvc
           .perform(MockMvcRequestBuilders.post(MAPPING_PATH).contentType(APPLICATION_JSON)
               .accept(APPLICATION_JSON).with(csrf()).content(payload))
-          .andExpect(status().isBadRequest()).andExpect(jsonPath("$.error").value("BAD_REQUEST"))
-          .andExpect(
-              jsonPath("$.error_description").value(containsString("target_entity_identifiers")))
-          .andExpect(jsonPath("$.error_description").value(containsString("expected")));
+          .andExpect(status().isBadRequest())
+          .andExpect(content().contentTypeCompatibleWith(APPLICATION_PROBLEM_JSON))
+          .andExpect(jsonPath("$.status").value(400))
+          .andExpect(jsonPath("$.title").value("Bad Request"))
+          .andExpect(jsonPath("$.detail").value("Failed to read request"))
+          .andExpect(jsonPath("$.instance").value(MAPPING_PATH))
+          .andExpect(problemDetailResponse(HttpStatus.BAD_REQUEST))
+          .andExpect(jsonPath("$.error_description").value("Failed to read request"))
+          .andExpect(jsonPath("$.timestamp").isNotEmpty());
     }
 
     @Test
@@ -375,7 +450,7 @@ class EntityDynamicMappingControllerTest extends AbstractIntegrationTest {
           .perform(MockMvcRequestBuilders.post(MAPPING_PATH).contentType(APPLICATION_JSON)
               .accept(APPLICATION_JSON).with(csrf()).content(payload))
           .andExpect(status().isUnprocessableContent())
-          .andExpect(jsonPath("$.error").value("UNPROCESSABLE_CONTENT"))
+          .andExpect(problemDetailResponse(HttpStatus.UNPROCESSABLE_CONTENT))
           .andExpect(jsonPath("$.error_description").value(containsString("missing required")));
     }
 
@@ -447,7 +522,7 @@ class EntityDynamicMappingControllerTest extends AbstractIntegrationTest {
           .perform(MockMvcRequestBuilders.post(MAPPING_PATH).contentType(APPLICATION_JSON)
               .accept(APPLICATION_JSON).with(csrf()).content(payload))
           .andExpect(status().isUnprocessableContent())
-          .andExpect(jsonPath("$.error").value("UNPROCESSABLE_CONTENT")).andExpect(
+          .andExpect(problemDetailResponse(HttpStatus.UNPROCESSABLE_CONTENT)).andExpect(
               jsonPath("$.error_description").value(containsString("missing required relations")));
     }
 
@@ -497,7 +572,7 @@ class EntityDynamicMappingControllerTest extends AbstractIntegrationTest {
           .perform(MockMvcRequestBuilders.post(MAPPING_PATH).contentType(APPLICATION_JSON)
               .accept(APPLICATION_JSON).with(csrf()).content(payload))
           .andExpect(status().isUnprocessableContent())
-          .andExpect(jsonPath("$.error").value("UNPROCESSABLE_CONTENT")).andExpect(
+          .andExpect(problemDetailResponse(HttpStatus.UNPROCESSABLE_CONTENT)).andExpect(
               jsonPath("$.error_description").value(containsString("is not defined in template")));
     }
   }
@@ -533,7 +608,7 @@ class EntityDynamicMappingControllerTest extends AbstractIntegrationTest {
     @DisplayName("Should return 404 when mapping does not exist")
     void getMapping_404_not_found() throws Exception {
       mockMvc.perform(get(MAPPING_PATH + "/non-existent-mapping").accept(APPLICATION_JSON))
-          .andExpect(status().isNotFound()).andExpect(jsonPath("$.error").value("NOT_FOUND"))
+          .andExpect(status().isNotFound()).andExpect(problemDetailResponse(HttpStatus.NOT_FOUND))
           .andExpect(jsonPath("$.error_description").exists());
     }
 
@@ -573,7 +648,7 @@ class EntityDynamicMappingControllerTest extends AbstractIntegrationTest {
           .perform(MockMvcRequestBuilders.put(MAPPING_PATH + "/non-existent-mapping")
               .contentType(APPLICATION_JSON).accept(APPLICATION_JSON).with(csrf())
               .content(buildUpdatePayload()))
-          .andExpect(status().isNotFound()).andExpect(jsonPath("$.error").value("NOT_FOUND"))
+          .andExpect(status().isNotFound()).andExpect(problemDetailResponse(HttpStatus.NOT_FOUND))
           .andExpect(jsonPath("$.error_description").exists());
     }
 
@@ -623,7 +698,8 @@ class EntityDynamicMappingControllerTest extends AbstractIntegrationTest {
       mockMvc
           .perform(MockMvcRequestBuilders.put(MAPPING_PATH + "/microservice-mapping")
               .contentType(APPLICATION_JSON).accept(APPLICATION_JSON).with(csrf()).content(payload))
-          .andExpect(status().isBadRequest()).andExpect(jsonPath("$.error").value("BAD_REQUEST"));
+          .andExpect(status().isBadRequest())
+          .andExpect(problemDetailResponse(HttpStatus.BAD_REQUEST));
     }
   }
 
@@ -651,7 +727,7 @@ class EntityDynamicMappingControllerTest extends AbstractIntegrationTest {
           .accept(APPLICATION_JSON).with(csrf())).andExpect(status().isNoContent());
 
       mockMvc.perform(get(MAPPING_PATH + "/mapping-to-delete").accept(APPLICATION_JSON))
-          .andExpect(status().isNotFound()).andExpect(jsonPath("$.error").value("NOT_FOUND"));
+          .andExpect(status().isNotFound()).andExpect(problemDetailResponse(HttpStatus.NOT_FOUND));
     }
 
     @Test
@@ -661,7 +737,7 @@ class EntityDynamicMappingControllerTest extends AbstractIntegrationTest {
       mockMvc
           .perform(MockMvcRequestBuilders.delete(MAPPING_PATH + "/non-existent-mapping")
               .accept(APPLICATION_JSON).with(csrf()))
-          .andExpect(status().isNotFound()).andExpect(jsonPath("$.error").value("NOT_FOUND"))
+          .andExpect(status().isNotFound()).andExpect(problemDetailResponse(HttpStatus.NOT_FOUND))
           .andExpect(jsonPath("$.error_description").exists());
     }
 
@@ -672,7 +748,7 @@ class EntityDynamicMappingControllerTest extends AbstractIntegrationTest {
       mockMvc
           .perform(MockMvcRequestBuilders.delete(MAPPING_PATH + "/microservice-mapping")
               .accept(APPLICATION_JSON).with(csrf()))
-          .andExpect(status().isConflict()).andExpect(jsonPath("$.error").value("CONFLICT"))
+          .andExpect(status().isConflict()).andExpect(problemDetailResponse(HttpStatus.CONFLICT))
           .andExpect(jsonPath("$.error_description").value(containsString("in use")));
     }
   }
@@ -815,11 +891,11 @@ class EntityDynamicMappingControllerTest extends AbstractIntegrationTest {
                 "relations": [
                   {
                     "name": "apim-api-consumed_by-component",
-                    "target_entity_identifiers": [".relations.\\\"apim-api-consumed_by-component\\\""]
+                    "target_entity_identifiers": [".relations.\\"apim-api-consumed_by-component\\""]
                   },
                   {
                     "name": "apim-api-provided_by-component",
-                    "target_entity_identifiers": [".relations.\\\"apim-api-provided_by-component\\\""]
+                    "target_entity_identifiers": [".relations.\\"apim-api-provided_by-component\\""]
                   }
                 ]
               }
@@ -1136,7 +1212,7 @@ class EntityDynamicMappingControllerTest extends AbstractIntegrationTest {
       mockMvc
           .perform(MockMvcRequestBuilders.post(MAPPING_PATH + "/dry-run")
               .contentType(APPLICATION_JSON).accept(APPLICATION_JSON).with(csrf()).content(payload))
-          .andExpect(status().isNotFound()).andExpect(jsonPath("$.error").value("NOT_FOUND"))
+          .andExpect(status().isNotFound()).andExpect(problemDetailResponse(HttpStatus.NOT_FOUND))
           .andExpect(
               jsonPath("$.error_description").value(containsString("non-existent-template")));
     }
@@ -1159,7 +1235,8 @@ class EntityDynamicMappingControllerTest extends AbstractIntegrationTest {
       mockMvc
           .perform(MockMvcRequestBuilders.post(MAPPING_PATH + "/dry-run")
               .contentType(APPLICATION_JSON).accept(APPLICATION_JSON).with(csrf()).content(payload))
-          .andExpect(status().isBadRequest()).andExpect(jsonPath("$.error").value("BAD_REQUEST"))
+          .andExpect(status().isBadRequest())
+          .andExpect(problemDetailResponse(HttpStatus.BAD_REQUEST))
           .andExpect(jsonPath("$.error_description")
               .value(containsString("Entity dynamic Mapping definition is mandatory")));
     }
@@ -1188,7 +1265,8 @@ class EntityDynamicMappingControllerTest extends AbstractIntegrationTest {
       mockMvc
           .perform(MockMvcRequestBuilders.post(MAPPING_PATH + "/dry-run")
               .contentType(APPLICATION_JSON).accept(APPLICATION_JSON).with(csrf()).content(payload))
-          .andExpect(status().isBadRequest()).andExpect(jsonPath("$.error").value("BAD_REQUEST"))
+          .andExpect(status().isBadRequest())
+          .andExpect(problemDetailResponse(HttpStatus.BAD_REQUEST))
           .andExpect(jsonPath("$.error_description").value(containsString("Payload is mandatory")));
     }
 
@@ -1224,7 +1302,8 @@ class EntityDynamicMappingControllerTest extends AbstractIntegrationTest {
       mockMvc
           .perform(MockMvcRequestBuilders.post(MAPPING_PATH + "/dry-run")
               .contentType(APPLICATION_JSON).accept(APPLICATION_JSON).with(csrf()).content(payload))
-          .andExpect(status().isBadRequest()).andExpect(jsonPath("$.error").value("BAD_REQUEST"))
+          .andExpect(status().isBadRequest())
+          .andExpect(problemDetailResponse(HttpStatus.BAD_REQUEST))
           .andExpect(jsonPath("$.error_description").value(containsString("Payload is mandatory")));
     }
 
@@ -1272,7 +1351,7 @@ class EntityDynamicMappingControllerTest extends AbstractIntegrationTest {
           .perform(MockMvcRequestBuilders.post(MAPPING_PATH + "/dry-run")
               .contentType(APPLICATION_JSON).accept(APPLICATION_JSON).with(csrf()).content(payload))
           .andExpect(status().isUnprocessableContent())
-          .andExpect(jsonPath("$.error").value("UNPROCESSABLE_CONTENT")).andExpect(
+          .andExpect(problemDetailResponse(HttpStatus.UNPROCESSABLE_CONTENT)).andExpect(
               jsonPath("$.error_description").value(containsString("missing required relations")));
     }
 
@@ -1304,7 +1383,8 @@ class EntityDynamicMappingControllerTest extends AbstractIntegrationTest {
       mockMvc
           .perform(MockMvcRequestBuilders.post(MAPPING_PATH + "/dry-run")
               .contentType(APPLICATION_JSON).accept(APPLICATION_JSON).with(csrf()).content(payload))
-          .andExpect(status().isBadRequest()).andExpect(jsonPath("$.error").value("BAD_REQUEST"))
+          .andExpect(status().isBadRequest())
+          .andExpect(problemDetailResponse(HttpStatus.BAD_REQUEST))
           .andExpect(jsonPath("$.error_description")
               .value(containsString(ENTITY_DYNAMIC_MAPPING_TEMPLATE_IDENTIFIER_MANDATORY)));
     }
@@ -1340,7 +1420,8 @@ class EntityDynamicMappingControllerTest extends AbstractIntegrationTest {
       mockMvc
           .perform(MockMvcRequestBuilders.post(MAPPING_PATH + "/dry-run")
               .contentType(APPLICATION_JSON).accept(APPLICATION_JSON).with(csrf()).content(payload))
-          .andExpect(status().isBadRequest()).andExpect(jsonPath("$.error").value("BAD_REQUEST"))
+          .andExpect(status().isBadRequest())
+          .andExpect(problemDetailResponse(HttpStatus.BAD_REQUEST))
           .andExpect(jsonPath("$.error_description").value(containsString("mapping identifier")));
     }
 
@@ -1353,17 +1434,17 @@ class EntityDynamicMappingControllerTest extends AbstractIntegrationTest {
             "mapping": {
               "identifier": "runtime-expression-error-test",
               "entity_template_identifier": "microservice",
-              "filter": ".action == \\\"pushed\\\"",
+              "filter": ".action == \\"pushed\\"",
               "action": "UPDATE_ENTITY",
               "name": "runtime expression error test",
               "description": "test",
               "entity": {
-                "identifier": "error(\\\"forced dry-run failure\\\")",
+                "identifier": "error(\\"forced dry-run failure\\")",
                 "name": ".repository.name",
                 "properties": {
                   "applicationName": ".repository.name",
                   "ownerEmail": ".sender.email",
-                  "environment": "\\\"DEV\\\"",
+                  "environment": "\\"DEV\\"",
                   "version": ".ref",
                   "port": "8080",
                   "programmingLanguage": ".repository.language"
@@ -1390,8 +1471,8 @@ class EntityDynamicMappingControllerTest extends AbstractIntegrationTest {
           .perform(MockMvcRequestBuilders.post(MAPPING_PATH + "/dry-run")
               .contentType(APPLICATION_JSON).accept(APPLICATION_JSON).with(csrf()).content(payload))
           .andExpect(status().isUnprocessableContent())
-          .andExpect(content().contentType(APPLICATION_JSON))
-          .andExpect(jsonPath("$.error").value("UNPROCESSABLE_CONTENT"))
+          .andExpect(content().contentType(APPLICATION_PROBLEM_JSON))
+          .andExpect(problemDetailResponse(HttpStatus.UNPROCESSABLE_CONTENT))
           .andExpect(jsonPath("$.error_description")
               .value(containsString("Expression evaluation failed")));
     }
@@ -1432,7 +1513,7 @@ class EntityDynamicMappingControllerTest extends AbstractIntegrationTest {
           .perform(MockMvcRequestBuilders.post(MAPPING_PATH + "/dry-run")
               .contentType(APPLICATION_JSON).accept(APPLICATION_JSON).with(csrf()).content(payload))
           .andExpect(status().isUnprocessableContent())
-          .andExpect(jsonPath("$.error").value("UNPROCESSABLE_CONTENT"))
+          .andExpect(problemDetailResponse(HttpStatus.UNPROCESSABLE_CONTENT))
           .andExpect(jsonPath("$.error_description").value(containsString(
               "The mapping is missing required properties: [environment, ownerEmail, port, programmingLanguage, version]")));
     }
@@ -1446,7 +1527,7 @@ class EntityDynamicMappingControllerTest extends AbstractIntegrationTest {
             "mapping": {
               "identifier": "github-commits-dry-run",
               "entity_template_identifier": "microservice",
-              "filter": ".action == \\\"pushed\\\"",
+              "filter": ".action == \\"pushed\\"",
               "action": "UPDATE_ENTITY",
               "name": "GitHub multi-commit dry-run",
               "description": "Generation d'une liste d'entites a partir des commits",
@@ -1456,10 +1537,10 @@ class EntityDynamicMappingControllerTest extends AbstractIntegrationTest {
                 "properties": {
                   "applicationName": ".repository.name",
                   "ownerEmail": ".email",
-                  "port": "\\\"8080\\\"",
+                  "port": "\\"8080\\"",
                   "programmingLanguage": ".repository.language",
-                  "version": "\\\"1.0.0\\\"",
-                  "environment": "\\\"DEV\\\""
+                  "version": "\\"1.0.0\\"",
+                  "environment": "\\"DEV\\""
                 },
                 "relations": []
               }
@@ -1483,7 +1564,7 @@ class EntityDynamicMappingControllerTest extends AbstractIntegrationTest {
           .perform(MockMvcRequestBuilders.post(MAPPING_PATH + "/dry-run")
               .contentType(APPLICATION_JSON).accept(APPLICATION_JSON).with(csrf()).content(payload))
           .andExpect(status().isUnprocessableContent())
-          .andExpect(jsonPath("$.error").value("UNPROCESSABLE_CONTENT"))
+          .andExpect(problemDetailResponse(HttpStatus.UNPROCESSABLE_CONTENT))
           .andExpect(jsonPath("$.error_description").value(containsString("ownerEmail")));
     }
 
@@ -1677,7 +1758,7 @@ class EntityDynamicMappingControllerTest extends AbstractIntegrationTest {
               MockMvcRequestBuilders.post(MAPPING_PATH + "/dry-run").contentType(APPLICATION_JSON)
                   .accept(APPLICATION_JSON).with(csrf()).content(dryRunPayload))
           .andExpect(status().isUnprocessableContent())
-          .andExpect(jsonPath("$.error").value("UNPROCESSABLE_CONTENT"))
+          .andExpect(problemDetailResponse(HttpStatus.UNPROCESSABLE_CONTENT))
           .andExpect(
               jsonPath("$.error_description").value(containsString("is not defined in template")))
           .andExpect(jsonPath("$.error_description").value(containsString("undefined-api-link")));

@@ -43,7 +43,7 @@ class HexagonalArchitectureTest {
       "org.springframework.web..", "org.springframework.data.jpa..",
       "org.springframework.data.repository..", "org.springframework.http..", "org.hibernate..",
       "org.mapstruct..", "com.schibsted..", "com.fasterxml.jackson..", "org.apache.kafka..",
-      "java.net.http..",};
+      "java.net.http..", "org.springframework.beans.."};
 
   // ---------------------------------------------------------------------------------------
   // 1. Hexagonal constraints

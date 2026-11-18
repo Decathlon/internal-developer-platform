@@ -2,6 +2,7 @@ package com.decathlon.idp_core.infrastructure.adapters.api.configuration.securit
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import org.junit.jupiter.api.DisplayName;
@@ -16,6 +17,7 @@ import org.springframework.security.oauth2.server.resource.authentication.JwtAut
 import org.springframework.security.web.DefaultSecurityFilterChain;
 import org.springframework.security.web.SecurityFilterChain;
 
+import com.decathlon.idp_core.infrastructure.adapters.api.auth.GlobalAuthorizationFilter;
 import com.decathlon.idp_core.infrastructure.adapters.api.auth.JitProvisioningFilter;
 
 @DisplayName("JwtFilterChainConfigTest")
@@ -28,6 +30,7 @@ class JwtFilterChainConfigTest {
   private final ApplicationContextRunner contextRunner = new ApplicationContextRunner()
       .withConfiguration(AutoConfigurations.of(JwtFilterChainConfig.class))
       .withBean(JitProvisioningFilter.class, () -> mock(JitProvisioningFilter.class))
+      .withBean(GlobalAuthorizationFilter.class, () -> mock(GlobalAuthorizationFilter.class))
       .withBean(JwtAuthenticationConverter.class, JwtAuthenticationConverter::new)
       .withBean(HttpSecurity.class, () -> httpSecurity());
 
@@ -45,9 +48,28 @@ class JwtFilterChainConfigTest {
             .doesNotHaveBean(SecurityFilterChain.class));
   }
 
+  @Test
+  void shouldRegisterGlobalAuthorizationAfterJitProvisioning() {
+    var jitFilter = mock(JitProvisioningFilter.class);
+    var authorizationFilter = mock(GlobalAuthorizationFilter.class);
+    var configuration = new JwtFilterChainConfig(jitFilter, authorizationFilter,
+        new JwtAuthenticationConverter());
+    HttpSecurity http = httpSecurity();
+
+    configuration.jwtSecurityFilterChain(http);
+
+    verify(http).addFilterAfter(authorizationFilter, JitProvisioningFilter.class);
+  }
+
   private HttpSecurity httpSecurity() {
     HttpSecurity http = mock(HttpSecurity.class, org.mockito.Answers.RETURNS_DEEP_STUBS);
     when(http.build()).thenReturn(securityFilterChain);
+    when(http.authorizeHttpRequests(org.mockito.ArgumentMatchers.any())).thenReturn(http);
+    when(http.cors(org.mockito.ArgumentMatchers.any())).thenReturn(http);
+    when(http.oauth2ResourceServer(org.mockito.ArgumentMatchers.any())).thenReturn(http);
+    when(
+        http.addFilterAfter(org.mockito.ArgumentMatchers.any(), org.mockito.ArgumentMatchers.any()))
+            .thenReturn(http);
     return http;
   }
 }
