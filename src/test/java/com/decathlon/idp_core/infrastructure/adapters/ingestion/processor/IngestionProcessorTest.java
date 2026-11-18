@@ -1,9 +1,11 @@
 package com.decathlon.idp_core.infrastructure.adapters.ingestion.processor;
 
 import static com.decathlon.idp_core.domain.constant.ValidationMessages.ENTITY_DYNAMIC_MAPPING_ACTION_MANDATORY;
+import static com.decathlon.idp_core.infrastructure.adapters.ingestion.configuration.IngestionObservabilityConstants.*;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.fail;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.argThat;
@@ -13,9 +15,11 @@ import static org.mockito.Mockito.when;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.UUID;
 import java.util.stream.Stream;
 
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -45,6 +49,14 @@ import com.decathlon.idp_core.domain.service.entity.EntityService;
 import ch.qos.logback.classic.Logger;
 import ch.qos.logback.classic.spi.ILoggingEvent;
 import ch.qos.logback.core.read.ListAppender;
+import io.opentelemetry.api.OpenTelemetry;
+import io.opentelemetry.api.metrics.Meter;
+import io.opentelemetry.sdk.OpenTelemetrySdk;
+import io.opentelemetry.sdk.metrics.SdkMeterProvider;
+import io.opentelemetry.sdk.metrics.data.HistogramPointData;
+import io.opentelemetry.sdk.metrics.data.LongPointData;
+import io.opentelemetry.sdk.metrics.data.MetricData;
+import io.opentelemetry.sdk.testing.exporter.InMemoryMetricReader;
 
 /// Unit tests for IngestionProcessor covering all mapping actions and edge cases.
 ///
@@ -67,6 +79,8 @@ class IngestionProcessorTest {
   private IngestionProcessor ingestionProcessor;
 
   private ListAppender<ILoggingEvent> listAppender;
+  private InMemoryMetricReader metricReader;
+  private SdkMeterProvider meterProvider;
 
   @BeforeEach
   void setUp() {
@@ -74,7 +88,24 @@ class IngestionProcessorTest {
     listAppender = new ListAppender<>();
     listAppender.start();
     logger.addAppender(listAppender);
-    ingestionProcessor = new IngestionProcessor(mappingEngine, entityService);
+
+    metricReader = InMemoryMetricReader.create();
+    meterProvider = SdkMeterProvider.builder().registerMetricReader(metricReader).build();
+    OpenTelemetry openTelemetry = OpenTelemetrySdk.builder().setMeterProvider(meterProvider)
+        .build();
+    Meter meter = openTelemetry.getMeter("com.decathlon.idp_core.tests");
+
+    ingestionProcessor = new IngestionProcessor(mappingEngine, entityService, meter);
+  }
+
+  @AfterEach
+  void tearDown() {
+    Logger logger = (Logger) LoggerFactory.getLogger(IngestionProcessor.class);
+    logger.detachAppender(listAppender);
+    listAppender.stop();
+    if (meterProvider != null) {
+      meterProvider.close();
+    }
   }
 
   private Entity createTestEntity(String templateId, String identifier) {
@@ -96,6 +127,130 @@ class IngestionProcessorTest {
         "Test webhook description", true, mappings,
         new WebhookSecurity(WebhookSecurityType.HMAC_SHA256,
             Map.of("header_name", "X-Hub-Signature-256", "secret_alias", "MY_SECRET")));
+  }
+
+  private List<MetricData> collectedMetrics() {
+    return List.copyOf(metricReader.collectAllMetrics());
+  }
+
+  private MetricData metricByName(List<MetricData> metrics, String metricName) {
+    return metrics.stream().filter(metric -> metric.getName().equals(metricName)).findFirst()
+        .orElseThrow(() -> new AssertionError("Missing metric: " + metricName));
+  }
+
+  private long longCounterValue(List<MetricData> metrics, String metricName, String... keyValues) {
+    MetricData metric = metricByName(metrics, metricName);
+    Optional<LongPointData> point = metric.getLongSumData().getPoints().stream()
+        .filter(dataPoint -> attributesMatch(dataPoint.getAttributes(), keyValues)).findFirst();
+    return point.map(LongPointData::getValue).orElse(0L);
+  }
+
+  private HistogramPointData histogramPoint(List<MetricData> metrics, String metricName,
+      String... keyValues) {
+    MetricData metric = metricByName(metrics, metricName);
+    return metric.getHistogramData().getPoints().stream()
+        .filter(dataPoint -> attributesMatch(dataPoint.getAttributes(), keyValues)).findFirst()
+        .orElseThrow(() -> new AssertionError("Missing histogram point for metric: " + metricName));
+  }
+
+  private boolean attributesMatch(io.opentelemetry.api.common.Attributes attributes,
+      String... keyValues) {
+    if (keyValues.length % 2 != 0) {
+      fail("Attributes must be provided as key/value pairs");
+    }
+    for (int index = 0; index < keyValues.length; index += 2) {
+      String actual = attributes
+          .get(io.opentelemetry.api.common.AttributeKey.stringKey(keyValues[index]));
+      if (!keyValues[index + 1].equals(actual)) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  @Nested
+  @DisplayName("Observability metrics")
+  class ObservabilityMetricsTest {
+
+    @Test
+    @DisplayName("Should record mapping metrics for successful mapping")
+    void mapping_metrics_success() {
+      String payload = "{\"action\": \"pushed\"}";
+      EntityDynamicMapping mapping = createTestMapping(MappingAction.UPDATE_ENTITY);
+      WebhookConnector connector = createWebhookConnector("test-connector", List.of(mapping));
+      Entity entity = createTestEntity("test-template", "test-id");
+
+      when(mappingEngine.mapToEntity(payload, mapping)).thenReturn(entity);
+      when(entityService.entityExists("test-template", "test-id")).thenReturn(false);
+
+      ingestionProcessor.ingest(payload, connector);
+
+      List<MetricData> metrics = collectedMetrics();
+      assertThat(longCounterValue(metrics, MAPPING_APPLIED_TOTAL, ATTRIBUTE_CONNECTOR,
+          "test-connector", ATTRIBUTE_MAPPING_ID, mapping.identifier(), ATTRIBUTE_ACTION,
+          MappingAction.UPDATE_ENTITY.name())).isEqualTo(1L);
+      assertThat(longCounterValue(metrics, MAPPING_RESULT, ATTRIBUTE_CONNECTOR, "test-connector",
+          ATTRIBUTE_MAPPING_ID, mapping.identifier(), ATTRIBUTE_RESULT, "MATCHED")).isEqualTo(1L);
+      assertThat(longCounterValue(metrics, MAPPING_RESULT, ATTRIBUTE_CONNECTOR, "test-connector",
+          ATTRIBUTE_MAPPING_ID, mapping.identifier(), ATTRIBUTE_RESULT, "ERROR")).isZero();
+      assertThat(histogramPoint(metrics, MAPPING_LATENCY_MS, ATTRIBUTE_CONNECTOR, "test-connector",
+          ATTRIBUTE_MAPPING_ID, mapping.identifier()).getCount()).isEqualTo(1L);
+    }
+
+    @Test
+    @DisplayName("Should record mapping metrics for filtered mapping")
+    void mapping_metrics_filtered() {
+      String payload = "{\"action\": \"other\"}";
+      EntityDynamicMapping mapping = createTestMapping(MappingAction.UPDATE_ENTITY);
+      WebhookConnector connector = createWebhookConnector("test-connector", List.of(mapping));
+
+      when(mappingEngine.mapToEntity(payload, mapping)).thenReturn(null);
+
+      ingestionProcessor.ingest(payload, connector);
+
+      List<MetricData> metrics = collectedMetrics();
+      assertThat(longCounterValue(metrics, MAPPING_APPLIED_TOTAL, ATTRIBUTE_CONNECTOR,
+          "test-connector", ATTRIBUTE_MAPPING_ID, mapping.identifier(), ATTRIBUTE_ACTION,
+          MappingAction.UPDATE_ENTITY.name())).isEqualTo(1L);
+      assertThat(
+          longCounterValue(metrics, MAPPING_FILTERED_TOTAL, ATTRIBUTE_CONNECTOR, "test-connector",
+              ATTRIBUTE_MAPPING_ID, mapping.identifier(), ATTRIBUTE_REASON, "filter_rejected"))
+                  .isEqualTo(1L);
+      assertThat(longCounterValue(metrics, MAPPING_RESULT, ATTRIBUTE_CONNECTOR, "test-connector",
+          ATTRIBUTE_MAPPING_ID, mapping.identifier(), ATTRIBUTE_RESULT, "FILTERED_OUT"))
+              .isEqualTo(1L);
+      assertThat(histogramPoint(metrics, MAPPING_LATENCY_MS, ATTRIBUTE_CONNECTOR, "test-connector",
+          ATTRIBUTE_MAPPING_ID, mapping.identifier()).getCount()).isEqualTo(1L);
+    }
+
+    @Test
+    @DisplayName("Should record mapping metrics for failed mapping")
+    void mapping_metrics_failure() {
+      String payload = "{\"action\": \"pushed\"}";
+      EntityDynamicMapping mapping = createTestMapping(MappingAction.UPDATE_RELATIONS);
+      WebhookConnector connector = createWebhookConnector("test-connector", List.of(mapping));
+      Entity entity = createTestEntity("test-template", "test-id");
+
+      when(mappingEngine.mapToEntity(payload, mapping)).thenReturn(entity);
+      when(entityService.entityExists("test-template", "test-id")).thenReturn(false);
+
+      assertThrows(EntityNotFoundException.class,
+          () -> ingestionProcessor.ingest(payload, connector));
+
+      List<MetricData> metrics = collectedMetrics();
+      assertThat(longCounterValue(metrics, MAPPING_APPLIED_TOTAL, ATTRIBUTE_CONNECTOR,
+          "test-connector", ATTRIBUTE_MAPPING_ID, mapping.identifier(), ATTRIBUTE_ACTION,
+          MappingAction.UPDATE_RELATIONS.name())).isEqualTo(1L);
+      assertThat(longCounterValue(metrics, MAPPING_ERRORS_TOTAL, ATTRIBUTE_CONNECTOR,
+          "test-connector", ATTRIBUTE_MAPPING_ID, mapping.identifier(), "error_type",
+          EntityNotFoundException.class.getSimpleName())).isEqualTo(1L);
+      assertThat(longCounterValue(metrics, MAPPING_RESULT, ATTRIBUTE_CONNECTOR, "test-connector",
+          ATTRIBUTE_MAPPING_ID, mapping.identifier(), ATTRIBUTE_RESULT, "ERROR")).isEqualTo(1L);
+      assertThat(longCounterValue(metrics, MAPPING_RESULT, ATTRIBUTE_CONNECTOR, "test-connector",
+          ATTRIBUTE_MAPPING_ID, mapping.identifier(), ATTRIBUTE_RESULT, "MATCHED")).isZero();
+      assertThat(histogramPoint(metrics, MAPPING_LATENCY_MS, ATTRIBUTE_CONNECTOR, "test-connector",
+          ATTRIBUTE_MAPPING_ID, mapping.identifier()).getCount()).isEqualTo(1L);
+    }
   }
 
   @ParameterizedTest
