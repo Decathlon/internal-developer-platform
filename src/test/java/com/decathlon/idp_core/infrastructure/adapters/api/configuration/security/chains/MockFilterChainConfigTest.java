@@ -35,6 +35,7 @@ import org.springframework.security.web.SecurityFilterChain;
 import com.decathlon.idp_core.domain.exception.mock.MockSecurityConfigurationException;
 import com.decathlon.idp_core.infrastructure.adapters.api.auth.GlobalAuthorizationFilter;
 import com.decathlon.idp_core.infrastructure.adapters.api.auth.JitProvisioningFilter;
+import com.decathlon.idp_core.infrastructure.adapters.api.configuration.HttpMessageSignatureConfiguration.ChainConfigurer;
 
 /// Unit tests for MockFilterChainConfig and MockJwtAuthenticationFilter.
 /// Covers mock security setup and JWT token generation for local development.
@@ -79,6 +80,7 @@ class MockFilterChainConfigTest {
 
   private final ApplicationContextRunner contextRunner = new ApplicationContextRunner()
       .withConfiguration(AutoConfigurations.of(MockFilterChainConfig.class))
+      .withBean(ChainConfigurer.class, () -> mock(ChainConfigurer.class))
       .withBean(JitProvisioningFilter.class, () -> mock(JitProvisioningFilter.class))
       .withBean(GlobalAuthorizationFilter.class, () -> mock(GlobalAuthorizationFilter.class))
       .withBean(HttpSecurity.class, this::httpSecurity);
@@ -128,9 +130,10 @@ class MockFilterChainConfigTest {
     when(httpSecurityMock.sessionManagement(any())).thenThrow(simulatedError);
 
     // When & Then
-    assertThatThrownBy(() -> configuration.mockSecurityFilterChain(httpSecurityMock))
-        .isInstanceOf(MockSecurityConfigurationException.class)
-        .hasMessage("Failed to configure mock security filter chain").hasCause(simulatedError);
+    assertThatThrownBy(
+        () -> configuration.mockSecurityFilterChain(httpSecurityMock, mock(ChainConfigurer.class)))
+            .isInstanceOf(MockSecurityConfigurationException.class)
+            .hasMessage("Failed to configure mock security filter chain").hasCause(simulatedError);
   }
 
   @Nested
@@ -144,7 +147,7 @@ class MockFilterChainConfigTest {
       var configuration = new MockFilterChainConfig(jitFilter, authorizationFilter);
       HttpSecurity http = httpSecurity();
 
-      configuration.mockSecurityFilterChain(http);
+      configuration.mockSecurityFilterChain(http, mock(ChainConfigurer.class));
 
       verify(http).addFilterAfter(authorizationFilter, JitProvisioningFilter.class);
     }

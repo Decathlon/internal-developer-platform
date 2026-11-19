@@ -123,6 +123,14 @@ app:
   # Base URL of this service, used to build self-referencing links.
   idp-core-prefix-url: ${IDP_CORE_PREFIX_URL}
   security:
+    http-message-signature-verification:
+      enabled: ${HTTP_MESSAGE_SIGNATURE_VERIFICATION_ENABLED:true}
+      secret: ${HTTP_MESSAGE_SIGNATURE_VERIFICATION_SECRET}
+      identifier-header-name: ${HTTP_MESSAGE_SIGNATURE_VERIFICATION_IDENTIFIER_HEADER_NAME:x-request-id}
+      algorithm: ${HTTP_MESSAGE_SIGNATURE_VERIFICATION_ALGORITHM:HMAC_SHA256}
+      validity-duration-seconds: ${HTTP_MESSAGE_SIGNATURE_VERIFICATION_VALIDITY_DURATION_SECONDS:30}
+      clock-skew-seconds: ${HTTP_MESSAGE_SIGNATURE_VERIFICATION_CLOCK_SKEW_SECONDS:0}
+      excluded-paths: ${HTTP_MESSAGE_SIGNATURE_VERIFICATION_EXCLUDED_PATHS:/actuator/health,/actuator/health/**,/swagger-ui.html,/swagger-ui/**,/v3/api-docs/**}
     principal-provisioning:
       mode: ${IDP_PRINCIPAL_PROVISIONING_MODE:LINK_ONLY}
     authorization:

@@ -15,6 +15,8 @@ import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.web.DefaultSecurityFilterChain;
 import org.springframework.security.web.SecurityFilterChain;
 
+import com.decathlon.idp_core.infrastructure.adapters.api.configuration.HttpMessageSignatureConfiguration.ChainConfigurer;
+
 @DisplayName("ApiKeyFilterChainConfigTest")
 @ExtendWith(MockitoExtension.class)
 class ApiKeyFilterChainConfigTest {
@@ -24,6 +26,7 @@ class ApiKeyFilterChainConfigTest {
 
   private final ApplicationContextRunner contextRunner = new ApplicationContextRunner()
       .withConfiguration(AutoConfigurations.of(ApiKeyFilterChainConfig.class))
+      .withBean(ChainConfigurer.class, () -> mock(ChainConfigurer.class))
       .withBean(HttpSecurity.class, () -> httpSecurity());
 
   @Test
