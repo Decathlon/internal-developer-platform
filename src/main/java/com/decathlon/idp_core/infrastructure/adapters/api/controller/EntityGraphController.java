@@ -59,6 +59,7 @@ import lombok.RequiredArgsConstructor;
 public class EntityGraphController {
 
   private final EntityGraphService entityGraphService;
+  private final EntityGraphFlatDtoOutMapper entityGraphFlatDtoOutMapper;
 
   /// Retrieves the entity relationship graph as a flat nodes-and-edges structure.
   ///
@@ -98,7 +99,7 @@ public class EntityGraphController {
     EntityGraphNode graphNode = entityGraphService.getEntityGraph(templateIdentifier,
         entityIdentifier, new EntityGraphQueryOptions(depth, includeData, includeData,
             relationFilter, propertyFilter, mode));
-    return EntityGraphFlatDtoOutMapper.toFlatDto(graphNode);
+    return entityGraphFlatDtoOutMapper.toFlatDto(graphNode);
   }
 
 }

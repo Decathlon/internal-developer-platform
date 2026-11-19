@@ -16,6 +16,7 @@ import com.decathlon.idp_core.domain.model.principal.PrincipalInfo;
 import com.decathlon.idp_core.domain.model.principal.PrincipalKind;
 import com.decathlon.idp_core.domain.port.EntityRepositoryPort;
 
+import io.opentelemetry.instrumentation.annotations.WithSpan;
 import lombok.RequiredArgsConstructor;
 
 /// Domain service orchestrating Just-In-Time (JIT) provisioning of Principal entities.
@@ -58,6 +59,7 @@ public class PrincipalProvisioningService {
   ///
   /// @param principalInfo extracted authentication information
   /// @return the provisioned Principal entity
+  @WithSpan("PrincipalProvisioningService.provisionPrincipal")
   @Transactional
   public Entity provisionPrincipal(PrincipalInfo principalInfo) {
     return provisionPrincipal(principalInfo, false);
@@ -68,6 +70,7 @@ public class PrincipalProvisioningService {
   /// @param principalInfo extracted authentication information for an
   /// allow-listed principal
   /// @return the provisioned Principal entity
+  @WithSpan("PrincipalProvisioningService.provisionGlobalAdministrator")
   @Transactional
   public Entity provisionGlobalAdministrator(PrincipalInfo principalInfo) {
     return provisionPrincipal(principalInfo, true);
@@ -102,6 +105,7 @@ public class PrincipalProvisioningService {
   /// @param principalInfo authenticated principal identity
   /// @return matching principal entity, or empty when missing or of a different
   /// kind
+  @WithSpan("PrincipalProvisioningService.findPrincipalWithSameKind")
   @Transactional(readOnly = true)
   public Optional<Entity> findPrincipalWithSameKind(PrincipalInfo principalInfo) {
     return entityRepository
