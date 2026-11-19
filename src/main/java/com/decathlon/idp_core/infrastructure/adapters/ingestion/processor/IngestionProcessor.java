@@ -14,6 +14,7 @@ import com.decathlon.idp_core.domain.model.entity_mapping.EntityDynamicMapping;
 import com.decathlon.idp_core.domain.model.inbound_connectors.webhook.WebhookConnector;
 import com.decathlon.idp_core.domain.port.MappingEnginePort;
 import com.decathlon.idp_core.domain.service.entity.EntityService;
+import com.decathlon.idp_core.infrastructure.adapters.api.configuration.PrincipalProvisioningProperties;
 
 import io.opentelemetry.api.trace.Span;
 import lombok.RequiredArgsConstructor;
@@ -25,11 +26,14 @@ import lombok.extern.slf4j.Slf4j;
 public class IngestionProcessor {
 
   private static final String SPAN_ATTRIBUTE_WEBHOOK_IDENTIFIER = "idp.webhook.identifier";
-  private static final Set<String> PROTECTED_PRINCIPAL_PROPERTIES = Set.of("kind", "is_admin",
+  private static final Set<String> JIT_PROTECTED_PRINCIPAL_PROPERTIES = Set.of("kind", "is_admin",
+      "is_idp_user");
+  private static final Set<String> LINK_ONLY_PROTECTED_PRINCIPAL_PROPERTIES = Set.of("is_admin",
       "is_idp_user");
 
   private final MappingEnginePort mappingEngine;
   private final EntityService entityService;
+  private final PrincipalProvisioningProperties provisioningProperties;
 
   /// Ingests a webhook payload by applying all configured mappings.
   ///
@@ -85,8 +89,12 @@ public class IngestionProcessor {
     if (!AuthorizationResource.PRINCIPAL_TEMPLATE_IDENTIFIER.equals(entity.templateIdentifier())) {
       return entity;
     }
+    Set<String> protectedProperties = switch (provisioningProperties.mode()) {
+      case JIT -> JIT_PROTECTED_PRINCIPAL_PROPERTIES;
+      case LINK_ONLY -> LINK_ONLY_PROTECTED_PRINCIPAL_PROPERTIES;
+    };
     List<Property> properties = entity.properties().stream()
-        .filter(property -> !PROTECTED_PRINCIPAL_PROPERTIES.contains(property.name())).toList();
+        .filter(property -> !protectedProperties.contains(property.name())).toList();
     return new Entity(entity.id(), entity.templateIdentifier(), entity.name(), entity.identifier(),
         properties, entity.relations());
   }
