@@ -7,6 +7,15 @@ import static com.tngtech.archunit.library.GeneralCodingRules.NO_CLASSES_SHOULD_
 import static com.tngtech.archunit.library.GeneralCodingRules.NO_CLASSES_SHOULD_USE_JAVA_UTIL_LOGGING;
 import static com.tngtech.archunit.library.dependencies.SlicesRuleDefinition.slices;
 
+import java.lang.reflect.Field;
+import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.Map;
+import java.util.Set;
+
+import com.decathlon.idp_core.infrastructure.adapters.api.handler.ApiExceptionHandler;
+import com.tngtech.archunit.core.domain.JavaClass;
+import com.tngtech.archunit.core.domain.JavaClasses;
 import com.tngtech.archunit.core.importer.ImportOption.DoNotIncludeTests;
 import com.tngtech.archunit.junit.AnalyzeClasses;
 import com.tngtech.archunit.junit.ArchTest;
@@ -100,6 +109,36 @@ class MaintainabilityArchitectureTest {
       .that().haveSimpleNameEndingWith("Exception").should()
       .resideInAnyPackage(EXCEPTION_PACKAGE, INFRASTRUCTURE_EXCEPTION_PACKAGE)
       .because("exceptions are either business (domain) or technical (infrastructure adapter)");
+
+  /// Every domain runtime exception must have an HTTP status mapping.
+  @ArchTest
+  static void allDomainExceptionsAreRegistered(JavaClasses importedClasses)
+      throws NoSuchFieldException, IllegalAccessException {
+    Field statusByExceptionField = ApiExceptionHandler.class
+        .getDeclaredField("STATUS_BY_EXCEPTION");
+    statusByExceptionField.setAccessible(true);
+    Map<?, ?> statusByException = (Map<?, ?>) statusByExceptionField.get(null);
+    Set<String> mappedExceptionNames = new HashSet<>();
+    for (Object key : statusByException.keySet()) {
+      if (key instanceof Class<?> exceptionClass) {
+        mappedExceptionNames.add(exceptionClass.getName());
+      }
+    }
+
+    var unregistered = new ArrayList<String>();
+    for (JavaClass javaClass : importedClasses) {
+      if (javaClass.getPackageName().startsWith(BASE_PACKAGE + ".domain.exception")
+          && javaClass.isAssignableTo(RuntimeException.class)
+          && !mappedExceptionNames.contains(javaClass.getName())) {
+        unregistered.add(javaClass.getName());
+      }
+    }
+
+    if (!unregistered.isEmpty()) {
+      throw new AssertionError("The following domain exceptions are not registered in "
+          + "ApiExceptionHandler.STATUS_BY_EXCEPTION: " + unregistered);
+    }
+  }
 
   // ---------------------------------------------------------------------------------------
   // 4. Naming & placement conventions

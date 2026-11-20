@@ -160,7 +160,7 @@ class JitProvisioningFilterTest {
     jitProvisioningFilter.doFilterInternal(request, response, filterChain);
 
     verify(provisioningService, never()).provisionPrincipal(any());
-    verify(errorResponseWriter).write(response, HttpStatus.UNAUTHORIZED,
+    verify(errorResponseWriter).write(request, response, HttpStatus.UNAUTHORIZED,
         "No linked principal matches the authenticated identity");
     verify(filterChain, never()).doFilter(any(), any());
   }
@@ -191,7 +191,7 @@ class JitProvisioningFilterTest {
     verify(request).setAttribute(ProvisionedPrincipalContext.REQUEST_ATTRIBUTE,
         new ProvisionedPrincipalContext(principalInfo, Optional.of(principalEntity)));
     verify(filterChain).doFilter(request, response);
-    verify(errorResponseWriter, never()).write(any(), any(), any());
+    verify(errorResponseWriter, never()).write(any(), any(), any(), any());
   }
 
   @ParameterizedTest(name = "{0} {1} wrongKind={2}")
@@ -233,9 +233,9 @@ class JitProvisioningFilterTest {
 
     if (shouldContinue) {
       verify(filterChain).doFilter(request, response);
-      verify(errorResponseWriter, never()).write(any(), any(), any());
+      verify(errorResponseWriter, never()).write(any(), any(), any(), any());
     } else {
-      verify(errorResponseWriter).write(response, HttpStatus.UNAUTHORIZED,
+      verify(errorResponseWriter).write(request, response, HttpStatus.UNAUTHORIZED,
           "No linked principal matches the authenticated identity");
       verify(filterChain, never()).doFilter(any(), any());
     }
@@ -319,7 +319,7 @@ class JitProvisioningFilterTest {
     // Act & Assert (Should not throw exception)
     jitProvisioningFilter.doFilterInternal(request, response, filterChain);
 
-    verify(errorResponseWriter).write(response, HttpStatus.SERVICE_UNAVAILABLE,
+    verify(errorResponseWriter).write(request, response, HttpStatus.SERVICE_UNAVAILABLE,
         "Unable to verify your access at this time. Please try again later.");
     verify(filterChain, never()).doFilter(any(), any());
   }
@@ -339,7 +339,7 @@ class JitProvisioningFilterTest {
 
     jitProvisioningFilter.doFilterInternal(request, response, filterChain);
 
-    verify(errorResponseWriter).write(response, HttpStatus.SERVICE_UNAVAILABLE,
+    verify(errorResponseWriter).write(request, response, HttpStatus.SERVICE_UNAVAILABLE,
         "Unable to verify your access at this time. Please try again later.");
     verify(filterChain, never()).doFilter(any(), any());
   }
@@ -355,7 +355,7 @@ class JitProvisioningFilterTest {
 
     jitProvisioningFilter.doFilterInternal(request, response, filterChain);
 
-    verify(errorResponseWriter).write(response, HttpStatus.UNAUTHORIZED,
+    verify(errorResponseWriter).write(request, response, HttpStatus.UNAUTHORIZED,
         "Required principal identifier claim 'id' is missing or blank");
     verify(filterChain, never()).doFilter(any(), any());
     verify(provisioningService, never()).provisionPrincipal(any());
@@ -375,7 +375,7 @@ class JitProvisioningFilterTest {
             () -> jitProvisioningFilter.doFilterInternal(request, response, filterChain))
         .isInstanceOf(IllegalStateException.class).hasMessage("Unexpected extraction failure");
 
-    verify(errorResponseWriter, never()).write(any(), any(), any());
+    verify(errorResponseWriter, never()).write(any(), any(), any(), any());
     verify(filterChain, never()).doFilter(any(), any());
   }
 
