@@ -41,6 +41,8 @@ import com.decathlon.idp_core.domain.model.inbound_connectors.webhook.WebhookCon
 import com.decathlon.idp_core.domain.model.inbound_connectors.webhook.WebhookSecurity;
 import com.decathlon.idp_core.domain.port.MappingEnginePort;
 import com.decathlon.idp_core.domain.service.entity.EntityService;
+import com.decathlon.idp_core.infrastructure.adapters.api.configuration.PrincipalProvisioningMode;
+import com.decathlon.idp_core.infrastructure.adapters.api.configuration.PrincipalProvisioningProperties;
 
 import ch.qos.logback.classic.Logger;
 import ch.qos.logback.classic.spi.ILoggingEvent;
@@ -74,7 +76,8 @@ class IngestionProcessorTest {
     listAppender = new ListAppender<>();
     listAppender.start();
     logger.addAppender(listAppender);
-    ingestionProcessor = new IngestionProcessor(mappingEngine, entityService);
+    ingestionProcessor = new IngestionProcessor(mappingEngine, entityService,
+        new PrincipalProvisioningProperties(PrincipalProvisioningMode.JIT));
   }
 
   private Entity createTestEntity(String templateId, String identifier) {
@@ -100,7 +103,8 @@ class IngestionProcessorTest {
 
   @ParameterizedTest
   @MethodSource("principalMappingOperations")
-  void ingest_doesNotApplyProtectedPrincipalProperties(MappingAction action, boolean exists) {
+  void ingest_appliesPrincipalPropertyProtectionByProvisioningMode(MappingAction action,
+      boolean exists, PrincipalProvisioningMode mode) {
     String payload = "{\"action\": \"pushed\"}";
     EntityDynamicMapping mapping = createTestMapping(action);
     WebhookConnector connector = createWebhookConnector("principal-connector", List.of(mapping));
@@ -113,26 +117,34 @@ class IngestionProcessorTest {
     when(mappingEngine.mapToEntity(payload, mapping)).thenReturn(mappedPrincipal);
     when(entityService.entityExists("principal", "mapped-user")).thenReturn(exists);
 
+    ingestionProcessor = new IngestionProcessor(mappingEngine, entityService,
+        new PrincipalProvisioningProperties(mode));
     ingestionProcessor.ingest(payload, connector);
 
+    List<String> expectedPropertyNames = mode == PrincipalProvisioningMode.LINK_ONLY
+        ? List.of("kind", "display_name")
+        : List.of("display_name");
     if (exists) {
-      verify(entityService).patchEntity(eq("principal"), eq("mapped-user"),
-          argThat(patch -> containsOnlyUnprotectedProperties(patch.properties())));
+      verify(entityService).patchEntity(eq("principal"), eq("mapped-user"), argThat(
+          patch -> hasExpectedPrincipalProperties(patch.properties(), expectedPropertyNames)));
     } else {
-      verify(entityService)
-          .createEntity(argThat(entity -> containsOnlyUnprotectedProperties(entity.properties())));
+      verify(entityService).createEntity(argThat(
+          entity -> hasExpectedPrincipalProperties(entity.properties(), expectedPropertyNames)));
     }
   }
 
   private static Stream<Arguments> principalMappingOperations() {
     return Stream.of(MappingAction.UPDATE_ENTITY, MappingAction.UPDATE_PROPERTIES)
-        .flatMap(action -> Stream.of(false, true).map(exists -> Arguments.of(action, exists)));
+        .flatMap(action -> Stream.of(false, true)
+            .flatMap(exists -> Stream.of(PrincipalProvisioningMode.values())
+                .map(mode -> Arguments.of(action, exists, mode))));
   }
 
-  private static boolean containsOnlyUnprotectedProperties(List<Property> properties) {
-    return properties.stream()
-        .noneMatch(property -> List.of("kind", "is_admin", "is_idp_user").contains(property.name()))
-        && properties.stream().anyMatch(property -> "display_name".equals(property.name()));
+  private static boolean hasExpectedPrincipalProperties(List<Property> properties,
+      List<String> expectedPropertyNames) {
+    return properties.stream().map(Property::name).toList().containsAll(expectedPropertyNames)
+        && properties.size() == expectedPropertyNames.size()
+        && expectedPropertyNames.containsAll(properties.stream().map(Property::name).toList());
   }
 
   @Nested
