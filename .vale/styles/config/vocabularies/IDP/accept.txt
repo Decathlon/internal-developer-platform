@@ -39,7 +39,9 @@ npm
 Docusaurus
 markdownlint
 Matthieu
+Ferial
 Renny
+JSLT
 DTOs
 deserialize
 accessors

@@ -84,7 +84,7 @@ Good, because **Unified Transformation Standards:** Centralizing common logic in
 * Bad, because **Limited Built-ins:** Some advanced math, date or recursive operations may require custom Java function extensions. (Complexity of implementation)
 * Bad, because **Smaller Community:** Has a smaller ecosystem and fewer online resources and answers than JQ. (Contributor / end users UX)
 * Bad, because **Higher Entry Barrier:** Even with a library, the initial "blank page" experience for a new user is harder with JSLT than with the JQ simple piping syntax. (Contributor UX)
-* Bad, because **Configuration Integrity Risk:** Allowing runtime or volume-mounted functions introduces the risk of "broken" configurations preventing system startup. We must implement a validation stage during the application's lifecycle to ensure all external scripts are syntactically correct before they are utilized. (Complexity of implementation / Reliability)
+* Bad, because **Configuration Integrity Risk:** Allowing runtime or volume-mounted functions introduces the risk of "broken" configurations preventing system startup. We must implement a validation stage during the application's lifecycle to ensure all external scripts are syntactically correct before they are used. (Complexity of implementation / Reliability)
 
 ### 2. Use JQ as the mapping DSL
 
