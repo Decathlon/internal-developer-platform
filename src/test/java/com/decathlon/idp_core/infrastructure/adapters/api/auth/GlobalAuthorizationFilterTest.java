@@ -156,9 +156,16 @@ class GlobalAuthorizationFilterTest {
     filter.doFilter(request, response, chain);
 
     assertThat(response.getStatus()).isEqualTo(403);
-    assertThat(response.getContentType()).startsWith("application/json");
+    assertThat(response.getContentType()).startsWith("application/problem+json");
     assertThat(response.getContentAsString()).contains("\"error\":\"FORBIDDEN\"",
         "\"error_description\":\"Principal is not authorized to perform this operation\"");
+    assertThat(response.getContentAsString()).contains("\"type\":\"about:blank\"",
+        "\"title\":\"Forbidden\"", "\"status\":403", "\"instance\":\"/api/v1/entities\"",
+        "\"timestamp\":");
+    var body = new ObjectMapper().readTree(response.getContentAsString());
+    assertThat(body.has("error")).isTrue();
+    assertThat(body.has("error_description")).isTrue();
+    assertThat(body.has("properties")).isFalse();
     assertThat(downstreamMutations).hasValue(0);
   }
 
@@ -175,6 +182,9 @@ class GlobalAuthorizationFilterTest {
     assertThat(response.getStatus()).isEqualTo(401);
     assertThat(response.getContentAsString()).contains("\"error\":\"UNAUTHORIZED\"",
         "\"error_description\":\"Required principal identifier claim 'id' is missing or blank\"");
+    assertThat(response.getContentAsString()).contains("\"type\":\"about:blank\"",
+        "\"title\":\"Unauthorized\"", "\"status\":401", "\"instance\":\"/api/v1/entities\"",
+        "\"timestamp\":");
     verify(chain, never()).doFilter(any(), any());
     verify(authorizationService, never()).authorize(any(), any());
   }

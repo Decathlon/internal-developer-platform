@@ -5,6 +5,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.containsString;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.springframework.http.MediaType.APPLICATION_JSON;
+import static org.springframework.http.MediaType.APPLICATION_PROBLEM_JSON;
+import static org.springframework.http.MediaType.APPLICATION_PROBLEM_JSON_VALUE;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.jwt;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -52,6 +54,21 @@ class EntityTemplateControllerTest extends AbstractIntegrationTest {
   private MockMvc mockMvc;
   @Autowired
   private EntityTemplateRepositoryPort entityTemplateRepository;
+
+  private void assertProblemDetail(MvcResult result, int status, String title, String detail,
+      String instance, String error) throws Exception {
+    var response = result.getResponse();
+    assertThat(response.getContentType()).startsWith(APPLICATION_PROBLEM_JSON_VALUE);
+    var body = objectMapper.readTree(response.getContentAsString());
+    assertThat(body.path("type").asText()).isEqualTo("about:blank");
+    assertThat(body.path("title").asText()).isEqualTo(title);
+    assertThat(body.path("status").asInt()).isEqualTo(status);
+    assertThat(body.path("detail").asText()).isEqualTo(detail);
+    assertThat(body.path("instance").asText()).isEqualTo(instance);
+    assertThat(body.path("error").asText()).isEqualTo(error);
+    assertThat(body.path("error_description").asText()).isEqualTo(detail);
+    assertThat(body.path("timestamp").asText()).isNotBlank();
+  }
 
   /// Test suite for the GET /api/v1/entity-templates endpoint, covering paginated
   /// retrieval of entity templates.
@@ -488,7 +505,8 @@ class EntityTemplateControllerTest extends AbstractIntegrationTest {
               .accept(APPLICATION_JSON).with(csrf())
               .content(getJsonTestFileContent(ENTITY_TEMPLATE_JSON_TEST_PATH
                   + "postEntityTemplate_409_identifier_already_exists.json")))
-          .andExpect(status().isConflict()).andExpect(content().contentType(APPLICATION_JSON))
+          .andExpect(status().isConflict())
+          .andExpect(content().contentTypeCompatibleWith(APPLICATION_PROBLEM_JSON))
           .andExpect(jsonPath("$.error_description").exists()).andExpect(
               jsonPath("$.error_description").value(TEMPLATE_ALREADY_EXISTS + ":web-service"));
     }
@@ -504,7 +522,7 @@ class EntityTemplateControllerTest extends AbstractIntegrationTest {
     void postTemplate_400_property_type_invalid_enum() throws Exception {
       MvcResult res = postBadRequestAndAssertEquals(ENTITY_TEMPLATE_PATH,
           ENTITY_TEMPLATE_JSON_TEST_PATH + "postEntityTemplate_400_bad_property_type.json",
-          "Invalid value 'NOT IN ENUM' for property 'type'");
+          "Failed to read request");
       assertNotNull(res, "Test executed successfully");
     }
 
@@ -519,7 +537,7 @@ class EntityTemplateControllerTest extends AbstractIntegrationTest {
     void postTemplate_400_property_format_invalid_enum() throws Exception {
       MvcResult res = postBadRequestAndAssertEquals(ENTITY_TEMPLATE_PATH,
           ENTITY_TEMPLATE_JSON_TEST_PATH + "postEntityTemplate_400_bad_property_format.json",
-          "Invalid value 'NOT A VALID FORMAT' for property 'format'");
+          "Failed to read request");
       assertNotNull(res, "Test executed successfully");
     }
 
@@ -866,73 +884,89 @@ class EntityTemplateControllerTest extends AbstractIntegrationTest {
     @WithMockUser
     void putTemplate_404_withUnknownIdentifier() throws Exception {
       String identifier = "unknown-identifier";
-      mockMvc
+      MvcResult result = mockMvc
           .perform(MockMvcRequestBuilders.put(ENTITY_TEMPLATE_PATH + "/" + identifier)
               .contentType(APPLICATION_JSON).accept(APPLICATION_JSON).with(csrf())
               .content(getJsonTestFileContent(
                   "integration_test/json/entity-template/v1/putEntityTemplate_200.json")))
-          .andExpect(status().isNotFound()).andExpect(content().string(
-              "{\"error\":\"NOT_FOUND\",\"error_description\":\"Template not found with identifier: unknown-identifier\"}"));
+          .andExpect(status().isNotFound()).andReturn();
+      assertProblemDetail(result, 404, "Not Found",
+          "Template not found with identifier: unknown-identifier",
+          ENTITY_TEMPLATE_PATH + "/" + identifier, "NOT_FOUND");
     }
 
     @Test
     @WithMockUser()
     void putTemplate_400_propertyNameIsMissing() throws Exception {
       String identifier = "web-service";
-      mockMvc.perform(MockMvcRequestBuilders.put(ENTITY_TEMPLATE_PATH + "/" + identifier)
-          .contentType(APPLICATION_JSON).accept(APPLICATION_JSON).with(csrf())
+      MvcResult result = mockMvc.perform(MockMvcRequestBuilders
+          .put(ENTITY_TEMPLATE_PATH + "/" + identifier).contentType(APPLICATION_JSON)
+          .accept(APPLICATION_JSON).with(csrf())
           .content(getJsonTestFileContent(
               "integration_test/json/entity-template/v1/putEntityTemplate_400_propertyNameIsMissing.json")))
-          .andExpect(status().isBadRequest()).andExpect(content().string(
-              "{\"error\":\"BAD_REQUEST\",\"error_description\":\"Property name is mandatory and cannot be blank\"}"));
+          .andExpect(status().isBadRequest()).andReturn();
+      assertProblemDetail(result, 400, "Bad Request",
+          "Property name is mandatory and cannot be blank", ENTITY_TEMPLATE_PATH + "/" + identifier,
+          "BAD_REQUEST");
     }
 
     @Test
     @WithMockUser()
     void putTemplate_400_propertyNameIsBlank() throws Exception {
       String identifier = "web-service";
-      mockMvc.perform(MockMvcRequestBuilders.put(ENTITY_TEMPLATE_PATH + "/" + identifier)
-          .contentType(APPLICATION_JSON).accept(APPLICATION_JSON).with(csrf())
+      MvcResult result = mockMvc.perform(MockMvcRequestBuilders
+          .put(ENTITY_TEMPLATE_PATH + "/" + identifier).contentType(APPLICATION_JSON)
+          .accept(APPLICATION_JSON).with(csrf())
           .content(getJsonTestFileContent(
               "integration_test/json/entity-template/v1/putEntityTemplate_400_propertyNameIsBlank.json")))
-          .andExpect(status().isBadRequest()).andExpect(content().string(
-              "{\"error\":\"BAD_REQUEST\",\"error_description\":\"Property name is mandatory and cannot be blank\"}"));
+          .andExpect(status().isBadRequest()).andReturn();
+      assertProblemDetail(result, 400, "Bad Request",
+          "Property name is mandatory and cannot be blank", ENTITY_TEMPLATE_PATH + "/" + identifier,
+          "BAD_REQUEST");
     }
 
     @Test
     @WithMockUser()
     void putTemplate_400_propertyDescriptionIsBlank() throws Exception {
       String identifier = "web-service";
-      mockMvc.perform(MockMvcRequestBuilders.put(ENTITY_TEMPLATE_PATH + "/" + identifier)
-          .contentType(APPLICATION_JSON).accept(APPLICATION_JSON).with(csrf())
+      MvcResult result = mockMvc.perform(MockMvcRequestBuilders
+          .put(ENTITY_TEMPLATE_PATH + "/" + identifier).contentType(APPLICATION_JSON)
+          .accept(APPLICATION_JSON).with(csrf())
           .content(getJsonTestFileContent(
               "integration_test/json/entity-template/v1/putEntityTemplate_400_propertyDescriptionIsBlank.json")))
-          .andExpect(status().isBadRequest()).andExpect(content().string(
-              "{\"error\":\"BAD_REQUEST\",\"error_description\":\"Property description is mandatory and cannot be blank\"}"));
+          .andExpect(status().isBadRequest()).andReturn();
+      assertProblemDetail(result, 400, "Bad Request",
+          "Property description is mandatory and cannot be blank",
+          ENTITY_TEMPLATE_PATH + "/" + identifier, "BAD_REQUEST");
     }
 
     @Test
     @WithMockUser()
     void putTemplate_400_propertyDescriptionIsMissing() throws Exception {
       String identifier = "web-service";
-      mockMvc.perform(MockMvcRequestBuilders.put(ENTITY_TEMPLATE_PATH + "/" + identifier)
-          .contentType(APPLICATION_JSON).accept(APPLICATION_JSON).with(csrf())
+      MvcResult result = mockMvc.perform(MockMvcRequestBuilders
+          .put(ENTITY_TEMPLATE_PATH + "/" + identifier).contentType(APPLICATION_JSON)
+          .accept(APPLICATION_JSON).with(csrf())
           .content(getJsonTestFileContent(
               "integration_test/json/entity-template/v1/putEntityTemplate_400_propertyDescriptionIsMissing.json")))
-          .andExpect(status().isBadRequest()).andExpect(content().string(
-              "{\"error\":\"BAD_REQUEST\",\"error_description\":\"Property description is mandatory and cannot be blank\"}"));
+          .andExpect(status().isBadRequest()).andReturn();
+      assertProblemDetail(result, 400, "Bad Request",
+          "Property description is mandatory and cannot be blank",
+          ENTITY_TEMPLATE_PATH + "/" + identifier, "BAD_REQUEST");
     }
 
     @Test
     @WithMockUser()
     void putTemplate_400_propertyTypeIsMissing() throws Exception {
       String identifier = "web-service";
-      mockMvc.perform(MockMvcRequestBuilders.put(ENTITY_TEMPLATE_PATH + "/" + identifier)
-          .contentType(APPLICATION_JSON).accept(APPLICATION_JSON).with(csrf())
+      MvcResult result = mockMvc.perform(MockMvcRequestBuilders
+          .put(ENTITY_TEMPLATE_PATH + "/" + identifier).contentType(APPLICATION_JSON)
+          .accept(APPLICATION_JSON).with(csrf())
           .content(getJsonTestFileContent(
               "integration_test/json/entity-template/v1/putEntityTemplate_400_propertyTypeIsMissing.json")))
-          .andExpect(status().isBadRequest()).andExpect(content().string(
-              "{\"error\":\"BAD_REQUEST\",\"error_description\":\"Property type is mandatory\"}"));
+          .andExpect(status().isBadRequest()).andReturn();
+      assertProblemDetail(result, 400, "Bad Request", "Property type is mandatory",
+          ENTITY_TEMPLATE_PATH + "/" + identifier, "BAD_REQUEST");
     }
 
     @Test
@@ -942,12 +976,15 @@ class EntityTemplateControllerTest extends AbstractIntegrationTest {
       Optional<EntityTemplate> entityTemplateUpdated = entityTemplateRepository
           .findByIdentifier("microservice");
       assertThat(entityTemplateUpdated).isPresent();
-      mockMvc.perform(MockMvcRequestBuilders.put(ENTITY_TEMPLATE_PATH + "/" + identifier)
-          .contentType(APPLICATION_JSON).accept(APPLICATION_JSON).with(csrf())
+      MvcResult result = mockMvc.perform(MockMvcRequestBuilders
+          .put(ENTITY_TEMPLATE_PATH + "/" + identifier).contentType(APPLICATION_JSON)
+          .accept(APPLICATION_JSON).with(csrf())
           .content(getJsonTestFileContent(
               "integration_test/json/entity-template/v1/putEntityTemplate_409_withIdentifierAlreadyExists.json")))
-          .andExpect(status().isConflict()).andExpect(content().string(
-              "{\"error\":\"CONFLICT\",\"error_description\":\"The entity template name Microservice already exists\"}"));
+          .andExpect(status().isConflict()).andReturn();
+      assertProblemDetail(result, 409, "Conflict",
+          "The entity template name Microservice already exists",
+          ENTITY_TEMPLATE_PATH + "/" + identifier, "CONFLICT");
     }
 
     /// Tests the PUT /api/v1/entity-templates/{identifier} endpoint when the name
@@ -1003,12 +1040,15 @@ class EntityTemplateControllerTest extends AbstractIntegrationTest {
     @DisplayName("Returns 409 when name already exists")
     void putTemplate_409_name_already_exists() throws Exception {
       String identifier = "web-service";
-      mockMvc.perform(MockMvcRequestBuilders.put(ENTITY_TEMPLATE_PATH + "/" + identifier)
-          .contentType(APPLICATION_JSON).accept(APPLICATION_JSON).with(csrf())
+      MvcResult result = mockMvc.perform(MockMvcRequestBuilders
+          .put(ENTITY_TEMPLATE_PATH + "/" + identifier).contentType(APPLICATION_JSON)
+          .accept(APPLICATION_JSON).with(csrf())
           .content(getJsonTestFileContent(
               "integration_test/json/entity-template/v1/putEntityTemplate_409_name_already_exists.json")))
-          .andExpect(status().isConflict()).andExpect(content().string(
-              "{\"error\":\"CONFLICT\",\"error_description\":\"The entity template name Microservice already exists\"}"));
+          .andExpect(status().isConflict()).andReturn();
+      assertProblemDetail(result, 409, "Conflict",
+          "The entity template name Microservice already exists",
+          ENTITY_TEMPLATE_PATH + "/" + identifier, "CONFLICT");
     }
 
     /// Tests the PUT /api/v1/entity-templates/{identifier} endpoint when name field
@@ -1158,7 +1198,8 @@ class EntityTemplateControllerTest extends AbstractIntegrationTest {
       mockMvc
           .perform(MockMvcRequestBuilders.delete(ENTITY_TEMPLATE_PATH + "/" + nonExistentId)
               .accept(APPLICATION_JSON).with(csrf()))
-          .andExpect(status().isNotFound()).andExpect(content().contentType(APPLICATION_JSON))
+          .andExpect(status().isNotFound())
+          .andExpect(content().contentTypeCompatibleWith(APPLICATION_PROBLEM_JSON))
           .andExpect(jsonPath("$.error").value("NOT_FOUND"))
           .andExpect(jsonPath("$.error_description").exists());
 
@@ -1182,7 +1223,8 @@ class EntityTemplateControllerTest extends AbstractIntegrationTest {
       mockMvc
           .perform(MockMvcRequestBuilders.delete(ENTITY_TEMPLATE_PATH + "/" + templateId)
               .accept(APPLICATION_JSON).with(csrf()))
-          .andExpect(status().isBadRequest()).andExpect(content().contentType(APPLICATION_JSON))
+          .andExpect(status().isBadRequest())
+          .andExpect(content().contentTypeCompatibleWith(APPLICATION_PROBLEM_JSON))
           .andExpect(jsonPath("$.error").value("BAD_REQUEST"))
           .andExpect(jsonPath("$.error_description").exists());
 

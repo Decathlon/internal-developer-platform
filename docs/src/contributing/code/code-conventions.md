@@ -117,26 +117,13 @@ public class InvalidIdentifierException extends DomainException {
 
 ### Global Exception Handler
 
-```java
-@RestControllerAdvice
-public class GlobalExceptionHandler {
-
-    @ExceptionHandler(EntityNotFoundException.class)
-    public ResponseEntity<ErrorResponse> handleNotFound(EntityNotFoundException ex) {
-        return ResponseEntity.status(HttpStatus.NOT_FOUND)
-            .body(new ErrorResponse(ex.getCode(), ex.getMessage()));
-    }
-
-    @ExceptionHandler(MethodArgumentNotValidException.class)
-    public ResponseEntity<ErrorResponse> handleValidation(MethodArgumentNotValidException ex) {
-        var errors = ex.getBindingResult().getFieldErrors().stream()
-            .map(e -> e.getField() + ": " + e.getDefaultMessage())
-            .toList();
-        return ResponseEntity.badRequest()
-            .body(new ErrorResponse("VALIDATION_ERROR", String.join(", ", errors)));
-    }
-}
-```
+`ApiExceptionHandler` extends Spring's `ResponseEntityExceptionHandler`. It
+maps known domain exceptions to HTTP statuses through the
+`STATUS_BY_EXCEPTION` map; add an entry such as
+`entry(MyNewBusinessException.class, HttpStatus.BAD_REQUEST)` for a new
+exception. Spring MVC exceptions use Spring's built-in handling. Responses use
+RFC 9457 `ProblemDetail` fields and retain the `error`, `error_description`,
+and `timestamp` compatibility properties.
 
 ---
 

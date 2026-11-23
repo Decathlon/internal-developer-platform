@@ -22,6 +22,8 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.boot.test.system.CapturedOutput;
 import org.springframework.boot.test.system.OutputCaptureExtension;
+import org.springframework.http.ProblemDetail;
+import org.springframework.http.converter.json.ProblemDetailJacksonMixin;
 import org.springframework.mock.web.MockHttpServletRequest;
 import org.springframework.mock.web.MockHttpServletResponse;
 
@@ -33,7 +35,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 @ExtendWith(OutputCaptureExtension.class)
 class HttpMessageSignatureFilterTest {
 
-  private final ObjectMapper mapper = new ObjectMapper();
+  private final ObjectMapper mapper = new ObjectMapper().addMixIn(ProblemDetail.class,
+      ProblemDetailJacksonMixin.class);
 
   @Test
   void validRequestPreservesBodyAndBearerAuthentication() throws Exception {
@@ -59,12 +62,18 @@ class HttpMessageSignatureFilterTest {
     request.addHeader("Authorization", "Signature ignored");
     var response = reject(request);
     assertThat(response.getStatus()).isEqualTo(401);
-    assertThat(response.getContentType()).isEqualTo("application/json;charset=UTF-8");
+    assertThat(response.getContentType()).isEqualTo("application/problem+json;charset=UTF-8");
     assertThat(response.getHeader("WWW-Authenticate")).isEqualTo("Signature realm=\"idp-core\"");
     assertThat(response.getHeader("Cache-Control")).isEqualTo("no-store");
-    assertThat(mapper.readTree(response.getContentAsString())).isEqualTo(mapper.readTree("""
-        {"error":"UNAUTHORIZED","error_description":"The HTTP message signature is missing"}
-        """));
+    var body = mapper.readTree(response.getContentAsString());
+    assertThat(body.get("type").asText()).isEqualTo("about:blank");
+    assertThat(body.get("title").asText()).isEqualTo("Unauthorized");
+    assertThat(body.get("status").asInt()).isEqualTo(401);
+    assertThat(body.get("instance").asText()).isEqualTo("/api/v1/entities");
+    assertThat(body.get("error").asText()).isEqualTo("UNAUTHORIZED");
+    assertThat(body.get("error_description").asText())
+        .isEqualTo("The HTTP message signature is missing");
+    assertThat(body.get("timestamp").isTextual()).isTrue();
   }
 
   @Test

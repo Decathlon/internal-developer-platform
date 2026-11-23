@@ -184,8 +184,14 @@ public abstract class AbstractIntegrationTest {
         .perform(
             MockMvcRequestBuilders.post(path).contentType(APPLICATION_JSON).accept(APPLICATION_JSON)
                 .with(csrf()).content(getJsonTestFileContent(jsonBodyfilePath)))
-        .andExpect(status().isBadRequest()).andExpect(jsonPath("$.error").value("BAD_REQUEST"))
-        .andExpect(jsonPath("$.error_description").value(errorDescription)).andReturn();
+        .andExpect(status().isBadRequest()).andExpect(jsonPath("$.title").value("Bad Request"))
+        .andExpect(jsonPath("$.type").value("about:blank"))
+        .andExpect(jsonPath("$.status").value(400))
+        .andExpect(jsonPath("$.detail").value(errorDescription))
+        .andExpect(jsonPath("$.error").value("BAD_REQUEST"))
+        .andExpect(jsonPath("$.error_description").value(errorDescription))
+        .andExpect(jsonPath("$.timestamp").exists()).andExpect(jsonPath("$.instance").exists())
+        .andReturn();
 
   }
 
@@ -205,8 +211,13 @@ public abstract class AbstractIntegrationTest {
         .perform(
             MockMvcRequestBuilders.post(path).contentType(APPLICATION_JSON).accept(APPLICATION_JSON)
                 .with(csrf()).content(getJsonTestFileContent(jsonBodyfilePath)))
-        .andExpect(status().isBadRequest()).andExpect(jsonPath("$.error").value("BAD_REQUEST"))
+        .andExpect(status().isBadRequest()).andExpect(jsonPath("$.title").value("Bad Request"))
+        .andExpect(jsonPath("$.type").value("about:blank"))
+        .andExpect(jsonPath("$.status").value(400))
+        .andExpect(jsonPath("$.detail").value(containsString(errorDescription)))
+        .andExpect(jsonPath("$.error").value("BAD_REQUEST"))
         .andExpect(jsonPath("$.error_description").value(containsString(errorDescription)))
+        .andExpect(jsonPath("$.timestamp").exists()).andExpect(jsonPath("$.instance").exists())
         .andReturn();
 
   }
@@ -226,8 +237,13 @@ public abstract class AbstractIntegrationTest {
         .perform(
             MockMvcRequestBuilders.post(path).contentType(APPLICATION_JSON).accept(APPLICATION_JSON)
                 .with(csrf()).content(getJsonTestFileContent(jsonBodyfilePath)))
-        .andExpect(status().isConflict()).andExpect(jsonPath("$.error").value("CONFLICT"))
+        .andExpect(status().isConflict()).andExpect(jsonPath("$.title").value("Conflict"))
+        .andExpect(jsonPath("$.type").value("about:blank"))
+        .andExpect(jsonPath("$.status").value(409))
+        .andExpect(jsonPath("$.detail").value(containsString(errorDescription)))
+        .andExpect(jsonPath("$.error").value("CONFLICT"))
         .andExpect(jsonPath("$.error_description").value(containsString(errorDescription)))
+        .andExpect(jsonPath("$.timestamp").exists()).andExpect(jsonPath("$.instance").exists())
         .andReturn();
 
   }
