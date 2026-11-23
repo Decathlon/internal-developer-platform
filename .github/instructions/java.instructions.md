@@ -18,7 +18,7 @@ applyTo: '**/*.java'
 ## Best practices
 
 - **Records**: For classes primarily intended to store data (for example, Data Transfer Objects, immutable data structures), **Java Records should be used instead of traditional classes**.
-- **Pattern Matching**: Utilize pattern matching for `instanceof` and `switch` expression to simplify conditional logic and type casting.
+- **Pattern Matching**: Use pattern matching for `instanceof` and `switch` expression to simplify conditional logic and type casting.
 - **Type Inference**: Use `var` for local variable declarations to improve readability, but only when the type is explicitly clear from the right-hand side of the expression.
 - **Immutability**: Favor immutable objects. Make classes and fields `final` where possible. Use collections from `List.of()`/`Map.of()` for fixed data. Use `Stream.toList()` to create immutable lists.
 - **Streams and Lambdas**: Use the Streams API and lambda expressions for collection processing. Employ method references (for example, `stream.map(Foo::toBar)`).
