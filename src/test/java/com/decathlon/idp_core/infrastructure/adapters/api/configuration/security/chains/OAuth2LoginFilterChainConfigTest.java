@@ -20,6 +20,7 @@ import org.springframework.security.web.SecurityFilterChain;
 
 import com.decathlon.idp_core.infrastructure.adapters.api.auth.GlobalAuthorizationFilter;
 import com.decathlon.idp_core.infrastructure.adapters.api.auth.JitProvisioningFilter;
+import com.decathlon.idp_core.infrastructure.adapters.api.configuration.HttpMessageSignatureConfiguration.ChainConfigurer;
 
 @DisplayName("OAuth2LoginFilterChainConfigTest")
 @ExtendWith(MockitoExtension.class)
@@ -30,6 +31,7 @@ class OAuth2LoginFilterChainConfigTest {
 
   private final ApplicationContextRunner contextRunner = new ApplicationContextRunner()
       .withConfiguration(AutoConfigurations.of(OAuth2LoginFilterChainConfig.class))
+      .withBean(ChainConfigurer.class, () -> mock(ChainConfigurer.class))
       .withBean(JitProvisioningFilter.class, () -> mock(JitProvisioningFilter.class))
       .withBean(GlobalAuthorizationFilter.class, () -> mock(GlobalAuthorizationFilter.class))
       .withBean(ClientRegistrationRepository.class, () -> mock(ClientRegistrationRepository.class))
@@ -68,7 +70,7 @@ class OAuth2LoginFilterChainConfigTest {
     var configuration = new OAuth2LoginFilterChainConfig(jitFilter, authorizationFilter);
     HttpSecurity http = httpSecurity();
 
-    configuration.oauth2LoginSecurityFilterChain(http);
+    configuration.oauth2LoginSecurityFilterChain(http, mock(ChainConfigurer.class));
 
     verify(http).addFilterAfter(authorizationFilter, JitProvisioningFilter.class);
   }

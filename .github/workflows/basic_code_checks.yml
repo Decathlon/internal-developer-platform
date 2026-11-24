@@ -24,7 +24,7 @@ jobs:
 
       - name: Lint GitHub Actions Workflows
         if: github.event_name == 'pull_request'
-        uses: reviewdog/action-actionlint@7abf25e1607ec65838b73d0484ff31f8e9499d80  # v1.81.2
+        uses: reviewdog/action-actionlint@ae857e78c1b42b3d0a49637181b09d3d56d402b4  # v1.84.1
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           reporter: github-pr-review
@@ -46,7 +46,7 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
 
       - name: Setup Java 25
-        uses: actions/setup-java@77dd5b2ce225ea11469928ac317850245a74ae78  # v6.2.0
+        uses: actions/setup-java@d1374f8ac74474200d16ef8ecee22c7ae7a51880  # v6.3.0
         with:
           distribution: temurin
           java-version: 25
@@ -78,7 +78,7 @@ jobs:
             ${{ runner.os }}-maven-
 
       - name: Setup Java 25
-        uses: actions/setup-java@77dd5b2ce225ea11469928ac317850245a74ae78  # v6.2.0
+        uses: actions/setup-java@d1374f8ac74474200d16ef8ecee22c7ae7a51880  # v6.3.0
         with:
           distribution: temurin
           java-version: 25
@@ -136,7 +136,7 @@ jobs:
           path: target
 
       - name: Setup Java 25
-        uses: actions/setup-java@77dd5b2ce225ea11469928ac317850245a74ae78  # v6.2.0
+        uses: actions/setup-java@d1374f8ac74474200d16ef8ecee22c7ae7a51880  # v6.3.0
         with:
           distribution: temurin
           java-version: 25
@@ -198,7 +198,7 @@ jobs:
           path: target
 
       - name: Setup Java 25
-        uses: actions/setup-java@77dd5b2ce225ea11469928ac317850245a74ae78  # v6.2.0
+        uses: actions/setup-java@d1374f8ac74474200d16ef8ecee22c7ae7a51880  # v6.3.0
         with:
           distribution: temurin
           java-version: 25
@@ -206,6 +206,7 @@ jobs:
       - name: Check if static swagger file is up to date
         env:
           SPEC_URL_PATH: '/v3/api-docs/internal'
+          HTTP_MESSAGE_SIGNATURE_VERIFICATION_ENABLED: 'false'
           SERVER_PORT: 8080
           OAUTH_JWK_URI: 'http://localhost:9999/mock/jwks'
           OAUTH_TOKEN_URI: 'http://localhost:9999/mock/token'
@@ -261,7 +262,7 @@ jobs:
           fetch-depth: 0
 
       - name: Setup Java 25
-        uses: actions/setup-java@77dd5b2ce225ea11469928ac317850245a74ae78  # v6.2.0
+        uses: actions/setup-java@d1374f8ac74474200d16ef8ecee22c7ae7a51880  # v6.3.0
         with:
           distribution: temurin
           java-version: 25

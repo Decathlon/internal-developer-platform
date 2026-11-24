@@ -9,6 +9,8 @@ import org.springframework.core.annotation.Order;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.web.SecurityFilterChain;
 
+import com.decathlon.idp_core.infrastructure.adapters.api.configuration.HttpMessageSignatureConfiguration.ChainConfigurer;
+
 /// Security filter chain for API key authentication.
 ///
 /// **Configuration:**
@@ -23,9 +25,11 @@ public class ApiKeyFilterChainConfig {
 
   @Bean
   @Order(3)
-  public SecurityFilterChain apiKeySecurityFilterChain(HttpSecurity http) {
+  public SecurityFilterChain apiKeySecurityFilterChain(HttpSecurity http,
+      ChainConfigurer httpMessageSignature) {
     http.authorizeHttpRequests(auth -> auth.requestMatchers("/api/v1/**").fullyAuthenticated()
         .anyRequest().authenticated()).cors(withDefaults());
+    httpMessageSignature.configure(http);
     return http.build();
   }
 }

@@ -13,6 +13,7 @@ import org.springframework.security.web.SecurityFilterChain;
 
 import com.decathlon.idp_core.infrastructure.adapters.api.auth.GlobalAuthorizationFilter;
 import com.decathlon.idp_core.infrastructure.adapters.api.auth.JitProvisioningFilter;
+import com.decathlon.idp_core.infrastructure.adapters.api.configuration.HttpMessageSignatureConfiguration.ChainConfigurer;
 
 @Configuration
 @ConditionalOnProperty(prefix = "app.security.authentication.jwt", name = "enabled", havingValue = "true", matchIfMissing = false)
@@ -32,7 +33,8 @@ public class JwtFilterChainConfig {
 
   @Bean
   @Order(2)
-  public SecurityFilterChain jwtSecurityFilterChain(HttpSecurity http) {
+  public SecurityFilterChain jwtSecurityFilterChain(HttpSecurity http,
+      ChainConfigurer httpMessageSignature) {
     http.authorizeHttpRequests(auth -> auth
         .requestMatchers("/api/v1/**").fullyAuthenticated().anyRequest().authenticated())
         .cors(withDefaults())
@@ -41,6 +43,7 @@ public class JwtFilterChainConfig {
         .addFilterAfter(jitProvisioningFilter, BearerTokenAuthenticationFilter.class)
         .addFilterAfter(globalAuthorizationFilter, JitProvisioningFilter.class);
 
+    httpMessageSignature.configure(http);
     return http.build();
   }
 }

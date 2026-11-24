@@ -19,6 +19,7 @@ import org.springframework.security.web.SecurityFilterChain;
 
 import com.decathlon.idp_core.infrastructure.adapters.api.auth.GlobalAuthorizationFilter;
 import com.decathlon.idp_core.infrastructure.adapters.api.auth.JitProvisioningFilter;
+import com.decathlon.idp_core.infrastructure.adapters.api.configuration.HttpMessageSignatureConfiguration.ChainConfigurer;
 
 @DisplayName("JwtFilterChainConfigTest")
 @ExtendWith(MockitoExtension.class)
@@ -29,6 +30,7 @@ class JwtFilterChainConfigTest {
 
   private final ApplicationContextRunner contextRunner = new ApplicationContextRunner()
       .withConfiguration(AutoConfigurations.of(JwtFilterChainConfig.class))
+      .withBean(ChainConfigurer.class, () -> mock(ChainConfigurer.class))
       .withBean(JitProvisioningFilter.class, () -> mock(JitProvisioningFilter.class))
       .withBean(GlobalAuthorizationFilter.class, () -> mock(GlobalAuthorizationFilter.class))
       .withBean(JwtAuthenticationConverter.class, JwtAuthenticationConverter::new)
@@ -56,7 +58,7 @@ class JwtFilterChainConfigTest {
         new JwtAuthenticationConverter());
     HttpSecurity http = httpSecurity();
 
-    configuration.jwtSecurityFilterChain(http);
+    configuration.jwtSecurityFilterChain(http, mock(ChainConfigurer.class));
 
     verify(http).addFilterAfter(authorizationFilter, JitProvisioningFilter.class);
   }

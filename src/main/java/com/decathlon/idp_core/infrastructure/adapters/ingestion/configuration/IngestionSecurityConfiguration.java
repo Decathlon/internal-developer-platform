@@ -7,6 +7,8 @@ import org.springframework.core.annotation.Order;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.web.SecurityFilterChain;
 
+import com.decathlon.idp_core.infrastructure.adapters.api.configuration.HttpMessageSignatureConfiguration.ChainConfigurer;
+
 // Dedicated security filter chain for inbound webhook ingestion routes.
 // Authentication model:
 // External callers do not authenticate through Spring Security for this entrypoint.
@@ -34,13 +36,15 @@ public class IngestionSecurityConfiguration {
   // Security level, and ignores CSRF for these M2M endpoints.
   @Bean
   @Order(1)
-  public SecurityFilterChain ingestionSecurityFilterChain(HttpSecurity http) {
+  public SecurityFilterChain ingestionSecurityFilterChain(HttpSecurity http,
+      ChainConfigurer httpMessageSignature) {
     String webhookMatcher = ingestionProperties.basePath() + "/**";
 
     http.securityMatcher(webhookMatcher)
         .authorizeHttpRequests(authorize -> authorize.anyRequest().permitAll())
         .csrf(csrf -> csrf.ignoringRequestMatchers(webhookMatcher));
 
+    httpMessageSignature.configure(http);
     return http.build();
   }
 }

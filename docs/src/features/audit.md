@@ -14,7 +14,7 @@ creation, updates, and deletion. This information is essential for:
 - **Compliance and Regulatory Requirements** - Maintain immutable audit trails for regulatory compliance
 - **Change Tracking and Audit mechanism** - Know who changed what and when
 - **Debugging and Root Cause Analysis** - Trace issues back to their origins
-- **Historical Reconstruction** - Restore object state at any point in time
+- **Historical Reconstruction** - Restore object state at any point
 
 Example audit flow for entity lifecycle:
 
