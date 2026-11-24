@@ -208,8 +208,8 @@ class ApiExceptionHandlerTest {
   static class RequestBodyController {
 
     @PostMapping("/request-body")
-    void create(@RequestBody RequestBodyDto requestBody) {
-      // This endpoint only exercises Spring's request-body deserialization handling.
+    RequestBodyDto create(@RequestBody RequestBodyDto requestBody) {
+      return requestBody;
     }
 
     @GetMapping("/domain-error")
@@ -225,8 +225,8 @@ class ApiExceptionHandlerTest {
   static class MethodValidationController {
 
     @GetMapping("/validated")
-    void validate(@RequestParam @Min(1) int count) {
-      // Request-parameter validation is the behavior under test; no action is needed.
+    int validate(@RequestParam @Min(1) int count) {
+      return count;
     }
   }
 
