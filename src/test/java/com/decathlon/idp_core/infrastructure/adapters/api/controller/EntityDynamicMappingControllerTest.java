@@ -3,6 +3,7 @@ package com.decathlon.idp_core.infrastructure.adapters.api.controller;
 import static com.decathlon.idp_core.domain.constant.ValidationMessages.ENTITY_DYNAMIC_MAPPING_TEMPLATE_IDENTIFIER_MANDATORY;
 import static org.hamcrest.Matchers.containsString;
 import static org.springframework.http.MediaType.APPLICATION_JSON;
+import static org.springframework.http.MediaType.APPLICATION_PROBLEM_JSON;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.jwt;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -383,7 +384,7 @@ class EntityDynamicMappingControllerTest extends AbstractIntegrationTest {
 
     @Test
     @WithMockUser
-    @DisplayName("Should return 400 with explicit message when target_entity_identifiers is a plain string instead of an array")
+    @DisplayName("Should return 400 when target_entity_identifiers is a plain string instead of an array")
     void postMapping_400_target_entity_identifiers_is_string() throws Exception {
       var payload = """
           {
@@ -411,9 +412,8 @@ class EntityDynamicMappingControllerTest extends AbstractIntegrationTest {
           .perform(MockMvcRequestBuilders.post(MAPPING_PATH).contentType(APPLICATION_JSON)
               .accept(APPLICATION_JSON).with(csrf()).content(payload))
           .andExpect(status().isBadRequest()).andExpect(jsonPath("$.error").value("BAD_REQUEST"))
-          .andExpect(
-              jsonPath("$.error_description").value(containsString("target_entity_identifiers")))
-          .andExpect(jsonPath("$.error_description").value(containsString("expected")));
+          .andExpect(jsonPath("$.detail").value("Failed to read request"))
+          .andExpect(jsonPath("$.error_description").value("Failed to read request"));
     }
 
     @Test
@@ -1456,7 +1456,7 @@ class EntityDynamicMappingControllerTest extends AbstractIntegrationTest {
           .perform(MockMvcRequestBuilders.post(MAPPING_PATH + "/dry-run")
               .contentType(APPLICATION_JSON).accept(APPLICATION_JSON).with(csrf()).content(payload))
           .andExpect(status().isUnprocessableContent())
-          .andExpect(content().contentType(APPLICATION_JSON))
+          .andExpect(content().contentTypeCompatibleWith(APPLICATION_PROBLEM_JSON))
           .andExpect(jsonPath("$.error").value("UNPROCESSABLE_CONTENT"))
           .andExpect(jsonPath("$.error_description")
               .value(containsString("Expression evaluation failed")));

@@ -82,7 +82,7 @@ public class GlobalAuthorizationFilter extends OncePerRequestFilter {
         : null;
     Optional<PrincipalInfo> principalInfo = principalContext != null
         ? Optional.of(principalContext.principal())
-        : extractPrincipal(authentication, response);
+        : extractPrincipal(authentication, request, response);
     if (principalInfo.isEmpty()) {
       return;
     }
@@ -103,7 +103,7 @@ public class GlobalAuthorizationFilter extends OncePerRequestFilter {
           authorizationRequest.resource().type(), request.getMethod(), request.getRequestURI());
       log.warn("Authorization denied for principal {} on {} {}", principal.identifier(),
           request.getMethod(), request.getRequestURI());
-      errorResponseWriter.write(response, HttpStatus.FORBIDDEN,
+      errorResponseWriter.write(request, response, HttpStatus.FORBIDDEN,
           "Principal is not authorized to perform this operation");
       return;
     }
@@ -117,12 +117,12 @@ public class GlobalAuthorizationFilter extends OncePerRequestFilter {
   }
 
   private Optional<PrincipalInfo> extractPrincipal(Authentication authentication,
-      HttpServletResponse response) throws IOException {
+      HttpServletRequest request, HttpServletResponse response) throws IOException {
     try {
       return Optional.of(principalExtractor.extractPrincipalInfo(authentication));
     } catch (MissingPrincipalIdentifierException exception) {
       log.warn("Authentication rejected: {}", exception.getMessage());
-      errorResponseWriter.write(response, HttpStatus.UNAUTHORIZED, exception.getMessage());
+      errorResponseWriter.write(request, response, HttpStatus.UNAUTHORIZED, exception.getMessage());
       return Optional.empty();
     }
   }

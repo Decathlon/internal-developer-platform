@@ -71,6 +71,6 @@ public final class HttpMessageSignatureFilter extends OncePerRequestFilter {
         correlation);
     response.setHeader("WWW-Authenticate", "Signature realm=\"idp-core\"");
     response.setHeader("Cache-Control", "no-store");
-    errorWriter.write(response, HttpStatus.UNAUTHORIZED, result.description());
+    errorWriter.write(request, response, HttpStatus.UNAUTHORIZED, result.description());
   }
 }

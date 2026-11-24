@@ -181,13 +181,18 @@ sequenceDiagram
 
 ### Error Flow
 
+Domain exceptions carry business meaning, while `ApiExceptionHandler` maps
+them to HTTP semantics in the infrastructure layer and returns RFC 9457
+`ProblemDetail` responses.
+
 ```mermaid
 sequenceDiagram
     participant DomainService
     participant ApiExceptionHandler
     participant Client
     DomainService->>ApiExceptionHandler: Throw domain exception
-    ApiExceptionHandler->>Client: Map to HTTP status + ErrorResponse DTO
+    ApiExceptionHandler->>ApiExceptionHandler: Map exception to HTTP status
+    ApiExceptionHandler->>Client: Return ProblemDetail with legacy compatibility fields
 ```
 
 ---

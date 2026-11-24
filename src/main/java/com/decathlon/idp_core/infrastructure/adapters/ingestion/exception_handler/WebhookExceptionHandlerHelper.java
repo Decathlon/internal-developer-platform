@@ -1,23 +1,27 @@
 package com.decathlon.idp_core.infrastructure.adapters.ingestion.exception_handler;
 
-import static com.decathlon.idp_core.infrastructure.adapters.ingestion.configuration.IngestionConstants.APPLICATION_JSON;
 import static com.decathlon.idp_core.infrastructure.adapters.ingestion.configuration.IngestionConstants.CONNECTOR_IDENTIFIER_PROPERTY;
 import static com.decathlon.idp_core.infrastructure.adapters.ingestion.configuration.IngestionConstants.UNKNOWN_VALUE;
+
+import java.net.URI;
 
 import org.apache.camel.Exchange;
 import org.apache.camel.LoggingLevel;
 import org.apache.camel.Message;
 import org.apache.camel.builder.RouteBuilder;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
+import org.springframework.http.ProblemDetail;
+import org.springframework.http.converter.json.ProblemDetailJacksonMixin;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 
 import com.decathlon.idp_core.domain.exception.webhook.WebhookAuthenticationException;
-import com.decathlon.idp_core.infrastructure.adapters.common.model.ErrorResponse;
+import com.decathlon.idp_core.infrastructure.adapters.api.handler.ApiProblemDetailFactory;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.ObjectWriter;
 
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
 /// Helper component providing reusable exception mapping and structured logging
@@ -27,13 +31,19 @@ import lombok.extern.slf4j.Slf4j;
 /// error responses with structured logging. Exception messages can optionally be
 /// exposed to clients when safe.
 @Component
-@RequiredArgsConstructor
 @Slf4j
 public class WebhookExceptionHandlerHelper {
 
   private static final String STRUCTURED_LOG_MESSAGE = "webhook_ingestion_error code={} status={} connector_identifier={} exception_type={} message={}";
+  private static final String ERROR_INSTANCE_PROPERTY = "webhookErrorInstance";
 
-  private final ObjectMapper objectMapper;
+  private final ObjectWriter problemDetailWriter;
+
+  public WebhookExceptionHandlerHelper(ObjectMapper objectMapper) {
+    this.problemDetailWriter = objectMapper.copy()
+        .addMixIn(ProblemDetail.class, ProblemDetailJacksonMixin.class)
+        .writerFor(ProblemDetail.class);
+  }
 
   public <T extends Throwable> void registerHandler(RouteBuilder routeBuilder,
       Class<T> exceptionType, WebhookErrorCode error) {
@@ -45,7 +55,8 @@ public class WebhookExceptionHandlerHelper {
   public <T extends Throwable> void registerHandler(RouteBuilder routeBuilder,
       Class<T> exceptionType, WebhookErrorCode error, boolean exposeExceptionMessage) {
 
-    routeBuilder.onException(exceptionType).handled(true).removeHeaders("*")
+    routeBuilder.onException(exceptionType).handled(true).process(this::captureRequestInstance)
+        .removeHeaders("*")
         .process(exchange -> setJsonErrorResponse(exchange, error, exposeExceptionMessage))
         .process(exchange -> logHandledException(exchange, error.logLevel(), error.code(),
             error.httpStatus().value()));
@@ -70,11 +81,19 @@ public class WebhookExceptionHandlerHelper {
       boolean exposeExceptionMessage) throws JsonProcessingException {
     HttpStatus httpStatus = error.httpStatus();
     String errorDescription = resolveErrorDescription(exchange, error, exposeExceptionMessage);
-    ErrorResponse errorResponse = new ErrorResponse(error.code(), errorDescription);
+    ProblemDetail problemDetail = ApiProblemDetailFactory.create(httpStatus, errorDescription,
+        URI.create(exchange.getProperty(ERROR_INSTANCE_PROPERTY, String.class)));
+    problemDetail.setProperty("error", error.code());
     Message message = exchange.getMessage();
     message.setHeader(Exchange.HTTP_RESPONSE_CODE, httpStatus.value());
-    message.setHeader(Exchange.CONTENT_TYPE, APPLICATION_JSON);
-    message.setBody(objectMapper.writeValueAsString(errorResponse));
+    message.setHeader(Exchange.CONTENT_TYPE, MediaType.APPLICATION_PROBLEM_JSON_VALUE);
+    message.setBody(problemDetailWriter.writeValueAsString(problemDetail));
+  }
+
+  private void captureRequestInstance(Exchange exchange) {
+    String requestPath = exchange.getMessage().getHeader(Exchange.HTTP_PATH, String.class);
+    exchange.setProperty(ERROR_INSTANCE_PROPERTY,
+        StringUtils.hasText(requestPath) ? requestPath : "/");
   }
 
   private String resolveErrorDescription(Exchange exchange, WebhookErrorCode error,

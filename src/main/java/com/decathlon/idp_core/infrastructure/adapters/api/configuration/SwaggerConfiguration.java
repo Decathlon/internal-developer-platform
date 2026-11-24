@@ -25,6 +25,8 @@ import io.swagger.v3.core.util.Json;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.models.OpenAPI;
 import io.swagger.v3.oas.models.info.Info;
+import io.swagger.v3.oas.models.media.DateTimeSchema;
+import io.swagger.v3.oas.models.media.StringSchema;
 import io.swagger.v3.oas.models.security.OAuthFlow;
 import io.swagger.v3.oas.models.security.OAuthFlows;
 import io.swagger.v3.oas.models.security.SecurityRequirement;
@@ -100,7 +102,32 @@ public class SwaggerConfiguration {
 
   @Bean
   public GroupedOpenApi allApis() {
-    return GroupedOpenApi.builder().group("internal").pathsToMatch("/**").build();
+    return GroupedOpenApi.builder().group("internal").pathsToMatch("/**")
+        .addOpenApiCustomizer(SwaggerConfiguration::addProblemDetailExtensions).build();
+  }
+
+  private static void addProblemDetailExtensions(OpenAPI openApi) {
+    if (openApi.getComponents() == null || openApi.getComponents().getSchemas() == null) {
+      throw new IllegalStateException("OpenAPI component schemas are missing");
+    }
+
+    io.swagger.v3.oas.models.media.Schema<?> schema = openApi.getComponents().getSchemas()
+        .get("ProblemDetail");
+    if (schema == null) {
+      throw new IllegalStateException("ProblemDetail schema is missing from the OpenAPI document");
+    }
+
+    schema.getProperties().remove("properties");
+    schema.addProperty("error", new StringSchema()
+        .description("Legacy HTTP status name retained for backward compatibility"));
+    schema.addProperty("error_description",
+        new StringSchema().description("Legacy error message; identical to detail"));
+    schema.addProperty("timestamp",
+        new DateTimeSchema().description("Time the error response was created"));
+    schema.addRequiredItem("error");
+    schema.addRequiredItem("error_description");
+    schema.addRequiredItem("timestamp");
+    schema.setAdditionalProperties(Boolean.TRUE);
   }
 
   @Schema(description = "Paginated response containing Template objects")

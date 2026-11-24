@@ -117,7 +117,7 @@ public class JitProvisioningFilter extends OncePerRequestFilter {
       principalInfo = principalExtractor.extractPrincipalInfo(authentication);
     } catch (MissingPrincipalIdentifierException exception) {
       log.warn("Authentication rejected: {}", exception.getMessage());
-      errorResponseWriter.write(response, HttpStatus.UNAUTHORIZED, exception.getMessage());
+      errorResponseWriter.write(request, response, HttpStatus.UNAUTHORIZED, exception.getMessage());
       return false;
     }
 
@@ -143,7 +143,7 @@ public class JitProvisioningFilter extends OncePerRequestFilter {
           log.debug("Principal evaluation rejected: mode={}, principal={}, kind={}, linked=false",
               PrincipalProvisioningMode.LINK_ONLY, principalInfo.identifier(),
               principalInfo.kind());
-          errorResponseWriter.write(response, HttpStatus.UNAUTHORIZED,
+          errorResponseWriter.write(request, response, HttpStatus.UNAUTHORIZED,
               "No linked principal matches the authenticated identity");
           return false;
         }
@@ -160,7 +160,7 @@ public class JitProvisioningFilter extends OncePerRequestFilter {
       if (matchingPrincipal.isEmpty()) {
         log.debug("Principal evaluation rejected: mode={}, principal={}, kind={}, linked=false",
             PrincipalProvisioningMode.JIT, principalInfo.identifier(), principalInfo.kind());
-        errorResponseWriter.write(response, HttpStatus.UNAUTHORIZED,
+        errorResponseWriter.write(request, response, HttpStatus.UNAUTHORIZED,
             "No linked principal matches the authenticated identity");
         return false;
       }
@@ -174,7 +174,7 @@ public class JitProvisioningFilter extends OncePerRequestFilter {
       return true;
     } catch (Exception e) {
       log.warn("JIT provisioning failed for authenticated principal: {}", e.getMessage(), e);
-      errorResponseWriter.write(response, HttpStatus.SERVICE_UNAVAILABLE,
+      errorResponseWriter.write(request, response, HttpStatus.SERVICE_UNAVAILABLE,
           "Unable to verify your access at this time. Please try again later.");
       return false;
     }
