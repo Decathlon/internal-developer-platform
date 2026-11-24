@@ -1,4 +1,4 @@
-FROM eclipse-temurin:25.0.5.1_2-jre-jammy
+FROM eclipse-temurin:26.0.2.1_1-jre-jammy
 
 ENV SERVER_PORT=8080 \
     PORT=8080
