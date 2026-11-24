@@ -285,7 +285,7 @@ human principal.
 
 The `app.security.authentication.api-key` chain is a placeholder. It doesn't validate credentials or establish a
 principal, so don't enable it. Inbound webhook delivery uses connector-level validation instead. See
-[Webhook Security](webhooks.md#security-strategies).
+[Webhook Security](../features/webhooks.md#security-strategies).
 
 ### Chain ordering
 
@@ -482,4 +482,4 @@ permissions.
 
 ## Next Steps
 
-- **[Webhook Security](../features/data-integration.md##Security)** - Connector-level security for inbound webhooks
+- **[Webhook Security](../features/data-integration.md#security)** - Connector-level security for inbound webhooks

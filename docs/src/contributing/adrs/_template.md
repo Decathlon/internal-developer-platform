@@ -3,7 +3,7 @@ You can remove this comment before submitting the PR.
 -->
 # {short title of solved problem and solution}
 
-* Status: {"Draft" | "Proposed" | "Rejected" | "Accepted" | "Deprecated" | "Superseded by [ADR-0005](0005-example.md)"}
+* Status: {"Draft" | "Proposed" | "Rejected" | "Accepted" | "Deprecated" | "Superseded by ADR-0005(use markdown link to the referenced ADR)"}
 * Deciders:
   * maintainers team: {list one or two person involved in the decision}
   * contributors team: {list one or two involved in the decision - if ownership is in builders team, fill with `N/A`}
