@@ -209,6 +209,7 @@ class ApiExceptionHandlerTest {
 
     @PostMapping("/request-body")
     void create(@RequestBody RequestBodyDto requestBody) {
+      // This endpoint only exercises Spring's request-body deserialization handling.
     }
 
     @GetMapping("/domain-error")
@@ -225,6 +226,7 @@ class ApiExceptionHandlerTest {
 
     @GetMapping("/validated")
     void validate(@RequestParam @Min(1) int count) {
+      // Request-parameter validation is the behavior under test; no action is needed.
     }
   }
 

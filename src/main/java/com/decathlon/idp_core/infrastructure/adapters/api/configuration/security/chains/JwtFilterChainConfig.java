@@ -51,8 +51,8 @@ public class JwtFilterChainConfig {
             oauth2 -> oauth2.jwt(jwt -> jwt.jwtAuthenticationConverter(jwtAuthenticationConverter))
                 .authenticationEntryPoint((request, response, exception) -> {
                   bearerTokenAuthenticationEntryPoint.commence(request, response, exception);
-                  errorResponseWriter.write(request, response, HttpStatus.UNAUTHORIZED,
-                      "A valid bearer token is required");
+                  errorResponseWriter.write(request, response,
+                      HttpStatus.valueOf(response.getStatus()), "A valid bearer token is required");
                 }).accessDeniedHandler((request, response, exception) -> {
                   bearerTokenAccessDeniedHandler.handle(request, response, exception);
                   errorResponseWriter.write(request, response, HttpStatus.FORBIDDEN,

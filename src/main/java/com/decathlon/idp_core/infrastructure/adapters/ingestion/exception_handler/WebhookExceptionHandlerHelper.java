@@ -55,8 +55,8 @@ public class WebhookExceptionHandlerHelper {
   public <T extends Throwable> void registerHandler(RouteBuilder routeBuilder,
       Class<T> exceptionType, WebhookErrorCode error, boolean exposeExceptionMessage) {
 
-    routeBuilder.onException(exceptionType).handled(true)
-        .process(exchange -> captureRequestInstance(exchange)).removeHeaders("*")
+    routeBuilder.onException(exceptionType).handled(true).process(this::captureRequestInstance)
+        .removeHeaders("*")
         .process(exchange -> setJsonErrorResponse(exchange, error, exposeExceptionMessage))
         .process(exchange -> logHandledException(exchange, error.logLevel(), error.code(),
             error.httpStatus().value()));

@@ -73,9 +73,9 @@ class SwaggerConfigurationTest {
         .allApis();
     OpenAPI openApi = new OpenAPI()
         .components(new Components().addSchemas("Other", new Schema<>()));
+    var customizer = groupedOpenApi.getOpenApiCustomizers().iterator().next();
 
-    assertThrows(IllegalStateException.class, () -> groupedOpenApi.getOpenApiCustomizers()
-        .forEach(customizer -> customizer.customise(openApi)));
+    assertThrows(IllegalStateException.class, () -> customizer.customise(openApi));
   }
 
   @Test
@@ -83,9 +83,9 @@ class SwaggerConfigurationTest {
     GroupedOpenApi groupedOpenApi = new SwaggerConfiguration("", "http://localhost:8080", false)
         .allApis();
     OpenAPI openApi = new OpenAPI();
+    var customizer = groupedOpenApi.getOpenApiCustomizers().iterator().next();
 
-    assertThrows(IllegalStateException.class, () -> groupedOpenApi.getOpenApiCustomizers()
-        .forEach(customizer -> customizer.customise(openApi)));
+    assertThrows(IllegalStateException.class, () -> customizer.customise(openApi));
   }
 
   @Test
@@ -93,8 +93,8 @@ class SwaggerConfigurationTest {
     GroupedOpenApi groupedOpenApi = new SwaggerConfiguration("", "http://localhost:8080", false)
         .allApis();
     OpenAPI openApi = new OpenAPI().components(new Components());
+    var customizer = groupedOpenApi.getOpenApiCustomizers().iterator().next();
 
-    assertThrows(IllegalStateException.class, () -> groupedOpenApi.getOpenApiCustomizers()
-        .forEach(customizer -> customizer.customise(openApi)));
+    assertThrows(IllegalStateException.class, () -> customizer.customise(openApi));
   }
 }

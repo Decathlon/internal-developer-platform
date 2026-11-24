@@ -25,6 +25,8 @@ import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Order;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestClassOrder;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.context.jdbc.Sql;
@@ -895,77 +897,24 @@ class EntityTemplateControllerTest extends AbstractIntegrationTest {
           ENTITY_TEMPLATE_PATH + "/" + identifier, "NOT_FOUND");
     }
 
-    @Test
-    @WithMockUser()
-    void putTemplate_400_propertyNameIsMissing() throws Exception {
+    @ParameterizedTest(name = "putTemplate_400 for {0}")
+    @WithMockUser
+    @CsvSource({
+        "putEntityTemplate_400_propertyNameIsMissing.json, Property name is mandatory and cannot be blank",
+        "putEntityTemplate_400_propertyNameIsBlank.json, Property name is mandatory and cannot be blank",
+        "putEntityTemplate_400_propertyDescriptionIsBlank.json, Property description is mandatory and cannot be blank",
+        "putEntityTemplate_400_propertyDescriptionIsMissing.json, Property description is mandatory and cannot be blank",
+        "putEntityTemplate_400_propertyTypeIsMissing.json, Property type is mandatory"})
+    void putTemplate_400_whenPropertyFieldIsInvalid(String fixtureName, String detail)
+        throws Exception {
       String identifier = "web-service";
-      MvcResult result = mockMvc.perform(MockMvcRequestBuilders
-          .put(ENTITY_TEMPLATE_PATH + "/" + identifier).contentType(APPLICATION_JSON)
-          .accept(APPLICATION_JSON).with(csrf())
-          .content(getJsonTestFileContent(
-              "integration_test/json/entity-template/v1/putEntityTemplate_400_propertyNameIsMissing.json")))
+      MvcResult result = mockMvc
+          .perform(MockMvcRequestBuilders.put(ENTITY_TEMPLATE_PATH + "/" + identifier)
+              .contentType(APPLICATION_JSON).accept(APPLICATION_JSON).with(csrf())
+              .content(getJsonTestFileContent(
+                  "integration_test/json/entity-template/v1/" + fixtureName)))
           .andExpect(status().isBadRequest()).andReturn();
-      assertProblemDetail(result, 400, "Bad Request",
-          "Property name is mandatory and cannot be blank", ENTITY_TEMPLATE_PATH + "/" + identifier,
-          "BAD_REQUEST");
-    }
-
-    @Test
-    @WithMockUser()
-    void putTemplate_400_propertyNameIsBlank() throws Exception {
-      String identifier = "web-service";
-      MvcResult result = mockMvc.perform(MockMvcRequestBuilders
-          .put(ENTITY_TEMPLATE_PATH + "/" + identifier).contentType(APPLICATION_JSON)
-          .accept(APPLICATION_JSON).with(csrf())
-          .content(getJsonTestFileContent(
-              "integration_test/json/entity-template/v1/putEntityTemplate_400_propertyNameIsBlank.json")))
-          .andExpect(status().isBadRequest()).andReturn();
-      assertProblemDetail(result, 400, "Bad Request",
-          "Property name is mandatory and cannot be blank", ENTITY_TEMPLATE_PATH + "/" + identifier,
-          "BAD_REQUEST");
-    }
-
-    @Test
-    @WithMockUser()
-    void putTemplate_400_propertyDescriptionIsBlank() throws Exception {
-      String identifier = "web-service";
-      MvcResult result = mockMvc.perform(MockMvcRequestBuilders
-          .put(ENTITY_TEMPLATE_PATH + "/" + identifier).contentType(APPLICATION_JSON)
-          .accept(APPLICATION_JSON).with(csrf())
-          .content(getJsonTestFileContent(
-              "integration_test/json/entity-template/v1/putEntityTemplate_400_propertyDescriptionIsBlank.json")))
-          .andExpect(status().isBadRequest()).andReturn();
-      assertProblemDetail(result, 400, "Bad Request",
-          "Property description is mandatory and cannot be blank",
-          ENTITY_TEMPLATE_PATH + "/" + identifier, "BAD_REQUEST");
-    }
-
-    @Test
-    @WithMockUser()
-    void putTemplate_400_propertyDescriptionIsMissing() throws Exception {
-      String identifier = "web-service";
-      MvcResult result = mockMvc.perform(MockMvcRequestBuilders
-          .put(ENTITY_TEMPLATE_PATH + "/" + identifier).contentType(APPLICATION_JSON)
-          .accept(APPLICATION_JSON).with(csrf())
-          .content(getJsonTestFileContent(
-              "integration_test/json/entity-template/v1/putEntityTemplate_400_propertyDescriptionIsMissing.json")))
-          .andExpect(status().isBadRequest()).andReturn();
-      assertProblemDetail(result, 400, "Bad Request",
-          "Property description is mandatory and cannot be blank",
-          ENTITY_TEMPLATE_PATH + "/" + identifier, "BAD_REQUEST");
-    }
-
-    @Test
-    @WithMockUser()
-    void putTemplate_400_propertyTypeIsMissing() throws Exception {
-      String identifier = "web-service";
-      MvcResult result = mockMvc.perform(MockMvcRequestBuilders
-          .put(ENTITY_TEMPLATE_PATH + "/" + identifier).contentType(APPLICATION_JSON)
-          .accept(APPLICATION_JSON).with(csrf())
-          .content(getJsonTestFileContent(
-              "integration_test/json/entity-template/v1/putEntityTemplate_400_propertyTypeIsMissing.json")))
-          .andExpect(status().isBadRequest()).andReturn();
-      assertProblemDetail(result, 400, "Bad Request", "Property type is mandatory",
+      assertProblemDetail(result, 400, "Bad Request", detail,
           ENTITY_TEMPLATE_PATH + "/" + identifier, "BAD_REQUEST");
     }
 

@@ -24,8 +24,8 @@ import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.web.server.LocalServerPort;
 import org.springframework.http.MediaType;
+import org.springframework.security.oauth2.jwt.BadJwtException;
 import org.springframework.security.oauth2.jwt.JwtDecoder;
-import org.springframework.security.oauth2.jwt.JwtException;
 import org.springframework.security.web.FilterChainProxy;
 import org.springframework.test.context.jdbc.Sql;
 import org.springframework.test.web.servlet.client.RestTestClient;
@@ -180,7 +180,7 @@ class HttpMessageSignatureIntegrationTest extends AbstractIntegrationTest {
 
   @Test
   void invalidJwtTokenReturnsProblemDetailAndBearerChallenge() throws Exception {
-    when(jwtDecoder.decode("invalid-token")).thenThrow(new JwtException("Rejected token"));
+    when(jwtDecoder.decode("invalid-token")).thenThrow(new BadJwtException("Rejected token"));
 
     client.get().uri("/api/v1/entities").header("Authorization", "Bearer invalid-token")
         .header("x-request-id", ID).header("Signature", currentSignature()).exchange()
