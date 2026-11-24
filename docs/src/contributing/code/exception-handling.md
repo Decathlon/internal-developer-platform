@@ -30,8 +30,8 @@ errors.
 
 ## Error Response Format
 
-API errors handled by `ApiExceptionHandler` and the servlet security filters
-follow RFC 9457 "Problem Details for HTTP APIs":
+API errors handled by `ApiExceptionHandler`, servlet security filters, and
+webhook ingestion follow RFC 9457 "Problem Details for HTTP APIs":
 
 ```json
 {
@@ -57,7 +57,7 @@ follow RFC 9457 "Problem Details for HTTP APIs":
 | `status` | HTTP status code |
 | `detail` | Human-readable explanation of the problem |
 | `instance` | Request path that produced the error |
-| `error` | Legacy HTTP status name, retained for existing clients |
+| `error` | Legacy code; webhook responses retain their webhook-specific values |
 | `error_description` | Legacy error message, equal to `detail` |
 | `timestamp` | Time the error response was created, in ISO 8601 format |
 

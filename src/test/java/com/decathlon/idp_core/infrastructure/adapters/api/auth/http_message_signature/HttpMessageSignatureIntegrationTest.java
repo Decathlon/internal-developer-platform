@@ -3,7 +3,9 @@ package com.decathlon.idp_core.infrastructure.adapters.api.auth.http_message_sig
 import static com.decathlon.idp_core.infrastructure.adapters.api.auth.http_message_signature.HttpMessageSignatureVerifierTest.ID;
 import static com.decathlon.idp_core.infrastructure.adapters.api.auth.http_message_signature.HttpMessageSignatureVerifierTest.signed;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
+import static org.mockito.Mockito.when;
 
 import java.nio.charset.StandardCharsets;
 import java.time.Instant;
@@ -23,6 +25,7 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.web.server.LocalServerPort;
 import org.springframework.http.MediaType;
 import org.springframework.security.oauth2.jwt.JwtDecoder;
+import org.springframework.security.oauth2.jwt.JwtException;
 import org.springframework.security.web.FilterChainProxy;
 import org.springframework.test.context.jdbc.Sql;
 import org.springframework.test.web.servlet.client.RestTestClient;
@@ -161,12 +164,35 @@ class HttpMessageSignatureIntegrationTest extends AbstractIntegrationTest {
   }
 
   @Test
-  void validSignatureStillRequiresJwtAuthentication() throws Exception {
+  void missingJwtTokenReturnsProblemDetailAndBearerChallenge() throws Exception {
     client.get().uri("/api/v1/entities").header("x-request-id", ID)
         .header("Origin", "https://example.com").header("Signature", currentSignature()).exchange()
         .expectStatus().isUnauthorized().expectHeader()
         .valueEquals("Access-Control-Allow-Origin", "https://example.com").expectHeader()
-        .value("WWW-Authenticate", value -> assertThat(value).startsWith("Bearer"));
+        .value("WWW-Authenticate", value -> assertThat(value).startsWith("Bearer")).expectHeader()
+        .contentTypeCompatibleWith(MediaType.APPLICATION_PROBLEM_JSON).expectBody()
+        .jsonPath("$.type").isEqualTo("about:blank").jsonPath("$.title").isEqualTo("Unauthorized")
+        .jsonPath("$.status").isEqualTo(401).jsonPath("$.detail")
+        .isEqualTo("A valid bearer token is required").jsonPath("$.error")
+        .isEqualTo("UNAUTHORIZED");
+    verifyNoInteractions(jwtDecoder);
+  }
+
+  @Test
+  void invalidJwtTokenReturnsProblemDetailAndBearerChallenge() throws Exception {
+    when(jwtDecoder.decode("invalid-token")).thenThrow(new JwtException("Rejected token"));
+
+    client.get().uri("/api/v1/entities").header("Authorization", "Bearer invalid-token")
+        .header("x-request-id", ID).header("Signature", currentSignature()).exchange()
+        .expectStatus().isUnauthorized().expectHeader()
+        .value("WWW-Authenticate", value -> assertThat(value).startsWith("Bearer")).expectHeader()
+        .contentTypeCompatibleWith(MediaType.APPLICATION_PROBLEM_JSON).expectBody()
+        .jsonPath("$.type").isEqualTo("about:blank").jsonPath("$.title").isEqualTo("Unauthorized")
+        .jsonPath("$.status").isEqualTo(401).jsonPath("$.detail")
+        .isEqualTo("A valid bearer token is required").jsonPath("$.error")
+        .isEqualTo("UNAUTHORIZED");
+
+    verify(jwtDecoder).decode("invalid-token");
   }
 
   @Test

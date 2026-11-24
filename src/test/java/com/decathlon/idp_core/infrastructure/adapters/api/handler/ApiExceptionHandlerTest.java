@@ -48,6 +48,7 @@ import com.decathlon.idp_core.domain.exception.entity.EntityAlreadyExistsExcepti
 import com.decathlon.idp_core.domain.exception.entity.EntityValidationException;
 import com.decathlon.idp_core.domain.exception.entity_template.EntityTemplateIsRelationTargetException;
 import com.decathlon.idp_core.domain.exception.entity_template.EntityTemplateNotFoundException;
+import com.decathlon.idp_core.domain.exception.entity_template.PropertyNameNotFoundEntityTemplatePropertiesException;
 import com.decathlon.idp_core.domain.exception.entity_template.RelationNameNotFoundEntityTemplateRelationsException;
 import com.decathlon.idp_core.domain.exception.principal.PrincipalNotFoundException;
 import com.decathlon.idp_core.domain.exception.webhook.WebhookAuthenticationException;
@@ -253,6 +254,8 @@ class ApiExceptionHandlerTest {
               HttpStatus.UNAUTHORIZED),
           Arguments.of(new PrincipalNotAuthorizedException("platform-user"), HttpStatus.FORBIDDEN),
           Arguments.of(new PrincipalNotFoundException("platform-user"), HttpStatus.NOT_FOUND),
+          Arguments.of(new PropertyNameNotFoundEntityTemplatePropertiesException(
+              "Mapped property does not exist in template"), HttpStatus.UNPROCESSABLE_CONTENT),
           Arguments.of(new RelationNameNotFoundEntityTemplateRelationsException(
               "Relation name github_repository not found"), HttpStatus.UNPROCESSABLE_CONTENT));
     }

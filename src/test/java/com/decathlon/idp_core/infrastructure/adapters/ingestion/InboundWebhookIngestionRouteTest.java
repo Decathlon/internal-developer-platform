@@ -4,6 +4,7 @@ import static com.decathlon.idp_core.infrastructure.adapters.ingestion.configura
 import static com.decathlon.idp_core.infrastructure.adapters.ingestion.configuration.IngestionConstants.HTTP_CREATED;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -37,6 +38,7 @@ import org.springframework.context.annotation.Import;
 import org.springframework.context.annotation.Primary;
 import org.springframework.core.Ordered;
 import org.springframework.core.annotation.Order;
+import org.springframework.http.HttpStatus;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.security.oauth2.jwt.JwtDecoder;
 import org.springframework.test.context.jdbc.Sql;
@@ -219,8 +221,22 @@ class InboundWebhookIngestionRouteTest extends AbstractIntegrationTest {
   private void assertJsonErrorResponse(Exchange exchange, String expectedError,
       String expectedDescription) throws Exception {
     JsonNode response = objectMapper.readTree(exchange.getMessage().getBody(String.class));
+    int status = exchange.getMessage().getHeader(Exchange.HTTP_RESPONSE_CODE, Integer.class);
+    assertJsonContentType(exchange);
+    assertEquals("about:blank", response.get("type").asText());
+    assertEquals(HttpStatus.valueOf(status).getReasonPhrase(), response.get("title").asText());
+    assertEquals(status, response.get("status").asInt());
+    assertEquals(expectedDescription, response.get("detail").asText());
+    assertEquals("/", response.get("instance").asText());
     assertEquals(expectedError, response.get("error").asText());
     assertEquals(expectedDescription, response.get("error_description").asText());
+    assertTrue(response.hasNonNull("timestamp"));
+  }
+
+  private void assertJsonContentType(Exchange exchange) {
+    int status = exchange.getMessage().getHeader(Exchange.HTTP_RESPONSE_CODE, Integer.class);
+    String contentType = status >= 400 ? "application/problem+json" : "application/json";
+    assertEquals(contentType, exchange.getMessage().getHeader(Exchange.CONTENT_TYPE));
   }
 
   private void assertSecurityValidationSucceeded(Exchange exchange) {
@@ -234,7 +250,7 @@ class InboundWebhookIngestionRouteTest extends AbstractIntegrationTest {
     Exchange exchange = invokeIngestionRoute("public-connector");
 
     assertEquals(HTTP_CREATED, exchange.getMessage().getHeader(Exchange.HTTP_RESPONSE_CODE));
-    assertEquals("application/json", exchange.getMessage().getHeader(Exchange.CONTENT_TYPE));
+    assertJsonContentType(exchange);
     assertJsonSuccessResponse(exchange);
   }
 
@@ -244,7 +260,7 @@ class InboundWebhookIngestionRouteTest extends AbstractIntegrationTest {
     Exchange exchange = invokeIngestionRoute("does-not-exist");
 
     assertEquals(404, exchange.getMessage().getHeader(Exchange.HTTP_RESPONSE_CODE));
-    assertEquals("application/json", exchange.getMessage().getHeader(Exchange.CONTENT_TYPE));
+    assertJsonContentType(exchange);
     assertJsonErrorResponse(exchange, "webhook_connector_not_found",
         "Webhook configuration not found");
   }
@@ -255,7 +271,7 @@ class InboundWebhookIngestionRouteTest extends AbstractIntegrationTest {
     Exchange exchange = invokeIngestionRoute("disabled-connector");
 
     assertEquals(403, exchange.getMessage().getHeader(Exchange.HTTP_RESPONSE_CODE));
-    assertEquals("application/json", exchange.getMessage().getHeader(Exchange.CONTENT_TYPE));
+    assertJsonContentType(exchange);
     assertJsonErrorResponse(exchange, "webhook_connector_disabled",
         "Webhook connector is disabled");
   }
@@ -266,7 +282,7 @@ class InboundWebhookIngestionRouteTest extends AbstractIntegrationTest {
     Exchange exchange = invokeIngestionRoute("token-connector");
 
     assertEquals(401, exchange.getMessage().getHeader(Exchange.HTTP_RESPONSE_CODE));
-    assertEquals("application/json", exchange.getMessage().getHeader(Exchange.CONTENT_TYPE));
+    assertJsonContentType(exchange);
     assertJsonErrorResponse(exchange, "webhook_authentication_failed",
         "Webhook authentication failed");
   }
@@ -278,7 +294,7 @@ class InboundWebhookIngestionRouteTest extends AbstractIntegrationTest {
         Map.of("X-Auth-Token", "invalid-token"));
 
     assertEquals(403, exchange.getMessage().getHeader(Exchange.HTTP_RESPONSE_CODE));
-    assertEquals("application/json", exchange.getMessage().getHeader(Exchange.CONTENT_TYPE));
+    assertJsonContentType(exchange);
     assertJsonErrorResponse(exchange, "webhook_forbidden", "Invalid credentials");
   }
 
@@ -289,7 +305,7 @@ class InboundWebhookIngestionRouteTest extends AbstractIntegrationTest {
         Map.of("X-Auth-Token", webhookTokenEnvValue));
 
     assertEquals(HTTP_CREATED, exchange.getMessage().getHeader(Exchange.HTTP_RESPONSE_CODE));
-    assertEquals("application/json", exchange.getMessage().getHeader(Exchange.CONTENT_TYPE));
+    assertJsonContentType(exchange);
     assertJsonSuccessResponse(exchange);
   }
 
@@ -315,7 +331,7 @@ class InboundWebhookIngestionRouteTest extends AbstractIntegrationTest {
         Map.of("X-Hub-Signature-256", signature));
 
     assertEquals(HTTP_CREATED, exchange.getMessage().getHeader(Exchange.HTTP_RESPONSE_CODE));
-    assertEquals("application/json", exchange.getMessage().getHeader(Exchange.CONTENT_TYPE));
+    assertJsonContentType(exchange);
     assertJsonSuccessResponse(exchange);
   }
 
@@ -326,7 +342,7 @@ class InboundWebhookIngestionRouteTest extends AbstractIntegrationTest {
         null, Map.of("X-Hub-Signature-256", "sha1=abc123"));
 
     assertEquals(401, exchange.getMessage().getHeader(Exchange.HTTP_RESPONSE_CODE));
-    assertEquals("application/json", exchange.getMessage().getHeader(Exchange.CONTENT_TYPE));
+    assertJsonContentType(exchange);
     assertJsonErrorResponse(exchange, "webhook_authentication_failed",
         "Webhook authentication failed");
   }
@@ -368,7 +384,7 @@ class InboundWebhookIngestionRouteTest extends AbstractIntegrationTest {
         Map.of("Authorization", "Bearer not-basic"));
 
     assertEquals(401, exchange.getMessage().getHeader(Exchange.HTTP_RESPONSE_CODE));
-    assertEquals("application/json", exchange.getMessage().getHeader(Exchange.CONTENT_TYPE));
+    assertJsonContentType(exchange);
     assertJsonErrorResponse(exchange, "webhook_authentication_failed",
         "Webhook authentication failed");
   }
@@ -386,7 +402,7 @@ class InboundWebhookIngestionRouteTest extends AbstractIntegrationTest {
         Map.of("Authorization", "Basic " + credentials));
 
     assertEquals(403, exchange.getMessage().getHeader(Exchange.HTTP_RESPONSE_CODE));
-    assertEquals("application/json", exchange.getMessage().getHeader(Exchange.CONTENT_TYPE));
+    assertJsonContentType(exchange);
     assertJsonErrorResponse(exchange, "webhook_forbidden", "Invalid credentials");
   }
 
@@ -403,7 +419,7 @@ class InboundWebhookIngestionRouteTest extends AbstractIntegrationTest {
         Map.of("Authorization", "Basic " + credentials));
 
     assertEquals(403, exchange.getMessage().getHeader(Exchange.HTTP_RESPONSE_CODE));
-    assertEquals("application/json", exchange.getMessage().getHeader(Exchange.CONTENT_TYPE));
+    assertJsonContentType(exchange);
     assertJsonErrorResponse(exchange, "webhook_forbidden", "Invalid credentials");
   }
 
@@ -436,7 +452,7 @@ class InboundWebhookIngestionRouteTest extends AbstractIntegrationTest {
 
   @Test
   @DisplayName("Validate-security route returns 403 when the JWKS host is not allow-listed")
-  void validateSecurityRoute_403_whenJwksHostIsNotAllowListed() {
+  void validateSecurityRoute_403_whenJwksHostIsNotAllowListed() throws Exception {
     String jwksUri = "https://github.com/oauth2/certs";
     when(jwtDecoderProvider.get(jwksUri))
         .thenThrow(new WebhookJwksHostForbiddenException("github.com"));
@@ -448,14 +464,7 @@ class InboundWebhookIngestionRouteTest extends AbstractIntegrationTest {
         Map.of("Authorization", "Bearer signed-token"));
 
     assertEquals(403, exchange.getMessage().getHeader(Exchange.HTTP_RESPONSE_CODE));
-    assertEquals("application/json", exchange.getMessage().getHeader(Exchange.CONTENT_TYPE));
-    try {
-      JsonNode response = objectMapper.readTree(exchange.getMessage().getBody(String.class));
-      assertEquals("webhook_forbidden", response.get("error").asText());
-      assertEquals("Invalid credentials", response.get("error_description").asText());
-    } catch (Exception exception) {
-      throw new AssertionError("Unable to read webhook error response", exception);
-    }
+    assertJsonErrorResponse(exchange, "webhook_forbidden", "Invalid credentials");
   }
 
   @Test
@@ -464,7 +473,7 @@ class InboundWebhookIngestionRouteTest extends AbstractIntegrationTest {
     Exchange exchange = invokeValidationWithoutWebhookConfig();
 
     assertEquals(500, exchange.getMessage().getHeader(Exchange.HTTP_RESPONSE_CODE));
-    assertEquals("application/json", exchange.getMessage().getHeader(Exchange.CONTENT_TYPE));
+    assertJsonContentType(exchange);
     assertJsonErrorResponse(exchange, "webhook_configuration_missing",
         "Webhook configuration unavailable");
   }
@@ -477,7 +486,7 @@ class InboundWebhookIngestionRouteTest extends AbstractIntegrationTest {
     Exchange exchange = invokeIngestionRoute("public-connector", payload, contentEncoding);
 
     assertEquals(HTTP_CREATED, exchange.getMessage().getHeader(Exchange.HTTP_RESPONSE_CODE));
-    assertEquals("application/json", exchange.getMessage().getHeader(Exchange.CONTENT_TYPE));
+    assertJsonContentType(exchange);
     assertJsonSuccessResponse(exchange);
   }
 
@@ -488,7 +497,7 @@ class InboundWebhookIngestionRouteTest extends AbstractIntegrationTest {
         "gzip");
 
     assertEquals(HTTP_BAD_REQUEST, exchange.getMessage().getHeader(Exchange.HTTP_RESPONSE_CODE));
-    assertEquals("application/json", exchange.getMessage().getHeader(Exchange.CONTENT_TYPE));
+    assertJsonContentType(exchange);
     assertJsonErrorResponse(exchange, "invalid_compressed_payload",
         "Invalid, unsupported, or oversized compressed payload");
   }
@@ -499,7 +508,7 @@ class InboundWebhookIngestionRouteTest extends AbstractIntegrationTest {
     Exchange exchange = invokeIngestionRoute("public-connector", null, "gzip");
 
     assertEquals(HTTP_BAD_REQUEST, exchange.getMessage().getHeader(Exchange.HTTP_RESPONSE_CODE));
-    assertEquals("application/json", exchange.getMessage().getHeader(Exchange.CONTENT_TYPE));
+    assertJsonContentType(exchange);
     assertJsonErrorResponse(exchange, "invalid_compressed_payload",
         "Invalid, unsupported, or oversized compressed payload");
   }
@@ -510,7 +519,7 @@ class InboundWebhookIngestionRouteTest extends AbstractIntegrationTest {
     Exchange exchange = invokeIngestionRoute("public-connector", gzipSamplePayload(), "gzip");
 
     assertEquals(HTTP_CREATED, exchange.getMessage().getHeader(Exchange.HTTP_RESPONSE_CODE));
-    assertEquals("application/json", exchange.getMessage().getHeader(Exchange.CONTENT_TYPE));
+    assertJsonContentType(exchange);
     assertJsonSuccessResponse(exchange);
   }
 
@@ -527,7 +536,7 @@ class InboundWebhookIngestionRouteTest extends AbstractIntegrationTest {
           Map.of("X-Auth-Token", "any-token"));
 
       assertEquals(401, exchange.getMessage().getHeader(Exchange.HTTP_RESPONSE_CODE));
-      assertEquals("application/json", exchange.getMessage().getHeader(Exchange.CONTENT_TYPE));
+      assertJsonContentType(exchange);
       assertJsonErrorResponse(exchange, "webhook_authentication_failed",
           "Webhook authentication failed");
     } finally {

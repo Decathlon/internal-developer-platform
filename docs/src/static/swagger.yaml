@@ -283,6 +283,12 @@ paths:
       responses:
         '204':
           description: Template deleted successfully
+        '400':
+          description: Template cannot be deleted while referenced as a relation target
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetail'
         '404':
           description: Template not found with the provided identifier
           content:
@@ -1039,6 +1045,12 @@ paths:
             '*/*':
               schema:
                 $ref: '#/components/schemas/EntityGraphFlatDtoOut'
+        '400':
+          description: Invalid graph query parameter value
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetail'
         '404':
           description: Entity not found with the provided identifier
           content:

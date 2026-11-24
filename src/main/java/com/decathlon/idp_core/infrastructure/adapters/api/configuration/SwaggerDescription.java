@@ -135,6 +135,7 @@ public class SwaggerDescription {
   public static final String RESPONSE_TEMPLATE_DELETED = "Template deleted successfully";
   public static final String RESPONSE_TEMPLATE_NOT_FOUND_ID = "Template not found with the provided ID";
   public static final String RESPONSE_TEMPLATE_NOT_FOUND_IDENTIFIER = "Template not found with the provided identifier";
+  public static final String RESPONSE_TEMPLATE_RELATION_TARGET = "Template cannot be deleted while referenced as a relation target";
   public static final String RESPONSE_INVALID_UUID = "Invalid UUID format";
   public static final String RESPONSE_INVALID_TEMPLATE_DATA = "Invalid template data provided";
   public static final String RESPONSE_INVALID_PAGINATION = "Invalid pagination parameters";

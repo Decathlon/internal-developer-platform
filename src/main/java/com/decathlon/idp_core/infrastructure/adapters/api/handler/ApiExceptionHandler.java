@@ -94,7 +94,7 @@ public class ApiExceptionHandler extends ResponseEntityExceptionHandler {
           entry(RelationCannotTargetItselfException.class, BAD_REQUEST),
           entry(EntityValidationException.class, BAD_REQUEST),
           entry(EntityDynamicMappingConfigurationException.class, BAD_REQUEST),
-          entry(PropertyNameNotFoundEntityTemplatePropertiesException.class, BAD_REQUEST),
+          entry(PropertyNameNotFoundEntityTemplatePropertiesException.class, UNPROCESSABLE_CONTENT),
           entry(WebhookSecurityConfigurationException.class, BAD_REQUEST),
           entry(WebhookConnectorConfigurationException.class, BAD_REQUEST),
           entry(MockSecurityConfigurationException.class, BAD_REQUEST),
