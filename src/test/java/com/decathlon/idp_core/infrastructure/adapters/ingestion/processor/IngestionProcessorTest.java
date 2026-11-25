@@ -6,10 +6,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.argThat;
-import static org.mockito.Mockito.never;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.*;
 
 import java.util.List;
 import java.util.Map;
@@ -47,6 +44,8 @@ import com.decathlon.idp_core.infrastructure.adapters.api.configuration.Principa
 import ch.qos.logback.classic.Logger;
 import ch.qos.logback.classic.spi.ILoggingEvent;
 import ch.qos.logback.core.read.ListAppender;
+import io.opentelemetry.api.OpenTelemetry;
+import io.opentelemetry.api.metrics.Meter;
 
 /// Unit tests for IngestionProcessor covering all mapping actions and edge cases.
 ///
@@ -59,6 +58,9 @@ import ch.qos.logback.core.read.ListAppender;
 @DisplayName("IngestionProcessor Unit Tests")
 @ExtendWith(MockitoExtension.class)
 class IngestionProcessorTest {
+
+  private static final Meter TEST_METER = OpenTelemetry.noop()
+      .getMeter("com.decathlon.idp_core.tests");
 
   @Mock
   private MappingEnginePort mappingEngine;
@@ -76,8 +78,9 @@ class IngestionProcessorTest {
     listAppender = new ListAppender<>();
     listAppender.start();
     logger.addAppender(listAppender);
-    ingestionProcessor = new IngestionProcessor(mappingEngine, entityService,
-        new PrincipalProvisioningProperties(PrincipalProvisioningMode.JIT));
+    ingestionProcessor = new IngestionProcessor(
+        new PrincipalProvisioningProperties(PrincipalProvisioningMode.JIT), mappingEngine,
+        entityService, TEST_METER);
   }
 
   private Entity createTestEntity(String templateId, String identifier) {
@@ -117,8 +120,8 @@ class IngestionProcessorTest {
     when(mappingEngine.mapToEntity(payload, mapping)).thenReturn(mappedPrincipal);
     when(entityService.entityExists("principal", "mapped-user")).thenReturn(exists);
 
-    ingestionProcessor = new IngestionProcessor(mappingEngine, entityService,
-        new PrincipalProvisioningProperties(mode));
+    ingestionProcessor = new IngestionProcessor(new PrincipalProvisioningProperties(mode),
+        mappingEngine, entityService, TEST_METER);
     ingestionProcessor.ingest(payload, connector);
 
     List<String> expectedPropertyNames = mode == PrincipalProvisioningMode.LINK_ONLY
@@ -136,7 +139,8 @@ class IngestionProcessorTest {
   private static Stream<Arguments> principalMappingOperations() {
     return Stream.of(MappingAction.UPDATE_ENTITY, MappingAction.UPDATE_PROPERTIES)
         .flatMap(action -> Stream.of(false, true)
-            .flatMap(exists -> Stream.of(PrincipalProvisioningMode.values())
+            .flatMap(exists -> Stream
+                .of(PrincipalProvisioningMode.JIT, PrincipalProvisioningMode.LINK_ONLY)
                 .map(mode -> Arguments.of(action, exists, mode))));
   }
 

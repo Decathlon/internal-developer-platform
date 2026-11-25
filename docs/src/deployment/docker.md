@@ -224,31 +224,42 @@ ENTRYPOINT ["java", "-jar", "app.jar"]
 
 ### Observability
 
-IDP-Core follows the standard OpenTelemetry environment variables. Tracing and metrics export are opt-in, and the application keeps the usual OpenTelemetry fallbacks so you can set the standard variables without hard-coding a vendor-specific configuration.
+IDP-Core follows the standard OpenTelemetry environment variables. Exporters are
+controlled with `OTEL_*_EXPORTER`, and the application keeps the usual
+OpenTelemetry fallbacks so you can set standard variables without hard-coding
+vendor-specific configuration.
+
+Enable delivery explicitly with `OTEL_TRACES_EXPORTER=otlp` and/or
+`OTEL_METRICS_EXPORTER=otlp`. With default settings, both exporters are set to
+`none`.
 
 The effective precedence is:
 
-- `OTEL_EXPORTER_OTLP_TRACES_TRANSPORT` > `OTEL_EXPORTER_OTLP_PROTOCOL` > `http`
-- `OTEL_EXPORTER_OTLP_METRICS_PROTOCOL` > `OTEL_EXPORTER_OTLP_PROTOCOL` > `http/protobuf`
+- `OTEL_EXPORTER_OTLP_TRACES_PROTOCOL` > `OTEL_EXPORTER_OTLP_PROTOCOL`
+- `OTEL_EXPORTER_OTLP_METRICS_PROTOCOL` > `OTEL_EXPORTER_OTLP_PROTOCOL`
+- `OTEL_EXPORTER_OTLP_TRACES_ENDPOINT` and `OTEL_EXPORTER_OTLP_METRICS_ENDPOINT`
+  override derived signal endpoints when explicitly set
 
 This means the application can work in local Docker, in Kubernetes, or in a managed platform while still honoring the standard OpenTelemetry variables set by the operator or deployment pipeline.
 
-| Variable                              | Description                                              | Default                                        |
-|---------------------------------------|----------------------------------------------------------|------------------------------------------------|
-| `OTEL_TRACING_ENABLED`                | Enables OpenTelemetry tracing (opt-in)                   | `false`                                        |
-| `OTEL_EXPORTER_OTLP_ENDPOINT`         | Base OTLP endpoint for all signals                       | `http://localhost:4318`                        |
-| `OTEL_EXPORTER_OTLP_TRACES_ENDPOINT`  | Full traces URL. It wins over the base endpoint          | `<base endpoint>/v1/traces`                    |
-| `OTEL_EXPORTER_OTLP_METRICS_ENDPOINT` | Full metrics URL. It wins over the base endpoint         | `<base endpoint>/v1/metrics`                   |
-| `OTEL_EXPORTER_OTLP_PROTOCOL`         | OTLP protocol used as the generic fallback               | `http/protobuf` for metrics, `http` for traces |
-| `OTEL_EXPORTER_OTLP_TRACES_TRANSPORT` | Transport for traces. It wins over the generic protocol  | `OTEL_EXPORTER_OTLP_PROTOCOL` or `http`        |
-| `OTEL_EXPORTER_OTLP_METRICS_PROTOCOL` | Transport for metrics. It wins over the generic protocol | `OTEL_EXPORTER_OTLP_PROTOCOL`                  |
-| `OTEL_METRICS_EXPORT_ENABLED`         | Enables OTLP metrics export (opt-in)                     | `false`                                        |
-| `OTEL_TRACES_SAMPLER_ARG`             | Fraction of traces kept, from `0.0` to `1.0`             | `0.1`                                          |
-| `OTEL_SERVICE_NAME`                   | Service name                                             | `internal-developer-platform`                  |
-| `OTEL_SERVICE_NAMESPACE`              | Service namespace                                        | `idp-core`                                     |
-| `OTEL_ENV`                            | Value of the `deployment.environment` attribute          | `local`                                        |
-| `OTEL_RESOURCE_ATTRIBUTES`            | Extra resource attributes (`key=value,key=value`)        | -                                              |
-| `LOG_LEVEL`                           | Root log level                                           | `INFO`                                         |
+| Variable                              | Description                                               | Default                       |
+| ------------------------------------- | --------------------------------------------------------- | ----------------------------- |
+| `OTEL_TRACES_EXPORTER`                | Trace exporter (`otlp` or `none`)                         | `none`                        |
+| `OTEL_METRICS_EXPORTER`               | Metrics exporter (`otlp`, `console`, or `none`)           | `none`                        |
+| `OTEL_LOGS_EXPORTER`                  | Logs exporter (`otlp` or `none`)                          | `none`                        |
+| `OTEL_EXPORTER_OTLP_ENDPOINT`         | Base OTLP endpoint for all signals                        | `http://localhost:4318`       |
+| `OTEL_EXPORTER_OTLP_TRACES_ENDPOINT`  | Optional traces endpoint override                         | Derived from base + protocol  |
+| `OTEL_EXPORTER_OTLP_METRICS_ENDPOINT` | Optional metrics endpoint override                        | Derived from base + protocol  |
+| `OTEL_EXPORTER_OTLP_PROTOCOL`         | Generic OTLP protocol fallback (`http/protobuf` / `grpc`) | `http/protobuf`               |
+| `OTEL_EXPORTER_OTLP_TRACES_PROTOCOL`  | Trace protocol override                                   | `OTEL_EXPORTER_OTLP_PROTOCOL` |
+| `OTEL_EXPORTER_OTLP_METRICS_PROTOCOL` | Metrics protocol override                                 | `OTEL_EXPORTER_OTLP_PROTOCOL` |
+| `OTEL_TRACES_SAMPLER`                 | Sampler strategy                                          | `always_on`                   |
+| `OTEL_TRACES_SAMPLER_ARG`             | Ratio argument for ratio-based samplers (`0.0`-`1.0`)     | `1.0`                         |
+| `OTEL_SERVICE_NAME`                   | Service name                                              | `internal-developer-platform` |
+| `OTEL_SERVICE_NAMESPACE`              | Service namespace                                         | `idp-core`                    |
+| `OTEL_ENV`                            | Value of the `deployment.environment` attribute           | `local`                       |
+| `OTEL_RESOURCE_ATTRIBUTES`            | Extra resource attributes (`key=value,key=value`)         | -                             |
+| `LOG_LEVEL`                           | Root log level                                            | `INFO`                        |
 
 The signal-specific variable wins over the generic one, so the image works in the common deployments:
 
@@ -257,8 +268,11 @@ The signal-specific variable wins over the generic one, so the image works in th
 - **Datadog or another OTLP collector:** set the standard OpenTelemetry endpoint and resource attributes
 - **Local development:** leave the variables unset and use the built-in `localhost:4318` fallback
 
-> Note: Lower `OTEL_TRACES_SAMPLER_ARG` in high-throughput production. Capturing 100% of the traces increases CPU overhead
-> and vendor costs. For example, `0.1` keeps 10% of the traces.
+> [!NOTE]
+> Set both `OTEL_TRACES_SAMPLER=traceidratio` (or
+> `OTEL_TRACES_SAMPLER=parentbased_traceidratio`) and
+> `OTEL_TRACES_SAMPLER_ARG=<ratio>` in production when you want less than 100%
+> sampling. With `always_on`, the sampler argument is ignored.
 
 `OTEL_RESOURCE_ATTRIBUTES` is the right place to pass Datadog tags such as `env`, `service`, and `version`. The application does not need hard-coded Datadog values; it just emits the standard OpenTelemetry resource metadata.
 

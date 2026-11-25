@@ -225,47 +225,48 @@ spring:
 ### OpenTelemetry
 
 ```yaml
-management:
-  tracing:
-    sampling:
-      probability: ${OTEL_TRACES_SAMPLER_ARG:0.1}
-    export:
-      enabled: ${OTEL_TRACING_ENABLED:false}
-
-  otlp:
-    metrics:
-      export:
-        url: ${OTEL_EXPORTER_OTLP_METRICS_ENDPOINT:${OTEL_EXPORTER_OTLP_ENDPOINT:http://localhost:4318}/v1/metrics}
-        enabled: ${OTEL_METRICS_EXPORT_ENABLED:false}
-        transport: ${OTEL_EXPORTER_OTLP_METRICS_PROTOCOL:${OTEL_EXPORTER_OTLP_PROTOCOL:http/protobuf}}
-
-  opentelemetry:
-    tracing:
-      export:
-        otlp:
-          endpoint: ${OTEL_EXPORTER_OTLP_TRACES_ENDPOINT:${OTEL_EXPORTER_OTLP_ENDPOINT:http://localhost:4318}/v1/traces}
-          transport: ${OTEL_EXPORTER_OTLP_TRACES_TRANSPORT:${OTEL_EXPORTER_OTLP_PROTOCOL:http}}
-    resource-attributes:
-      deployment.environment: ${OTEL_ENV:local}
-      service.namespace: ${OTEL_SERVICE_NAMESPACE:idp-core}
-      service.name: ${OTEL_SERVICE_NAME:internal-developer-platform}
+otel:
+  traces:
+    exporter: ${OTEL_TRACES_EXPORTER:otlp}
+    sampler: ${OTEL_TRACES_SAMPLER:always_on}
+    sampler-arg: ${OTEL_TRACES_SAMPLER_ARG:1.0}
+  metrics:
+    exporter: ${OTEL_METRICS_EXPORTER:otlp}
+  logs:
+    exporter: ${OTEL_LOGS_EXPORTER:none}
+  exporter:
+    otlp:
+      endpoint: ${OTEL_EXPORTER_OTLP_ENDPOINT:http://localhost:4318}
+      protocol: ${OTEL_EXPORTER_OTLP_PROTOCOL:http/protobuf}
+      traces:
+        protocol: ${OTEL_EXPORTER_OTLP_TRACES_PROTOCOL:${OTEL_EXPORTER_OTLP_PROTOCOL:http/protobuf}}
+      metrics:
+        protocol: ${OTEL_EXPORTER_OTLP_METRICS_PROTOCOL:${OTEL_EXPORTER_OTLP_PROTOCOL:http/protobuf}}
 ```
 
-The signal-specific OpenTelemetry variables win over the generic fallback, so you can set the standard OpenTelemetry environment variables without hard-coding vendor-specific values.
+Use `OTEL_TRACES_SAMPLER=traceidratio` (or `parentbased_traceidratio`) with
+`OTEL_TRACES_SAMPLER_ARG` to reduce sampling. With `always_on`, the sampler
+argument is ignored.
+
+The signal-specific variables still win over the generic fallback. When you do
+not set signal-specific endpoints, the OpenTelemetry SDK derives them from the
+base endpoint and selected protocol.
 
 ### Common environment variables
 
 | Variable | Description |
 | --- | --- |
-| `OTEL_TRACING_ENABLED` | Enables tracing export |
-| `OTEL_METRICS_EXPORT_ENABLED` | Enables OTLP metrics export |
+| `OTEL_TRACES_EXPORTER` | Trace exporter (`otlp` or `none`) |
+| `OTEL_METRICS_EXPORTER` | Metric exporter (`otlp`, `console`, or `none`) |
+| `OTEL_LOGS_EXPORTER` | Log exporter (`otlp` or `none`) |
+| `OTEL_TRACES_SAMPLER` | Sampler strategy (`always_on`, `traceidratio`, `parentbased_traceidratio`) |
 | `OTEL_TRACES_SAMPLER_ARG` | Trace sampling ratio |
 | `OTEL_EXPORTER_OTLP_ENDPOINT` | Base OTLP endpoint |
-| `OTEL_EXPORTER_OTLP_TRACES_ENDPOINT` | Full traces URL |
-| `OTEL_EXPORTER_OTLP_METRICS_ENDPOINT` | Full metrics URL |
+| `OTEL_EXPORTER_OTLP_TRACES_ENDPOINT` | Optional trace endpoint override |
+| `OTEL_EXPORTER_OTLP_METRICS_ENDPOINT` | Optional metrics endpoint override |
 | `OTEL_EXPORTER_OTLP_PROTOCOL` | Generic OTLP protocol fallback |
-| `OTEL_EXPORTER_OTLP_TRACES_TRANSPORT` | Trace transport override |
-| `OTEL_EXPORTER_OTLP_METRICS_PROTOCOL` | Metrics transport override |
+| `OTEL_EXPORTER_OTLP_TRACES_PROTOCOL` | Trace protocol override |
+| `OTEL_EXPORTER_OTLP_METRICS_PROTOCOL` | Metrics protocol override |
 | `OTEL_RESOURCE_ATTRIBUTES` | Resource metadata for the service |
 
 ---

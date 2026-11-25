@@ -65,10 +65,19 @@ app:
         hmac-env-value: test-github-secret
         jwks-env-key: JWKS_URI
         jwks-env-value: https://auth.example.com/.well-known/jwks.json
+otel:
+  traces:
+    exporter: none
+  metrics:
+    exporter: none
+  logs:
+    exporter: none
+
 management:
-  # Tests must not create or export traces.
-  tracing:
-    enabled: false
+  otlp:
+    metrics:
+      export:
+        enabled: false
   endpoint:
     health:
       probes:
@@ -91,3 +100,11 @@ idp:
       # Example: ALLOWED_JWKS_HOSTS=github.com,auth.decathlon.com
       allowed-jwks-hosts: github.com,www.googleapis.com
       allow-none: true
+
+camel:
+  servlet:
+    mapping:
+      enabled: false
+  component:
+    servlet:
+      enabled: false
