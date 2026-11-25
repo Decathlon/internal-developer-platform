@@ -185,7 +185,7 @@ public class EntityController {
     Span currentSpan = Span.current();
     currentSpan.setAttribute("idp.entity.template", templateIdentifier);
     currentSpan.setAttribute("idp.entity.page", page);
-    currentSpan.setAttribute("idp.entity.filter.query", q == null ? "" : q);
+    currentSpan.setAttribute("idp.entity.filter.present", q != null && !q.isBlank());
 
     PaginationCriteria paginationCriteria = new PaginationCriteria(page, resolvePageSize(size),
         sort);

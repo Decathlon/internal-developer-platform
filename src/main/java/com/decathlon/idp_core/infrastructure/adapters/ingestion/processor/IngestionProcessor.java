@@ -11,6 +11,7 @@ import org.springframework.stereotype.Component;
 import com.decathlon.idp_core.domain.exception.entity.EntityAlreadyExistsException;
 import com.decathlon.idp_core.domain.exception.entity.EntityNotFoundException;
 import com.decathlon.idp_core.domain.exception.entity.EntityValidationException;
+import com.decathlon.idp_core.domain.model.authorization.AuthorizationResource;
 import com.decathlon.idp_core.domain.model.entity.Entity;
 import com.decathlon.idp_core.domain.model.entity.EntityPatch;
 import com.decathlon.idp_core.domain.model.entity.Property;
@@ -18,12 +19,12 @@ import com.decathlon.idp_core.domain.model.entity_mapping.EntityDynamicMapping;
 import com.decathlon.idp_core.domain.model.inbound_connectors.webhook.WebhookConnector;
 import com.decathlon.idp_core.domain.port.MappingEnginePort;
 import com.decathlon.idp_core.domain.service.entity.EntityService;
-import com.decathlon.idp_core.infrastructure.adapters.ingestion.metrics.IngestionObservabilitySupport;
 import com.decathlon.idp_core.infrastructure.adapters.api.configuration.PrincipalProvisioningProperties;
+import com.decathlon.idp_core.infrastructure.adapters.ingestion.metrics.IngestionObservabilitySupport;
 
 import io.opentelemetry.api.common.Attributes;
+import io.opentelemetry.api.metrics.DoubleHistogram;
 import io.opentelemetry.api.metrics.LongCounter;
-import io.opentelemetry.api.metrics.LongHistogram;
 import io.opentelemetry.api.metrics.Meter;
 import io.opentelemetry.api.trace.Span;
 import lombok.extern.slf4j.Slf4j;
@@ -32,22 +33,21 @@ import lombok.extern.slf4j.Slf4j;
 @Slf4j
 public class IngestionProcessor {
 
-  private static final Set<String> PROTECTED_PRINCIPAL_PROPERTIES = Set.of("kind", "is_admin",
-  private static final String SPAN_ATTRIBUTE_WEBHOOK_IDENTIFIER = "idp.webhook.identifier";
   private static final Set<String> JIT_PROTECTED_PRINCIPAL_PROPERTIES = Set.of("kind", "is_admin",
       "is_idp_user");
   private static final Set<String> LINK_ONLY_PROTECTED_PRINCIPAL_PROPERTIES = Set.of("is_admin",
       "is_idp_user");
+  private final PrincipalProvisioningProperties provisioningProperties;
+  private static final String SPAN_ATTRIBUTE_WEBHOOK_IDENTIFIER = "idp.webhook.identifier";
 
   private final MappingEnginePort mappingEngine;
   private final EntityService entityService;
-  private final PrincipalProvisioningProperties provisioningProperties;
 
   private final LongCounter mappingAppliedCounter;
   private final LongCounter mappingFilteredCounter;
   private final LongCounter mappingResultCounter;
   private final LongCounter mappingErrorsCounter;
-  private final LongHistogram mappingLatencyHistogram;
+  private final DoubleHistogram mappingLatencyHistogram;
 
   private final LongCounter entityCreatedCounter;
   private final LongCounter entityUpdatedCounter;
@@ -58,8 +58,10 @@ public class IngestionProcessor {
   private final LongCounter entityNotFoundCounter;
   private final LongCounter entityConflictCounter;
 
-  public IngestionProcessor(MappingEnginePort mappingEngine, EntityService entityService,
+  public IngestionProcessor(PrincipalProvisioningProperties provisioningProperties,
+      MappingEnginePort mappingEngine, EntityService entityService,
       @Qualifier("ingestionMeter") Meter meter) {
+    this.provisioningProperties = provisioningProperties;
     this.mappingEngine = mappingEngine;
     this.entityService = entityService;
 
@@ -71,7 +73,7 @@ public class IngestionProcessor {
         .setDescription("Terminal mapping outcome").build();
     this.mappingErrorsCounter = meter.counterBuilder(MAPPING_ERRORS_TOTAL)
         .setDescription("Mapping exceptions and runtime failures").build();
-    this.mappingLatencyHistogram = meter.histogramBuilder(MAPPING_LATENCY_MS).ofLongs()
+    this.mappingLatencyHistogram = meter.histogramBuilder(MAPPING_LATENCY_MS)
         .setDescription("Mapping duration in milliseconds").setUnit("ms").build();
 
     this.entityCreatedCounter = meter.counterBuilder(ENTITY_CREATED_TOTAL)
@@ -128,9 +130,9 @@ public class IngestionProcessor {
         mappingId, ACTION_KEY, action));
 
     try {
-      Entity entity = mappingEngine.mapToEntity(payload, mapping);
+      Entity mappedEntity = mappingEngine.mapToEntity(payload, mapping);
 
-      if (entity == null) {
+      if (mappedEntity == null) {
         mappingFilteredCounter.add(1,
             Attributes.of(CONNECTOR_KEY, connectorIdentifier, MAPPING_ID_KEY, mappingId,
                 REASON_KEY, "filter_rejected"));
@@ -139,21 +141,22 @@ public class IngestionProcessor {
                 RESULT_KEY, "FILTERED_OUT"));
         return;
       }
-
+      Entity entity = protectPrincipalProperties(mappedEntity);
       switch (mapping.action()) {
-        case UPDATE_ENTITY -> handleUpdate(entity, connectorIdentifier);
-        case UPDATE_PROPERTIES -> handleUpdateProperties(entity, connectorIdentifier);
-        case UPDATE_RELATIONS -> handleUpdateRelations(entity, connectorIdentifier);
-        case DELETE_ENTITY -> handleDelete(entity, connectorIdentifier);
-        case null, default -> log.warn("Unsupported or null mapping action: {}", mapping.action());
+        case UPDATE_ENTITY -> handleUpdate(entity, connectorIdentifier, action);
+        case UPDATE_PROPERTIES -> handleUpdateProperties(entity, connectorIdentifier, action);
+        case UPDATE_RELATIONS -> handleUpdateRelations(entity, connectorIdentifier, action);
+        case DELETE_ENTITY -> handleDelete(entity, connectorIdentifier, action);
+        case null, default -> throw new IllegalStateException(
+            "Unsupported or null mapping action: " + mapping.action());
       }
+      log.info("Successfully processed action {} for entity: {} under template: {}",
+          mapping.action(), entity.identifier(), entity.templateIdentifier());
 
       mappingResultCounter.add(1,
           Attributes.of(CONNECTOR_KEY, connectorIdentifier, MAPPING_ID_KEY, mappingId,
               RESULT_KEY, "MATCHED"));
 
-      log.info("Successfully processed action {} for entity: {} under template: {}",
-          mapping.action(), entity.identifier(), entity.templateIdentifier());
     } catch (RuntimeException exception) {
       mappingErrorsCounter.add(1,
           Attributes.of(CONNECTOR_KEY, connectorIdentifier, MAPPING_ID_KEY, mappingId,
@@ -163,14 +166,14 @@ public class IngestionProcessor {
               RESULT_KEY, "ERROR"));
       throw exception;
     } finally {
-      long durationMs = (System.nanoTime() - startTimeNanos) / 1_000_000L;
+      double durationMs = (System.nanoTime() - startTimeNanos) / 1_000_000.0d;
       mappingLatencyHistogram.record(durationMs,
           Attributes.of(CONNECTOR_KEY, connectorIdentifier, MAPPING_ID_KEY, mappingId));
     }
   }
 
-  private void handleUpdate(Entity entity, String connectorIdentifier) {
-    Entity sanitizedEntity = sanitizePrincipalEntity(entity);
+  private void handleUpdate(Entity entity, String connectorIdentifier, String action) {
+    Entity sanitizedEntity = protectPrincipalProperties(entity);
 
     try {
       if (entityService.entityExists(entity.templateIdentifier(), entity.identifier())) {
@@ -190,13 +193,14 @@ public class IngestionProcessor {
             CONNECTOR_KEY, connectorIdentifier));
       }
     } catch (RuntimeException exception) {
-      recordEntityFailureMetrics(connectorIdentifier, exception, entity.templateIdentifier());
+      recordEntityFailureMetrics(connectorIdentifier, exception, entity.templateIdentifier(),
+          action);
       throw exception;
     }
   }
 
-  private void handleUpdateProperties(Entity entity, String connectorIdentifier) {
-    Entity sanitizedEntity = sanitizePrincipalEntity(entity);
+  private void handleUpdateProperties(Entity entity, String connectorIdentifier, String action) {
+    Entity sanitizedEntity = protectPrincipalProperties(entity);
     EntityPatch propertiesPatch = new EntityPatch(entity.name(), sanitizedEntity.properties(),
         List.of());
 
@@ -215,19 +219,16 @@ public class IngestionProcessor {
             CONNECTOR_KEY, connectorIdentifier));
       }
     } catch (RuntimeException exception) {
-      recordEntityFailureMetrics(connectorIdentifier, exception, entity.templateIdentifier());
+      recordEntityFailureMetrics(connectorIdentifier, exception, entity.templateIdentifier(),
+          action);
       throw exception;
     }
   }
 
-  private Entity sanitizePrincipalEntity(Entity entity) {
-    if (!"principal".equals(entity.templateIdentifier())) {
+  private Entity protectPrincipalProperties(Entity entity) {
+    if (!AuthorizationResource.PRINCIPAL_TEMPLATE_IDENTIFIER.equals(entity.templateIdentifier())) {
       return entity;
     }
-
-    List<Property> sanitizedProperties = entity.properties().stream()
-        .filter(property -> !PROTECTED_PRINCIPAL_PROPERTIES.contains(property.name())).toList();
-
     Set<String> protectedProperties = switch (provisioningProperties.mode()) {
       case JIT -> JIT_PROTECTED_PRINCIPAL_PROPERTIES;
       case LINK_ONLY -> LINK_ONLY_PROTECTED_PRINCIPAL_PROPERTIES;
@@ -235,10 +236,10 @@ public class IngestionProcessor {
     List<Property> properties = entity.properties().stream()
         .filter(property -> !protectedProperties.contains(property.name())).toList();
     return new Entity(entity.id(), entity.templateIdentifier(), entity.name(), entity.identifier(),
-        sanitizedProperties, entity.relations());
+        properties, entity.relations());
   }
 
-  private void handleUpdateRelations(Entity entity, String connectorIdentifier) {
+  private void handleUpdateRelations(Entity entity, String connectorIdentifier, String action) {
     try {
       if (!entityService.entityExists(entity.templateIdentifier(), entity.identifier())) {
         throw new EntityNotFoundException(entity.templateIdentifier(), entity.identifier());
@@ -251,12 +252,13 @@ public class IngestionProcessor {
       entityUpdatedCounter.add(1, Attributes.of(TEMPLATE_KEY, entity.templateIdentifier(),
           CONNECTOR_KEY, connectorIdentifier));
     } catch (RuntimeException exception) {
-      recordEntityFailureMetrics(connectorIdentifier, exception, entity.templateIdentifier());
+      recordEntityFailureMetrics(connectorIdentifier, exception, entity.templateIdentifier(),
+          action);
       throw exception;
     }
   }
 
-  private void handleDelete(Entity entity, String connectorIdentifier) {
+  private void handleDelete(Entity entity, String connectorIdentifier, String action) {
     try {
       entityService.deleteEntity(entity.templateIdentifier(), entity.identifier());
       entityDeletedCounter.add(1, Attributes.of(TEMPLATE_KEY, entity.templateIdentifier(),
@@ -264,19 +266,20 @@ public class IngestionProcessor {
       log.debug("Deleted entity: {} for template: {}", entity.identifier(),
           entity.templateIdentifier());
     } catch (RuntimeException exception) {
-      recordEntityFailureMetrics(connectorIdentifier, exception, entity.templateIdentifier());
+      recordEntityFailureMetrics(connectorIdentifier, exception, entity.templateIdentifier(),
+          action);
       throw exception;
     }
   }
 
   private void recordEntityFailureMetrics(String connectorIdentifier, RuntimeException exception,
-      String templateIdentifier) {
+      String templateIdentifier, String action) {
     functionalValidationFailedCounter.add(1, Attributes.of(CONNECTOR_KEY, connectorIdentifier,
         TEMPLATE_KEY, templateIdentifier, REASON_KEY, exception.getClass().getSimpleName()));
 
     if (exception instanceof EntityNotFoundException) {
       entityNotFoundCounter.add(1, Attributes.of(TEMPLATE_KEY, templateIdentifier, CONNECTOR_KEY,
-          connectorIdentifier, ACTION_KEY, "ingestion"));
+          connectorIdentifier, ACTION_KEY, action));
     }
     if (exception instanceof EntityAlreadyExistsException) {
       entityConflictCounter.add(1, Attributes.of(TEMPLATE_KEY, templateIdentifier, CONNECTOR_KEY,

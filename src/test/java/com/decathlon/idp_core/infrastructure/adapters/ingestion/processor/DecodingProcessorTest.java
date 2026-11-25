@@ -1,15 +1,25 @@
 package com.decathlon.idp_core.infrastructure.adapters.ingestion.processor;
 
+import static com.decathlon.idp_core.infrastructure.adapters.ingestion.configuration.IngestionObservabilityConstants.ATTRIBUTE_CONNECTOR;
+import static com.decathlon.idp_core.infrastructure.adapters.ingestion.configuration.IngestionObservabilityConstants.ATTRIBUTE_ENCODING;
+import static com.decathlon.idp_core.infrastructure.adapters.ingestion.configuration.IngestionObservabilityConstants.ATTRIBUTE_REASON;
+import static com.decathlon.idp_core.infrastructure.adapters.ingestion.configuration.IngestionObservabilityConstants.PAYLOAD_DECODED_TOTAL;
+import static com.decathlon.idp_core.infrastructure.adapters.ingestion.configuration.IngestionObservabilityConstants.PAYLOAD_DECODE_ERRORS_TOTAL;
+import static com.decathlon.idp_core.infrastructure.adapters.ingestion.configuration.IngestionObservabilityConstants.PAYLOAD_SIZE_BYTES;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import java.io.ByteArrayOutputStream;
 import java.nio.charset.StandardCharsets;
+import java.util.List;
 import java.util.Map;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.Stream;
 import java.util.zip.GZIPOutputStream;
 
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -20,24 +30,43 @@ import com.decathlon.idp_core.infrastructure.adapters.ingestion.configuration.In
 import com.decathlon.idp_core.infrastructure.adapters.ingestion.exception.WebhookDecodingException;
 import com.decathlon.idp_core.infrastructure.adapters.ingestion.processor.decoder.DecodingProcessor;
 
+import io.opentelemetry.api.common.AttributeKey;
+import io.opentelemetry.api.common.Attributes;
 import io.opentelemetry.api.metrics.Meter;
-import io.opentelemetry.sdk.OpenTelemetrySdk;
 import io.opentelemetry.sdk.metrics.SdkMeterProvider;
+import io.opentelemetry.sdk.metrics.data.HistogramPointData;
+import io.opentelemetry.sdk.metrics.data.LongPointData;
+import io.opentelemetry.sdk.metrics.data.MetricData;
+import io.opentelemetry.sdk.testing.exporter.InMemoryMetricReader;
 
 @DisplayName("DecodingProcessor unit tests")
 class DecodingProcessorTest {
 
   private static final Map<String, Object> GZIP_HEADERS = Map.of("Content-Encoding", "gzip");
+  private static final String TEST_CONNECTOR = "test-connector";
   private static final byte[] CORRUPTED_GZIP_PAYLOAD = "not-a-gzip-stream"
       .getBytes(StandardCharsets.UTF_8);
 
-  private final Meter meter = OpenTelemetrySdk.builder()
-      .setMeterProvider(SdkMeterProvider.builder().build()).build()
-      .getMeter("com.decathlon.idp_core.tests");
+  private InMemoryMetricReader metricReader;
+  private SdkMeterProvider meterProvider;
+  private DecodingProcessor decodingProcessor;
 
-  // Default processor with the production default limit (10 MB)
-  private final DecodingProcessor decodingProcessor = new DecodingProcessor(
-      IngestionConstants.MAX_DECOMPRESSED_BYTES, meter);
+  @BeforeEach
+  void setUp() {
+    metricReader = InMemoryMetricReader.create();
+    meterProvider = SdkMeterProvider.builder().registerMetricReader(metricReader).build();
+    Meter meter = meterProvider.get("com.decathlon.idp_core.tests");
+
+    // Default processor with the production default limit (10 MB)
+    decodingProcessor = new DecodingProcessor(IngestionConstants.MAX_DECOMPRESSED_BYTES, meter);
+  }
+
+  @AfterEach
+  void tearDown() {
+    if (meterProvider != null) {
+      meterProvider.close();
+    }
+  }
 
   @ParameterizedTest(name = "[{index}]")
   @MethodSource("passThroughCases")
@@ -58,6 +87,58 @@ class DecodingProcessorTest {
     String decoded = decodingProcessor.decode(gzipPayload, headers);
 
     assertEquals(rawPayload, decoded);
+  }
+
+  @Test
+  @DisplayName("Records decoded counter, payload size and connector attribution on gzip success")
+  void decode_recordsMetrics_whenGzipDecodeSucceeds() throws Exception {
+    String payload = "{\"event\":\"metrics\"}";
+    byte[] gzipPayload = gzip(payload);
+
+    String decoded = decodingProcessor.decode(gzipPayload, GZIP_HEADERS, TEST_CONNECTOR);
+
+    assertEquals(payload, decoded);
+    assertEquals(1L, findLongCounterValue(PAYLOAD_DECODED_TOTAL,
+        Map.of(ATTRIBUTE_CONNECTOR, TEST_CONNECTOR, ATTRIBUTE_ENCODING, "gzip")));
+    assertEquals(1L, findHistogramCount(Map.of(ATTRIBUTE_CONNECTOR, TEST_CONNECTOR)));
+    assertEquals(payload.getBytes(StandardCharsets.UTF_8).length,
+        (long) findHistogramSum(Map.of(ATTRIBUTE_CONNECTOR, TEST_CONNECTOR)));
+  }
+
+  @Test
+  @DisplayName("Records decode error reason and connector attribution for unsupported encoding")
+  void decode_recordsErrorMetrics_whenEncodingUnsupported() {
+    Map<String, Object> headers = Map.of("Content-Encoding", "br");
+    var decodeFailureCase = new DecodeFailureWithConnectorCase(decodingProcessor,
+        "{}".getBytes(StandardCharsets.UTF_8), headers, TEST_CONNECTOR);
+
+    assertThrows(WebhookDecodingException.class, decodeFailureCase::execute);
+
+    assertEquals(1L, findLongCounterValue(PAYLOAD_DECODE_ERRORS_TOTAL,
+        Map.of(ATTRIBUTE_CONNECTOR, TEST_CONNECTOR, ATTRIBUTE_REASON, "unsupported_encoding")));
+  }
+
+  @Test
+  @DisplayName("Records decode error reason and connector attribution for corrupted gzip payload")
+  void decode_recordsErrorMetrics_whenGzipPayloadIsCorrupted() {
+    assertThrows(WebhookDecodingException.class,
+        () -> decodingProcessor.decode(CORRUPTED_GZIP_PAYLOAD, GZIP_HEADERS, TEST_CONNECTOR));
+
+    assertEquals(1L, findLongCounterValue(PAYLOAD_DECODE_ERRORS_TOTAL,
+        Map.of(ATTRIBUTE_CONNECTOR, TEST_CONNECTOR, ATTRIBUTE_REASON, "corrupted_gzip_payload")));
+  }
+
+  @Test
+  @DisplayName("Records decode error reason for payload too large before decoding")
+  void decode_recordsErrorMetrics_whenPayloadTooLarge() {
+    byte[] oversizedPayload = new byte[(int) IngestionConstants.MAX_DECOMPRESSED_BYTES + 1];
+    var decodeFailureCase = new DecodeFailureWithConnectorCase(decodingProcessor, oversizedPayload,
+        Map.of(), TEST_CONNECTOR);
+
+    assertThrows(WebhookDecodingException.class, decodeFailureCase::execute);
+
+    assertEquals(1L, findLongCounterValue(PAYLOAD_DECODE_ERRORS_TOTAL,
+        Map.of(ATTRIBUTE_CONNECTOR, TEST_CONNECTOR, ATTRIBUTE_REASON, "payload_too_large")));
   }
 
   @Test
@@ -111,11 +192,13 @@ class DecodingProcessorTest {
   @DisplayName("Throws WebhookDecodingException when decompressed payload exceeds the configured size limit (Zip Bomb protection)")
   void decode_throwsWebhookDecodingException_whenDecompressedSizeExceedsLimit() throws Exception {
     // Processor with a very small limit of 10 bytes to trigger the zip bomb guard
+    Meter meter = meterProvider.get("com.decathlon.idp_core.tests.restricted");
     DecodingProcessor restrictedProcessor = new DecodingProcessor(10L, meter);
     byte[] gzipPayload = gzip("This payload will exceed the 10 bytes decompression limit");
+    var failureCase = new DecodeFailureCase(restrictedProcessor, gzipPayload, GZIP_HEADERS);
 
     WebhookDecodingException exception = assertThrows(WebhookDecodingException.class,
-        () -> restrictedProcessor.decode(gzipPayload, GZIP_HEADERS));
+        failureCase::execute);
 
     assertThat(exception.getMessage()).contains("exceeds maximum allowed size of 10 bytes");
   }
@@ -143,8 +226,9 @@ class DecodingProcessorTest {
       }
     };
 
+    var failureCase = new DecodeFailureObjectCase(decodingProcessor, oversizedPayload, Map.of());
     WebhookDecodingException exception = assertThrows(WebhookDecodingException.class,
-        () -> decodingProcessor.decode(oversizedPayload, Map.of()));
+        failureCase::execute);
 
     assertThat(exception.getMessage()).contains("Input payload string length");
   }
@@ -170,8 +254,9 @@ class DecodingProcessorTest {
   void decode_throwsWebhookDecodingException_whenStringPayloadExceedsMaxSize() {
     // String that exceeds MAX_INPUT_PAYLOAD_BYTES (10 MB)
     String oversizedPayload = "X".repeat((int) IngestionConstants.MAX_DECOMPRESSED_BYTES + 1);
+    var failureCase = new DecodeFailureObjectCase(decodingProcessor, oversizedPayload, Map.of());
     WebhookDecodingException exception = assertThrows(WebhookDecodingException.class,
-        () -> decodingProcessor.decode(oversizedPayload, Map.of()));
+        failureCase::execute);
 
     assertThat(exception.getMessage()).contains("Input payload string length")
         .contains("exceeds maximum allowed size");
@@ -261,8 +346,9 @@ class DecodingProcessorTest {
     Map<String, Object> headers = Map.of("Content-Encoding", longEncoding);
     byte[] payload = "{}".getBytes(StandardCharsets.UTF_8);
 
+    var failureCase = new DecodeFailureCase(decodingProcessor, payload, headers);
     WebhookDecodingException exception = assertThrows(WebhookDecodingException.class,
-        () -> decodingProcessor.decode(payload, headers));
+        failureCase::execute);
 
     assertThat(exception.getMessage()).contains("Unsupported Content-Encoding: '")
         .doesNotContain("x".repeat(200)); // Verify long value was truncated
@@ -298,5 +384,52 @@ class DecodingProcessorTest {
     void execute() {
       decodingProcessor.decode(payload, headers);
     }
+  }
+
+  private record DecodeFailureWithConnectorCase(DecodingProcessor decodingProcessor, Object payload,
+      Map<String, Object> headers, String connector) {
+
+    void execute() {
+      decodingProcessor.decode(payload, headers, connector);
+    }
+  }
+
+  private record DecodeFailureObjectCase(DecodingProcessor decodingProcessor, Object payload,
+      Map<String, Object> headers) {
+
+    void execute() {
+      decodingProcessor.decode(payload, headers);
+    }
+  }
+
+  private long findLongCounterValue(String metricName, Map<String, String> expectedAttributes) {
+    return snapshotMetrics().stream().filter(metric -> metricName.equals(metric.getName()))
+        .flatMap(metric -> metric.getLongSumData().getPoints().stream())
+        .filter(point -> hasAttributes(point.getAttributes(), expectedAttributes))
+        .mapToLong(LongPointData::getValue).sum();
+  }
+
+  private long findHistogramCount(Map<String, String> expectedAttributes) {
+    return snapshotMetrics().stream().filter(metric -> PAYLOAD_SIZE_BYTES.equals(metric.getName()))
+        .flatMap(metric -> metric.getHistogramData().getPoints().stream())
+        .filter(point -> hasAttributes(point.getAttributes(), expectedAttributes))
+        .mapToLong(HistogramPointData::getCount).sum();
+  }
+
+  private double findHistogramSum(Map<String, String> expectedAttributes) {
+    return snapshotMetrics().stream().filter(metric -> PAYLOAD_SIZE_BYTES.equals(metric.getName()))
+        .flatMap(metric -> metric.getHistogramData().getPoints().stream())
+        .filter(point -> hasAttributes(point.getAttributes(), expectedAttributes))
+        .mapToDouble(HistogramPointData::getSum).sum();
+  }
+
+  private List<MetricData> snapshotMetrics() {
+    meterProvider.forceFlush().join(10, TimeUnit.SECONDS);
+    return List.copyOf(metricReader.collectAllMetrics());
+  }
+
+  private boolean hasAttributes(Attributes attributes, Map<String, String> expectedAttributes) {
+    return expectedAttributes.entrySet().stream().allMatch(
+        entry -> entry.getValue().equals(attributes.get(AttributeKey.stringKey(entry.getKey()))));
   }
 }

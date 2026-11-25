@@ -50,7 +50,7 @@ OTLP export path.
 ### Diagnose missing metrics
 
 1. Restart the application and inspect `[OTEL SDK CHECK]`. `DefaultMeter` means no-op collection; `SdkMeter` confirms a native SDK meter, not successful delivery to Datadog.
-2. Temporarily set `OTEL_METRICS_EXPORTER=console,otlp` and `OTEL_METRIC_EXPORT_INTERVAL=5000`. The starter includes the logging exporter. Console and OTLP exporters can coexist without a manually created reader.
+2. Temporarily set `OTEL_METRICS_EXPORTER=console,otlp`, `OTEL_METRIC_EXPORT_INTERVAL=5000`, and `OTEL_EXPORTER_DIAGNOSTIC_LOG_LEVEL=INFO`. The console exporter logs at INFO, which the default WARN level suppresses. Console and OTLP exporters can coexist without a manually created reader. Restore the previous exporter log level after diagnosis.
 3. Send a webhook, then wait for the export interval. Look for `idp.webhook.security.requests.total` or `idp.webhook.mapping.applied.total`. A filtered mapping still records attempts and filtered results, but does not create an entity.
 4. If console metrics appear but Datadog receives nothing, check exporter errors, collector metrics routing, authentication, and Datadog filters. Configure required request headers with `OTEL_EXPORTER_OTLP_METRICS_HEADERS`; resource attributes are not HTTP headers.
 5. Restore `OTEL_METRICS_EXPORTER=otlp` and the normal interval after diagnosis. Console metrics can contain operational identifiers and generate large logs.
@@ -58,7 +58,15 @@ OTLP export path.
 > [!WARNING]
 > On platforms that allocate CPU only during requests, background export can pause between requests. Check CPU allocation and instance lifetime if collection works but periodic export is delayed.
 
-For HTTP/protobuf, set `OTEL_EXPORTER_OTLP_METRICS_ENDPOINT` to the full collector URL, including `/v1/metrics`. Inside a container, `localhost` points to the application container. Use the collector service name, or `host.docker.internal` if the collector runs on your macOS host through Docker Desktop. The repository's Docker Compose file does not start a collector.
+Prefer setting `OTEL_EXPORTER_OTLP_ENDPOINT` and `OTEL_EXPORTER_OTLP_PROTOCOL`.
+The SDK derives signal endpoints from these values and handles
+`http/protobuf` and `grpc` correctly. Set
+`OTEL_EXPORTER_OTLP_METRICS_ENDPOINT` only when you need an explicit
+signal-specific override. Inside a container, `localhost` points to the
+application container. Use the collector service name, or
+`host.docker.internal` if the collector runs on your macOS host through
+Docker Desktop. The repository's Docker Compose file does not start a
+collector.
 
 ### Verify metrics behavior
 
@@ -135,11 +143,11 @@ OpenTelemetry tracing is enabled through Spring Boot configuration. The applicat
 | `OTEL_METRIC_EXPORT_INTERVAL` | Metric export interval in milliseconds | `60000` |
 | `OTEL_LOGS_EXPORTER` | Log exporter | `none` |
 | `OTEL_EXPORTER_OTLP_ENDPOINT` | Base OTLP endpoint | `http://localhost:4318` |
-| `OTEL_EXPORTER_OTLP_TRACES_ENDPOINT` | Full traces endpoint | `<base>/v1/traces` |
-| `OTEL_EXPORTER_OTLP_METRICS_ENDPOINT` | Full metrics endpoint | `<base>/v1/metrics` |
+| `OTEL_EXPORTER_OTLP_TRACES_ENDPOINT` | Optional full traces endpoint override | Derived from base + protocol |
+| `OTEL_EXPORTER_OTLP_METRICS_ENDPOINT` | Optional full metrics endpoint override | Derived from base + protocol |
 | `OTEL_EXPORTER_OTLP_PROTOCOL` | OTLP protocol, `http/protobuf` or `grpc` | `http/protobuf` |
 | `OTEL_EXPORTER_OTLP_TRACES_PROTOCOL` | Trace-specific protocol override | `OTEL_EXPORTER_OTLP_PROTOCOL` |
-| `OTEL_EXPORTER_OTLP_METRICS_PROTOCOL` | Metrics-specific transport override | `OTEL_EXPORTER_OTLP_PROTOCOL` |
+| `OTEL_EXPORTER_OTLP_METRICS_PROTOCOL` | Metrics-specific protocol override | `OTEL_EXPORTER_OTLP_PROTOCOL` |
 | `OTEL_RESOURCE_ATTRIBUTES` | Resource metadata injected by the environment | - |
 
 The signal-specific variables win over the generic fallback, so local development and hosted deployments can both work without hard-coded vendor configuration.

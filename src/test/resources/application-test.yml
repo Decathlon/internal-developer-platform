@@ -100,3 +100,11 @@ idp:
       # Example: ALLOWED_JWKS_HOSTS=github.com,auth.decathlon.com
       allowed-jwks-hosts: github.com,www.googleapis.com
       allow-none: true
+
+camel:
+  servlet:
+    mapping:
+      enabled: false
+  component:
+    servlet:
+      enabled: false

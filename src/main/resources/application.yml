@@ -226,14 +226,16 @@ otel:
       service.namespace: ${OTEL_SERVICE_NAMESPACE:idp-core}
 
   metrics:
-    exporter: ${OTEL_METRICS_EXPORTER:otlp}
+    # Opt-in export: keep telemetry disabled by default unless explicitly enabled.
+    exporter: ${OTEL_METRICS_EXPORTER:none}
 
   metric:
     export:
       interval: ${OTEL_METRIC_EXPORT_INTERVAL:60000}
 
   traces:
-    exporter: ${OTEL_TRACES_EXPORTER:otlp}
+    # Opt-in export: keep telemetry disabled by default unless explicitly enabled.
+    exporter: ${OTEL_TRACES_EXPORTER:none}
     sampler: ${OTEL_TRACES_SAMPLER:always_on}
     sampler-arg: ${OTEL_TRACES_SAMPLER_ARG:1.0}
 
@@ -245,17 +247,15 @@ otel:
       endpoint: ${OTEL_EXPORTER_OTLP_ENDPOINT:http://localhost:4318}
       protocol: ${OTEL_EXPORTER_OTLP_PROTOCOL:http/protobuf}
       metrics:
-        endpoint: ${OTEL_EXPORTER_OTLP_METRICS_ENDPOINT:${OTEL_EXPORTER_OTLP_ENDPOINT:http://localhost:4318}/v1/metrics}
         protocol: ${OTEL_EXPORTER_OTLP_METRICS_PROTOCOL:${OTEL_EXPORTER_OTLP_PROTOCOL:http/protobuf}}
       traces:
-        endpoint: ${OTEL_EXPORTER_OTLP_TRACES_ENDPOINT:${OTEL_EXPORTER_OTLP_ENDPOINT:http://localhost:4318}/v1/traces}
         protocol: ${OTEL_EXPORTER_OTLP_TRACES_PROTOCOL:${OTEL_EXPORTER_OTLP_PROTOCOL:http/protobuf}}
   instrumentation:
     common:
       logging:
         # Spring log patterns use traceId/spanId while OTel defaults to trace_id/span_id.
-        trace-id-key: traceId
-        span-id-key: spanId
+        trace-id: traceId
+        span-id: spanId
     micrometer:
       enabled: false
     spring-web:
