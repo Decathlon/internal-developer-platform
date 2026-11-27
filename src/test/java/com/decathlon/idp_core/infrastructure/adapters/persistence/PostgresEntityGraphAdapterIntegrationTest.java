@@ -14,7 +14,12 @@ import org.springframework.transaction.annotation.Transactional;
 
 import com.decathlon.idp_core.AbstractIntegrationTest;
 import com.decathlon.idp_core.domain.model.entity.Entity;
+import com.decathlon.idp_core.domain.model.entity.EntitySummary;
 import com.decathlon.idp_core.domain.model.entity_graph.EntityGraphTraversalMode;
+import com.decathlon.idp_core.domain.model.entity_graph.EntityRelatedByQuery;
+import com.decathlon.idp_core.domain.model.search.PaginatedResult;
+import com.decathlon.idp_core.domain.model.search.PaginationCriteria;
+import com.decathlon.idp_core.domain.model.search.SortCriteria;
 
 @DisplayName("PostgresEntityGraphAdapter integration tests")
 class PostgresEntityGraphAdapterIntegrationTest extends AbstractIntegrationTest {
@@ -23,6 +28,9 @@ class PostgresEntityGraphAdapterIntegrationTest extends AbstractIntegrationTest 
 
   @Autowired
   private PostgresEntityGraphAdapter adapter;
+
+  @Autowired
+  private PostgresEntityTemplateAdapter templateAdapter;
 
   @Autowired
   private JdbcTemplate jdbcTemplate;
@@ -86,11 +94,15 @@ class PostgresEntityGraphAdapterIntegrationTest extends AbstractIntegrationTest 
   }
 
   private UUID insertEntity(String identifier) {
+    return insertEntityWithTemplateAndName(TEMPLATE, identifier, identifier);
+  }
+
+  private UUID insertEntityWithTemplateAndName(String template, String identifier, String name) {
     UUID id = UUID.randomUUID();
     jdbcTemplate.update("""
         INSERT INTO idp_core.entity (id, template_identifier, name, identifier)
         VALUES (?, ?, ?, ?)
-        """, id, TEMPLATE, identifier, identifier);
+        """, id, template, name, identifier);
     return id;
   }
 
@@ -105,16 +117,31 @@ class PostgresEntityGraphAdapterIntegrationTest extends AbstractIntegrationTest 
 
   private void insertRelation(UUID entityId, String relationName, UUID targetId,
       String targetIdentifier) {
+    insertRelation(entityId, relationName, TEMPLATE, targetId, targetIdentifier);
+  }
+
+  private void insertRelation(UUID entityId, String relationName, String targetTemplate,
+      UUID targetId, String targetIdentifier) {
+    insertRelation(entityId, relationName, targetTemplate, targetId, targetIdentifier, false);
+  }
+
+  private void insertRelationWithoutTargetUuid(UUID entityId, String relationName,
+      String targetTemplate, String targetIdentifier) {
+    insertRelation(entityId, relationName, targetTemplate, null, targetIdentifier, true);
+  }
+
+  private void insertRelation(UUID entityId, String relationName, String targetTemplate,
+      UUID targetId, String targetIdentifier, boolean omitTargetUuid) {
     UUID relationId = UUID.randomUUID();
     jdbcTemplate.update("""
         INSERT INTO idp_core.relation (id, name, target_template_identifier)
         VALUES (?, ?, ?)
-        """, relationId, relationName, TEMPLATE);
+        """, relationId, relationName, targetTemplate);
     jdbcTemplate.update("""
         INSERT INTO idp_core.relation_target_entities
           (relation_id, target_entity_uuid, target_entity_identifier)
         VALUES (?, ?, ?)
-        """, relationId, targetId, targetIdentifier);
+        """, relationId, omitTargetUuid ? null : targetId, targetIdentifier);
     jdbcTemplate.update(
         "INSERT INTO idp_core.entity_relations (entity_id, relation_id) VALUES (?, ?)", entityId,
         relationId);
@@ -161,6 +188,123 @@ class PostgresEntityGraphAdapterIntegrationTest extends AbstractIntegrationTest 
 
     assertThat(graph.values()).extracting(Entity::identifier)
         .containsExactlyInAnyOrder("outbound-root", "outbound-downstream", "outbound-downstream-2");
+  }
+
+  @Test
+  @Transactional
+  @DisplayName("Should check whether relation definition exists by name")
+  void shouldCheckRelationDefinitionExistsByName() {
+    jdbcTemplate.update(
+        """
+            INSERT INTO idp_core.relation_definition (id, name, target_template_identifier, required, to_many)
+            VALUES (?, ?, ?, false, true)
+            """,
+        UUID.randomUUID(), "asset_owned_by_component", "asset");
+
+    assertThat(templateAdapter.existsRelationDefinitionByName("asset_owned_by_component")).isTrue();
+    assertThat(templateAdapter.existsRelationDefinitionByName("completely_unknown_relation"))
+        .isFalse();
+  }
+
+  @Test
+  @Transactional
+  @DisplayName("Should find inbound multi-hop assets linked to product skipping intermediary components")
+  void shouldFindInboundMultiHopAssetsSkippingIntermediaryComponents() {
+    UUID productId = insertEntityWithTemplateAndName("product", "payments", "Payments");
+    insertEntityWithTemplateAndName("product", "logistics", "Logistics");
+    UUID comp1Id = insertEntityWithTemplateAndName("component", "checkout-api", "Checkout API");
+    UUID comp2Id = insertEntityWithTemplateAndName("component", "billing-worker", "Billing Worker");
+    UUID asset1Id = insertEntityWithTemplateAndName("asset", "orders-db", "Orders Database");
+    UUID asset2Id = insertEntityWithTemplateAndName("asset", "ledger-db", "Ledger Database");
+
+    // Inbound lineage: asset -> component -> product
+    insertRelationWithoutTargetUuid(comp1Id, "component_owned_by_product", "product", "payments");
+    insertRelationWithoutTargetUuid(comp1Id, "component_owned_by_product", "product", "logistics");
+    insertRelationWithoutTargetUuid(comp2Id, "component_owned_by_product", "product", "payments");
+    insertRelationWithoutTargetUuid(asset1Id, "asset_owned_by_component", "component",
+        "checkout-api");
+    insertRelationWithoutTargetUuid(asset2Id, "asset_owned_by_component", "component",
+        "billing-worker");
+
+    // At depth=1, assets are 2 hops away, so nothing matches
+    // asset_owned_by_component
+    PaginatedResult<EntitySummary> depth1 = adapter.findEntitiesRelatedByRelation(
+        new EntityRelatedByQuery(productId, "asset_owned_by_component", 1,
+            EntityGraphTraversalMode.DIRECT_LINEAGE, new PaginationCriteria(0, 20, "identifier"),
+            new SortCriteria("identifier", SortCriteria.Direction.ASC)));
+    assertThat(depth1.content()).isEmpty();
+    assertThat(depth1.totalElements()).isZero();
+
+    // At depth=2, returns ONLY the assets (skips components and does not leak
+    // otherProductId)
+    PaginatedResult<EntitySummary> depth2 = adapter.findEntitiesRelatedByRelation(
+        new EntityRelatedByQuery(productId, "asset_owned_by_component", 2,
+            EntityGraphTraversalMode.DIRECT_LINEAGE, new PaginationCriteria(0, 20, "identifier"),
+            new SortCriteria("identifier", SortCriteria.Direction.ASC)));
+
+    assertThat(depth2.totalElements()).isEqualTo(2L);
+    assertThat(depth2.totalPages()).isEqualTo(1);
+    assertThat(depth2.content()).extracting("identifier").containsExactly("ledger-db", "orders-db");
+    assertThat(depth2.content()).extracting("templateIdentifier").containsOnly("asset");
+  }
+
+  @Test
+  @Transactional
+  @DisplayName("Should support outbound chains, diamond convergence, cycles, sorting, and out-of-range pagination")
+  void shouldSupportOutboundDiamondsCyclesSortingAndPagination() {
+    UUID rootId = insertEntityWithTemplateAndName("product", "core-product", "Core Product");
+    UUID compId = insertEntityWithTemplateAndName("component", "core-comp", "Core Component");
+    UUID assetAId = insertEntityWithTemplateAndName("asset", "asset-alpha", "Zeta Name");
+    UUID assetBId = insertEntityWithTemplateAndName("asset", "asset-beta", "Alpha Name");
+    UUID assetCId = insertEntityWithTemplateAndName("archive", "asset-gamma", "Middle Name");
+
+    // Outbound lineage from root through comp to three assets
+    insertRelationWithoutTargetUuid(rootId, "has_component", "component", "core-comp");
+    // Self-cycle on root via target relation (root itself must NOT be returned)
+    insertRelation(rootId, "has_asset", "product", rootId, "core-product");
+    // Downstream cycle between assetA and comp (must not loop infinitely or
+    // duplicate)
+    insertRelation(assetAId, "links_back", "component", compId, "core-comp");
+    // Diamond: root also directly links to assetA via a different relation at
+    // depth=1!
+    insertRelation(rootId, "monitors_directly", "asset", assetAId, "asset-alpha");
+    insertRelation(compId, "has_asset", "asset", assetAId, "asset-alpha");
+    insertRelation(compId, "has_asset", "asset", assetBId, "asset-beta");
+    insertRelation(compId, "has_asset", "archive", assetCId, "asset-gamma");
+
+    // Page 0 (size 2) sorted by name ASC: Alpha Name (asset-beta), Middle Name
+    // (asset-gamma)
+    PaginatedResult<EntitySummary> page0 = adapter
+        .findEntitiesRelatedByRelation(new EntityRelatedByQuery(rootId, "has_asset", 3,
+            EntityGraphTraversalMode.DIRECT_LINEAGE, new PaginationCriteria(0, 2, "name,asc"),
+            new SortCriteria("name", SortCriteria.Direction.ASC)));
+
+    assertThat(page0.totalElements()).isEqualTo(3L);
+    assertThat(page0.totalPages()).isEqualTo(2);
+    assertThat(page0.content()).extracting("identifier").containsExactly("asset-beta",
+        "asset-gamma");
+
+    // Page 1 (size 2) sorted by name ASC: Zeta Name (asset-alpha, reached via
+    // diamond!)
+    PaginatedResult<EntitySummary> page1 = adapter
+        .findEntitiesRelatedByRelation(new EntityRelatedByQuery(rootId, "has_asset", 3,
+            EntityGraphTraversalMode.DIRECT_LINEAGE, new PaginationCriteria(1, 2, "name,asc"),
+            new SortCriteria("name", SortCriteria.Direction.ASC)));
+
+    assertThat(page1.totalElements()).isEqualTo(3L);
+    assertThat(page1.content()).extracting("identifier").containsExactly("asset-alpha");
+
+    // Out-of-range Page 5 (size 2): empty content, but totalElements=3 preserved
+    // via count query
+    PaginatedResult<EntitySummary> page5 = adapter.findEntitiesRelatedByRelation(
+        new EntityRelatedByQuery(rootId, "has_asset", 3, EntityGraphTraversalMode.DIRECT_LINEAGE,
+            new PaginationCriteria(5, 2, "templateIdentifier,asc"),
+            new SortCriteria("templateIdentifier", SortCriteria.Direction.ASC)));
+
+    assertThat(page5.content()).isEmpty();
+    assertThat(page5.totalElements()).isEqualTo(3L);
+    assertThat(page5.totalPages()).isEqualTo(2);
+    assertThat(page5.currentPage()).isEqualTo(5);
   }
 
 }

@@ -229,3 +229,5 @@ graph LR
 ---
 
 ## Next Steps
+
+- **[Entity Relationship Graph](../features/graph.md#get-related-entities-by-terminal-relation)** - Query paginated entities across multi-hop relations or visualize full graphs

@@ -13,8 +13,10 @@ import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.decathlon.idp_core.domain.constant.ValidationMessages;
 import com.decathlon.idp_core.domain.exception.entity.EntityNotFoundException;
 import com.decathlon.idp_core.domain.exception.entity_template.EntityTemplateNotFoundException;
+import com.decathlon.idp_core.domain.exception.entity_template.RelationDefinitionNotFoundException;
 import com.decathlon.idp_core.domain.exception.search.InvalidSearchQueryException;
 import com.decathlon.idp_core.domain.model.entity.Entity;
 import com.decathlon.idp_core.domain.model.entity.EntityCompositeKey;
@@ -23,11 +25,14 @@ import com.decathlon.idp_core.domain.model.entity.EntitySummary;
 import com.decathlon.idp_core.domain.model.entity_graph.EntityGraphNode;
 import com.decathlon.idp_core.domain.model.entity_graph.EntityGraphQueryOptions;
 import com.decathlon.idp_core.domain.model.entity_graph.EntityGraphTraversalMode;
+import com.decathlon.idp_core.domain.model.entity_graph.EntityRelatedByQuery;
+import com.decathlon.idp_core.domain.model.search.PaginatedResult;
 import com.decathlon.idp_core.domain.model.search.PaginationCriteria;
 import com.decathlon.idp_core.domain.model.search.SortCriteria;
 import com.decathlon.idp_core.domain.port.EntityGraphRepositoryPort;
 import com.decathlon.idp_core.domain.port.EntityRepositoryPort;
 import com.decathlon.idp_core.domain.service.entity.EntityService;
+import com.decathlon.idp_core.domain.service.entity_template.RelationDefinitionValidationService;
 import com.decathlon.idp_core.domain.service.search.SortParameterParser;
 
 import lombok.RequiredArgsConstructor;
@@ -63,8 +68,11 @@ public class EntityGraphService {
   private final EntityService entityService;
   private final EntityGraphRepositoryPort entityGraphRepositoryPort;
   private final EntityGraphHelper entityGraphHelper;
+  private final RelationDefinitionValidationService relationDefinitionValidationService;
 
-  private static final int MAX_DEPTH = 6;
+  public static final int MIN_DEPTH = 1;
+  public static final int MAX_DEPTH = 6;
+  private static final String DEFAULT_SORT_FIELD = "identifier";
 
   /// Resolves a depth-limited, fully populated relationship graph for a single
   /// root entity.
@@ -174,6 +182,56 @@ public class EntityGraphService {
     return entityPage.map(entity -> graphsByUuid.getOrDefault(entity.id(),
         new EntityGraphNode(entity.templateIdentifier(), entity.identifier(), entity.name(),
             entity.properties(), List.of(), List.of())));
+  }
+
+  /// Retrieves a paginated slice of entity summaries linked to the given root
+  /// entity via a terminal `relationName` edge within `depth` hops using
+  /// `DIRECT_LINEAGE`.
+  ///
+  /// @param templateIdentifier template identifier of the root entity
+  /// @param entityIdentifier business identifier of the root entity
+  /// @param relationName terminal relation name filtering returned entities
+  /// @param depth maximum number of relationship hops (`1..6`)
+  /// @param paginationCriteria zero-based page, page size, and optional sort
+  /// expression
+  /// @param maxPageSize configured upper bound for `size`
+  /// @return paginated entity summaries matching the terminal relation
+  /// @throws InvalidSearchQueryException when depth, page, size, or sort is
+  /// invalid
+  /// @throws EntityNotFoundException when the root entity does not exist
+  /// @throws RelationDefinitionNotFoundException when `relationName` is not
+  /// defined in any template
+  @Transactional(readOnly = true)
+  public PaginatedResult<EntitySummary> getEntitiesRelatedByRelation(String templateIdentifier,
+      String entityIdentifier, String relationName, int depth,
+      PaginationCriteria paginationCriteria, int maxPageSize) {
+    paginationCriteria.validateBounds(maxPageSize);
+    validateDepthBounds(depth);
+    SortCriteria sortCriteria = SortParameterParser.parse(paginationCriteria.sort())
+        .orElseGet(() -> new SortCriteria(DEFAULT_SORT_FIELD, SortCriteria.Direction.ASC));
+
+    EntitySummary rootEntity = entityRepositoryPort
+        .findSummariesByCompositeKeys(
+            List.of(new EntityCompositeKey(templateIdentifier, entityIdentifier)))
+        .stream().findFirst()
+        .orElseThrow(() -> new EntityNotFoundException(templateIdentifier, entityIdentifier));
+
+    relationDefinitionValidationService.validateRelationDefinitionExists(relationName);
+
+    return entityGraphRepositoryPort
+        .findEntitiesRelatedByRelation(new EntityRelatedByQuery(rootEntity.id(), relationName,
+            depth, EntityGraphTraversalMode.DIRECT_LINEAGE, paginationCriteria, sortCriteria));
+  }
+
+  private void validateDepthBounds(int depth) {
+    if (depth < MIN_DEPTH) {
+      throw new InvalidSearchQueryException(
+          ValidationMessages.GRAPH_DEPTH_MIN_VIOLATION.formatted(MIN_DEPTH));
+    }
+    if (depth > MAX_DEPTH) {
+      throw new InvalidSearchQueryException(
+          ValidationMessages.GRAPH_DEPTH_MAX_VIOLATION.formatted(MAX_DEPTH));
+    }
   }
 
   private Sort toSpringSort(SortCriteria criteria) {

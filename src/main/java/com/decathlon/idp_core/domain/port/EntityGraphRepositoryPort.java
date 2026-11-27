@@ -5,7 +5,10 @@ import java.util.Map;
 import java.util.UUID;
 
 import com.decathlon.idp_core.domain.model.entity.Entity;
+import com.decathlon.idp_core.domain.model.entity.EntitySummary;
 import com.decathlon.idp_core.domain.model.entity_graph.EntityGraphTraversalMode;
+import com.decathlon.idp_core.domain.model.entity_graph.EntityRelatedByQuery;
+import com.decathlon.idp_core.domain.model.search.PaginatedResult;
 
 /// Driven port defining the contract for entity relationship graph retrieval.
 ///
@@ -48,5 +51,15 @@ public interface EntityGraphRepositoryPort {
   /// discovered or the inputs cannot start a traversal
   Map<UUID, Entity> findEntityGraph(Collection<UUID> rootIds, int depth, boolean includeProperties,
       boolean includeRootEntityProperties, EntityGraphTraversalMode mode);
+
+  /// Finds a paginated slice of distinct entity summaries reached via a terminal
+  /// relation matching `query.relationName()` within `query.depth()` hops.
+  ///
+  /// Intermediary entities traversed along the path and the root entity itself
+  /// are excluded unless also reached via a matching terminal relation edge.
+  ///
+  /// @param query validated traversal, filter, sort, and pagination parameters
+  /// @return paginated entity summaries and total matching element count
+  PaginatedResult<EntitySummary> findEntitiesRelatedByRelation(EntityRelatedByQuery query);
 
 }

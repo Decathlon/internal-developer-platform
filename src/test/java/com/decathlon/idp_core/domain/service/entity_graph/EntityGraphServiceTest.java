@@ -32,6 +32,8 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 
 import com.decathlon.idp_core.domain.exception.entity.EntityNotFoundException;
+import com.decathlon.idp_core.domain.exception.entity_template.RelationDefinitionNotFoundException;
+import com.decathlon.idp_core.domain.exception.search.InvalidSearchQueryException;
 import com.decathlon.idp_core.domain.model.entity.Entity;
 import com.decathlon.idp_core.domain.model.entity.EntityCompositeKey;
 import com.decathlon.idp_core.domain.model.entity.EntitySummary;
@@ -40,11 +42,15 @@ import com.decathlon.idp_core.domain.model.entity.Relation;
 import com.decathlon.idp_core.domain.model.entity_graph.EntityGraphNode;
 import com.decathlon.idp_core.domain.model.entity_graph.EntityGraphQueryOptions;
 import com.decathlon.idp_core.domain.model.entity_graph.EntityGraphTraversalMode;
+import com.decathlon.idp_core.domain.model.entity_graph.EntityRelatedByQuery;
+import com.decathlon.idp_core.domain.model.search.PaginatedResult;
 import com.decathlon.idp_core.domain.model.search.PaginationCriteria;
+import com.decathlon.idp_core.domain.model.search.SortCriteria;
 import com.decathlon.idp_core.domain.port.EntityGraphRepositoryPort;
 import com.decathlon.idp_core.domain.port.EntityRepositoryPort;
 import com.decathlon.idp_core.domain.service.entity.EntityService;
 import com.decathlon.idp_core.domain.service.entity_template.EntityTemplateValidationService;
+import com.decathlon.idp_core.domain.service.entity_template.RelationDefinitionValidationService;
 
 @ExtendWith(MockitoExtension.class)
 @DisplayName("EntityGraphService Tests")
@@ -61,6 +67,9 @@ class EntityGraphServiceTest {
 
   @Mock
   private EntityTemplateValidationService entityTemplateValidationService;
+
+  @Mock
+  private RelationDefinitionValidationService relationDefinitionValidationService;
 
   @Spy
   private EntityGraphHelper entityGraphHelper = new EntityGraphHelper();
@@ -764,6 +773,110 @@ class EntityGraphServiceTest {
       EntityGraphNode outboundResult = entityGraphService.getEntityGraph(TEMPLATE, "api",
           new EntityGraphQueryOptions(1, false, false, Set.of(), Set.of(),
               EntityGraphTraversalMode.OUTBOUND_ONLY));
+
+      @Nested
+      @DisplayName("getEntitiesRelatedByRelation")
+      class GetEntitiesRelatedByRelationTests {
+
+        @Test
+        @DisplayName("Should delegate DIRECT_LINEAGE query with parsed sort and return paginated summaries")
+        void shouldDelegateDirectLineageQueryAndReturnSummaries() {
+          Entity product = entity("product", "payments", "Payments Product");
+          stubRootEntity(product);
+          EntitySummary asset = new EntitySummary(UUID.randomUUID(), "checkout-db", "Checkout DB",
+              "asset");
+          PaginatedResult<EntitySummary> expected = new PaginatedResult<>(List.of(asset), 1L, 1, 0);
+          PaginationCriteria pagination = new PaginationCriteria(0, 20, "name,desc");
+
+          when(entityGraphRepositoryPort.findEntitiesRelatedByRelation(any())).thenReturn(expected);
+
+          PaginatedResult<EntitySummary> actual = entityGraphService.getEntitiesRelatedByRelation(
+              "product", "payments", "asset_owned_by_component", 2, pagination, 500);
+
+          assertThat(actual).isEqualTo(expected);
+          verify(relationDefinitionValidationService)
+              .validateRelationDefinitionExists("asset_owned_by_component");
+          verify(entityGraphRepositoryPort).findEntitiesRelatedByRelation(new EntityRelatedByQuery(
+              product.id(), "asset_owned_by_component", 2, EntityGraphTraversalMode.DIRECT_LINEAGE,
+              pagination, new SortCriteria("name", SortCriteria.Direction.DESC)));
+        }
+
+        @Test
+        @DisplayName("Should default sort to identifier ASC when sort expression is blank")
+        void shouldDefaultSortWhenBlank() {
+          Entity product = entity("product", "payments", "Payments Product");
+          stubRootEntity(product);
+          PaginationCriteria pagination = new PaginationCriteria(0, 10, "");
+          PaginatedResult<EntitySummary> expected = new PaginatedResult<>(List.of(), 0L, 0, 0);
+          when(entityGraphRepositoryPort.findEntitiesRelatedByRelation(any())).thenReturn(expected);
+
+          entityGraphService.getEntitiesRelatedByRelation("product", "payments",
+              "asset_owned_by_component", 1, pagination, 500);
+
+          verify(entityGraphRepositoryPort).findEntitiesRelatedByRelation(new EntityRelatedByQuery(
+              product.id(), "asset_owned_by_component", 1, EntityGraphTraversalMode.DIRECT_LINEAGE,
+              pagination, new SortCriteria("identifier", SortCriteria.Direction.ASC)));
+        }
+
+        @Test
+        @DisplayName("Should throw EntityNotFoundException when root entity is missing")
+        void shouldThrowWhenRootEntityNotFound() {
+          when(entityRepositoryPort
+              .findSummariesByCompositeKeys(List.of(new EntityCompositeKey("product", "missing"))))
+                  .thenReturn(List.of());
+          PaginationCriteria pagination = new PaginationCriteria(0, 20, "identifier,asc");
+
+          assertThatThrownBy(() -> entityGraphService.getEntitiesRelatedByRelation("product",
+              "missing", "asset_owned_by_component", 2, pagination, 500))
+                  .isInstanceOf(EntityNotFoundException.class);
+
+          verify(relationDefinitionValidationService, never())
+              .validateRelationDefinitionExists(any());
+          verify(entityGraphRepositoryPort, never()).findEntitiesRelatedByRelation(any());
+        }
+
+        @Test
+        @DisplayName("Should propagate RelationDefinitionNotFoundException when relation definition is missing")
+        void shouldThrowWhenRelationDefinitionMissing() {
+          Entity product = entity("product", "payments", "Payments Product");
+          stubRootEntity(product);
+          org.mockito.Mockito.doThrow(new RelationDefinitionNotFoundException("unknown_rel"))
+              .when(relationDefinitionValidationService)
+              .validateRelationDefinitionExists("unknown_rel");
+          PaginationCriteria pagination = new PaginationCriteria(0, 20, "identifier,asc");
+
+          assertThatThrownBy(() -> entityGraphService.getEntitiesRelatedByRelation("product",
+              "payments", "unknown_rel", 2, pagination, 500))
+                  .isInstanceOf(RelationDefinitionNotFoundException.class);
+
+          verify(entityGraphRepositoryPort, never()).findEntitiesRelatedByRelation(any());
+        }
+
+        @Test
+        @DisplayName("Should reject depth outside 1..6 and invalid pagination or sort")
+        void shouldRejectOutOfBoundsDepthPaginationOrSort() {
+          PaginationCriteria validPagination = new PaginationCriteria(0, 20, "identifier,asc");
+
+          assertThatThrownBy(() -> entityGraphService.getEntitiesRelatedByRelation("product",
+              "payments", "rel", 0, validPagination, 500))
+                  .isInstanceOf(InvalidSearchQueryException.class)
+                  .hasMessageContaining("depth must be at least 1");
+
+          assertThatThrownBy(() -> entityGraphService.getEntitiesRelatedByRelation("product",
+              "payments", "rel", 7, validPagination, 500))
+                  .isInstanceOf(InvalidSearchQueryException.class)
+                  .hasMessageContaining("depth cannot exceed 6");
+
+          PaginationCriteria oversizedPage = new PaginationCriteria(0, 501, "identifier,asc");
+          assertThatThrownBy(() -> entityGraphService.getEntitiesRelatedByRelation("product",
+              "payments", "rel", 1, oversizedPage, 500))
+                  .isInstanceOf(InvalidSearchQueryException.class);
+
+          PaginationCriteria badSort = new PaginationCriteria(0, 20, "unsupported,asc");
+          assertThatThrownBy(() -> entityGraphService.getEntitiesRelatedByRelation("product",
+              "payments", "rel", 1, badSort, 500)).isInstanceOf(InvalidSearchQueryException.class);
+        }
+      }
       assertThat(outboundResult.relationsAsTarget()).isEmpty();
     }
   }

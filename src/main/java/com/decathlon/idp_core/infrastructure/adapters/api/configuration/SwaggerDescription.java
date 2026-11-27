@@ -271,6 +271,12 @@ public class SwaggerDescription {
   public static final String PARAM_RELATIONS_DESCRIPTION = "When provided, only relations whose name matches one of the listed values are traversed and included. Omit to include all relations.";
   public static final String PARAM_PROPERTIES_DESCRIPTION = "When provided, each node's data object is restricted to the listed property names. Requires include_data=true to have any effect. Omit to include all properties.";
   public static final String PARAM_TRAVERSAL_MODE_DESCRIPTION = "Specifies the traversal mode for the entity graph. Defaults to DIRECT_LINEAGE.";
+  public static final String ENDPOINT_GET_ENTITY_RELATED_BY_SUMMARY = "Get paginated entities related by terminal relation name";
+  public static final String ENDPOINT_GET_ENTITY_RELATED_BY_DESCRIPTION = "Retrieves a paginated list of entity summaries reached from the root entity via a terminal relation matching relationName within the requested depth using DIRECT_LINEAGE traversal, skipping intermediary nodes.";
+  public static final String RESPONSE_ENTITY_RELATED_BY_SUCCESS = "Paginated related entity summaries retrieved successfully";
+  public static final String RESPONSE_ENTITY_OR_RELATION_NOT_FOUND = "Entity or relation definition not found";
+  public static final String PARAM_RELATED_BY_RELATION_NAME_DESCRIPTION = "Terminal relation name leading to the returned entities";
+  public static final String PARAM_RELATED_BY_DEPTH_DESCRIPTION = "Maximum traversal depth for resolving the terminal relation. Defaults to 1. Valid range: 1-6.";
   /// Search API endpoint constants
   public static final String ENDPOINT_POST_SEARCH_SUMMARY = "Search entities";
   public static final String ENDPOINT_POST_SEARCH_DESCRIPTION = """

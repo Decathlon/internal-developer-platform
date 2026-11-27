@@ -11,11 +11,15 @@ import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.decathlon.idp_core.domain.model.entity.Entity;
+import com.decathlon.idp_core.domain.model.entity.EntitySummary;
 import com.decathlon.idp_core.domain.model.entity.Property;
 import com.decathlon.idp_core.domain.model.entity.Relation;
 import com.decathlon.idp_core.domain.model.entity_graph.EntityGraphTraversalMode;
+import com.decathlon.idp_core.domain.model.entity_graph.EntityRelatedByQuery;
+import com.decathlon.idp_core.domain.model.search.PaginatedResult;
 import com.decathlon.idp_core.domain.port.EntityGraphRepositoryPort;
 import com.decathlon.idp_core.infrastructure.adapters.persistence.model.entity.EntityGraphJsonProjection;
+import com.decathlon.idp_core.infrastructure.adapters.persistence.model.entity.RelatedEntitySummaryProjection;
 import com.decathlon.idp_core.infrastructure.adapters.persistence.repository.JpaEntityRepository;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.core.JsonProcessingException;
@@ -109,6 +113,42 @@ public class PostgresEntityGraphAdapter implements EntityGraphRepositoryPort {
       }
     }
     return entities;
+  }
+
+  /// Retrieves a paginated slice of entity summaries reached via a terminal
+  /// relation edge, skipping intermediary nodes and avoiding re-expansion of
+  /// already-visited nodes per flow direction.
+  ///
+  /// @param query validated traversal, relation filter, sort, and pagination
+  /// parameters
+  /// @return paginated result containing matched entity summaries and total count
+  @Override
+  @Transactional(readOnly = true)
+  public PaginatedResult<EntitySummary> findEntitiesRelatedByRelation(EntityRelatedByQuery query) {
+    int page = query.paginationCriteria().page();
+    int size = query.paginationCriteria().size();
+    long offset = (long) page * size;
+
+    List<RelatedEntitySummaryProjection> projections = jpaEntityRepository
+        .findEntitiesRelatedByRelationPage(query.rootId(), query.relationName(), query.depth(),
+            query.mode().name(), query.sortCriteria().field(),
+            query.sortCriteria().direction().name(), size, offset);
+
+    long totalElements;
+    if (!projections.isEmpty()) {
+      totalElements = projections.getFirst().getTotalCount();
+    } else if (offset == 0L) {
+      totalElements = 0L;
+    } else {
+      totalElements = jpaEntityRepository.countEntitiesRelatedByRelation(query.rootId(),
+          query.relationName(), query.depth(), query.mode().name());
+    }
+
+    int totalPages = totalElements == 0L ? 0 : (int) ((totalElements + size - 1) / size);
+    List<EntitySummary> summaries = projections.stream().map(p -> new EntitySummary(p.getId(),
+        p.getIdentifier(), p.getName(), p.getTemplateIdentifier())).toList();
+
+    return new PaginatedResult<>(summaries, totalElements, totalPages, page);
   }
 
   // Suppress "Use a stream instead of this loop" rule warning
