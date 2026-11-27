@@ -192,6 +192,71 @@ Each edge in the graph represents a relationship between two entities:
 | `label`    | string  | Relationship name/type (for example, "depends_on," "calls")     |
 | `animated` | boolean | Whether the edge should be animated in visualization            |
 
+### Get Related Entities by Terminal Relation
+
+Retrieve a paginated list of entity summaries connected to a root entity when the final hop in a `DIRECT_LINEAGE` path matches `relationName`. Use this endpoint when you need the target entities at the end of a lineage chain without hydrating intermediary nodes or full graph edges.
+
+```bash
+GET /api/v1/entities/{templateIdentifier}/{entityIdentifier}/related-by/{relationName}?depth={depth}&page={page}&size={size}&sort={sort}
+```
+
+#### Related-By Path Parameters
+
+| Parameter            | Type   | Required | Description                                                               |
+| -------------------- | ------ | -------- | ------------------------------------------------------------------------- |
+| `templateIdentifier` | string | ✅       | Template identifier of the starting entity (for example, `product`)       |
+| `entityIdentifier`   | string | ✅       | Business identifier of the starting entity                                |
+| `relationName`       | string | ✅       | Name of the terminal relation leading to the returned entities            |
+
+#### Related-By Query Parameters
+
+| Parameter | Type    | Required | Default          | Description                                                                                      |
+| --------- | ------- | -------- | ---------------- | ------------------------------------------------------------------------------------------------ |
+| `depth`   | integer |          | `1`              | Maximum number of relationship hops (`1` to `6`) evaluated along `DIRECT_LINEAGE` paths.         |
+| `page`    | integer |          | `0`              | Zero-based page index.                                                                           |
+| `size`    | integer |          | `20`             | Number of items per page (`1` to configured `MAX_PAGE_SIZE`, default maximum `500`).             |
+| `sort`    | string  |          | `identifier,asc` | Sort expression in `field[,asc\|desc]` format (`identifier`, `name`, or `templateIdentifier`).   |
+
+#### Multi-Hop Lineage Example
+
+Suppose your catalog links assets to products across two hops:
+
+```mermaid
+flowchart LR
+    A[asset: checkout-db] -->|asset_owned_by_component| C[component: checkout-api]
+    C -->|component_owned_by_product| P[product: payments]
+```
+
+Query all assets linked to `product/payments` by specifying the terminal relation `asset_owned_by_component` and `depth=2`:
+
+```bash
+curl -X GET \
+  'http://localhost:8084/api/v1/entities/product/payments/related-by/asset_owned_by_component?depth=2&page=0&size=20&sort=identifier,asc' \
+  -H "Authorization: Bearer YOUR_TOKEN"
+```
+
+#### Paginated Summary Response
+
+The endpoint returns `200 OK` with a Spring `Page` of entity summaries (skipping the intermediary `component` nodes), `404 Not Found` when the root entity or `relationName` definition does not exist, and `400 Bad Request` when `depth`, `page`, `size`, or `sort` is out of range:
+
+```json
+{
+  "content": [
+    {
+      "identifier": "checkout-db",
+      "name": "Checkout Database",
+      "template_identifier": "asset"
+    }
+  ],
+  "page": {
+    "size": 20,
+    "number": 0,
+    "total_elements": 1,
+    "total_pages": 1
+  }
+}
+```
+
 ## Visualization with React Flow
 
 [React Flow](https://reactflow.dev/) is a popular library for building interactive node-based user interfaces. The graph endpoint response format is perfectly suited for React Flow visualization.

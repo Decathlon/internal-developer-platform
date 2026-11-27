@@ -17,6 +17,7 @@ import org.springframework.stereotype.Repository;
 import com.decathlon.idp_core.domain.model.entity.EntitySummary;
 import com.decathlon.idp_core.infrastructure.adapters.persistence.model.entity.EntityGraphJsonProjection;
 import com.decathlon.idp_core.infrastructure.adapters.persistence.model.entity.EntityJpaEntity;
+import com.decathlon.idp_core.infrastructure.adapters.persistence.model.entity.RelatedEntitySummaryProjection;
 
 @Repository
 public interface JpaEntityRepository
@@ -362,4 +363,118 @@ public interface JpaEntityRepository
       @Param("entityIds") Collection<UUID> entityIds, @Param("rootIds") Collection<UUID> rootIds,
       @Param("includeProperties") boolean includeProperties,
       @Param("includeRootEntityProperties") boolean includeRootEntityProperties);
+
+  /// Shared wavefront CTE fragment discovering distinct non-root entity UUIDs
+  /// reached via a terminal edge named `:relationName` within `:depth` hops,
+  /// tracking visited nodes per flow lane so each `(entityId, flow)` is expanded
+  /// at most once.
+  String RELATED_BY_RELATION_CTE = """
+      WITH RECURSIVE lineage(depth, flow, frontier, visited, matched) AS (
+          SELECT
+              0 AS depth,
+              f.flow,
+              ARRAY[CAST(:rootId AS uuid)] AS frontier,
+              ARRAY[CAST(:rootId AS uuid)] AS visited,
+              CAST(ARRAY[] AS uuid[]) AS matched
+          FROM (VALUES ('OUTBOUND'), ('INBOUND'), ('ANY')) AS f(flow)
+          WHERE (:mode = 'DIRECT_LINEAGE' AND f.flow IN ('OUTBOUND', 'INBOUND'))
+             OR (:mode = 'OUTBOUND_ONLY' AND f.flow = 'OUTBOUND')
+             OR (:mode = 'BIDIRECTIONAL' AND f.flow = 'ANY')
+
+          UNION ALL
+
+          SELECT
+              l.depth + 1,
+              l.flow,
+              step.next_frontier,
+              l.visited || step.next_frontier,
+              step.matched_at_step
+          FROM lineage l
+          CROSS JOIN LATERAL (
+              SELECT
+                  COALESCE(array_agg(DISTINCT h.candidate_id)
+                      FILTER (WHERE NOT (h.candidate_id = ANY(l.visited))),
+                      CAST(ARRAY[] AS uuid[])) AS next_frontier,
+                  COALESCE(array_agg(DISTINCT h.candidate_id)
+                      FILTER (WHERE h.rel_name = :relationName
+                                AND h.candidate_id <> CAST(:rootId AS uuid)),
+                      CAST(ARRAY[] AS uuid[])) AS matched_at_step
+              FROM (
+                                    SELECT COALESCE(rte.target_entity_uuid, fallback.id) AS candidate_id,
+                                                 r.name AS rel_name
+                  FROM unnest(l.frontier) AS current_id
+                  JOIN idp_core.entity_relations er ON er.entity_id = current_id
+                  JOIN idp_core.relation r ON r.id = er.relation_id
+                  JOIN idp_core.relation_target_entities rte ON rte.relation_id = r.id
+                                    LEFT JOIN idp_core.entity fallback
+                                        ON rte.target_entity_uuid IS NULL
+                                     AND fallback.template_identifier = r.target_template_identifier
+                                     AND fallback.identifier = rte.target_entity_identifier
+                  WHERE l.flow IN ('OUTBOUND', 'ANY')
+                                        AND COALESCE(rte.target_entity_uuid, fallback.id) IS NOT NULL
+
+                  UNION ALL
+
+                  SELECT er.entity_id AS candidate_id, r.name AS rel_name
+                  FROM unnest(l.frontier) AS current_id
+                  JOIN idp_core.entity current_entity ON current_entity.id = current_id
+                  JOIN idp_core.relation_target_entities rte
+                    ON rte.target_entity_uuid = current_id
+                    OR (rte.target_entity_uuid IS NULL
+                        AND rte.target_entity_identifier = current_entity.identifier)
+                  JOIN idp_core.relation r ON r.id = rte.relation_id
+                  JOIN idp_core.entity_relations er ON er.relation_id = r.id
+                  WHERE l.flow IN ('INBOUND', 'ANY')
+                    AND (rte.target_entity_uuid IS NOT NULL
+                         OR r.target_template_identifier = current_entity.template_identifier)
+              ) h
+          ) step
+          WHERE l.depth < :depth
+            AND cardinality(l.frontier) > 0
+      ),
+      matched_ids AS (
+          SELECT DISTINCT m.id
+          FROM lineage l
+          CROSS JOIN LATERAL unnest(l.matched) AS m(id)
+      )
+      """;
+
+  /// Returns a sorted, paginated slice of distinct entities reached via a
+  /// terminal `:relationName` edge within `:depth` hops, along with `totalCount`.
+  @Query(value = RELATED_BY_RELATION_CTE
+      + """
+          SELECT
+              e.id AS id,
+              e.identifier AS identifier,
+              e.name AS name,
+              e.template_identifier AS templateIdentifier,
+              COUNT(*) OVER() AS totalCount
+          FROM matched_ids m
+          JOIN idp_core.entity e ON e.id = m.id
+          ORDER BY
+              CASE WHEN :sortField = 'identifier' AND :sortDirection = 'ASC' THEN e.identifier END ASC,
+              CASE WHEN :sortField = 'identifier' AND :sortDirection = 'DESC' THEN e.identifier END DESC,
+              CASE WHEN :sortField = 'name' AND :sortDirection = 'ASC' THEN e.name END ASC,
+              CASE WHEN :sortField = 'name' AND :sortDirection = 'DESC' THEN e.name END DESC,
+              CASE WHEN :sortField = 'templateIdentifier' AND :sortDirection = 'ASC' THEN e.template_identifier END ASC,
+              CASE WHEN :sortField = 'templateIdentifier' AND :sortDirection = 'DESC' THEN e.template_identifier END DESC,
+              e.id ASC
+          LIMIT :limit OFFSET :offset
+          """, nativeQuery = true)
+  List<RelatedEntitySummaryProjection> findEntitiesRelatedByRelationPage(
+      @Param("rootId") UUID rootId, @Param("relationName") String relationName,
+      @Param("depth") int depth, @Param("mode") String mode, @Param("sortField") String sortField,
+      @Param("sortDirection") String sortDirection, @Param("limit") int limit,
+      @Param("offset") long offset);
+
+  /// Counts total distinct entities reached via a terminal `:relationName` edge
+  /// when an out-of-range page offset returns an empty slice.
+  @Query(value = RELATED_BY_RELATION_CTE + """
+      SELECT COUNT(*)
+      FROM matched_ids m
+      JOIN idp_core.entity e ON e.id = m.id
+      """, nativeQuery = true)
+  long countEntitiesRelatedByRelation(@Param("rootId") UUID rootId,
+      @Param("relationName") String relationName, @Param("depth") int depth,
+      @Param("mode") String mode);
 }

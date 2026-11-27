@@ -55,4 +55,15 @@ public interface JpaEntityTemplateRepository
         AND et.identifier <> :identifier
       """)
   long countRelationTargetingTemplate(@Param("identifier") String identifier);
+
+  /// Checks whether any relation definition exists with the specified name.
+  ///
+  /// @param relationName relation definition name to look up
+  /// @return `true` if at least one relation definition matches `relationName`
+  @Query("""
+      SELECT COUNT(rd) > 0
+      FROM RelationDefinitionJpaEntity rd
+      WHERE rd.name = :relationName
+      """)
+  boolean existsRelationDefinitionByName(@Param("relationName") String relationName);
 }

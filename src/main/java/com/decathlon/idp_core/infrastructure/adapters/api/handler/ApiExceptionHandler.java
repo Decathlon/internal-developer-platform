@@ -88,6 +88,19 @@ public class ApiExceptionHandler {
     return ResponseEntity.status(NOT_FOUND).body(errorResponse);
   }
 
+  /// Handles domain exception when a requested relation definition name does not
+  /// exist in any template.
+  ///
+  /// **HTTP mapping:** Maps domain [RelationDefinitionNotFoundException] to HTTP
+  /// 404 Not Found.
+  @ExceptionHandler(RelationDefinitionNotFoundException.class)
+  public ResponseEntity<ErrorResponse> handleRelationDefinitionNotFoundException(
+      RelationDefinitionNotFoundException ex) {
+    log.warn("Relation definition not found: {}", ex.getMessage());
+    ErrorResponse errorResponse = new ErrorResponse(NOT_FOUND.name(), ex.getMessage());
+    return ResponseEntity.status(NOT_FOUND).body(errorResponse);
+  }
+
   /// Handles domain exception for malformed filter query strings (`q=` DSL).
   ///
   /// **HTTP mapping:** Maps domain [InvalidFilterDslException] to HTTP 400 Bad

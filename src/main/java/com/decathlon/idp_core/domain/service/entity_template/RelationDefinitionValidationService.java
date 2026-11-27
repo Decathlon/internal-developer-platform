@@ -12,6 +12,7 @@ import java.util.stream.Collectors;
 import org.springframework.stereotype.Service;
 
 import com.decathlon.idp_core.domain.exception.entity_template.RelationCannotTargetItselfException;
+import com.decathlon.idp_core.domain.exception.entity_template.RelationDefinitionNotFoundException;
 import com.decathlon.idp_core.domain.exception.entity_template.RelationNameAlreadyExistsException;
 import com.decathlon.idp_core.domain.exception.entity_template.RelationTargetTemplateChangeException;
 import com.decathlon.idp_core.domain.exception.entity_template.TargetTemplateNotFoundException;
@@ -47,6 +48,18 @@ public class RelationDefinitionValidationService {
         .ifPresent(name -> {
           throw new RelationNameAlreadyExistsException(name);
         });
+  }
+
+  /// Validates that at least one relation definition with the given name exists.
+  ///
+  /// @param relationName relation name to verify
+  /// @throws RelationDefinitionNotFoundException when no relation definition has
+  /// the given name
+  public void validateRelationDefinitionExists(String relationName) {
+    if (relationName == null || relationName.isBlank()
+        || !entityTemplateRepositoryPort.existsRelationDefinitionByName(relationName)) {
+      throw new RelationDefinitionNotFoundException(relationName);
+    }
   }
 
   /// Validates that all target templates exist for the given relations.

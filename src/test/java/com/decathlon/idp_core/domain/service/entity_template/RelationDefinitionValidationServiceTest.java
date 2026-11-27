@@ -18,6 +18,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import com.decathlon.idp_core.domain.exception.entity_template.RelationCannotTargetItselfException;
+import com.decathlon.idp_core.domain.exception.entity_template.RelationDefinitionNotFoundException;
 import com.decathlon.idp_core.domain.exception.entity_template.RelationNameAlreadyExistsException;
 import com.decathlon.idp_core.domain.exception.entity_template.RelationTargetTemplateChangeException;
 import com.decathlon.idp_core.domain.exception.entity_template.TargetTemplateNotFoundException;
@@ -314,6 +315,42 @@ class RelationDefinitionValidationServiceTest {
           RelationCannotTargetItselfException.class, () -> relationDefinitionValidationService
               .validateRelationNoSelfReference("my-template", relations));
       assertTrue(ex.getMessage().contains("circular") && ex.getMessage().contains("my-template"));
+    }
+  }
+
+  @Nested
+  @DisplayName("validateRelationDefinitionExists")
+  class ValidateRelationDefinitionExistsTests {
+
+    @Test
+    @DisplayName("Happy path: relation definition exists")
+    void relationDefinitionExists() {
+      when(entityTemplateRepositoryPort.existsRelationDefinitionByName("asset_owned_by_component"))
+          .thenReturn(true);
+
+      assertDoesNotThrow(() -> relationDefinitionValidationService
+          .validateRelationDefinitionExists("asset_owned_by_component"));
+    }
+
+    @Test
+    @DisplayName("Error: relation definition does not exist")
+    void relationDefinitionDoesNotExist() {
+      when(entityTemplateRepositoryPort.existsRelationDefinitionByName("unknown_rel"))
+          .thenReturn(false);
+
+      RelationDefinitionNotFoundException ex = assertThrows(
+          RelationDefinitionNotFoundException.class, () -> relationDefinitionValidationService
+              .validateRelationDefinitionExists("unknown_rel"));
+      assertTrue(ex.getMessage().contains("unknown_rel"));
+    }
+
+    @Test
+    @DisplayName("Error: null or blank relation name throws RelationDefinitionNotFoundException")
+    void nullOrBlankRelationNameThrows() {
+      assertThrows(RelationDefinitionNotFoundException.class,
+          () -> relationDefinitionValidationService.validateRelationDefinitionExists(null));
+      assertThrows(RelationDefinitionNotFoundException.class,
+          () -> relationDefinitionValidationService.validateRelationDefinitionExists("   "));
     }
   }
 }

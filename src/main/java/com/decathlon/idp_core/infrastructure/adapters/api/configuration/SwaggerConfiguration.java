@@ -15,6 +15,7 @@ import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
 
 import com.decathlon.idp_core.infrastructure.adapters.api.dto.out.entity.EntityDtoOut;
+import com.decathlon.idp_core.infrastructure.adapters.api.dto.out.entity.EntitySummaryDto;
 import com.decathlon.idp_core.infrastructure.adapters.api.dto.out.entity_dynamic_mapping.EntityDynamicMappingDtoOut;
 import com.decathlon.idp_core.infrastructure.adapters.api.dto.out.entity_template.EntityTemplateDtoOut;
 import com.decathlon.idp_core.infrastructure.adapters.api.dto.out.webhook.InboundWebhookDtoOut;
@@ -113,6 +114,14 @@ public class SwaggerConfiguration {
   @Schema(description = "Paginated response containing Entity objects")
   public static class EntityPageResponse extends PageImpl<EntityDtoOut> {
     public EntityPageResponse(List<EntityDtoOut> content, Pageable pageable, long total) {
+      super(content, pageable, total);
+    }
+  }
+
+  @Schema(description = "Paginated response containing Entity summary objects")
+  public static class EntitySummaryPageResponse extends PageImpl<EntitySummaryDto> {
+    public EntitySummaryPageResponse(List<EntitySummaryDto> content, Pageable pageable,
+        long total) {
       super(content, pageable, total);
     }
   }

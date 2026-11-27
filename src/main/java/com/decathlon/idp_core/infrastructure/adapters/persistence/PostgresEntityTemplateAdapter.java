@@ -72,6 +72,11 @@ public class PostgresEntityTemplateAdapter implements EntityTemplateRepositoryPo
   }
 
   @Override
+  public boolean existsRelationDefinitionByName(String relationName) {
+    return jpaEntityTemplateRepository.existsRelationDefinitionByName(relationName);
+  }
+
+  @Override
   public EntityTemplate save(EntityTemplate entityTemplate) {
     EntityTemplateJpaEntity jpaEntity;
     if (entityTemplate.id() != null) {

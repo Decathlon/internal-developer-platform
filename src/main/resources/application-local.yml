@@ -54,7 +54,7 @@ app:
     authentication:
       jwt:
         # Enable to take in custom JWT tokens for authentication in local development
-        enabled: false
+        enabled: true
       oauth2-login:
         enabled: false
       mock:

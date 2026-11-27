@@ -34,6 +34,7 @@ import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 
+import com.decathlon.idp_core.domain.constant.SearchConstraints;
 import com.decathlon.idp_core.domain.exception.authorization.PrincipalNotAuthorizedException;
 import com.decathlon.idp_core.domain.exception.entity.EntityAlreadyExistsException;
 import com.decathlon.idp_core.domain.exception.entity.EntityValidationException;
@@ -42,11 +43,13 @@ import com.decathlon.idp_core.domain.exception.entity_dynamic_mapping.EntityDyna
 import com.decathlon.idp_core.domain.exception.entity_template.EntityTemplateAlreadyExistsException;
 import com.decathlon.idp_core.domain.exception.entity_template.EntityTemplateNotFoundException;
 import com.decathlon.idp_core.domain.exception.entity_template.PropertyNameNotFoundEntityTemplatePropertiesException;
+import com.decathlon.idp_core.domain.exception.entity_template.RelationDefinitionNotFoundException;
 import com.decathlon.idp_core.domain.exception.entity_template.RelationNameNotFoundEntityTemplateRelationsException;
 import com.decathlon.idp_core.domain.exception.webhook.WebhookSecurityConfigurationException;
 import com.decathlon.idp_core.domain.model.entity_graph.EntityGraphQueryOptions;
 import com.decathlon.idp_core.domain.model.entity_graph.EntityGraphTraversalMode;
 import com.decathlon.idp_core.domain.service.entity_graph.EntityGraphService;
+import com.decathlon.idp_core.infrastructure.adapters.api.configuration.SearchProperties;
 import com.decathlon.idp_core.infrastructure.adapters.api.controller.EntityGraphController;
 import com.decathlon.idp_core.infrastructure.adapters.api.exception.MissingPrincipalIdentifierException;
 import com.decathlon.idp_core.infrastructure.adapters.common.model.ErrorResponse;
@@ -79,7 +82,9 @@ class ApiExceptionHandlerTest {
     @BeforeEach
     void setUpClient() {
       graphService = mock(EntityGraphService.class);
-      client = RestTestClient.bindToController(new EntityGraphController(graphService))
+      client = RestTestClient
+          .bindToController(new EntityGraphController(graphService,
+              new SearchProperties(SearchConstraints.DEFAULT_MAX_PAGE_SIZE)))
           .configureServer(builder -> builder.setControllerAdvice(exceptionHandler)).build();
     }
 
@@ -278,6 +283,25 @@ class ApiExceptionHandlerTest {
       assertNotNull(body);
       assertEquals(HttpStatus.BAD_REQUEST.name(), body.getError());
       assertEquals(exception.getMessage(), body.getErrorDescription());
+    }
+
+    @Test
+    @DisplayName("Should handle RelationDefinitionNotFoundException with 404 status")
+    void shouldHandleRelationDefinitionNotFoundException() {
+      RelationDefinitionNotFoundException exception = new RelationDefinitionNotFoundException(
+          "asset_owned_by_component");
+
+      ResponseEntity<ErrorResponse> response = exceptionHandler
+          .handleRelationDefinitionNotFoundException(exception);
+
+      assertNotNull(response);
+      assertEquals(HttpStatus.NOT_FOUND, response.getStatusCode());
+      ErrorResponse body = response.getBody();
+      assertNotNull(body);
+      assertEquals(HttpStatus.NOT_FOUND.name(), body.getError());
+      assertEquals("Relation definition with name 'asset_owned_by_component' not found",
+          body.getErrorDescription());
+      assertEquals("asset_owned_by_component", exception.getRelationName());
     }
 
     /// Tests the handling of [ConstraintViolationException] with multiple

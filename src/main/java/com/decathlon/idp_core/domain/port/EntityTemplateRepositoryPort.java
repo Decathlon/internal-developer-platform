@@ -51,5 +51,12 @@ public interface EntityTemplateRepositoryPort {
   /// relation
   boolean existsRelationTargetingTemplate(String identifier);
 
+  /// Returns `true` when at least one relation definition exists with the given
+  /// name across all templates.
+  ///
+  /// @param relationName relation definition name to look up
+  /// @return `true` if a matching relation definition exists
+  boolean existsRelationDefinitionByName(String relationName);
+
   boolean existsById(UUID id);
 }
